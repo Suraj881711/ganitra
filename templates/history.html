@@ -1,10 +1,9 @@
 {% extends "base.html" %}
 {% block content %}
   <div class="card">
-    <h2>History 🕘</h2>
+    <h2>{{ t.history_heading }}</h2>
     {% if entries %}
-      <p class="muted">Questions you solved in this session, newest first.
-        Click one to see its full solution again.</p>
+      <p class="muted">{{ t.history_intro }}</p>
       {% for e in entries %}
         <div class="practice-q">
           <form method="post" action="/solve" class="history-form">
@@ -15,12 +14,11 @@
         </div>
       {% endfor %}
       <form method="post" action="/history/clear">
-        <button type="submit">Clear history</button>
+        <button type="submit">{{ t.clear_history }}</button>
       </form>
     {% else %}
-      <p class="muted">Nothing here yet — solve a question and it will
-        appear in this list.</p>
+      <p class="muted">{{ t.history_empty }}</p>
     {% endif %}
-    <a class="back" href="/">← Back to solver</a>
+    <a class="back" href="/">{{ t.back_to_solver }}</a>
   </div>
 {% endblock %}

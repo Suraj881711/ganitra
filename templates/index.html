@@ -3,22 +3,20 @@
   <section class="hero rise">
     <div class="hero-logo">🧮</div>
     <h1>Gani<span class="gold">tra</span></h1>
-    <p class="hero-tag">Ask any maths question — get a clear,
-      step-by-step solution in seconds. Plain English or Hinglish,
-      Class 10 to engineering level.</p>
+    <p class="hero-tag">{{ t.hero_tag }}</p>
 
     <form method="post" action="/solve" class="hero-form">
-      <label for="q">Enter a math question:</label>
+      <label for="q">{{ t.enter_question }}</label>
       <textarea id="q" name="question" rows="3"
-        placeholder="e.g., Solve 2x+3=7, integrate x^2 from 0 to 1, sin 30 ka maan, plot x^2 - 3x + 2"
+        placeholder="{{ t.question_placeholder }}"
         required></textarea>
       <div class="input-tools">
-        <button type="button" id="mic-btn" class="tool-btn">🎤 Bol ke poochho</button>
-        <label class="tool-btn" for="photo-input">📷 Photo se sawaal</label>
+        <button type="button" id="mic-btn" class="tool-btn">{{ t.voice_btn }}</button>
+        <label class="tool-btn" for="photo-input">{{ t.photo_btn }}</label>
         <input type="file" id="photo-input" accept="image/*" hidden />
         <span id="input-note" class="tool-note" role="status"></span>
       </div>
-      <button type="submit" class="hero-solve">Solve it →</button>
+      <button type="submit" class="hero-solve">{{ t.solve_btn }}</button>
     </form>
 
     <form id="photo-form" method="post" action="/photo-solve" hidden>
@@ -46,42 +44,45 @@
   </section>
 
   <section class="topics rise rise-2">
-    <h2>Everything it can solve</h2>
-    <p class="sub">17 topic areas — every answer comes with full working.</p>
+    <h2>{{ t.topics_heading }}</h2>
+    <p class="sub">{{ t.topics_sub }}</p>
     <div class="topic-grid">
-      <div class="topic-card"><div class="ic">➗</div><h3>Arithmetic</h3><p>Fractions, percentages, BODMAS — with reduction steps.</p></div>
-      <div class="topic-card"><div class="ic">✖️</div><h3>Algebra</h3><p>Equations, systems, inequalities, factor, expand, simplify.</p></div>
-      <div class="topic-card"><div class="ic">📈</div><h3>Exponents &amp; Logs</h3><p>Powers, logarithms and log equations.</p></div>
-      <div class="topic-card"><div class="ic">📐</div><h3>Trigonometry</h3><p>Values, identities, equations and inverse trig (degrees by default).</p></div>
-      <div class="topic-card"><div class="ic">∫</div><h3>Calculus</h3><p>Limits, derivatives (partial &amp; implicit), integrals, ODEs.</p></div>
-      <div class="topic-card star"><div class="ic">🔀</div><h3>Transforms &amp; Series</h3><p>Laplace &amp; inverse Laplace, Taylor/Maclaurin series, partial fractions.</p></div>
-      <div class="topic-card"><div class="ic">🔢</div><h3>Linear Algebra</h3><p>Determinant, inverse, eigenvalues, rank, Ax = b.</p></div>
-      <div class="topic-card"><div class="ic">🔷</div><h3>Geometry</h3><p>Areas, volumes and coordinate geometry.</p></div>
-      <div class="topic-card"><div class="ic">🎲</div><h3>Statistics &amp; Probability</h3><p>Mean, median, mode, SD, dice, coins, cards, counting.</p></div>
-      <div class="topic-card star"><div class="ic">📊</div><h3>Distributions</h3><p>Normal (z-scores, percentiles), Poisson and binomial probabilities.</p></div>
-      <div class="topic-card"><div class="ic">#️⃣</div><h3>Number Theory</h3><p>Primes, GCD/LCM with factorisation steps, modulo.</p></div>
-      <div class="topic-card"><div class="ic">🔁</div><h3>Sequences &amp; Series</h3><p>AP/GP terms and sums, natural-number series.</p></div>
-      <div class="topic-card"><div class="ic">ℹ️</div><h3>Complex Numbers</h3><p>Arithmetic, modulus, conjugate, argument.</p></div>
-      <div class="topic-card"><div class="ic">🧮</div><h3>Sets</h3><p>Union, intersection, difference, symmetric difference.</p></div>
-      <div class="topic-card"><div class="ic">🔄</div><h3>Unit Conversion</h3><p>Length, mass, time, volume, area and temperature.</p></div>
-      <div class="topic-card"><div class="ic">📝</div><h3>Word Problems</h3><p>Percent change, speed–distance, simple interest.</p></div>
-      <div class="topic-card star"><div class="ic">📉</div><h3>Graphs</h3><p>Plot one or two functions; shaded area for definite integrals.</p></div>
+      <div class="topic-card"><div class="ic">➗</div><h3>{{ t.t_arithmetic }}</h3><p>Fractions, percentages, BODMAS — with reduction steps.</p></div>
+      <div class="topic-card"><div class="ic">✖️</div><h3>{{ t.t_algebra }}</h3><p>Equations, systems, inequalities, factor, expand, simplify.</p></div>
+      <div class="topic-card"><div class="ic">📈</div><h3>{{ t.t_exponents_logs }}</h3><p>Powers, logarithms and log equations.</p></div>
+      <div class="topic-card"><div class="ic">📐</div><h3>{{ t.t_trigonometry }}</h3><p>Values, identities, equations and inverse trig (degrees by default).</p></div>
+      <div class="topic-card"><div class="ic">∫</div><h3>{{ t.t_calculus }}</h3><p>Limits, derivatives (partial &amp; implicit), integrals, ODEs.</p></div>
+      <div class="topic-card star"><div class="ic">🔀</div><h3>{{ t.t_transforms }}</h3><p>Laplace &amp; inverse Laplace, Taylor/Maclaurin series, partial fractions.</p></div>
+      <div class="topic-card"><div class="ic">🔢</div><h3>{{ t.t_linear_algebra }}</h3><p>Determinant, inverse, eigenvalues, rank, Ax = b.</p></div>
+      <div class="topic-card"><div class="ic">🔷</div><h3>{{ t.t_geometry }}</h3><p>Areas, volumes and coordinate geometry.</p></div>
+      <div class="topic-card"><div class="ic">🎲</div><h3>{{ t.t_statistics }}</h3><p>Mean, median, mode, SD, dice, coins, cards, counting.</p></div>
+      <div class="topic-card star"><div class="ic">📊</div><h3>{{ t.t_distributions }}</h3><p>Normal (z-scores, percentiles), Poisson and binomial probabilities.</p></div>
+      <div class="topic-card"><div class="ic">#️⃣</div><h3>{{ t.t_number_theory }}</h3><p>Primes, GCD/LCM with factorisation steps, modulo.</p></div>
+      <div class="topic-card"><div class="ic">🔁</div><h3>{{ t.t_sequences }}</h3><p>AP/GP terms and sums, natural-number series.</p></div>
+      <div class="topic-card"><div class="ic">ℹ️</div><h3>{{ t.t_complex }}</h3><p>Arithmetic, modulus, conjugate, argument.</p></div>
+      <div class="topic-card"><div class="ic">🧮</div><h3>{{ t.t_sets }}</h3><p>Union, intersection, difference, symmetric difference.</p></div>
+      <div class="topic-card"><div class="ic">🔄</div><h3>{{ t.t_units }}</h3><p>Length, mass, time, volume, area and temperature.</p></div>
+      <div class="topic-card"><div class="ic">📝</div><h3>{{ t.t_word_problems }}</h3><p>Percent change, speed–distance, simple interest.</p></div>
+      <div class="topic-card star"><div class="ic">📉</div><h3>{{ t.t_graphs }}</h3><p>Plot one or two functions; shaded area for definite integrals.</p></div>
     </div>
   </section>
 
   <section class="how rise rise-3">
-    <h2>How it works</h2>
-    <p class="sub">Three steps, no sign-up.</p>
+    <h2>{{ t.how_heading }}</h2>
+    <p class="sub">{{ t.how_sub }}</p>
     <div class="how-grid">
-      <div class="how-card"><span class="n">1</span><h3>Type, speak or photograph</h3><p>Type it, bol ke poochho 🎤, ya notebook ki photo bhej do 📷. Plain English or Hinglish — “240 ka 15 pratishat” works too.</p></div>
-      <div class="how-card"><span class="n">2</span><h3>See every step</h3><p>The solver shows the full working, not just the final answer.</p></div>
-      <div class="how-card"><span class="n">3</span><h3>Save &amp; practise</h3><p>Download the solution as a .txt file, revisit it in History, or take a timed quiz in Practice.</p></div>
+      <div class="how-card"><span class="n">1</span><h3>{{ t.how1_title }}</h3><p>{{ t.how1_text }}</p></div>
+      <div class="how-card"><span class="n">2</span><h3>{{ t.how2_title }}</h3><p>{{ t.how2_text }}</p></div>
+      <div class="how-card"><span class="n">3</span><h3>{{ t.how3_title }}</h3><p>{{ t.how3_text }}</p></div>
     </div>
   </section>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
     (function () {
+      var L = {{ js_t | tojson }};
+      var VOICE_BTN = {{ voice_label | tojson }};
+      var SPEECH_LANG = {{ speech_lang | tojson }};
       var box = document.getElementById("q");
       var note = document.getElementById("input-note");
       document.querySelectorAll(".chip").forEach(function (chip) {
@@ -98,7 +99,7 @@
       var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
         micBtn.style.display = "none";
-        say("Voice input is browser me available nahi hai — Chrome me try karein.");
+        say(L.js_voice_no_api);
       } else {
         var recog = null;
         var listening = false;
@@ -111,34 +112,32 @@
             var text = ev.results[0][0].transcript || "";
             if (text) {
               box.value = text;
-              say("Sun liya: “" + text + "” — Solve dabayein.");
+              say(L.js_voice_heard.replace("{text}", text));
             }
           };
           recog.onerror = function (ev) {
-            if (ev.error === "language-not-supported" && lang === "hi-IN") {
+            if (ev.error === "language-not-supported" && lang !== "en-IN") {
               startRecognition("en-IN");  // fallback language
               return;
             }
             listening = false;
-            micBtn.textContent = "🎤 Bol ke poochho";
-            say(ev.error === "not-allowed"
-              ? "Mic ki permission nahi mili — browser settings me mic allow karein."
-              : "Voice samajh nahi aaya, dobara try karein.");
+            micBtn.textContent = VOICE_BTN;
+            say(ev.error === "not-allowed" ? L.js_voice_denied : L.js_voice_failed);
           };
           recog.onend = function () {
             listening = false;
-            micBtn.textContent = "🎤 Bol ke poochho";
+            micBtn.textContent = VOICE_BTN;
           };
           try {
             recog.start();
             listening = true;
-            micBtn.textContent = "🎙️ Sun raha hoon… boliye";
-            say("Boliye, sun raha hoon…");
+            micBtn.textContent = L.js_voice_listening_btn;
+            say(L.js_voice_speak);
           } catch (e) { /* already running */ }
         }
         micBtn.addEventListener("click", function () {
           if (listening && recog) { recog.stop(); return; }
-          startRecognition("hi-IN");
+          startRecognition(SPEECH_LANG);
         });
       }
 
@@ -148,29 +147,29 @@
       var photoQuestion = document.getElementById("photo-question");
       if (typeof window.Tesseract === "undefined") {
         photoInput.disabled = true;
-        say("Photo wala feature abhi load nahi hua — page refresh karke try karein.");
+        say(L.js_photo_unavailable);
       }
       photoInput.addEventListener("change", function () {
         var file = photoInput.files && photoInput.files[0];
         if (!file) return;
         if (typeof window.Tesseract === "undefined") {
-          say("Photo reader load nahi hua — page refresh karein.");
+          say(L.js_photo_unavailable);
           return;
         }
-        say("Photo padh rahe hain… ⏳ (typed/print sawaal sabse saaf padhta hai)");
+        say(L.js_photo_reading);
         window.Tesseract.recognize(file, "eng")
           .then(function (res) {
             var text = ((res && res.data && res.data.text) || "").trim();
             if (!text) {
-              say("Photo me sawaal nahi mil paya — saaf, seedhi photo dobara try karein, ya type kar dein.");
+              say(L.js_photo_not_found);
               return;
             }
             photoQuestion.value = text;
-            say("Sawaal mil gaya — bhej rahe hain…");
+            say(L.js_photo_sending);
             photoForm.submit();
           })
           .catch(function () {
-            say("Photo padhne me dikkat aayi — dobara try karein ya sawaal type kar dein.");
+            say(L.js_photo_error);
           });
       });
     })();

@@ -3,29 +3,32 @@
   <div class="card">
     {% if photo_text is defined %}
       <div class="photo-box">
-        <h2>📷 Photo se padha gaya sawaal</h2>
-        <p>Photo se padha gaya sawaal — galti ho toh theek karke Solve
-          dabayein. (OCR kabhi-kabhi number ya sign galat padh deta hai,
-          isliye pehle text check kar lein.)</p>
+        <h2>{{ t.photo_heading }}</h2>
+        <p>{{ t.photo_text }}</p>
         <form method="post" action="/solve">
           <textarea name="question" rows="2"
             aria-label="Photo se padha gaya sawaal">{{ photo_text }}</textarea>
-          <button type="submit" class="hero-solve">Theek karke Solve karein →</button>
+          <button type="submit" class="hero-solve">{{ t.photo_fix_btn }}</button>
         </form>
-        <p class="muted">Neeche isi padhe gaye sawaal ka jawab hai:</p>
+        <p class="muted">{{ t.photo_below }}</p>
       </div>
     {% endif %}
-    <h2>Question</h2>
+    <h2>{{ t.question_heading }}</h2>
     <pre>{{ question }}</pre>
     {% if result.interpreted_as %}
-      <p class="muted">Understood as: <code>{{ result.interpreted_as }}</code></p>
+      <p class="muted">{{ t.understood_as }} <code>{{ result.interpreted_as }}</code></p>
     {% endif %}
 
-    <h2>Answer <span class="badge">{{ result.type }}{% if result.op %} · {{ result.op }}{% endif %}</span></h2>
+    <h2>{{ t.answer_heading }} <span class="badge">{{ result.type }}{% if result.op %} · {{ result.op }}{% endif %}</span></h2>
     <p class="answer-big">
       {% if result.latex %}\[ {{ result.latex }} \]{% else %}{{ result.answer }}{% endif %}
     </p>
     {% if result.latex and result.answer %}<p class="muted">{{ result.answer }}</p>{% endif %}
+
+    {% if explanation %}
+      <h2>{{ t.explanation_heading }}</h2>
+      <p class="explain">{{ explanation }}</p>
+    {% endif %}
 
     {% if result.image %}
       <img class="graph" src="{{ url_for('static', filename=result.image) }}"
@@ -33,19 +36,19 @@
     {% endif %}
 
     {% if result.steps %}
-      <h2>Step-by-step solution</h2>
+      <h2>{{ t.steps_heading }}</h2>
       <ol class="steps">
         {% for step in result.steps %}<li>{{ step }}</li>{% endfor %}
       </ol>
     {% endif %}
 
     <details>
-      <summary>Full result (JSON)</summary>
+      <summary>{{ t.full_result }}</summary>
       <pre>{{ result | tojson(indent=2) }}</pre>
     </details>
 
-    <a class="back" href="/download">⬇ Download solution (.txt)</a>
-    <a class="back" href="/">← Ask another</a>
-    <a class="back" href="/history">History</a>
+    <a class="back" href="/download">{{ t.download_link }}</a>
+    <a class="back" href="/">{{ t.ask_another }}</a>
+    <a class="back" href="/history">{{ t.nav_history }}</a>
   </div>
 {% endblock %}

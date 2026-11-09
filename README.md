@@ -43,6 +43,16 @@ in the web UI, through a JSON API, or on the command line.
   check/fix it, then Solve. Works best on printed/typed questions;
   handwriting often needs a quick edit, which is exactly what the
   confirm box is for.
+- **Multi-language UI** 🌐 — the whole interface is available in
+  **6 languages**: English, हिन्दी (Hindi), বাংলা (Bengali), मराठी
+  (Marathi), தமிழ் (Tamil) and తెలుగు (Telugu). Use the language
+  dropdown in the header; the choice is remembered for your session
+  (stored server-side, set via `/set-lang/<code>`). Voice input also
+  listens in the selected language, and every answer page adds one
+  short **explanation line** in the selected language under the
+  answer. Honest scope: the UI, voice and that summary line are
+  localised — the step-by-step working itself is still shown in
+  English (full step translation is future work).
 - **Pretty maths** — MathJax rendering in the web UI.
 - Three interfaces: web UI, REST API (`POST /api/solve`), and a CLI.
 
@@ -122,8 +132,10 @@ python verify_wave2.py  # wave-2 samples (distributions, ODEs,
 
 ```
 app.py                  Flask app (/, /solve, /practice + timed quiz,
-                        /history, /download)
+                        /history, /download, /set-lang/<code>)
 api.py                  JSON API blueprint (/api/solve)
+i18n.py                 UI strings + explanation templates in 6 languages
+                        (en/hi/bn/mr/ta/te); English is the fallback
 cli.py                  Command-line interface
 solver/
   router.py             Hinglish normalisation + topic routing + fallback
@@ -153,6 +165,7 @@ test/                   pytest suite
 verify_all.py           wave-1 end-to-end verification (not part of the app)
 verify_wave2.py         wave-2 end-to-end verification (not part of the app)
 verify_wave3.py         wave-3 verification: voice/photo inputs (not part of the app)
+verify_wave4.py         wave-4 verification: multi-language UI (not part of the app)
 ```
 
 ## Notes & honest limits
@@ -173,3 +186,9 @@ verify_wave3.py         wave-3 verification: voice/photo inputs (not part of the
   that is why the recognised text is always shown in an editable box
   before solving. Voice input depends on the browser's speech
   recognition (Chrome works best) and needs mic permission.
+- Multi-language support covers the interface, the voice-input
+  language and a one-line explanation summary on the answer page.
+  The step-by-step working is **not** translated yet — it stays in
+  English in every language mode. The explanation line is a fixed
+  template sentence (per topic/operation) with the final answer
+  filled in, not a free-form translation.

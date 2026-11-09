@@ -1,39 +1,37 @@
 {% extends "base.html" %}
 {% block content %}
   <div class="card">
-    <h2>Timed quiz 🎯</h2>
-    <p class="muted">Pick a topic and difficulty — you get
-      {{ 5 }} questions and {{ time_limit }} seconds on the clock.
-      Answers are checked when you submit.</p>
+    <h2>{{ t.quiz_heading }}</h2>
+    <p class="muted">{{ t.quiz_intro }}</p>
 
     <form method="post" action="/practice/start" class="quiz-setup">
-      <label for="topic">Topic</label>
+      <label for="topic">{{ t.topic_label }}</label>
       <select id="topic" name="topic">
-        {% for t in topics %}
-          <option value="{{ t }}" {% if quiz and quiz.topic == t %}selected{% endif %}>{{ t|capitalize }}</option>
+        {% for topic in topics %}
+          <option value="{{ topic }}" {% if quiz and quiz.topic == topic %}selected{% endif %}>{{ t["quiz_topic_" + topic] }}</option>
         {% endfor %}
       </select>
-      <label for="difficulty">Difficulty</label>
+      <label for="difficulty">{{ t.difficulty_label }}</label>
       <select id="difficulty" name="difficulty">
         {% for d in difficulties %}
-          <option value="{{ d }}" {% if quiz and quiz.difficulty == d %}selected{% endif %}>{{ d|capitalize }}</option>
+          <option value="{{ d }}" {% if quiz and quiz.difficulty == d %}selected{% endif %}>{{ t["diff_" + d] }}</option>
         {% endfor %}
       </select>
-      <button type="submit">{{ "Restart quiz" if quiz else "Start quiz" }}</button>
+      <button type="submit">{{ t.restart_quiz if quiz else t.start_quiz }}</button>
     </form>
 
     {% if quiz %}
-      <div class="quiz-timer">⏱ Time left: <span id="timer">{{ time_limit }}</span>s</div>
+      <div class="quiz-timer">{{ t.time_left }} <span id="timer">{{ time_limit }}</span>s</div>
       <form method="post" action="/practice/submit" id="quiz-form">
         <input type="hidden" name="time_taken" id="time-taken" value="" />
         {% for item in quiz.questions %}
           <div class="practice-q">
             <p><strong>Q{{ loop.index }}.</strong> {{ item.question }}</p>
             <input type="text" name="answer_{{ loop.index0 }}"
-                   placeholder="Your answer" autocomplete="off" />
+                   placeholder="{{ t.your_answer_ph }}" autocomplete="off" />
           </div>
         {% endfor %}
-        <button type="submit">Submit answers</button>
+        <button type="submit">{{ t.submit_answers }}</button>
       </form>
       <script>
         (function () {
@@ -60,25 +58,24 @@
     {% endif %}
 
     {% if questions %}
-      <h2>Practice questions</h2>
-      <p class="muted">Try each question yourself first, then reveal the
-        answer. Reload the page for a fresh set.</p>
+      <h2>{{ t.practice_heading }}</h2>
+      <p class="muted">{{ t.practice_intro }}</p>
       {% for item in questions %}
         <div class="practice-q">
           <p><strong>Q{{ loop.index }}.</strong> {{ item.question }}</p>
           <details>
-            <summary>Show answer</summary>
+            <summary>{{ t.show_answer }}</summary>
             <p class="answer-big">{{ item.answer }}</p>
           </details>
         </div>
       {% endfor %}
-      <a class="back" href="/practice/classic">↻ New set</a>
+      <a class="back" href="/practice/classic">{{ t.new_set }}</a>
     {% else %}
-      <p class="muted">Prefer untimed practice?
-        <a href="/practice/classic">Open the classic practice set</a>
-        (answers hidden until you reveal them).</p>
+      <p class="muted">{{ t.classic_prefer }}
+        <a href="/practice/classic">{{ t.classic_open }}</a>
+        {{ t.classic_note }}</p>
     {% endif %}
 
-    <a class="back" href="/">← Back to solver</a>
+    <a class="back" href="/">{{ t.back_to_solver }}</a>
   </div>
 {% endblock %}

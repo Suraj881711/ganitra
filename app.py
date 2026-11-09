@@ -3,6 +3,8 @@ import re
 from flask import (Flask, Response, render_template, request, redirect,
                    session, url_for, flash)
 from api import api_bp
+from i18n import (LANG_NAMES, SPEECH_LANGS, SUPPORTED_LANGS,
+                  explanation_for, get_strings, normalise_lang)
 from solver.practice import (QUIZ_DIFFICULTIES, QUIZ_QUESTION_COUNT,
                              QUIZ_SECONDS_PER_QUESTION, QUIZ_TOPICS,
                              check_quiz_answer, generate_practice,
@@ -68,6 +70,42 @@ def create_app():
     # Register API blueprint
     app.register_blueprint(api_bp, url_prefix="/api")
 
+    def _lang():
+        return normalise_lang(session.get("lang", "en"))
+
+    def _t():
+        return get_strings(_lang())
+
+    @app.context_processor
+    def inject_i18n():
+        lang = _lang()
+        strings = get_strings(lang)
+        try:
+            strings["quiz_intro"] = strings["quiz_intro"].format(
+                count=QUIZ_QUESTION_COUNT,
+                seconds=QUIZ_QUESTION_COUNT * QUIZ_SECONDS_PER_QUESTION)
+        except (KeyError, IndexError, ValueError):
+            pass
+        return {
+            "lang": lang,
+            "t": strings,
+            "lang_options": [(code, LANG_NAMES[code])
+                             for code in SUPPORTED_LANGS],
+            "speech_lang": SPEECH_LANGS[lang],
+            "js_t": {k: v for k, v in strings.items()
+                     if k.startswith("js_")},
+            "voice_label": strings["voice_btn"],
+        }
+
+    @app.get("/set-lang/<code>")
+    def set_lang(code):
+        if code in SUPPORTED_LANGS:
+            session["lang"] = code
+        target = request.args.get("next") or ""
+        if not target.startswith("/") or target.startswith("//"):
+            target = url_for("index")
+        return redirect(target)
+
     @app.get("/")
     def index():
         return render_template("index.html")
@@ -76,7 +114,7 @@ def create_app():
     def solve():
         question = request.form.get("question", "").strip()
         if not question:
-            flash("Please enter a question.")
+            flash(_t()["flash_no_question"])
             return redirect(url_for("index"))
         result = solve_question(question)
         session["last_question"] = question
@@ -85,7 +123,9 @@ def create_app():
         history.insert(0, {"question": question, "result": result})
         session["history"] = history[:_HISTORY_LIMIT]
         return render_template("answer.html", question=question,
-                               result=result)
+                               result=result,
+                               explanation=explanation_for(result,
+                                                           _lang()))
 
     @app.post("/photo-solve")
     def photo_solve():
@@ -97,8 +137,7 @@ def create_app():
         raw = request.form.get("question", "")
         question = normalize_ocr_text(raw)
         if not question:
-            flash("Photo me koi sawaal nahi padh paya — photo saaf karke "
-                  "dobara try karein, ya sawaal type kar dein.")
+            flash(_t()["flash_photo_empty"])
             return redirect(url_for("index"))
         result = solve_question(question)
         session["last_question"] = question
@@ -107,14 +146,16 @@ def create_app():
         history.insert(0, {"question": question, "result": result})
         session["history"] = history[:_HISTORY_LIMIT]
         return render_template("answer.html", question=question,
-                               result=result, photo_text=question)
+                               result=result, photo_text=question,
+                               explanation=explanation_for(result,
+                                                           _lang()))
 
     @app.get("/download")
     def download():
         question = session.get("last_question")
         result = session.get("last_result")
         if not question or not result:
-            flash("Solve a question first, then download its solution.")
+            flash(_t()["flash_download_first"])
             return redirect(url_for("index"))
         body = _solution_text(question, result)
         return Response(
@@ -170,7 +211,7 @@ def create_app():
     def practice_submit():
         quiz = session.get("quiz")
         if not quiz:
-            flash("Start a quiz first.")
+            flash(_t()["flash_start_quiz"])
             return redirect(url_for("practice"))
         rows, score = [], 0
         for i, item in enumerate(quiz["questions"]):
