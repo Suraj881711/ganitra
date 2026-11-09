@@ -5,7 +5,7 @@ from solver.router import solve_question
 
 
 def main():
-    parser = argparse.ArgumentParser(description="maths-gpt CLI")
+    parser = argparse.ArgumentParser(description="Ganitra CLI")
     parser.add_argument("question", type=str, help="Math question to solve")
     parser.add_argument("--json", action="store_true",
                         help="Print the full result as JSON")

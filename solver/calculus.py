@@ -84,34 +84,116 @@ def _integral_steps(expr, var, bounds=None):
 
 
 def _ode(q: str):
-    """Basic ODEs of the form dy/dx = f(x, y) or y' = f(x, y)."""
-    text = q.replace("y'", "dy/dx")
+    """ODEs via dsolve: separable, linear, second-order, with simple
+    initial conditions. Accepts dy/dx = ..., y' = ..., y'' + y = 0,
+    'differential equation ...', and first-order IVPs like
+    'dy/dx = 2x, y(0) = 1'."""
+    text = q.strip()
+    # y'' must be replaced before y' (y' is a prefix of y'').
+    text = text.replace("y''", "d2y/dx2").replace("y'", "dy/dx")
     text = re.sub(r"\b(dsolve|solve|differential\s+equation)\b", "",
                   text, flags=re.I).strip(" :")
+    # Pull out initial conditions: y(0) = 1, dy/dx(0) = 2
+    ics = {}
+    yfun = sp.Function("y")
+    yx = yfun(_x)
+
+    def _set_ic(kind, at_raw, val_raw):
+        at = parse_expression(at_raw)
+        val = parse_expression(val_raw)
+        if kind == "deriv":
+            ics[yx.diff(_x).subs(_x, at)] = val
+        else:
+            ics[yx.subs(_x, at)] = val
+        return " "
+
+    text = re.sub(
+        r"dy/dx\s*\(\s*(-?[\d.]+)\s*\)\s*=\s*(-?[\d.]+)",
+        lambda m: _set_ic("deriv", m.group(1), m.group(2)), text)
+    text = re.sub(
+        r"y\s*\(\s*(-?[\d.]+)\s*\)\s*=\s*(-?[\d.]+)",
+        lambda m: _set_ic("func", m.group(1), m.group(2)), text)
+    text = text.strip(" ,;")
+    text = re.sub(r"\band\s*$", "", text).strip(" ,;")
+    text = re.sub(r"\bwith\b.*$", "", text, flags=re.I).strip(" ,;")
+
     if "=" not in text:
         return None
     left, right = text.split("=", 1)
-    if "dy/dx" not in left.replace(" ", "") and "dy/dx" not in text:
-        return None
-    yfun = sp.Function("y")
-    yx = yfun(_x)
+    left_c = left.replace(" ", "")
     y_sym = symbols("y")
-    rhs = parse_expression(right)
-    rhs = rhs.subs(y_sym, yx) if y_sym in rhs.free_symbols else rhs
-    if _x not in rhs.free_symbols and yx not in rhs.free_symbols:
-        rhs = rhs  # constant RHS is fine
-    eq = sp.Eq(sp.Derivative(yx, _x), rhs)
-    sol = dsolve(eq, yx)
+
+    def as_yx(expr):
+        return expr.subs(y_sym, yx) if y_sym in expr.free_symbols else expr
+
+    if left_c == "d2y/dx2":
+        rhs = as_yx(parse_expression(right))
+        sol_eq = sp.Eq(yx.diff(_x, 2), rhs)
+        ode_text = f"y'' = {fmt(rhs)}"
+    elif left_c == "dy/dx":
+        rhs = as_yx(parse_expression(right))
+        sol_eq = sp.Eq(yx.diff(_x), rhs)
+        ode_text = f"dy/dx = {fmt(rhs)}"
+    elif "d2y/dx2" in text.replace(" ", "") or "dy/dx" in text:
+        # Implicit form, e.g. "d2y/dx2 + y = 0", "dy/dx + y = x". Hide
+        # the derivative tokens behind placeholders BEFORE parse_expr
+        # runs — its tokenizer mangles "dy/dx" into d*y/d*x, splits
+        # "D2" into a derivative application, and even splits a long
+        # camel-case symbol like "ZoZ" into Z*o*Z. So: tokenise the
+        # text manually, swap the derivative tokens for single letters
+        # (w = y', v = y''), parse, then substitute back.
+        whole = text.replace("d2y/dx2", "\x01").replace("dy/dx", "\x02")
+        tokens = re.findall(r"\x01|\x02|[A-Za-z]+|\d+(?:\.\d+)?|\S", whole)
+
+        def rebuild(toks):
+            out = []
+            for tk in toks:
+                if tk == "\x01":
+                    out.append(" v ")
+                elif tk == "\x02":
+                    out.append(" w ")
+                elif tk.isalpha() and len(tk) > 1 and tk not in (
+                        "sin", "cos", "tan", "exp", "log", "sqrt",
+                        "cot", "sec", "csc"):
+                    # implicit multiplication of single letters: xy -> x*y
+                    out.append("*".join(tk))
+                else:
+                    out.append(tk)
+            return " ".join(out)
+
+        joined = rebuild(tokens)
+        l2, r2 = joined.split("=", 1)
+        w_sym, v_sym = symbols("w v")
+        lexpr = parse_expression(l2)
+        rexpr = parse_expression(r2)
+        subs_map = {v_sym: yx.diff(_x, 2), w_sym: yx.diff(_x),
+                    y_sym: yx}
+        sol_eq = sp.Eq(lexpr.subs(subs_map), rexpr.subs(subs_map))
+        ode_text = text.replace("d2y/dx2", "y''")
+    else:
+        return None
+
+    try:
+        sol = dsolve(sol_eq, yx, ics=ics) if ics else dsolve(sol_eq, yx)
+    except Exception:
+        return None
+    if isinstance(sol, list):
+        sol = sol[0]
+    rhs_sol = sol.rhs
+    kind = ("initial condition(s) applied: "
+            + ", ".join(f"{fmt(k)} = {fmt(v)}" for k, v in ics.items())) \
+        if ics else "general solution (C1, C2 are arbitrary constants)"
     steps = [
-        f"Differential equation: dy/dx = {fmt(rhs)}",
-        "Solve with SymPy's dsolve (separation of variables / "
-        "integrating factor as applicable).",
-        f"General solution: {fmt(sol.rhs)} (C1 is an arbitrary constant)",
+        f"Differential equation: {ode_text}",
+        "Solve with SymPy's dsolve — it classifies the equation "
+        "(separable, linear, constant-coefficient, ...) and applies "
+        "the matching method.",
+        f"Solution: y = {fmt(rhs_sol)} — {kind}",
     ]
     return {
         "type": "calculus",
         "op": "differential_equation",
-        "answer": f"y = {fmt(sol.rhs)}",
+        "answer": f"y = {fmt(rhs_sol)}",
         "steps": steps,
     }
 
@@ -119,9 +201,15 @@ def _ode(q: str):
 def solve_calculus(question: str):
     q = question.strip()
 
-    # Differential equations first (dy/dx = ... or y' = ...)
-    if re.search(r"(dy/dx|y'|dsolve|differential)", q, re.I) and "=" in q \
-            and not re.search(r"\bfor\b", q, re.I):
+    # Differential equations first: dy/dx / y' / y'' forms, or an ODE
+    # written in implicit form ("y'' + y = 0"). The "for" exclusion keeps
+    # implicit differentiation ("find dy/dx for x^2 + y^2 = 25") out, but
+    # "solve ... for y" is an ODE request.
+    ode_hint = re.search(r"(dy/dx|d2y|dsolve|differential|y'')", q, re.I) \
+        or re.search(r"y'\s*=", q) or re.search(r"y'\s*[+\-*/=]", q)
+    implicit_diff = bool(re.search(r"\bfor\b", q, re.I)) and not \
+        re.search(r"\bsolve\b.*\bfor\b", q, re.I)
+    if "=" in q and ode_hint and not implicit_diff:
         out = _ode(q)
         if out:
             return out
@@ -256,12 +344,21 @@ def solve_calculus(question: str):
     if m:
         expr_text = m.group(1)
         expr_text = re.sub(r"\s*d[a-zA-Z]\s*$", "", expr_text).strip()
+        wants_graph = bool(re.search(
+            r"\b(graph|plot|sketch|shade|diagram)\b", q, re.I))
+        bound_b = m.group(3)
+        if wants_graph and bound_b:
+            # "integrate x^2 from 0 to 1 and show the graph" — the lazy
+            # regex swallows the graph request into the upper bound.
+            mb = re.match(r"\s*(-?\d+(?:\.\d+)?|[a-zA-Z])\b", bound_b)
+            if mb:
+                bound_b = mb.group(1)
         expr = parse_expression(expr_text)
         var = _guess_symbol(expr)
-        if m.group(2) and m.group(3):
-            a, b = parse_expression(m.group(2)), parse_expression(m.group(3))
+        if m.group(2) and bound_b:
+            a, b = parse_expression(m.group(2)), parse_expression(bound_b)
             val = integrate(expr, (var, a, b))
-            return {
+            out = {
                 "type": "calculus",
                 "op": "definite_integral",
                 "answer": fmt(val),
@@ -269,6 +366,17 @@ def solve_calculus(question: str):
                 "steps": _integral_steps(expr, var, (a, b)),
                 "latex": sp.latex(val),
             }
+            if wants_graph:
+                try:
+                    from .plotting import solve_plot_area
+                    out["image"] = solve_plot_area(expr, var, a, b)
+                    out["steps"] = out["steps"] + [
+                        "The shaded region in the graph is exactly "
+                        "this area under the curve."
+                    ]
+                except Exception:
+                    pass
+            return out
         val = integrate(expr, var)
         return {
             "type": "calculus",

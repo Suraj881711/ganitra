@@ -1,11 +1,39 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import (Flask, Response, render_template, request, redirect,
+                   session, url_for, flash)
 from api import api_bp
-from solver.practice import generate_practice
+from solver.practice import (QUIZ_DIFFICULTIES, QUIZ_QUESTION_COUNT,
+                             QUIZ_SECONDS_PER_QUESTION, QUIZ_TOPICS,
+                             check_quiz_answer, generate_practice,
+                             generate_quiz)
 from solver.router import solve_question
+
+_HISTORY_LIMIT = 30
+
+
+def _solution_text(question, result):
+    lines = [f"Question: {question}", ""]
+    label = result.get("type", "")
+    if result.get("op"):
+        label = f"{label} · {result['op']}".strip(" ·")
+    lines.append(f"Topic: {label}" if label else "Topic: -")
+    lines.append(f"Answer: {result.get('answer', '')}")
+    steps = result.get("steps") or []
+    if steps:
+        lines.append("")
+        lines.append("Step-by-step solution:")
+        for i, step in enumerate(steps, 1):
+            lines.append(f"{i}. {step}")
+    if result.get("interpreted_as"):
+        lines.append("")
+        lines.append(f"(Understood as: {result['interpreted_as']})")
+    lines.append("")
+    lines.append("— Solved by Ganitra (Flask + SymPy)")
+    return "\n".join(lines)
+
 
 def create_app():
     app = Flask(__name__)
-    app.secret_key = "change-this-key"  # for flash messages
+    app.secret_key = "change-this-key"  # for flash messages + session
 
     # Register API blueprint
     app.register_blueprint(api_bp, url_prefix="/api")
@@ -21,12 +49,109 @@ def create_app():
             flash("Please enter a question.")
             return redirect(url_for("index"))
         result = solve_question(question)
-        return render_template("answer.html", question=question, result=result)
+        session["last_question"] = question
+        session["last_result"] = result
+        history = session.get("history", [])
+        history.insert(0, {"question": question, "result": result})
+        session["history"] = history[:_HISTORY_LIMIT]
+        return render_template("answer.html", question=question,
+                               result=result)
+
+    @app.get("/download")
+    def download():
+        question = session.get("last_question")
+        result = session.get("last_result")
+        if not question or not result:
+            flash("Solve a question first, then download its solution.")
+            return redirect(url_for("index"))
+        body = _solution_text(question, result)
+        return Response(
+            body,
+            mimetype="text/plain; charset=utf-8",
+            headers={"Content-Disposition":
+                     "attachment; filename=solution.txt"},
+        )
+
+    @app.get("/history")
+    def history():
+        return render_template(
+            "history.html", entries=session.get("history", []))
+
+    @app.post("/history/clear")
+    def history_clear():
+        session.pop("history", None)
+        return redirect(url_for("history"))
 
     @app.get("/practice")
     def practice():
-        questions = generate_practice(7)
-        return render_template("practice.html", questions=questions)
+        return render_template(
+            "practice.html",
+            questions=None,
+            quiz=None,
+            topics=QUIZ_TOPICS,
+            difficulties=QUIZ_DIFFICULTIES,
+            time_limit=QUIZ_QUESTION_COUNT * QUIZ_SECONDS_PER_QUESTION,
+        )
+
+    @app.post("/practice/start")
+    def practice_start():
+        topic = request.form.get("topic", "arithmetic")
+        difficulty = request.form.get("difficulty", "easy")
+        if topic not in QUIZ_TOPICS:
+            topic = "arithmetic"
+        if difficulty not in QUIZ_DIFFICULTIES:
+            difficulty = "easy"
+        items = generate_quiz(topic, difficulty)
+        quiz = {"topic": topic, "difficulty": difficulty,
+                "questions": items}
+        session["quiz"] = quiz
+        return render_template(
+            "practice.html",
+            questions=None,
+            quiz=quiz,
+            topics=QUIZ_TOPICS,
+            difficulties=QUIZ_DIFFICULTIES,
+            time_limit=QUIZ_QUESTION_COUNT * QUIZ_SECONDS_PER_QUESTION,
+        )
+
+    @app.post("/practice/submit")
+    def practice_submit():
+        quiz = session.get("quiz")
+        if not quiz:
+            flash("Start a quiz first.")
+            return redirect(url_for("practice"))
+        rows, score = [], 0
+        for i, item in enumerate(quiz["questions"]):
+            given = request.form.get(f"answer_{i}", "")
+            ok = check_quiz_answer(item["answer"], given)
+            score += 1 if ok else 0
+            rows.append({
+                "question": item["question"],
+                "expected": item["answer"],
+                "given": given,
+                "correct": ok,
+            })
+        session.pop("quiz", None)
+        return render_template(
+            "practice_result.html",
+            rows=rows,
+            score=score,
+            total=len(rows),
+            topic=quiz["topic"],
+            difficulty=quiz["difficulty"],
+            time_taken=request.form.get("time_taken", ""),
+        )
+
+    @app.get("/practice/classic")
+    def practice_classic():
+        return render_template(
+            "practice.html",
+            questions=generate_practice(7),
+            quiz=None,
+            topics=QUIZ_TOPICS,
+            difficulties=QUIZ_DIFFICULTIES,
+            time_limit=QUIZ_QUESTION_COUNT * QUIZ_SECONDS_PER_QUESTION,
+        )
 
     return app
 
@@ -35,5 +160,4 @@ if __name__ == "__main__":
     import os
 
     app = create_app()
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))

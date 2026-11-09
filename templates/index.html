@@ -1,29 +1,82 @@
 {% extends "base.html" %}
 {% block content %}
-  <form method="post" action="/solve" class="card">
-    <label for="q">Enter a math question:</label>
-    <textarea id="q" name="question" rows="4"
-      placeholder="e.g., Solve 2x+3=7, integrate x^2 from 0 to 1, sin 30 ka maan, plot x^2 - 3x + 2"
-      required></textarea>
-    <button type="submit">Solve</button>
-  </form>
+  <section class="hero rise">
+    <div class="hero-logo">🧮</div>
+    <h1>Gani<span class="gold">tra</span></h1>
+    <p class="hero-tag">Ask any maths question — get a clear,
+      step-by-step solution in seconds. Plain English or Hinglish,
+      Class 10 to engineering level.</p>
 
-  <section class="help">
-    <h2>Examples — try any of these</h2>
-    <ul>
-      <li><code>2+2*5</code> · <code>15% of 240</code> · <code>3/4 + 1/2</code></li>
-      <li><code>Solve 2x+3=7</code> · <code>x^2 - 5x + 6 = 0</code> · <code>x + y = 10 and x - y = 4</code></li>
-      <li><code>factor x^2 - 5x + 6</code> · <code>expand (x+2)(x+3)</code> · <code>2x + 3 &gt; 7</code></li>
-      <li><code>log base 2 of 32</code> · <code>sin 30</code> · <code>prove sin^2(x) + cos^2(x) = 1</code></li>
-      <li><code>derivative of x^3 + 2x</code> · <code>Integrate x^2 from 0 to 1</code> · <code>limit x-&gt;0 of sin(x)/x</code></li>
-      <li><code>determinant of [[1,2],[3,4]]</code> · <code>eigenvalues of [[2,0],[0,3]]</code></li>
-      <li><code>area of circle with radius 5</code> · <code>distance between (1,2) and (4,6)</code></li>
-      <li><code>mean of 2, 4, 6, 8</code> · <code>probability of getting a 6 on a dice</code> · <code>C(5,2)</code></li>
-      <li><code>Is 97 prime?</code> · <code>gcd of 12 and 18</code> · <code>17 mod 5</code></li>
-      <li><code>10th term of AP 2, 5, 8</code> · <code>(2+3i)*(1-i)</code> · <code>{1,2,3} union {3,4,5}</code></li>
-      <li><code>convert 5 km to miles</code> · <code>plot x^2 - 3x + 2</code></li>
-      <li>Hinglish: <code>5 aur 3 ko jodo</code> · <code>240 ka 15 pratishat</code> · <code>sin 30 ka maan</code></li>
-    </ul>
-    <p>Want to practise? Open the <a href="/practice">Practice page</a> for random questions with hidden answers.</p>
+    <form method="post" action="/solve" class="hero-form">
+      <label for="q">Enter a math question:</label>
+      <textarea id="q" name="question" rows="3"
+        placeholder="e.g., Solve 2x+3=7, integrate x^2 from 0 to 1, sin 30 ka maan, plot x^2 - 3x + 2"
+        required></textarea>
+      <button type="submit" class="hero-solve">Solve it →</button>
+    </form>
+
+    <div class="chips" aria-label="Example questions">
+      <button type="button" class="chip">x^2 - 5x + 6 = 0</button>
+      <button type="button" class="chip">derivative of x^3 + 2x</button>
+      <button type="button" class="chip">integrate x^2 from 0 to 1 and show the graph</button>
+      <button type="button" class="chip">normal distribution mean 0 sd 1, P(X &lt; 1)</button>
+      <button type="button" class="chip">Laplace transform of t</button>
+      <button type="button" class="chip">plot x^2 and x+1</button>
+      <button type="button" class="chip">probability of sum 7 with two dice</button>
+      <button type="button" class="chip">sin 30 ka maan</button>
+    </div>
+
+    <div class="new-strip">
+      <span class="new-badge">✨ NEW · Normal · Poisson · Binomial</span>
+      <span class="new-badge">✨ NEW · Laplace transforms</span>
+      <span class="new-badge">✨ NEW · Timed quiz</span>
+      <span class="new-badge">✨ NEW · Two-function graphs</span>
+    </div>
   </section>
+
+  <section class="topics rise rise-2">
+    <h2>Everything it can solve</h2>
+    <p class="sub">17 topic areas — every answer comes with full working.</p>
+    <div class="topic-grid">
+      <div class="topic-card"><div class="ic">➗</div><h3>Arithmetic</h3><p>Fractions, percentages, BODMAS — with reduction steps.</p></div>
+      <div class="topic-card"><div class="ic">✖️</div><h3>Algebra</h3><p>Equations, systems, inequalities, factor, expand, simplify.</p></div>
+      <div class="topic-card"><div class="ic">📈</div><h3>Exponents &amp; Logs</h3><p>Powers, logarithms and log equations.</p></div>
+      <div class="topic-card"><div class="ic">📐</div><h3>Trigonometry</h3><p>Values, identities, equations and inverse trig (degrees by default).</p></div>
+      <div class="topic-card"><div class="ic">∫</div><h3>Calculus</h3><p>Limits, derivatives (partial &amp; implicit), integrals, ODEs.</p></div>
+      <div class="topic-card star"><div class="ic">🔀</div><h3>Transforms &amp; Series</h3><p>Laplace &amp; inverse Laplace, Taylor/Maclaurin series, partial fractions.</p></div>
+      <div class="topic-card"><div class="ic">🔢</div><h3>Linear Algebra</h3><p>Determinant, inverse, eigenvalues, rank, Ax = b.</p></div>
+      <div class="topic-card"><div class="ic">🔷</div><h3>Geometry</h3><p>Areas, volumes and coordinate geometry.</p></div>
+      <div class="topic-card"><div class="ic">🎲</div><h3>Statistics &amp; Probability</h3><p>Mean, median, mode, SD, dice, coins, cards, counting.</p></div>
+      <div class="topic-card star"><div class="ic">📊</div><h3>Distributions</h3><p>Normal (z-scores, percentiles), Poisson and binomial probabilities.</p></div>
+      <div class="topic-card"><div class="ic">#️⃣</div><h3>Number Theory</h3><p>Primes, GCD/LCM with factorisation steps, modulo.</p></div>
+      <div class="topic-card"><div class="ic">🔁</div><h3>Sequences &amp; Series</h3><p>AP/GP terms and sums, natural-number series.</p></div>
+      <div class="topic-card"><div class="ic">ℹ️</div><h3>Complex Numbers</h3><p>Arithmetic, modulus, conjugate, argument.</p></div>
+      <div class="topic-card"><div class="ic">🧮</div><h3>Sets</h3><p>Union, intersection, difference, symmetric difference.</p></div>
+      <div class="topic-card"><div class="ic">🔄</div><h3>Unit Conversion</h3><p>Length, mass, time, volume, area and temperature.</p></div>
+      <div class="topic-card"><div class="ic">📝</div><h3>Word Problems</h3><p>Percent change, speed–distance, simple interest.</p></div>
+      <div class="topic-card star"><div class="ic">📉</div><h3>Graphs</h3><p>Plot one or two functions; shaded area for definite integrals.</p></div>
+    </div>
+  </section>
+
+  <section class="how rise rise-3">
+    <h2>How it works</h2>
+    <p class="sub">Three steps, no sign-up.</p>
+    <div class="how-grid">
+      <div class="how-card"><span class="n">1</span><h3>Type your question</h3><p>Plain English or Hinglish — “240 ka 15 pratishat” works too.</p></div>
+      <div class="how-card"><span class="n">2</span><h3>See every step</h3><p>The solver shows the full working, not just the final answer.</p></div>
+      <div class="how-card"><span class="n">3</span><h3>Save &amp; practise</h3><p>Download the solution as a .txt file, revisit it in History, or take a timed quiz in Practice.</p></div>
+    </div>
+  </section>
+
+  <script>
+    (function () {
+      var box = document.getElementById("q");
+      document.querySelectorAll(".chip").forEach(function (chip) {
+        chip.addEventListener("click", function () {
+          box.value = chip.textContent.trim();
+          box.focus();
+        });
+      });
+    })();
+  </script>
 {% endblock %}

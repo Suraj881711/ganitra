@@ -9,6 +9,7 @@ from .algebra import solve_algebra
 from .arithmetic import solve_arithmetic
 from .calculus import solve_calculus
 from .complex_numbers import solve_complex
+from .distributions import solve_distributions
 from .exponents_logs import solve_exponents_logs
 from .geometry import solve_geometry
 from .linear_algebra import solve_linear_algebra
@@ -17,6 +18,7 @@ from .plotting import solve_plot
 from .sequences import solve_sequences
 from .sets_basics import solve_sets
 from .statistics import solve_statistics
+from .transforms import solve_transforms
 from .trigonometry import solve_trigonometry
 from .units import solve_units
 from .word_problems import solve_word_problem
@@ -82,7 +84,28 @@ def normalize_hinglish(question: str) -> str:
 def route_intent(question: str) -> str:
     q = question.lower()
 
-    if re.search(r"\b(plot|graph|draw)\b", q):
+    # Probability distributions (before statistics: "binomial" with
+    # n=/p= belongs here, plain probability stories stay statistics).
+    if "poisson" in q or "normal distribution" in q \
+            or "z-score" in q or "z score" in q:
+        return "distributions"
+    if "binomial" in q and re.search(r"\bn\s*=", q) and \
+            re.search(r"\bp\s*=", q):
+        return "distributions"
+    if re.search(r"\bpercentile\b", q) and re.search(
+            r"(mean|sd|sigma|standard deviation)", q):
+        return "distributions"
+
+    # Transforms & series (before calculus/algebra: "series" and
+    # "partial fractions" would otherwise fall through).
+    if "laplace" in q or "partial fraction" in q or \
+            re.search(r"\b(taylor|maclaurin)\b", q) or \
+            re.search(r"series\s+expansion", q) or \
+            re.search(r"expansion\s+of", q):
+        return "transforms"
+
+    if re.search(r"\b(plot|graph|draw)\b", q) and not re.search(
+            r"\bintegrat", q):
         return "plot"
 
     # Unit conversion: explicit "convert" is handled in solve_question via
@@ -95,10 +118,13 @@ def route_intent(question: str) -> str:
 
     # Calculus. Word boundaries so words like "derivative" are not
     # mangled mid-word by solvers ("deriv" must not eat "derivative").
+    # Also catch "integrate ... and show the graph" style requests
+    # and d2y/dx2-style second-order ODE notation.
     if re.search(
-            r"(dy/dx|y\'|differential|dsolve|derivative|differentiate|"
-            r"integration|integral|integrate|\blimit\b|\blim\b|d/d|"
-            r"partial)", q):
+            r"(dy/dx|d2y|y\'|differential|dsolve|derivative|"
+            r"differentiate|integration|integral|integrate|"
+            r"\blimit\b|\blim\b|d/d|partial)", q) or re.search(
+            r"\bintegrat\w*\b.+\b(graph|shade|plot)\b", q):
         return "calculus"
 
     # Linear algebra
@@ -197,15 +223,20 @@ _SOLVERS = {
     "sets": solve_sets,
     "exponents_logs": solve_exponents_logs,
     "plot": solve_plot,
+    "distributions": solve_distributions,
+    "transforms": solve_transforms,
 }
 
 _TOPICS = (
     "arithmetic & percentages, algebra (equations, systems, "
     "inequalities, factor/expand/simplify), exponents & logarithms, "
-    "trigonometry, calculus (limits, derivatives, integrals, basic "
-    "ODEs), linear algebra (matrices), geometry & coordinate geometry, "
-    "statistics & probability, number theory, sequences & series, "
-    "complex numbers, sets, unit conversion, word problems and graphs"
+    "trigonometry, calculus (limits, derivatives, integrals, ODEs "
+    "incl. second-order and initial conditions), Laplace transforms "
+    "and series, linear algebra (matrices), geometry & coordinate "
+    "geometry, statistics & probability (incl. normal, Poisson and "
+    "binomial distributions), number theory, sequences & series, "
+    "complex numbers, sets, unit conversion, word problems and graphs "
+    "(one or two functions, shaded integral area)"
 )
 
 

@@ -1,1 +1,1 @@
-"""Maths GPT solver package: routing + topic solvers (SymPy powered)."""
+"""Ganitra solver package: routing + topic solvers (SymPy powered)."""

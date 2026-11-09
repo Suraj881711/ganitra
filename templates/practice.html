@@ -1,19 +1,84 @@
 {% extends "base.html" %}
 {% block content %}
   <div class="card">
-    <h2>Practice questions</h2>
-    <p class="muted">Try each question yourself first, then reveal the answer.
-      Reload the page for a fresh set.</p>
-    {% for item in questions %}
-      <div class="practice-q">
-        <p><strong>Q{{ loop.index }}.</strong> {{ item.question }}</p>
-        <details>
-          <summary>Show answer</summary>
-          <p class="answer-big">{{ item.answer }}</p>
-        </details>
-      </div>
-    {% endfor %}
-    <a class="back" href="/practice">↻ New set</a>
+    <h2>Timed quiz 🎯</h2>
+    <p class="muted">Pick a topic and difficulty — you get
+      {{ 5 }} questions and {{ time_limit }} seconds on the clock.
+      Answers are checked when you submit.</p>
+
+    <form method="post" action="/practice/start" class="quiz-setup">
+      <label for="topic">Topic</label>
+      <select id="topic" name="topic">
+        {% for t in topics %}
+          <option value="{{ t }}" {% if quiz and quiz.topic == t %}selected{% endif %}>{{ t|capitalize }}</option>
+        {% endfor %}
+      </select>
+      <label for="difficulty">Difficulty</label>
+      <select id="difficulty" name="difficulty">
+        {% for d in difficulties %}
+          <option value="{{ d }}" {% if quiz and quiz.difficulty == d %}selected{% endif %}>{{ d|capitalize }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">{{ "Restart quiz" if quiz else "Start quiz" }}</button>
+    </form>
+
+    {% if quiz %}
+      <div class="quiz-timer">⏱ Time left: <span id="timer">{{ time_limit }}</span>s</div>
+      <form method="post" action="/practice/submit" id="quiz-form">
+        <input type="hidden" name="time_taken" id="time-taken" value="" />
+        {% for item in quiz.questions %}
+          <div class="practice-q">
+            <p><strong>Q{{ loop.index }}.</strong> {{ item.question }}</p>
+            <input type="text" name="answer_{{ loop.index0 }}"
+                   placeholder="Your answer" autocomplete="off" />
+          </div>
+        {% endfor %}
+        <button type="submit">Submit answers</button>
+      </form>
+      <script>
+        (function () {
+          var left = {{ time_limit }};
+          var start = Date.now();
+          var el = document.getElementById("timer");
+          var tick = setInterval(function () {
+            left -= 1;
+            if (el) el.textContent = Math.max(left, 0);
+            if (left <= 0) {
+              clearInterval(tick);
+              document.getElementById("time-taken").value =
+                Math.round((Date.now() - start) / 1000);
+              document.getElementById("quiz-form").submit();
+            }
+          }, 1000);
+          document.getElementById("quiz-form").addEventListener(
+            "submit", function () {
+              document.getElementById("time-taken").value =
+                Math.round((Date.now() - start) / 1000);
+            });
+        })();
+      </script>
+    {% endif %}
+
+    {% if questions %}
+      <h2>Practice questions</h2>
+      <p class="muted">Try each question yourself first, then reveal the
+        answer. Reload the page for a fresh set.</p>
+      {% for item in questions %}
+        <div class="practice-q">
+          <p><strong>Q{{ loop.index }}.</strong> {{ item.question }}</p>
+          <details>
+            <summary>Show answer</summary>
+            <p class="answer-big">{{ item.answer }}</p>
+          </details>
+        </div>
+      {% endfor %}
+      <a class="back" href="/practice/classic">↻ New set</a>
+    {% else %}
+      <p class="muted">Prefer untimed practice?
+        <a href="/practice/classic">Open the classic practice set</a>
+        (answers hidden until you reveal them).</p>
+    {% endif %}
+
     <a class="back" href="/">← Back to solver</a>
   </div>
 {% endblock %}

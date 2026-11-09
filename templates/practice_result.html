@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>Quiz result 🏆</h2>
+    <p class="answer-big">Score: {{ score }} / {{ total }}</p>
+    <p class="muted">{{ topic|capitalize }} · {{ difficulty|capitalize }}
+      {% if time_taken %}· finished in {{ time_taken }}s{% endif %}</p>
+
+    {% for row in rows %}
+      <div class="practice-q">
+        <p><strong>Q{{ loop.index }}.</strong> {{ row.question }}</p>
+        <p>Your answer:
+          {% if row.correct %}<span class="ok">✔ {{ row.given }}</span>
+          {% else %}<span class="bad">✘ {{ row.given or "(blank)" }}</span>
+          — correct answer: <strong>{{ row.expected }}</strong>{% endif %}
+        </p>
+      </div>
+    {% endfor %}
+
+    <a class="back" href="/practice">↻ New quiz</a>
+    <a class="back" href="/">← Back to solver</a>
+  </div>
+{% endblock %}
