@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - maths-gpt-wave2.zip
+      - ganitra-latest.zip
+      - maths-gpt-wave3.zip
 
 permissions:
   contents: write
@@ -17,13 +18,17 @@ jobs:
       - name: Unzip and stage project
         run: |
           set -e
-          unzip -o maths-gpt-wave2.zip -d _unpacked
+          ZIP_FILE=""
+          if [ -f ganitra-latest.zip ]; then ZIP_FILE=ganitra-latest.zip; elif [ -f maths-gpt-wave3.zip ]; then ZIP_FILE=maths-gpt-wave3.zip; fi
+          if [ -z "$ZIP_FILE" ]; then echo "No project zip found"; ls -la; exit 1; fi
+          echo "Zip file: $ZIP_FILE"
+          unzip -o "$ZIP_FILE" -d _unpacked
           SRC=$(find _unpacked -type f -name app.py -print -quit | xargs -r dirname)
           if [ -z "$SRC" ]; then SRC=_unpacked; fi
           echo "Source dir: $SRC"
           ls -la "$SRC"
           cp -a "$SRC"/. .
-          rm -rf _unpacked maths-gpt-wave2.zip
+          rm -rf _unpacked ganitra-latest.zip maths-gpt-wave3.zip
           find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
           rm -rf .venv venv
           git status --short
@@ -32,5 +37,5 @@ jobs:
           git config user.name "Suraj881711"
           git config user.email "Suraj881711@users.noreply.github.com"
           git add -A
-          git commit -m "Update project to wave 2 (Ganitra)" || echo "nothing to commit"
+          git commit -m "Update project to wave 3 (Ganitra) - photo OCR and voice input" || echo "nothing to commit"
           git push
