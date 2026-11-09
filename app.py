@@ -3,7 +3,6 @@ from api import api_bp
 from solver.practice import generate_practice
 from solver.router import solve_question
 
-
 def create_app():
     app = Flask(__name__)
     app.secret_key = "change-this-key"  # for flash messages
@@ -33,5 +32,8 @@ def create_app():
 
 
 if __name__ == "__main__":
+    import os
+
     app = create_app()
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
