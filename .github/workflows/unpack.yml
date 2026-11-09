@@ -1,0 +1,36 @@
+name: Unpack project zip
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - Advanced_Projects_Suraj.zip
+
+permissions:
+  contents: write
+
+jobs:
+  unpack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unzip and stage maths-gpt
+        run: |
+          set -e
+          unzip -o Advanced_Projects_Suraj.zip -d _unpacked
+          SRC=$(find _unpacked -type d -name maths-gpt -print -quit)
+          if [ -z "$SRC" ]; then SRC=_unpacked; fi
+          echo "Source dir: $SRC"
+          ls -la "$SRC"
+          cp -a "$SRC"/. .
+          rm -rf _unpacked Advanced_Projects_Suraj.zip
+          find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+          rm -rf .venv venv
+          git status --short
+      - name: Commit unpacked project
+        run: |
+          git config user.name "Suraj881711"
+          git config user.email "Suraj881711@users.noreply.github.com"
+          git add -A
+          git commit -m "Add maths-gpt project files" || echo "nothing to commit"
+          git push
