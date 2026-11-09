@@ -90,6 +90,36 @@ in the web UI, through a JSON API, or on the command line.
   practice round, a gentle **Badhai** card celebrates with a
   light pure-CSS confetti burst (no library, no sound, and it
   respects `prefers-reduced-motion`).
+- **🧒 Mera Saathi (Wave 6)** — a friendly optional companion:
+  on the first visit a small card asks *"Tumhara naam kya hai?"*
+  — the student can enter a first name (and optionally a class),
+  or skip it and keep using everything. Once set, the chat
+  welcome bubble greets the student by name, the header shows a
+  small "🧒 Name · Class 8" pill with an Edit option, and quiz
+  remarks speak to the student personally. The tone is always
+  encouraging, never scolding: after wrong answers and on the
+  friendly error card, Ganitra says the localised version of
+  *"Koi baat nahi — galti se hi seekhte hain, ek baar phir try
+  karo!"* The name is cleaned before it is stored (tags stripped,
+  30-character cap, escaped again on render). There is **no
+  login and no database**: the profile lives in the Flask
+  session and is mirrored in the browser's `localStorage`.
+- **👨‍👩‍👧 Parent Report (Wave 6)** — `/parent-report` (linked as
+  "For Parents" in the nav and footer) builds a calm report
+  from data the app already tracks: how many questions are in
+  this session's history, today's Dhyaan record (minutes
+  studied + questions solved today, read from this browser's
+  `localStorage`), the Mistake Notebook (how many questions are
+  waiting, and their topics), the last test report (score +
+  topics where marks were lost), and a simple **star** summary
+  — the rule is stated on the page: **1 star for every 5
+  questions in the session history, plus 1 star for each test
+  scored at 80% or more**. A **📤 Share on WhatsApp** button
+  opens WhatsApp with the same numbers as a short prefilled
+  text. Honest scope, also stated on the page: the report
+  covers **this device and browser only** (this session + the
+  record stored here) — there is no account system yet, so it
+  is the child's activity on this phone, not a cloud record.
 - **Board Mode** 📚 — `/board`: pick a board (CBSE, ICSE, MP Board,
   Rajasthan Board, UP Board, or Other State Board) and a class
   (6–12), then open any **NCERT maths chapter** for untimed practice
@@ -230,7 +260,8 @@ python verify_wave2.py  # wave-2 samples (distributions, ODEs,
 app.py                  Flask app (/, /solve, /chat API history,
                         /practice + timed quiz, /board Board Mode,
                         /mistakes, /history, /download,
-                        /solution/print, /set-lang/<code>)
+                        /solution/print, /set-lang/<code>,
+                        /saathi, /parent-report)
 api.py                  JSON API blueprint (/api/solve)
 board_data.py           NCERT chapter lists for Classes 6-12, each
                         chapter mapped to a practice topic
@@ -275,6 +306,9 @@ verify_wave5.py         wave-5 verification: chat homepage, Board Mode,
 verify_wave5b.py        wave-5b/5d/5e verification: friendly errors,
                         Copy Style (handwriting), Copy Check, Dhyaan
                         meter + Badhai (not part of the app)
+verify_wave6.py         wave-6 verification: Mera Saathi (personal
+                        greeting, encouragement, XSS-safe name) and
+                        the Parent Report (not part of the app)
 ```
 
 ## Notes & honest limits
@@ -324,3 +358,11 @@ verify_wave5b.py        wave-5b/5d/5e verification: friendly errors,
   visible in this browser, and solves done in this browser; it is
   a gentle study diary, not a proctored record. The Copy Check
   compares final answers only.
+- **Mera Saathi and the Parent Report are device/session-based
+  too**: the Saathi name/class live in the Flask session and in
+  this browser's `localStorage` (no account, no server database),
+  and the Parent Report is assembled from this session plus this
+  browser's stored Dhyaan record — clearing the browser data or
+  switching phones starts both from zero. The session history
+  behind the report is also capped (30 entries), so the report
+  is a friendly family summary, not an official record.

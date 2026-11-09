@@ -52,6 +52,20 @@ def api_solve():
         # Wave 5b: the friendly error contract for the chat — the
         # client renders the localised error card + Retry in a
         # Ganitra bubble. No raw solver text leaves the server.
+        # Wave 6: the same gentle card also carries the personal
+        # Mera Saathi encouragement line (named when a name is set).
+        saathi_name = session.get("saathi_name", "")
+        if not isinstance(saathi_name, str):
+            saathi_name = ""
+        saathi_name = saathi_name[:30]
+        if saathi_name:
+            try:
+                encouragement = strings[
+                    "error_encourage_name"].format(name=saathi_name)
+            except (IndexError, KeyError, ValueError):
+                encouragement = strings["error_encourage_name"]
+        else:
+            encouragement = strings["error_encourage"]
         return jsonify({
             "ok": False,
             "unsolvable": True,
@@ -59,6 +73,7 @@ def api_solve():
             "error": {
                 "heading": strings["error_heading"],
                 "intro": strings["error_intro"],
+                "encouragement": encouragement,
                 "tips": [strings["error_tip1"], strings["error_tip2"],
                          strings["error_tip3"]],
                 "retry_label": strings["error_retry_btn"],

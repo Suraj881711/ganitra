@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card parent-report" id="parent-report"
+       data-history-count="{{ history_count }}"
+       data-mistakes-count="{{ mistakes_count }}"
+       data-total-stars="{{ total_stars }}">
+    <h2>{{ t.parent_heading }}</h2>
+    {% if saathi_name %}
+      <p class="muted">{{ t.parent_intro_name.format(name=saathi_name) }}</p>
+      <p><strong>{{ t.parent_student_label }}:</strong> {{ saathi_name }}{% if saathi_class %} · {{ t.saathi_class_word }} {{ saathi_class }}{% endif %}</p>
+    {% else %}
+      <p class="muted">{{ t.parent_intro }}</p>
+    {% endif %}
+
+    <div class="parent-grid">
+      <section class="report-card">
+        <h3>{{ t.parent_solved_label }}</h3>
+        <p class="report-number" id="parent-session-count">{{ history_count }}</p>
+      </section>
+
+      <section class="report-card">
+        <h3>{{ t.parent_today_heading }}</h3>
+        <p class="muted" id="parent-record-status">{{ t.parent_record_loading }}</p>
+        <p>{{ t.parent_minutes_label }}:
+          <strong class="report-inline-number" id="parent-minutes">0</strong></p>
+        <p>{{ t.parent_today_questions_label }}:
+          <strong class="report-inline-number" id="parent-today-count">0</strong></p>
+      </section>
+
+      <section class="report-card">
+        <h3>{{ t.parent_mistakes_heading }}</h3>
+        <p>{{ t.parent_mistakes_count_label }}:
+          <strong class="report-inline-number" id="parent-mistakes-count">{{ mistakes_count }}</strong></p>
+        <p><strong>{{ t.parent_topics_label }}:</strong></p>
+        {% if mistake_topics %}
+          <ul class="report-list">
+            {% for topic in mistake_topics %}<li>{{ topic }}</li>{% endfor %}
+          </ul>
+        {% else %}
+          <p class="muted">{{ t.parent_none }}</p>
+        {% endif %}
+      </section>
+
+      <section class="report-card">
+        <h3>{{ t.parent_last_test_heading }}</h3>
+        {% if last_report %}
+          <p>{{ t.parent_last_test_label }}:
+            <strong class="report-inline-number" id="parent-last-score">{{ last_score_text }}</strong></p>
+          <p class="copycheck-remark">{{ t[last_report.remark_key] }}</p>
+          <p><strong>{{ t.parent_topics_label }}:</strong>
+            {% if last_report.lost_topics %}{{ last_report.lost_topics | join(", ") }}{% else %}{{ t.parent_none }}{% endif %}</p>
+        {% else %}
+          <p class="muted" id="parent-last-score">{{ t.parent_last_test_none }}</p>
+        {% endif %}
+      </section>
+    </div>
+
+    <section class="report-card stars-card">
+      <h3>{{ t.parent_stars_heading }}</h3>
+      <p class="report-number" id="parent-stars">{{ t.parent_stars_count.format(stars=total_stars) }}</p>
+      <p class="muted">{{ t.parent_stars_rule }}</p>
+    </section>
+
+    <p class="parent-note">{{ t.parent_scope_note }}</p>
+    <p>
+      <a class="whatsapp-btn" id="parent-whatsapp" href="#"
+         target="_blank" rel="noopener">{{ t.parent_share_btn }}</a>
+    </p>
+    <a class="back" href="/">{{ t.back_to_solver }}</a>
+  </div>
+
+  <script>
+    /* Parent Report (Wave 6): today's minutes/questions live only
+       in this browser's Dhyaan localStorage record, so the page
+       fills those two numbers in here and builds the WhatsApp share
+       text from exactly the numbers shown on the page. */
+    (function () {
+      var REPORT = {
+        name: {{ (saathi_name or "") | tojson }},
+        sessionSolved: {{ history_count | tojson }},
+        lastScore: {{ (last_score_text or t.parent_last_test_none) | tojson }},
+        stars: {{ total_stars | tojson }},
+        labels: {
+          heading: {{ t.parent_heading | tojson }},
+          student: {{ t.parent_student_label | tojson }},
+          solved: {{ t.parent_solved_label | tojson }},
+          minutes: {{ t.parent_minutes_label | tojson }},
+          todayQuestions: {{ t.parent_today_questions_label | tojson }},
+          lastScore: {{ t.parent_last_test_label | tojson }},
+          starsCount: {{ t.parent_stars_count | tojson }}
+        }
+      };
+      function dayKey() {
+        var d = new Date();
+        return "ganitra-dhyaan-" + d.getFullYear() + "-"
+          + (d.getMonth() + 1) + "-" + d.getDate();
+      }
+      var record = { seconds: 0, count: 0 };
+      try {
+        var raw = window.localStorage.getItem(dayKey());
+        if (raw) record = JSON.parse(raw) || record;
+      } catch (e) { /* no stored record: today simply shows zero */ }
+      var minutes = Math.floor((record.seconds || 0) / 60);
+      var todayCount = record.count || 0;
+      var minutesEl = document.getElementById("parent-minutes");
+      var countEl = document.getElementById("parent-today-count");
+      var statusEl = document.getElementById("parent-record-status");
+      if (minutesEl) minutesEl.textContent = String(minutes);
+      if (countEl) countEl.textContent = String(todayCount);
+      if (statusEl) statusEl.style.display = "none";
+
+      var lines = [REPORT.labels.heading];
+      if (REPORT.name) {
+        lines.push(REPORT.labels.student + ": " + REPORT.name);
+      }
+      lines.push(REPORT.labels.solved + ": "
+        + String(REPORT.sessionSolved));
+      lines.push(REPORT.labels.minutes + ": " + String(minutes));
+      lines.push(REPORT.labels.todayQuestions + ": "
+        + String(todayCount));
+      lines.push(REPORT.labels.lastScore + ": " + REPORT.lastScore);
+      lines.push(REPORT.labels.starsCount.replace(
+        "{stars}", String(REPORT.stars)));
+      var share = document.getElementById("parent-whatsapp");
+      if (share) {
+        share.href = "https://wa.me/?text="
+          + encodeURIComponent(lines.join("\n"));
+      }
+    })();
+  </script>
+{% endblock %}

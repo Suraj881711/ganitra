@@ -5,9 +5,42 @@
     <h1>Gani<span class="gold">tra</span></h1>
     <p class="hero-tag">{{ t.hero_tag }}</p>
 
+    {% if saathi_edit or (not saathi_name and not saathi_skipped) %}
+      <section class="saathi-card" id="saathi-card">
+        <h2>{{ t.saathi_card_heading }}</h2>
+        <p>{{ t.saathi_card_text }}</p>
+        <form method="post" action="/saathi" class="saathi-form"
+              id="saathi-form">
+          <input type="hidden" name="next" value="/" />
+          <div class="saathi-fields">
+            <label>{{ t.saathi_name_label }}
+              <input type="text" name="name" maxlength="30"
+                     autocomplete="given-name"
+                     value="{{ saathi_name }}"
+                     placeholder="{{ t.saathi_name_placeholder }}" />
+            </label>
+            <label>{{ t.saathi_class_label }}
+              <select name="class">
+                <option value="">{{ t.saathi_class_any }}</option>
+                {% for n in range(1, 13) %}
+                  <option value="{{ n }}" {% if saathi_class == n %}selected{% endif %}>{{ t.saathi_class_word }} {{ n }}</option>
+                {% endfor %}
+              </select>
+            </label>
+          </div>
+          <div class="saathi-actions">
+            <button type="submit" name="action" value="save"
+                    class="hero-solve saathi-save">{{ t.saathi_save_btn }}</button>
+            <button type="submit" name="action" value="skip"
+                    class="tool-btn" formnovalidate>{{ t.saathi_skip_btn }}</button>
+          </div>
+        </form>
+      </section>
+    {% endif %}
+
     <div class="chat-wrap">
       <div class="chat-log" id="chat-log" aria-live="polite">
-        <div class="bubble bot"><p>{{ t.chat_welcome }}</p></div>
+        <div class="bubble bot"><p>{{ saathi_greeting }}</p></div>
       </div>
 
       <form method="post" action="/solve" class="chat-form" id="chat-form">
@@ -364,6 +397,12 @@
         var intro = document.createElement("p");
         intro.textContent = (err && err.intro) || CHAT.errorIntro;
         div.appendChild(intro);
+        if (err && err.encouragement) {
+          var encourage = document.createElement("p");
+          encourage.className = "encourage-line";
+          encourage.textContent = err.encouragement;
+          div.appendChild(encourage);
+        }
         var tips = (err && err.tips) || CHAT.errorTips;
         var ul = document.createElement("ul");
         ul.className = "error-tips";
@@ -524,6 +563,81 @@
           .catch(function () {
             say(L.js_photo_error);
           });
+      });
+    })();
+  </script>
+  <script>
+    /* Mera Saathi (Wave 6): mirror the optional name/class between
+       the Flask session (server-rendered greeting and header pill)
+       and this browser's localStorage. The server value wins; a
+       name saved only in this browser is offered back to the server
+       once, so the greeting can be personalised on the next load. */
+    (function () {
+      var KEY = "ganitra-saathi";
+      var serverName = {{ (saathi_name or "") | tojson }};
+      var serverClass = {{ (saathi_class or "") | tojson }};
+      var serverSkipped = {{ saathi_skipped | tojson }};
+      var serverEdit = {{ saathi_edit | tojson }};
+      function load() {
+        try {
+          var raw = window.localStorage.getItem(KEY);
+          return raw ? JSON.parse(raw) : null;
+        } catch (e) { return null; }
+      }
+      function save(value) {
+        try {
+          window.localStorage.setItem(KEY, JSON.stringify(value));
+        } catch (e) { /* private mode: session still works */ }
+      }
+      if (serverName) {
+        save({ name: serverName, class: serverClass || "" });
+        return;
+      }
+      var form = document.getElementById("saathi-form");
+      if (!form) {
+        if (serverSkipped) save({ skipped: true });
+        return;
+      }
+      if (serverSkipped && !serverEdit) {
+        save({ skipped: true });
+        form.style.display = "none";
+        return;
+      }
+      var stored = load();
+      if (stored && stored.skipped && !serverEdit) {
+        var card = document.getElementById("saathi-card");
+        if (card) card.style.display = "none";
+        return;
+      }
+      var nameInput = form.querySelector('[name="name"]');
+      var classInput = form.querySelector('[name="class"]');
+      if (stored && stored.name && !serverEdit) {
+        if (nameInput) nameInput.value = stored.name;
+        if (classInput && stored.class) {
+          classInput.value = String(stored.class);
+        }
+        try {
+          if (!window.sessionStorage.getItem("ganitra-saathi-synced")) {
+            window.sessionStorage.setItem(
+              "ganitra-saathi-synced", "1");
+            var saveBtn = form.querySelector('[value="save"]');
+            if (saveBtn) form.requestSubmit(saveBtn);
+            else form.requestSubmit();
+          }
+        } catch (e) { /* if syncing fails, the filled form remains */ }
+      }
+      form.addEventListener("submit", function (ev) {
+        var action = ev.submitter ? ev.submitter.value : "save";
+        if (action === "skip") {
+          save({ skipped: true });
+          return;
+        }
+        var name = nameInput ? nameInput.value.trim().slice(0, 30)
+                             : "";
+        if (name) {
+          save({ name: name,
+                 class: classInput ? classInput.value : "" });
+        }
       });
     })();
   </script>

@@ -2693,3 +2693,363 @@ def remark_key_for(score, total):
     if ratio >= 0.4:
         return "remark_keep"
     return "remark_try"
+
+
+# ---------------------------------------------------------------------------
+# Wave 6: Mera Saathi (optional first name + class, friendly personal
+# greeting and never-scolding encouragement) and the Parent Report
+# (this device/session only). Every key exists in all 6 languages.
+# ---------------------------------------------------------------------------
+
+_EN_W6 = {
+    "saathi_card_heading": "🧒 Mera Saathi",
+    "saathi_card_text": "Tell Ganitra your first name, and it will "
+                        "greet you like a friend. This is optional — "
+                        "you can skip it and keep learning.",
+    "saathi_name_label": "Your first name",
+    "saathi_name_placeholder": "e.g. Aarav",
+    "saathi_class_label": "Class (optional)",
+    "saathi_class_any": "No class selected",
+    "saathi_class_word": "Class",
+    "saathi_save_btn": "Save — let's learn",
+    "saathi_skip_btn": "Skip for now",
+    "saathi_edit": "Edit",
+    "saathi_welcome_name": "Hello {name}! What shall we solve today?",
+    "saathi_wrong_name": "No problem, {name} — mistakes are how we "
+                         "learn. Look at the correct answer once, "
+                         "then try again!",
+    "saathi_wrong": "No problem — mistakes are how we learn. Look at "
+                    "the correct answer once, then try again!",
+    "error_encourage_name": "Don't give up, {name} — try once more "
+                            "with the tips below.",
+    "error_encourage": "Don't give up — try once more with the tips "
+                       "below.",
+    "nav_parents": "For Parents",
+    "parent_heading": "👨‍👩‍👧 Parent Report",
+    "parent_intro_name": "A calm summary of {name}'s learning on "
+                         "Ganitra.",
+    "parent_intro": "A calm summary of your child's learning on "
+                    "Ganitra.",
+    "parent_student_label": "Student",
+    "parent_solved_label": "Questions in this session's history",
+    "parent_today_heading": "Today on this device",
+    "parent_minutes_label": "Minutes studied today",
+    "parent_today_questions_label": "Questions solved today",
+    "parent_record_loading": "Reading today's record from this "
+                             "device…",
+    "parent_mistakes_heading": "Mistake Notebook",
+    "parent_mistakes_count_label": "Questions waiting to practise",
+    "parent_topics_label": "Topics",
+    "parent_none": "None yet",
+    "parent_last_test_heading": "Last test",
+    "parent_last_test_label": "Last test score",
+    "parent_last_test_none": "No test has been completed in this "
+                             "session yet.",
+    "parent_stars_heading": "Stars & progress",
+    "parent_stars_count": "{stars} stars",
+    "parent_stars_rule": "How stars are counted: 1 star for every 5 "
+                         "questions in this session's history, plus "
+                         "1 star for each test scored at 80% or more.",
+    "parent_scope_note": "Please note: this report is made on this "
+                         "device and browser. It covers this session "
+                         "and today's record stored here — there is "
+                         "no account or cloud record yet, so activity "
+                         "on another phone will not appear here.",
+    "parent_share_btn": "📤 Share on WhatsApp",
+}
+
+_HI_W6 = {
+    "saathi_card_heading": "🧒 मेरा साथी",
+    "saathi_card_text": "अपना पहला नाम बताइए, Ganitra आपको दोस्त की "
+                        "तरह बुलाएगा। यह वैकल्पिक है — आप इसे "
+                        "छोड़कर भी पढ़ाई जारी रख सकते हैं।",
+    "saathi_name_label": "आपका पहला नाम",
+    "saathi_name_placeholder": "जैसे आरव",
+    "saathi_class_label": "कक्षा (वैकल्पिक)",
+    "saathi_class_any": "कोई कक्षा नहीं चुनी",
+    "saathi_class_word": "कक्षा",
+    "saathi_save_btn": "सहेजें — चलिए सीखते हैं",
+    "saathi_skip_btn": "अभी छोड़ें",
+    "saathi_edit": "बदलें",
+    "saathi_welcome_name": "नमस्ते {name}! आज क्या हल करें?",
+    "saathi_wrong_name": "कोई बात नहीं, {name} — गलतियों से ही सीखते "
+                         "हैं। सही उत्तर एक बार देखें, फिर फिर से "
+                         "कोशिश करें!",
+    "saathi_wrong": "कोई बात नहीं — गलतियों से ही सीखते हैं। सही "
+                    "उत्तर एक बार देखें, फिर फिर से कोशिश करें!",
+    "error_encourage_name": "हार मत मानो, {name} — नीचे दिए सुझावों "
+                            "के साथ एक बार फिर कोशिश करो।",
+    "error_encourage": "हार मत मानो — नीचे दिए सुझावों के साथ एक बार "
+                       "फिर कोशिश करो।",
+    "nav_parents": "माता-पिता के लिए",
+    "parent_heading": "👨‍👩‍👧 अभिभावक रिपोर्ट",
+    "parent_intro_name": "{name} की Ganitra पर पढ़ाई का शांत सारांश।",
+    "parent_intro": "आपके बच्चे की Ganitra पर पढ़ाई का शांत सारांश।",
+    "parent_student_label": "छात्र",
+    "parent_solved_label": "इस सत्र के इतिहास में प्रश्न",
+    "parent_today_heading": "आज इस डिवाइस पर",
+    "parent_minutes_label": "आज पढ़ाई के मिनट",
+    "parent_today_questions_label": "आज हल किए गए प्रश्न",
+    "parent_record_loading": "इस डिवाइस से आज का रिकॉर्ड पढ़ा जा रहा "
+                             "है…",
+    "parent_mistakes_heading": "गलतियों की कॉपी",
+    "parent_mistakes_count_label": "अभ्यास के लिए बचे प्रश्न",
+    "parent_topics_label": "विषय",
+    "parent_none": "अभी कोई नहीं",
+    "parent_last_test_heading": "पिछली परीक्षा",
+    "parent_last_test_label": "पिछली परीक्षा का अंक",
+    "parent_last_test_none": "इस सत्र में अभी कोई परीक्षा पूरी नहीं "
+                             "हुई है।",
+    "parent_stars_heading": "सितारे और प्रगति",
+    "parent_stars_count": "{stars} सितारे",
+    "parent_stars_rule": "सितारे ऐसे गिने जाते हैं: इस सत्र के इतिहास "
+                         "में हर 5 प्रश्नों पर 1 सितारा, और 80% या "
+                         "अधिक अंक वाली हर परीक्षा पर 1 सितारा।",
+    "parent_scope_note": "कृपया ध्यान दें: यह रिपोर्ट इसी डिवाइस और "
+                         "ब्राउज़र पर बनी है। इसमें यह सत्र और यहाँ "
+                         "सहेजा आज का रिकॉर्ड शामिल है — अभी कोई खाता "
+                         "या क्लाउड रिकॉर्ड नहीं है, इसलिए दूसरे फ़ोन "
+                         "की गतिविधि यहाँ नहीं दिखेगी।",
+    "parent_share_btn": "📤 WhatsApp पर साझा करें",
+}
+
+_BN_W6 = {
+    "saathi_card_heading": "🧒 আমার সাথি",
+    "saathi_card_text": "Ganitra-কে তোমার প্রথম নাম বলো, সে তোমাকে "
+                        "বন্ধুর মতো ডাকবে। এটি ঐচ্ছিক — এড়িয়ে "
+                        "গিয়েও শেখা চালিয়ে যেতে পারো।",
+    "saathi_name_label": "তোমার প্রথম নাম",
+    "saathi_name_placeholder": "যেমন আরভ",
+    "saathi_class_label": "শ্রেণি (ঐচ্ছিক)",
+    "saathi_class_any": "কোনো শ্রেণি বাছা হয়নি",
+    "saathi_class_word": "শ্রেণি",
+    "saathi_save_btn": "সংরক্ষণ করো — চলো শিখি",
+    "saathi_skip_btn": "এখন এড়িয়ে যাও",
+    "saathi_edit": "বদলাও",
+    "saathi_welcome_name": "নমস্কার {name}! আজ কী সমাধান করব?",
+    "saathi_wrong_name": "কোনো সমস্যা নেই, {name} — ভুল থেকেই আমরা "
+                         "শিখি। সঠিক উত্তরটি একবার দেখে আবার চেষ্টা "
+                         "করো!",
+    "saathi_wrong": "কোনো সমস্যা নেই — ভুল থেকেই আমরা শিখি। সঠিক "
+                    "উত্তরটি একবার দেখে আবার চেষ্টা করো!",
+    "error_encourage_name": "হাল ছেড়ো না, {name} — নীচের পরামর্শসহ "
+                            "আরেকবার চেষ্টা করো।",
+    "error_encourage": "হাল ছেড়ো না — নীচের পরামর্শসহ আরেকবার চেষ্টা "
+                       "করো।",
+    "nav_parents": "অভিভাবকদের জন্য",
+    "parent_heading": "👨‍👩‍👧 অভিভাবক প্রতিবেদন",
+    "parent_intro_name": "{name}-এর Ganitra-তে শেখার শান্ত সারাংশ।",
+    "parent_intro": "আপনার সন্তানের Ganitra-তে শেখার শান্ত সারাংশ।",
+    "parent_student_label": "শিক্ষার্থী",
+    "parent_solved_label": "এই সেশনের ইতিহাসে প্রশ্ন",
+    "parent_today_heading": "আজ এই ডিভাইসে",
+    "parent_minutes_label": "আজ পড়াশোনার মিনিট",
+    "parent_today_questions_label": "আজ সমাধান করা প্রশ্ন",
+    "parent_record_loading": "এই ডিভাইস থেকে আজকের রেকর্ড পড়া হচ্ছে…",
+    "parent_mistakes_heading": "ভুলের খাতা",
+    "parent_mistakes_count_label": "অনুশীলনের জন্য অপেক্ষমাণ প্রশ্ন",
+    "parent_topics_label": "বিষয়",
+    "parent_none": "এখনও নেই",
+    "parent_last_test_heading": "শেষ পরীক্ষা",
+    "parent_last_test_label": "শেষ পরীক্ষার নম্বর",
+    "parent_last_test_none": "এই সেশনে এখনও কোনো পরীক্ষা শেষ হয়নি।",
+    "parent_stars_heading": "তারা ও অগ্রগতি",
+    "parent_stars_count": "{stars}টি তারা",
+    "parent_stars_rule": "তারা এভাবে গণনা হয়: এই সেশনের ইতিহাসে "
+                         "প্রতি 5টি প্রশ্নে 1টি তারা, এবং 80% বা "
+                         "তার বেশি নম্বর পাওয়া প্রতিটি পরীক্ষায় "
+                         "1টি তারা।",
+    "parent_scope_note": "মনে রাখবেন: এই প্রতিবেদন এই ডিভাইস ও "
+                         "ব্রাউজারেই তৈরি। এতে এই সেশন এবং এখানে "
+                         "সংরক্ষিত আজকের রেকর্ড আছে — এখনও কোনো "
+                         "অ্যাকাউন্ট বা ক্লাউড রেকর্ড নেই, তাই অন্য "
+                         "ফোনের কার্যকলাপ এখানে দেখা যাবে না।",
+    "parent_share_btn": "📤 WhatsApp-এ শেয়ার করুন",
+}
+
+_MR_W6 = {
+    "saathi_card_heading": "🧒 माझा साथी",
+    "saathi_card_text": "Ganitra ला तुझं पहिलं नाव सांग, तो तुला "
+                        "मित्रासारखा हाक मारेल. हे ऐच्छिक आहे — "
+                        "वगळूनही शिकणं सुरू ठेवता येईल.",
+    "saathi_name_label": "तुझं पहिलं नाव",
+    "saathi_name_placeholder": "उदा. आरव",
+    "saathi_class_label": "वर्ग (ऐच्छिक)",
+    "saathi_class_any": "वर्ग निवडलेला नाही",
+    "saathi_class_word": "वर्ग",
+    "saathi_save_btn": "जतन करा — चला शिकूया",
+    "saathi_skip_btn": "आता वगळा",
+    "saathi_edit": "बदला",
+    "saathi_welcome_name": "नमस्कार {name}! आज काय सोडवूया?",
+    "saathi_wrong_name": "काही हरकत नाही, {name} — चुकांमधूनच शिकतो. "
+                         "बरोबर उत्तर एकदा पाहा आणि पुन्हा प्रयत्न "
+                         "करा!",
+    "saathi_wrong": "काही हरकत नाही — चुकांमधूनच शिकतो. बरोबर उत्तर "
+                    "एकदा पाहा आणि पुन्हा प्रयत्न करा!",
+    "error_encourage_name": "हार मानू नकोस, {name} — खालील सूचनांसह "
+                            "पुन्हा एकदा प्रयत्न कर.",
+    "error_encourage": "हार मानू नकोस — खालील सूचनांसह पुन्हा एकदा "
+                       "प्रयत्न कर.",
+    "nav_parents": "पालकांसाठी",
+    "parent_heading": "👨‍👩‍👧 पालक अहवाल",
+    "parent_intro_name": "{name} च्या Ganitra वरील शिकण्याचा शांत "
+                         "सारांश.",
+    "parent_intro": "तुमच्या मुलाच्या Ganitra वरील शिकण्याचा शांत "
+                    "सारांश.",
+    "parent_student_label": "विद्यार्थी",
+    "parent_solved_label": "या सत्राच्या इतिहासातील प्रश्न",
+    "parent_today_heading": "आज या डिव्हाइसवर",
+    "parent_minutes_label": "आज अभ्यासाची मिनिटे",
+    "parent_today_questions_label": "आज सोडवलेले प्रश्न",
+    "parent_record_loading": "या डिव्हाइसवरून आजचा रेकॉर्ड वाचत आहे…",
+    "parent_mistakes_heading": "चुकांची वही",
+    "parent_mistakes_count_label": "सरावासाठी राहिलेले प्रश्न",
+    "parent_topics_label": "विषय",
+    "parent_none": "अजून एकही नाही",
+    "parent_last_test_heading": "शेवटची चाचणी",
+    "parent_last_test_label": "शेवटच्या चाचणीचे गुण",
+    "parent_last_test_none": "या सत्रात अजून एकही चाचणी पूर्ण झालेली "
+                             "नाही.",
+    "parent_stars_heading": "तारे आणि प्रगती",
+    "parent_stars_count": "{stars} तारे",
+    "parent_stars_rule": "तारे असे मोजले जातात: या सत्राच्या "
+                         "इतिहासातील प्रत्येक 5 प्रश्नांसाठी 1 "
+                         "तारा, आणि 80% किंवा अधिक गुण मिळालेल्या "
+                         "प्रत्येक चाचणीसाठी 1 तारा.",
+    "parent_scope_note": "कृपया लक्षात घ्या: हा अहवाल याच डिव्हाइस आणि "
+                         "ब्राउझरवर तयार होतो. यात हे सत्र आणि इथे "
+                         "जतन केलेला आजचा रेकॉर्ड आहे — अजून खाते "
+                         "किंवा क्लाउड रेकॉर्ड नाही, त्यामुळे दुसऱ्या "
+                         "फोनवरील हालचाल इथे दिसणार नाही.",
+    "parent_share_btn": "📤 WhatsApp वर शेअर करा",
+}
+
+_TA_W6 = {
+    "saathi_card_heading": "🧒 என் தோழன்",
+    "saathi_card_text": "உங்கள் முதல் பெயரை Ganitra-விடம் சொல்லுங்கள்; "
+                        "அது உங்களை நண்பரைப் போல அழைக்கும். இது "
+                        "விருப்பமானது — தவிர்த்துவிட்டும் கற்றுக் "
+                        "கொள்ளலாம்.",
+    "saathi_name_label": "உங்கள் முதல் பெயர்",
+    "saathi_name_placeholder": "எ.கா. ஆரவ்",
+    "saathi_class_label": "வகுப்பு (விருப்பம்)",
+    "saathi_class_any": "வகுப்பு தேர்ந்தெடுக்கப்படவில்லை",
+    "saathi_class_word": "வகுப்பு",
+    "saathi_save_btn": "சேமிக்கவும் — கற்றுக் கொள்ளலாம்",
+    "saathi_skip_btn": "இப்போது தவிர்க்கவும்",
+    "saathi_edit": "மாற்றவும்",
+    "saathi_welcome_name": "வணக்கம் {name}! இன்று எதைத் தீர்க்கலாம்?",
+    "saathi_wrong_name": "பரவாயில்லை, {name} — தவறுகளிலிருந்தே "
+                         "கற்றுக்கொள்கிறோம். சரியான விடையை ஒருமுறை "
+                         "பார்த்து மீண்டும் முயற்சிக்கவும்!",
+    "saathi_wrong": "பரவாயில்லை — தவறுகளிலிருந்தே கற்றுக்கொள்கிறோம். "
+                    "சரியான விடையை ஒருமுறை பார்த்து மீண்டும் "
+                    "முயற்சிக்கவும்!",
+    "error_encourage_name": "விட்டுவிடாதீர்கள், {name} — கீழே உள்ள "
+                            "குறிப்புகளுடன் மீண்டும் முயற்சிக்கவும்.",
+    "error_encourage": "விட்டுவிடாதீர்கள் — கீழே உள்ள குறிப்புகளுடன் "
+                       "மீண்டும் முயற்சிக்கவும்.",
+    "nav_parents": "பெற்றோருக்கு",
+    "parent_heading": "👨‍👩‍👧 பெற்றோர் அறிக்கை",
+    "parent_intro_name": "Ganitra-இல் {name} கற்றதின் அமைதியான "
+                         "சுருக்கம்.",
+    "parent_intro": "Ganitra-இல் உங்கள் குழந்தை கற்றதின் அமைதியான "
+                    "சுருக்கம்.",
+    "parent_student_label": "மாணவர்",
+    "parent_solved_label": "இந்த அமர்வின் வரலாற்றில் உள்ள கேள்விகள்",
+    "parent_today_heading": "இன்று இந்த சாதனத்தில்",
+    "parent_minutes_label": "இன்று படித்த நிமிடங்கள்",
+    "parent_today_questions_label": "இன்று தீர்க்கப்பட்ட கேள்விகள்",
+    "parent_record_loading": "இந்த சாதனத்திலிருந்து இன்றைய பதிவைப் "
+                             "படிக்கிறது…",
+    "parent_mistakes_heading": "தவறுகள் குறிப்பேடு",
+    "parent_mistakes_count_label": "பயிற்சிக்காக காத்திருக்கும் "
+                                   "கேள்விகள்",
+    "parent_topics_label": "தலைப்புகள்",
+    "parent_none": "இன்னும் இல்லை",
+    "parent_last_test_heading": "கடைசி தேர்வு",
+    "parent_last_test_label": "கடைசி தேர்வு மதிப்பெண்",
+    "parent_last_test_none": "இந்த அமர்வில் இன்னும் எந்த தேர்வும் "
+                             "முடிக்கப்படவில்லை.",
+    "parent_stars_heading": "நட்சத்திரங்கள் & முன்னேற்றம்",
+    "parent_stars_count": "{stars} நட்சத்திரங்கள்",
+    "parent_stars_rule": "நட்சத்திரங்கள் இப்படி கணக்கிடப்படுகின்றன: "
+                         "இந்த அமர்வின் வரலாற்றில் ஒவ்வொரு 5 "
+                         "கேள்விகளுக்கும் 1 நட்சத்திரம், மற்றும் 80% "
+                         "அல்லது அதற்கு மேல் மதிப்பெண் பெற்ற "
+                         "ஒவ்வொரு தேர்வுக்கும் 1 நட்சத்திரம்.",
+    "parent_scope_note": "கவனிக்கவும்: இந்த அறிக்கை இந்த சாதனம் "
+                         "மற்றும் உலாவியிலேயே உருவாக்கப்படுகிறது. "
+                         "இதில் இந்த அமர்வு மற்றும் இங்கு "
+                         "சேமிக்கப்பட்ட இன்றைய பதிவு உள்ளது — இன்னும் "
+                         "கணக்கு அல்லது கிளவுட் பதிவு இல்லை, எனவே "
+                         "மற்றொரு தொலைபேசியின் செயல்பாடு இங்கே "
+                         "தெரியாது.",
+    "parent_share_btn": "📤 WhatsApp இல் பகிரவும்",
+}
+
+_TE_W6 = {
+    "saathi_card_heading": "🧒 నా స్నేహితుడు",
+    "saathi_card_text": "మీ మొదటి పేరును Ganitra కి చెప్పండి; అది "
+                        "మిమ్మల్ని స్నేహితుడిలా పిలుస్తుంది. ఇది "
+                        "ఐచ్ఛికం — దాటవేసి కూడా నేర్చుకోవచ్చు.",
+    "saathi_name_label": "మీ మొదటి పేరు",
+    "saathi_name_placeholder": "ఉదా. ఆరవ్",
+    "saathi_class_label": "తరగతి (ఐచ్ఛికం)",
+    "saathi_class_any": "తరగతి ఎంచుకోలేదు",
+    "saathi_class_word": "తరగతి",
+    "saathi_save_btn": "సేవ్ చేయండి — నేర్చుకుందాం",
+    "saathi_skip_btn": "ఇప్పుడు దాటవేయండి",
+    "saathi_edit": "మార్చండి",
+    "saathi_welcome_name": "నమస్తే {name}! ఈరోజు ఏమి పరిష్కరిద్దాం?",
+    "saathi_wrong_name": "పర్వాలేదు, {name} — తప్పుల నుండే "
+                         "నేర్చుకుంటాం. సరైన సమాధానాన్ని ఒకసారి "
+                         "చూసి మళ్ళీ ప్రయత్నించండి!",
+    "saathi_wrong": "పర్వాలేదు — తప్పుల నుండే నేర్చుకుంటాం. సరైన "
+                    "సమాధానాన్ని ఒకసారి చూసి మళ్ళీ ప్రయత్నించండి!",
+    "error_encourage_name": "వదిలిపెట్టకండి, {name} — క్రింది "
+                            "సూచనలతో మళ్ళీ ప్రయత్నించండి.",
+    "error_encourage": "వదిలిపెట్టకండి — క్రింది సూచనలతో మళ్ళీ "
+                       "ప్రయత్నించండి.",
+    "nav_parents": "తల్లిదండ్రుల కోసం",
+    "parent_heading": "👨‍👩‍👧 తల్లిదండ్రుల నివేదిక",
+    "parent_intro_name": "Ganitra లో {name} నేర్చుకున్నదాని ప్రశాంత "
+                         "సారాంశం.",
+    "parent_intro": "Ganitra లో మీ పిల్లలు నేర్చుకున్నదాని ప్రశాంత "
+                    "సారాంశం.",
+    "parent_student_label": "విద్యార్థి",
+    "parent_solved_label": "ఈ సెషన్ చరిత్రలోని ప్రశ్నలు",
+    "parent_today_heading": "ఈరోజు ఈ పరికరంలో",
+    "parent_minutes_label": "ఈరోజు చదివిన నిమిషాలు",
+    "parent_today_questions_label": "ఈరోజు పరిష్కరించిన ప్రశ్నలు",
+    "parent_record_loading": "ఈ పరికరం నుండి ఈరోజు రికార్డును "
+                             "చదువుతోంది…",
+    "parent_mistakes_heading": "తప్పుల నోట్‌బుక్",
+    "parent_mistakes_count_label": "సాధన కోసం వేచి ఉన్న ప్రశ్నలు",
+    "parent_topics_label": "అంశాలు",
+    "parent_none": "ఇంకా లేవు",
+    "parent_last_test_heading": "చివరి పరీక్ష",
+    "parent_last_test_label": "చివరి పరీక్ష స్కోరు",
+    "parent_last_test_none": "ఈ సెషన్‌లో ఇంకా ఏ పరీక్ష పూర్తి "
+                             "కాలేదు.",
+    "parent_stars_heading": "నక్షత్రాలు & పురోగతి",
+    "parent_stars_count": "{stars} నక్షత్రాలు",
+    "parent_stars_rule": "నక్షత్రాలు ఇలా లెక్కించబడతాయి: ఈ సెషన్ "
+                         "చరిత్రలోని ప్రతి 5 ప్రశ్నలకు 1 నక్షత్రం, "
+                         "మరియు 80% లేదా అంతకంటే ఎక్కువ స్కోరు "
+                         "సాధించిన ప్రతి పరీక్షకు 1 నక్షత్రం.",
+    "parent_scope_note": "గమనించండి: ఈ నివేదిక ఈ పరికరం మరియు "
+                         "బ్రౌజర్‌లోనే తయారవుతుంది. ఇందులో ఈ సెషన్ "
+                         "మరియు ఇక్కడ నిల్వ ఉన్న ఈరోజు రికార్డు "
+                         "ఉంటుంది — ఇంకా ఖాతా లేదా క్లౌడ్ రికార్డు "
+                         "లేదు, కాబట్టి మరో ఫోన్‌లోని కార్యకలాపం "
+                         "ఇక్కడ కనిపించదు.",
+    "parent_share_btn": "📤 WhatsApp లో పంచుకోండి",
+}
+
+STRINGS["en"].update(_EN_W6)
+STRINGS["hi"].update(_HI_W6)
+STRINGS["bn"].update(_BN_W6)
+STRINGS["mr"].update(_MR_W6)
+STRINGS["ta"].update(_TA_W6)
+STRINGS["te"].update(_TE_W6)

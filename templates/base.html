@@ -38,6 +38,11 @@
         <a href="/board">{{ t.nav_board }}</a>
         <a href="/mistakes">{{ t.nav_mistakes }}</a>
         <a href="/history">{{ t.nav_history }}</a>
+        <a href="/parent-report">{{ t.nav_parents }}</a>
+        {% if saathi_name %}
+          <span class="saathi-pill">🧒 {{ saathi_name }}{% if saathi_class %} · {{ t.saathi_class_word }} {{ saathi_class }}{% endif %}
+            <a href="/?saathi=edit#saathi-card">{{ t.saathi_edit }}</a></span>
+        {% endif %}
         <span class="dhyaan-pill" id="dhyaan-pill"
           title="{{ t.dhyaan_label }}"><span aria-hidden="true">{{ t.dhyaan_label }}</span>
           <span id="dhyaan-text"></span></span>
@@ -63,6 +68,7 @@
     </main>
     <footer>
       <p>{{ t.footer_powered }}</p>
+      <p><a href="/parent-report">{{ t.nav_parents }}</a></p>
     </footer>
     <script>
       /* Dhyaan meter (Wave 5e): today's study record, kept only in

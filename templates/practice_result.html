@@ -17,6 +17,10 @@
       </div>
     {% endfor %}
 
+    {% if score < total %}
+      <p class="encourage-line">{{ saathi_encouragement }}</p>
+    {% endif %}
+
     {% if copycheck %}
       <div class="copycheck-card">
         <h3>{{ t.copycheck_heading }}</h3>

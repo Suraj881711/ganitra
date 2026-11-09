@@ -416,3 +416,76 @@ ol.steps.notebook.handwriting-on li {
   .confetti-piece { animation: none; opacity: 0; }
   .bubble, .rise { animation: none; }
 }
+
+
+/* --- Wave 6: Mera Saathi + Parent Report ----------------------- */
+.saathi-pill {
+  display: inline-flex; align-items: center; gap: .35rem;
+  min-height: 44px; padding: .25rem .7rem; margin-right: 10px;
+  border: 1.5px solid #ddd3ba; border-radius: 999px;
+  background: #fffdf6; color: #5c4a1f; font-size: .92rem;
+  white-space: nowrap;
+}
+.saathi-pill a { color: var(--accent); font-weight: 700; padding: 8px 2px; }
+.saathi-card {
+  max-width: 800px; margin: 0 auto 24px; text-align: left;
+  background: #fffdf6; border: 1.5px solid #e8dfc4;
+  border-radius: 18px; padding: 22px 24px;
+  box-shadow: 0 12px 28px rgba(101, 84, 40, .08);
+}
+.saathi-card h2 { margin: 0 0 6px; font-size: 22px; color: var(--text); }
+.saathi-card p { color: var(--sub); line-height: 1.65; margin: 0 0 14px; }
+.saathi-fields {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+.saathi-form label { color: var(--sub); font-weight: 600; margin: 0; }
+.saathi-form input[type="text"], .saathi-form select {
+  width: 100%; min-height: 48px; margin-top: 6px;
+  background: #fff; color: var(--text);
+  border: 1.5px solid #ddd3ba; border-radius: 12px;
+  padding: 11px 13px; font-size: 16px; line-height: 1.5;
+}
+.saathi-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.saathi-actions .saathi-save {
+  width: auto; margin: 0; min-height: 48px; padding: 12px 24px;
+}
+.saathi-actions .tool-btn { min-height: 48px; }
+.encourage-line {
+  background: #eef7f3; border-left: 4px solid var(--accent);
+  border-radius: 10px; padding: 11px 14px; margin: 14px 0;
+  line-height: 1.65; font-weight: 600;
+}
+.parent-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px; margin: 18px 0 14px;
+}
+.report-card {
+  background: #fffdf6; border: 1px solid var(--line);
+  border-radius: 16px; padding: 19px 20px;
+  box-shadow: 0 8px 20px rgba(101, 84, 40, .05);
+}
+.report-card h3 { margin: 0 0 10px; font-size: 17px; line-height: 1.5; }
+.report-card p { line-height: 1.65; }
+.report-number { font-size: 30px; font-weight: 800; margin: 4px 0; }
+.report-inline-number { font-size: 18px; }
+.report-list { margin: 6px 0; padding-left: 21px; line-height: 1.65; }
+.stars-card { margin-top: 14px; }
+.parent-note {
+  background: #fdf6e3; border-left: 4px solid #d4af37;
+  border-radius: 10px; padding: 13px 15px; line-height: 1.65;
+  margin: 18px 0;
+}
+.whatsapp-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 48px; padding: 12px 22px; border-radius: 999px;
+  background: #2f7d6e; color: #fff; font-weight: 700;
+  text-decoration: none; box-shadow: 0 10px 22px rgba(47, 125, 110, .22);
+}
+footer a { color: var(--accent); font-weight: 600; }
+@media (max-width: 560px) {
+  .saathi-card { padding: 19px 17px; }
+  .saathi-actions .saathi-save, .saathi-actions .tool-btn,
+  .whatsapp-btn { width: 100%; }
+  .saathi-pill { margin-top: 6px; }
+}

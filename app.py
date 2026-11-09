@@ -20,6 +20,39 @@ from solver.router import solve_question
 _HISTORY_LIMIT = 30
 _MISTAKE_LIMIT = 50
 _QUESTION_LIMIT = 500
+_SAATHI_NAME_LIMIT = 30
+
+
+def _clean_saathi_name(value):
+    """Wave 6: keep only a short, plain-text first name for Mera
+    Saathi. Tags are removed (never stored), whitespace is collapsed,
+    and the result is capped at 30 characters; templates also escape
+    it on render, so a name can never inject markup."""
+    if not isinstance(value, str):
+        return ""
+    text = re.sub(r"<[^>]*>", "", value)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:_SAATHI_NAME_LIMIT].strip()
+
+
+def _clean_saathi_class(value):
+    """Wave 6: the optional Saathi class is a whole number 1-12."""
+    try:
+        number = int(str(value).strip())
+    except (TypeError, ValueError):
+        return None
+    return number if 1 <= number <= 12 else None
+
+
+def _personal_line(strings, name_key, plain_key, name):
+    """Format a personalised i18n line, falling back safely."""
+    template = strings.get(name_key if name else plain_key, "")
+    if name:
+        try:
+            return template.format(name=name)
+        except (IndexError, KeyError, ValueError):
+            return template
+    return template
 
 
 def _ask_again(question):
@@ -124,6 +157,16 @@ def create_app():
             "chapter": chapter,
             "celebrate": bool(total) and score / total >= 0.8,
         }
+        # Wave 6: keep a running count of >=80% tests for the Parent
+        # Report star rule. If older session data has only the last
+        # report, treat a celebrating last report as one such test.
+        star_count = session.get("test_star_count")
+        if not isinstance(star_count, int) or star_count < 0:
+            previous = session.get("last_test_report") or {}
+            star_count = 1 if previous.get("celebrate") else 0
+        if report["celebrate"]:
+            star_count += 1
+        session["test_star_count"] = star_count
         session["last_test_report"] = report
         return report
 
@@ -143,6 +186,8 @@ def create_app():
                 seconds=QUIZ_QUESTION_COUNT * QUIZ_SECONDS_PER_QUESTION)
         except (KeyError, IndexError, ValueError):
             pass
+        saathi_name = _clean_saathi_name(session.get("saathi_name", ""))
+        saathi_class = _clean_saathi_class(session.get("saathi_class"))
         return {
             "lang": lang,
             "t": strings,
@@ -155,6 +200,20 @@ def create_app():
                               "dhyaan_today")},
             "dhyaan_today": strings["dhyaan_today"],
             "voice_label": strings["voice_btn"],
+            "saathi_name": saathi_name,
+            "saathi_class": saathi_class,
+            "saathi_skipped": bool(session.get("saathi_skipped"))
+                              and not saathi_name,
+            "saathi_edit": request.args.get("saathi") == "edit",
+            "saathi_greeting": _personal_line(
+                strings, "saathi_welcome_name", "chat_welcome",
+                saathi_name),
+            "saathi_encouragement": _personal_line(
+                strings, "saathi_wrong_name", "saathi_wrong",
+                saathi_name),
+            "error_encouragement": _personal_line(
+                strings, "error_encourage_name", "error_encourage",
+                saathi_name),
         }
 
     @app.get("/set-lang/<code>")
@@ -162,6 +221,36 @@ def create_app():
         if code in SUPPORTED_LANGS:
             session["lang"] = code
         target = request.args.get("next") or ""
+        if not target.startswith("/") or target.startswith("//"):
+            target = url_for("index")
+        return redirect(target)
+
+    @app.post("/saathi")
+    def saathi_save():
+        """Wave 6: save (or skip) the optional Mera Saathi profile.
+        Only a cleaned first name and an optional class number ever
+        enter the session — no account, no database, and skipping
+        never blocks any part of the site."""
+        if request.form.get("action") == "skip":
+            session.pop("saathi_name", None)
+            session.pop("saathi_class", None)
+            session["saathi_skipped"] = True
+        else:
+            name = _clean_saathi_name(request.form.get("name", ""))
+            if name:
+                session["saathi_name"] = name
+                class_num = _clean_saathi_class(
+                    request.form.get("class", ""))
+                if class_num is None:
+                    session.pop("saathi_class", None)
+                else:
+                    session["saathi_class"] = class_num
+                session["saathi_skipped"] = False
+            else:
+                session.pop("saathi_name", None)
+                session.pop("saathi_class", None)
+                session["saathi_skipped"] = True
+        target = request.form.get("next") or ""
         if not target.startswith("/") or target.startswith("//"):
             target = url_for("index")
         return redirect(target)
@@ -260,6 +349,49 @@ def create_app():
     def history_clear():
         session.pop("history", None)
         return redirect(url_for("history"))
+
+    @app.get("/parent-report")
+    def parent_report():
+        """Wave 6: a calm report for parents, built only from data
+        this browser/session already holds — session history, the
+        session Mistake Notebook, the last test report, and (filled
+        in by the page's JS) today's Dhyaan record in localStorage.
+        There is no account or cloud record behind it."""
+        strings = _t()
+        history_count = len(session.get("history", []))
+        mistakes = session.get("mistakes", [])
+        topics, seen = [], set()
+        for entry in mistakes:
+            source = (entry.get("source") or "").strip()
+            topic = (entry.get("topic") or "").strip()
+            if source and source != "quiz":
+                label = source
+            elif topic:
+                label = strings.get(f"quiz_topic_{topic}", topic)
+            else:
+                label = ""
+            if label and label not in seen:
+                seen.add(label)
+                topics.append(label)
+        last_report = session.get("last_test_report") or None
+        test_star_count = session.get("test_star_count")
+        if not isinstance(test_star_count, int) or test_star_count < 0:
+            test_star_count = 1 if (
+                last_report and last_report.get("celebrate")) else 0
+        total_stars = history_count // 5 + test_star_count
+        last_score_text = None
+        if last_report:
+            last_score_text = (f"{last_report.get('score', 0)} / "
+                               f"{last_report.get('total', 0)}")
+        return render_template(
+            "parent_report.html",
+            history_count=history_count,
+            mistakes_count=len(mistakes),
+            mistake_topics=topics,
+            last_report=last_report,
+            last_score_text=last_score_text,
+            test_star_count=test_star_count,
+            total_stars=total_stars)
 
     @app.get("/practice")
     def practice():
