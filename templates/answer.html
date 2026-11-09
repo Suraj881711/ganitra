@@ -1,6 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
   <div class="card">
+    {% if photo_text is defined %}
+      <div class="photo-box">
+        <h2>📷 Photo se padha gaya sawaal</h2>
+        <p>Photo se padha gaya sawaal — galti ho toh theek karke Solve
+          dabayein. (OCR kabhi-kabhi number ya sign galat padh deta hai,
+          isliye pehle text check kar lein.)</p>
+        <form method="post" action="/solve">
+          <textarea name="question" rows="2"
+            aria-label="Photo se padha gaya sawaal">{{ photo_text }}</textarea>
+          <button type="submit" class="hero-solve">Theek karke Solve karein →</button>
+        </form>
+        <p class="muted">Neeche isi padhe gaye sawaal ka jawab hai:</p>
+      </div>
+    {% endif %}
     <h2>Question</h2>
     <pre>{{ question }}</pre>
     {% if result.interpreted_as %}

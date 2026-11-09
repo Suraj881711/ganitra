@@ -1,3 +1,5 @@
+import re
+
 from flask import (Flask, Response, render_template, request, redirect,
                    session, url_for, flash)
 from api import api_bp
@@ -8,6 +10,34 @@ from solver.practice import (QUIZ_DIFFICULTIES, QUIZ_QUESTION_COUNT,
 from solver.router import solve_question
 
 _HISTORY_LIMIT = 30
+
+
+def normalize_ocr_text(text):
+    """Conservatively clean text recognised from a photo (Tesseract.js).
+
+    Only unambiguous maths fixes are applied — anything doubtful is left
+    untouched so the user can correct it in the editable confirm box:
+    unicode minus/dashes -> -, superscript ²/³ -> ^2/^3, ×/✕ -> *,
+    ÷ -> /, an X between two digits -> *, and an isolated variable letter
+    immediately followed by digits ("x2", "x 2") -> exponent ("x^2").
+    """
+    if not text:
+        return ""
+    t = text
+    # Unicode minus and dash variants -> ASCII hyphen-minus
+    t = t.replace("−", "-").replace("–", "-").replace("—", "-")
+    # Superscript powers OCR sometimes produces
+    t = t.replace("²", "^2").replace("³", "^3")
+    # Multiplication / division symbols
+    t = t.replace("×", "*").replace("✕", "*").replace("÷", "/")
+    # "3X4" / "3 x 4" style: an X between two digits is multiplication
+    t = re.sub(r"(\d)\s*[Xx]\s*(?=\d)", r"\1*", t)
+    # "x2" / "x 2": isolated variable letter + digits is an exponent
+    t = re.sub(r"(?<![A-Za-z])([A-Za-z])\s*(\d+)(?![A-Za-z])",
+               r"\1^\2", t)
+    # Collapse all whitespace (OCR line breaks) to single spaces
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
 
 
 def _solution_text(question, result):
@@ -56,6 +86,28 @@ def create_app():
         session["history"] = history[:_HISTORY_LIMIT]
         return render_template("answer.html", question=question,
                                result=result)
+
+    @app.post("/photo-solve")
+    def photo_solve():
+        # Text recognised from a photo by Tesseract.js in the browser.
+        # Normalise it, solve it, and render the answer page with the
+        # recognised text in an editable box on top — agar OCR ne galat
+        # padha ho, user text theek karke normal /solve se dobara bhej
+        # sakta hai.
+        raw = request.form.get("question", "")
+        question = normalize_ocr_text(raw)
+        if not question:
+            flash("Photo me koi sawaal nahi padh paya — photo saaf karke "
+                  "dobara try karein, ya sawaal type kar dein.")
+            return redirect(url_for("index"))
+        result = solve_question(question)
+        session["last_question"] = question
+        session["last_result"] = result
+        history = session.get("history", [])
+        history.insert(0, {"question": question, "result": result})
+        session["history"] = history[:_HISTORY_LIMIT]
+        return render_template("answer.html", question=question,
+                               result=result, photo_text=question)
 
     @app.get("/download")
     def download():

@@ -12,7 +12,17 @@
       <textarea id="q" name="question" rows="3"
         placeholder="e.g., Solve 2x+3=7, integrate x^2 from 0 to 1, sin 30 ka maan, plot x^2 - 3x + 2"
         required></textarea>
+      <div class="input-tools">
+        <button type="button" id="mic-btn" class="tool-btn">🎤 Bol ke poochho</button>
+        <label class="tool-btn" for="photo-input">📷 Photo se sawaal</label>
+        <input type="file" id="photo-input" accept="image/*" hidden />
+        <span id="input-note" class="tool-note" role="status"></span>
+      </div>
       <button type="submit" class="hero-solve">Solve it →</button>
+    </form>
+
+    <form id="photo-form" method="post" action="/photo-solve" hidden>
+      <input type="hidden" name="question" id="photo-question" />
     </form>
 
     <div class="chips" aria-label="Example questions">
@@ -31,6 +41,7 @@
       <span class="new-badge">✨ NEW · Laplace transforms</span>
       <span class="new-badge">✨ NEW · Timed quiz</span>
       <span class="new-badge">✨ NEW · Two-function graphs</span>
+      <span class="new-badge">✨ NEW · Photo &amp; voice se sawaal</span>
     </div>
   </section>
 
@@ -62,20 +73,105 @@
     <h2>How it works</h2>
     <p class="sub">Three steps, no sign-up.</p>
     <div class="how-grid">
-      <div class="how-card"><span class="n">1</span><h3>Type your question</h3><p>Plain English or Hinglish — “240 ka 15 pratishat” works too.</p></div>
+      <div class="how-card"><span class="n">1</span><h3>Type, speak or photograph</h3><p>Type it, bol ke poochho 🎤, ya notebook ki photo bhej do 📷. Plain English or Hinglish — “240 ka 15 pratishat” works too.</p></div>
       <div class="how-card"><span class="n">2</span><h3>See every step</h3><p>The solver shows the full working, not just the final answer.</p></div>
       <div class="how-card"><span class="n">3</span><h3>Save &amp; practise</h3><p>Download the solution as a .txt file, revisit it in History, or take a timed quiz in Practice.</p></div>
     </div>
   </section>
 
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
     (function () {
       var box = document.getElementById("q");
+      var note = document.getElementById("input-note");
       document.querySelectorAll(".chip").forEach(function (chip) {
         chip.addEventListener("click", function () {
           box.value = chip.textContent.trim();
           box.focus();
         });
+      });
+
+      function say(msg) { if (note) note.textContent = msg; }
+
+      /* ---------- Voice input (Web Speech API, browser-side) ---------- */
+      var micBtn = document.getElementById("mic-btn");
+      var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        micBtn.style.display = "none";
+        say("Voice input is browser me available nahi hai — Chrome me try karein.");
+      } else {
+        var recog = null;
+        var listening = false;
+        function startRecognition(lang) {
+          recog = new SR();
+          recog.lang = lang;
+          recog.interimResults = false;
+          recog.maxAlternatives = 1;
+          recog.onresult = function (ev) {
+            var text = ev.results[0][0].transcript || "";
+            if (text) {
+              box.value = text;
+              say("Sun liya: “" + text + "” — Solve dabayein.");
+            }
+          };
+          recog.onerror = function (ev) {
+            if (ev.error === "language-not-supported" && lang === "hi-IN") {
+              startRecognition("en-IN");  // fallback language
+              return;
+            }
+            listening = false;
+            micBtn.textContent = "🎤 Bol ke poochho";
+            say(ev.error === "not-allowed"
+              ? "Mic ki permission nahi mili — browser settings me mic allow karein."
+              : "Voice samajh nahi aaya, dobara try karein.");
+          };
+          recog.onend = function () {
+            listening = false;
+            micBtn.textContent = "🎤 Bol ke poochho";
+          };
+          try {
+            recog.start();
+            listening = true;
+            micBtn.textContent = "🎙️ Sun raha hoon… boliye";
+            say("Boliye, sun raha hoon…");
+          } catch (e) { /* already running */ }
+        }
+        micBtn.addEventListener("click", function () {
+          if (listening && recog) { recog.stop(); return; }
+          startRecognition("hi-IN");
+        });
+      }
+
+      /* ---------- Photo input (Tesseract.js OCR, browser-side) ---------- */
+      var photoInput = document.getElementById("photo-input");
+      var photoForm = document.getElementById("photo-form");
+      var photoQuestion = document.getElementById("photo-question");
+      if (typeof window.Tesseract === "undefined") {
+        photoInput.disabled = true;
+        say("Photo wala feature abhi load nahi hua — page refresh karke try karein.");
+      }
+      photoInput.addEventListener("change", function () {
+        var file = photoInput.files && photoInput.files[0];
+        if (!file) return;
+        if (typeof window.Tesseract === "undefined") {
+          say("Photo reader load nahi hua — page refresh karein.");
+          return;
+        }
+        say("Photo padh rahe hain… ⏳ (typed/print sawaal sabse saaf padhta hai)");
+        window.Tesseract.recognize(file, "eng")
+          .then(function (res) {
+            var text = ((res && res.data && res.data.text) || "").trim();
+            if (!text) {
+              say("Photo me sawaal nahi mil paya — saaf, seedhi photo dobara try karein, ya type kar dein.");
+              return;
+            }
+            photoQuestion.value = text;
+            say("Sawaal mil gaya — bhej rahe hain…");
+            photoForm.submit();
+          })
+          .catch(function () {
+            say("Photo padhne me dikkat aayi — dobara try karein ya sawaal type kar dein.");
+          });
       });
     })();
   </script>

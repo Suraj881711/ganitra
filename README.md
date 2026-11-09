@@ -32,6 +32,17 @@ in the web UI, through a JSON API, or on the command line.
   download its step-by-step solution as a `.txt` file.
 - **Hinglish input** — e.g. `5 aur 3 ko jodo`, `240 ka 15 pratishat`,
   `2, 4, 6 ka ausat`, `sin 30 ka maan`.
+- **Voice input** 🎤 — "Bol ke poochho": speak your question (Hindi or
+  English) using the browser's Web Speech API; the transcript fills the
+  box and you press Solve. Chrome recommended; nothing is sent to a
+  server until you solve.
+- **Photo input** 📷 — "Photo se sawaal": upload a photo of a question
+  and it is read **in your browser** with Tesseract.js (no server-side
+  OCR, no extra dependencies). The recognised text is cleaned up
+  (e.g. `−` → `-`, `x2` → `x^2`) and shown in an **editable box** —
+  check/fix it, then Solve. Works best on printed/typed questions;
+  handwriting often needs a quick edit, which is exactly what the
+  confirm box is for.
 - **Pretty maths** — MathJax rendering in the web UI.
 - Three interfaces: web UI, REST API (`POST /api/solve`), and a CLI.
 
@@ -141,6 +152,7 @@ templates/, static/     Jinja templates and CSS (graphs land in static/graphs/)
 test/                   pytest suite
 verify_all.py           wave-1 end-to-end verification (not part of the app)
 verify_wave2.py         wave-2 end-to-end verification (not part of the app)
+verify_wave3.py         wave-3 verification: voice/photo inputs (not part of the app)
 ```
 
 ## Notes & honest limits
@@ -156,3 +168,8 @@ verify_wave2.py         wave-2 end-to-end verification (not part of the app)
 - The solver understands common phrasings; very free-form word problems
   outside the listed patterns may not parse — the answer page then says so
   instead of guessing.
+- Photo OCR runs in the browser (Tesseract.js) and reads **printed or
+  typed** questions best; handwritten questions may come out wrong —
+  that is why the recognised text is always shown in an editable box
+  before solving. Voice input depends on the browser's speech
+  recognition (Chrome works best) and needs mic permission.
