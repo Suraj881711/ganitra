@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>Question</h2>
+    <pre>{{ question }}</pre>
+    {% if result.interpreted_as %}
+      <p class="muted">Understood as: <code>{{ result.interpreted_as }}</code></p>
+    {% endif %}
+
+    <h2>Answer <span class="badge">{{ result.type }}{% if result.op %} · {{ result.op }}{% endif %}</span></h2>
+    <p class="answer-big">
+      {% if result.latex %}\[ {{ result.latex }} \]{% else %}{{ result.answer }}{% endif %}
+    </p>
+    {% if result.latex and result.answer %}<p class="muted">{{ result.answer }}</p>{% endif %}
+
+    {% if result.image %}
+      <img class="graph" src="{{ url_for('static', filename=result.image) }}"
+           alt="Graph of the function" />
+    {% endif %}
+
+    {% if result.steps %}
+      <h2>Step-by-step solution</h2>
+      <ol class="steps">
+        {% for step in result.steps %}<li>{{ step }}</li>{% endfor %}
+      </ol>
+    {% endif %}
+
+    <details>
+      <summary>Full result (JSON)</summary>
+      <pre>{{ result | tojson(indent=2) }}</pre>
+    </details>
+
+    <a class="back" href="/">← Ask another</a>
+  </div>
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>Practice questions</h2>
+    <p class="muted">Try each question yourself first, then reveal the answer.
+      Reload the page for a fresh set.</p>
+    {% for item in questions %}
+      <div class="practice-q">
+        <p><strong>Q{{ loop.index }}.</strong> {{ item.question }}</p>
+        <details>
+          <summary>Show answer</summary>
+          <p class="answer-big">{{ item.answer }}</p>
+        </details>
+      </div>
+    {% endfor %}
+    <a class="back" href="/practice">↻ New set</a>
+    <a class="back" href="/">← Back to solver</a>
+  </div>
+{% endblock %}
