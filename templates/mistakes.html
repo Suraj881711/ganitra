@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>{{ t.mistakes_heading }}</h2>
+    {% if entries %}
+      <p class="muted">{{ t.mistakes_intro }}</p>
+      {% for e in entries %}
+        <div class="practice-q">
+          <p><strong>{{ e.question }}</strong></p>
+          <p class="muted">{{ t.mistakes_correct_is }}
+            <strong>{{ e.expected }}</strong>
+            {% if e.source %}· {{ e.source }}{% endif %}</p>
+        </div>
+      {% endfor %}
+      <div class="board-actions">
+        <a class="board-opt" href="/mistakes/practice">{{ t.mistakes_practice_btn }}</a>
+        <form method="post" action="/mistakes/clear" class="inline-form">
+          <button type="submit">{{ t.mistakes_clear_btn }}</button>
+        </form>
+      </div>
+    {% else %}
+      <p class="muted">{{ t.mistakes_empty }}</p>
+    {% endif %}
+    <a class="back" href="/">{{ t.back_to_solver }}</a>
+  </div>
+{% endblock %}

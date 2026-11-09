@@ -6,14 +6,22 @@
     <title>Ganitra — {{ t.tagline }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;600;700&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;600;700&family=Kalam:wght@400;700&family=Caveat:wght@500;700&display=swap"
           rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <style>
-      .lang-switch { display: inline-flex; align-items: center; gap: .4rem;
-                     font-size: .9rem; }
-      .lang-switch select { font: inherit; padding: .25rem .4rem;
-                            border-radius: .5rem; }
+      .lang-switch { display: inline-flex; align-items: center; gap: .45rem;
+                     font-size: .95rem; }
+      .lang-switch select { font: inherit; padding: .45rem .6rem;
+                            min-height: 44px;
+                            border: 1.5px solid #ddd3ba; background: #fff;
+                            color: inherit;
+                            border-radius: .6rem; }
+      .dhyaan-pill { display: inline-flex; align-items: center;
+                     gap: .45rem; padding: .3rem .75rem; min-height: 44px;
+                     border: 1.5px solid #ddd3ba; border-radius: 999px;
+                     background: #fffdf6; color: #5c4a1f;
+                     font-size: .9rem; white-space: nowrap; }
     </style>
     <script>
       MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
@@ -27,7 +35,12 @@
       <nav>
         <a href="/">{{ t.nav_solve }}</a>
         <a href="/practice">{{ t.nav_practice }}</a>
+        <a href="/board">{{ t.nav_board }}</a>
+        <a href="/mistakes">{{ t.nav_mistakes }}</a>
         <a href="/history">{{ t.nav_history }}</a>
+        <span class="dhyaan-pill" id="dhyaan-pill"
+          title="{{ t.dhyaan_label }}"><span aria-hidden="true">{{ t.dhyaan_label }}</span>
+          <span id="dhyaan-text"></span></span>
         <label class="lang-switch">{{ t.lang_label }}
           <select id="lang-select" aria-label="{{ t.lang_label }}"
                   onchange="if (this.value) window.location.href = '/set-lang/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search);">
@@ -51,5 +64,65 @@
     <footer>
       <p>{{ t.footer_powered }}</p>
     </footer>
+    <script>
+      /* Dhyaan meter (Wave 5e): today's study record, kept only in
+         this browser's localStorage and reset each calendar day.
+         Minutes accumulate while the page is open AND visible;
+         questions solved are counted by the solve flows (chat hook
+         in index.html; the classic /solve is counted by the answer
+         page, which loads this same script after a solve). */
+      (function () {
+        var FMT = {{ dhyaan_today | tojson }};
+        var text = document.getElementById("dhyaan-text");
+        if (!text) return;
+        function dayKey() {
+          var d = new Date();
+          return "ganitra-dhyaan-" + d.getFullYear() + "-"
+            + (d.getMonth() + 1) + "-" + d.getDate();
+        }
+        function load() {
+          try {
+            var raw = window.localStorage.getItem(dayKey());
+            if (raw) return JSON.parse(raw);
+          } catch (e) { /* fall through to a fresh record */ }
+          return { seconds: 0, count: 0 };
+        }
+        function save(rec) {
+          try {
+            window.localStorage.setItem(dayKey(),
+                                        JSON.stringify(rec));
+          } catch (e) { /* private mode: meter just won't persist */ }
+        }
+        function paint() {
+          var rec = load();
+          var mins = Math.floor((rec.seconds || 0) / 60);
+          text.textContent = FMT
+            .replace("{minutes}", String(mins))
+            .replace("{count}", String(rec.count || 0));
+        }
+        window.ganitraDhyaanPaint = paint;
+        paint();
+        var ticking = null;
+        function tick() {
+          var rec = load();
+          rec.seconds = (rec.seconds || 0) + 15;
+          save(rec);
+          paint();
+        }
+        function start() {
+          if (!ticking) ticking = setInterval(tick, 15000);
+        }
+        function stop() {
+          if (ticking) {
+            clearInterval(ticking);
+            ticking = null;
+          }
+        }
+        if (!document.hidden) start();
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden) stop(); else start();
+        });
+      })();
+    </script>
   </body>
 </html>

@@ -17,7 +17,33 @@
       </div>
     {% endfor %}
 
+    {% if copycheck %}
+      <div class="copycheck-card">
+        <h3>{{ t.copycheck_heading }}</h3>
+        <p class="copycheck-marks">{{ t.score_label }}
+          <strong>{{ copycheck.score }} / {{ copycheck.total }}</strong></p>
+        <p class="copycheck-remark">{{ t[copycheck.remark_key] }}</p>
+        <p class="muted">{{ t.copycheck_note }}</p>
+        {% if copycheck.lost_topics %}
+          <p><strong>{{ t.copycheck_lost_label }}</strong>
+            {{ copycheck.lost_topics | join(", ") }}</p>
+          <p><a class="back" href="/mistakes">{{ t.copycheck_practice_link }}</a></p>
+        {% else %}
+          <p>{{ t.copycheck_all_clear }}</p>
+        {% endif %}
+      </div>
+      {% if copycheck.celebrate %}
+        <div class="celebrate-card" data-celebrate role="status">
+          <p class="celebrate-msg">{{ t.celebrate_msg }}</p>
+          <div class="confetti" aria-hidden="true">
+            {% for i in range(14) %}<span class="confetti-piece"></span>{% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    {% endif %}
+
     <a class="back" href="/practice">{{ t.new_quiz }}</a>
+    <a class="back" href="/mistakes">{{ t.nav_mistakes }}</a>
     <a class="back" href="/">{{ t.back_to_solver }}</a>
   </div>
 {% endblock %}

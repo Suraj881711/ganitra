@@ -1239,6 +1239,77 @@ def normalise_lang(code):
     return code if code in SUPPORTED_LANGS else "en"
 
 
+def result_unsolvable(result):
+    """Wave 5b: presentation-layer flag — did the solver fail?
+
+    The solver signals failure with op == "error" and the raw wording
+    "Could not solve this one: <detail>", which is a programmer
+    message and must never reach a student. app.py/api.py use this
+    detector to render the friendly localised error card instead.
+    Conservative on purpose: op == "error" is the solver's only
+    failure signal and real solves never use it.
+    """
+    result = result or {}
+    return (result.get("op") == "error"
+            or str(result.get("answer", "")).startswith(
+                "Could not solve"))
+
+
+# Wave 5b: keyboard-mash / nonsense-word guard. The solver's
+# arithmetic path happily "simplifies" a string of unknown words by
+# multiplying their letters together ("asdf qwer zxq" ->
+# a*d*e*f*q**2*r*s*w*x*z), which looks like an answer but teaches
+# nothing. A result is treated as unsolvable for display when ALL of
+# these hold (kept deliberately narrow so real symbolic simplifies
+# like "x + y", "(x+1)(x+2)", "2x + 3x" or "abc" are NEVER flagged):
+#   * the result is an arithmetic/algebra "simplify", and
+#   * the question has at least two multi-letter words (len >= 3),
+#     none of which is a known maths/command word, and
+#   * the question has no digits and no operator characters.
+_GIBBERISH_SAFE_WORDS = {
+    "sin", "cos", "tan", "sec", "csc", "cot", "log", "exp", "sqrt",
+    "lim", "sum", "int", "gcd", "lcm", "hcf", "mod", "abs", "max",
+    "min", "mean", "mode", "median", "prime", "factor", "factors",
+    "expand", "simplify", "solve", "find", "value", "graph", "plot",
+    "area", "volume", "radius", "circle", "square", "triangle",
+    "rectangle", "angle", "degree", "degrees", "percent", "percentage",
+    "probability", "derivative", "integral", "differentiate",
+    "integrate", "limit", "equation", "root", "roots", "power",
+    "cube", "cubed", "the", "and", "for", "with", "from", "what",
+    "when", "is", "of", "to", "in", "a", "an",
+    "jodo", "ghatana", "guna", "bhaag", "pratishat", "ausat",
+}
+
+
+def question_looks_like_gibberish(question, result):
+    """True when `question` is word-salad that the solver merely
+    letter-multiplied (see the note above). Presentation-layer only:
+    the solver itself is untouched."""
+    result = result or {}
+    if result.get("op") != "simplify":
+        return False
+    if result.get("type") not in ("arithmetic", "algebra"):
+        return False
+    q = str(question or "").lower()
+    if any(ch.isdigit() for ch in q):
+        return False
+    if any(ch in q for ch in "+-*/^=()<>%"):
+        return False
+    words = [w.strip(".,?!;:") for w in q.split()]
+    words = [w for w in words if w]
+    long_words = [w for w in words if len(w) >= 3 and w.isalpha()]
+    if len(long_words) < 2:
+        return False
+    return not any(w in _GIBBERISH_SAFE_WORDS for w in long_words)
+
+
+def solve_failed(question, result):
+    """Wave 5b: the single display-time failure test used by app.py
+    and api.py — a solver error result OR word-salad input."""
+    return (result_unsolvable(result)
+            or question_looks_like_gibberish(question, result))
+
+
 def get_strings(lang):
     """UI strings for `lang`, merged over English (fallback)."""
     merged = dict(STRINGS["en"])
@@ -1265,3 +1336,1360 @@ def explanation_for(result, lang):
         return template.format(answer=answer)
     except (KeyError, IndexError, ValueError):
         return fallback["generic"].format(answer=answer)
+
+
+# ---------------------------------------------------------------------------
+# Wave 5 strings: chat homepage, Board Mode, Mistake Notebook, PDF/print.
+# Kept as one block per language and merged into the main dicts below so
+# the completeness rule still holds: every key exists in all 6 languages
+# (get_strings() additionally falls back to English for anything missed).
+# ---------------------------------------------------------------------------
+
+_EN_W5 = {
+    "nav_board": "Board Mode",
+    "nav_mistakes": "Mistakes",
+    # chat homepage
+    "chat_welcome": "Namaste! 🙏 Ask me any maths question — type it, "
+                    "speak it 🎤, or send a photo 📷 — and I will solve "
+                    "it step by step, right here in the chat.",
+    "chat_solving": "Solving…",
+    "chat_full_solution": "Full solution page →",
+    "chat_error": "Something went wrong — please try again.",
+    # board mode
+    "board_heading": "Board Mode 📚",
+    "board_intro": "NCERT maths chapters for Classes 6–12. The chapter "
+                   "list is the same for CBSE, ICSE and state boards, "
+                   "so pick your board, choose your class, and practise "
+                   "chapter by chapter.",
+    "board_choose_board": "Your board",
+    "board_choose_class": "Choose your class",
+    "board_class_word": "Class",
+    "board_chapters_heading": "Chapters",
+    "board_practice_btn": "Practice (untimed)",
+    "board_test_btn": "Chapter test (timed)",
+    "board_back": "← Board Mode",
+    "board_test_heading": "Chapter test 🎯",
+    "board_start_test": "Start chapter test",
+    "board_topic_label": "Questions from:",
+    "board_fallback_note": "Closest topic match — a dedicated "
+                           "generator for this chapter is still "
+                           "to come.",
+    "quiz_topic_sequences": "Sequences & Series",
+    "quiz_topic_probability": "Probability",
+    "quiz_topic_calculus": "Calculus",
+    "quiz_topic_linear_algebra": "Linear Algebra",
+    "quiz_topic_geometry": "Geometry",
+    # mistake notebook
+    "mistakes_heading": "Mistake Notebook 📒",
+    "mistakes_intro": "Questions you got wrong in quizzes and chapter "
+                      "tests, newest first. This notebook is kept "
+                      "only in your browser session — it clears when "
+                      "the session ends.",
+    "mistakes_empty": "No mistakes recorded yet — take a quiz or a "
+                      "chapter test and the questions you miss will "
+                      "appear here.",
+    "mistakes_practice_btn": "↻ Practice these again",
+    "mistakes_clear_btn": "Clear notebook",
+    "mistakes_correct_is": "Correct answer:",
+    # pdf / print
+    "pdf_link": "🖨 Download PDF",
+    "print_btn": "Print / Save as PDF",
+    "print_footer": "Solved by Ganitra",
+}
+
+_HI_W5 = {
+    "nav_board": "बोर्ड मोड",
+    "nav_mistakes": "ग़लतियाँ",
+    "chat_welcome": "नमस्ते! 🙏 कोई भी गणित का प्रश्न पूछिए — लिखकर, "
+                    "बोलकर 🎤, या फ़ोटो भेजकर 📷 — और मैं उसे यहीं "
+                    "चैट में चरण-दर-चरण हल कर दूँगा।",
+    "chat_solving": "हल हो रहा है…",
+    "chat_full_solution": "पूरे हल का पृष्ठ →",
+    "chat_error": "कुछ गड़बड़ हो गई — कृपया फिर प्रयास कीजिए।",
+    "board_heading": "बोर्ड मोड 📚",
+    "board_intro": "कक्षा 6–12 के NCERT गणित अध्याय। अध्याय सूची "
+                   "CBSE, ICSE और राज्य बोर्डों के लिए एक समान है — "
+                   "अपना बोर्ड चुनिए, कक्षा चुनिए और अध्याय-दर-अध्याय "
+                   "अभ्यास कीजिए।",
+    "board_choose_board": "आपका बोर्ड",
+    "board_choose_class": "अपनी कक्षा चुनिए",
+    "board_class_word": "कक्षा",
+    "board_chapters_heading": "अध्याय",
+    "board_practice_btn": "अभ्यास (बिना समय सीमा)",
+    "board_test_btn": "अध्याय परीक्षा (समयबद्ध)",
+    "board_back": "← बोर्ड मोड",
+    "board_test_heading": "अध्याय परीक्षा 🎯",
+    "board_start_test": "अध्याय परीक्षा शुरू कीजिए",
+    "board_topic_label": "प्रश्न इस विषय से:",
+    "board_fallback_note": "सबसे निकट विषय मेल — इस अध्याय के लिए "
+                           "अलग जनरेटर अभी आना बाकी है।",
+    "quiz_topic_sequences": "अनुक्रम और श्रेणियाँ",
+    "quiz_topic_probability": "प्रायिकता",
+    "quiz_topic_calculus": "कलन (कैलकुलस)",
+    "quiz_topic_linear_algebra": "रैखिक बीजगणित",
+    "quiz_topic_geometry": "ज्यामिति",
+    "mistakes_heading": "ग़लतियों की नोटबुक 📒",
+    "mistakes_intro": "क्विज़ और अध्याय परीक्षाओं में ग़लत हुए "
+                      "प्रश्न, सबसे नए पहले। यह नोटबुक केवल आपके "
+                      "ब्राउज़र सत्र में रहती है — सत्र समाप्त होते "
+                      "ही साफ़ हो जाती है।",
+    "mistakes_empty": "अभी कोई ग़लती दर्ज नहीं है — क्विज़ या अध्याय "
+                      "परीक्षा दीजिए, ग़लत हुए प्रश्न यहाँ आएँगे।",
+    "mistakes_practice_btn": "↻ इन्हें फिर से अभ्यास कीजिए",
+    "mistakes_clear_btn": "नोटबुक साफ़ कीजिए",
+    "mistakes_correct_is": "सही उत्तर:",
+    "pdf_link": "🖨 PDF डाउनलोड कीजिए",
+    "print_btn": "प्रिंट / PDF के रूप में सहेजिए",
+    "print_footer": "Ganitra द्वारा हल किया गया",
+}
+
+_BN_W5 = {
+    "nav_board": "বোর্ড মোড",
+    "nav_mistakes": "ভুলগুলি",
+    "chat_welcome": "নমস্কার! 🙏 যেকোনো গণিতের প্রশ্ন জিজ্ঞাসা করুন — "
+                    "লিখে, বলে 🎤, বা ছবি পাঠিয়ে 📷 — আমি এখানেই "
+                    "চ্যাটে ধাপে ধাপে সমাধান করে দেব।",
+    "chat_solving": "সমাধান হচ্ছে…",
+    "chat_full_solution": "সম্পূর্ণ সমাধানের পৃষ্ঠা →",
+    "chat_error": "কিছু একটা ভুল হয়েছে — আবার চেষ্টা করুন।",
+    "board_heading": "বোর্ড মোড 📚",
+    "board_intro": "ষষ্ঠ থেকে দ্বাদশ শ্রেণির NCERT গণিত অধ্যায়। "
+                   "অধ্যায়ের তালিকা CBSE, ICSE ও রাজ্য বোর্ডগুলির "
+                   "জন্য একই — আপনার বোর্ড বেছে নিন, শ্রেণি বেছে "
+                   "নিন এবং অধ্যায় অনুযায়ী অনুশীলন করুন।",
+    "board_choose_board": "আপনার বোর্ড",
+    "board_choose_class": "আপনার শ্রেণি বেছে নিন",
+    "board_class_word": "শ্রেণি",
+    "board_chapters_heading": "অধ্যায়সমূহ",
+    "board_practice_btn": "অনুশীলন (সময়সীমা ছাড়া)",
+    "board_test_btn": "অধ্যায় পরীক্ষা (সময়বদ্ধ)",
+    "board_back": "← বোর্ড মোড",
+    "board_test_heading": "অধ্যায় পরীক্ষা 🎯",
+    "board_start_test": "অধ্যায় পরীক্ষা শুরু করুন",
+    "board_topic_label": "প্রশ্ন এই বিষয় থেকে:",
+    "board_fallback_note": "সবচেয়ে কাছের বিষয়ের মিল — এই অধ্যায়ের "
+                           "জন্য আলাদা জেনারেটর এখনও আসতে বাকি।",
+    "quiz_topic_sequences": "অনুক্রম ও ধারা",
+    "quiz_topic_probability": "সম্ভাবনা",
+    "quiz_topic_calculus": "ক্যালকুলাস",
+    "quiz_topic_linear_algebra": "রৈখিক বীজগণিত",
+    "quiz_topic_geometry": "জ্যামিতি",
+    "mistakes_heading": "ভুলের খাতা 📒",
+    "mistakes_intro": "কুইজ ও অধ্যায় পরীক্ষায় ভুল করা প্রশ্নগুলি, "
+                      "সবচেয়ে নতুন আগে। এই খাতাটি শুধু আপনার "
+                      "ব্রাউজার সেশনে থাকে — সেশন শেষ হলেই মুছে "
+                      "যায়।",
+    "mistakes_empty": "এখনও কোনো ভুল লেখা নেই — কুইজ বা অধ্যায় "
+                      "পরীক্ষা দিন, ভুল করা প্রশ্নগুলি এখানে আসবে।",
+    "mistakes_practice_btn": "↻ এগুলি আবার অনুশীলন করুন",
+    "mistakes_clear_btn": "খাতা পরিষ্কার করুন",
+    "mistakes_correct_is": "সঠিক উত্তর:",
+    "pdf_link": "🖨 PDF ডাউনলোড করুন",
+    "print_btn": "প্রিন্ট / PDF হিসেবে সংরক্ষণ করুন",
+    "print_footer": "Ganitra দ্বারা সমাধান করা হয়েছে",
+}
+
+_MR_W5 = {
+    "nav_board": "बोर्ड मोड",
+    "nav_mistakes": "चुका",
+    "chat_welcome": "नमस्कार! 🙏 कोणताही गणिताचा प्रश्न विचारा — "
+                    "लिहून, बोलून 🎤, किंवा फोटो पाठवून 📷 — आणि "
+                    "मी तो इथेच चॅटमध्ये टप्प्याटप्प्यात सोडवून "
+                    "देईन.",
+    "chat_solving": "सोडवत आहे…",
+    "chat_full_solution": "संपूर्ण उत्तराचे पान →",
+    "chat_error": "काहीतरी चुकले — कृपया पुन्हा प्रयत्न करा.",
+    "board_heading": "बोर्ड मोड 📚",
+    "board_intro": "इयत्ता ६–१२ साठी NCERT गणित प्रकरणे. "
+                   "प्रकरणांची यादी CBSE, ICSE आणि राज्य बोर्डांसाठी "
+                   "सारखीच आहे — तुमचे बोर्ड निवडा, इयत्ता निवडा "
+                   "आणि प्रकरणानुसार सराव करा.",
+    "board_choose_board": "तुमचे बोर्ड",
+    "board_choose_class": "तुमची इयत्ता निवडा",
+    "board_class_word": "इयत्ता",
+    "board_chapters_heading": "प्रकरणे",
+    "board_practice_btn": "सराव (वेळेमर्यादेशिवाय)",
+    "board_test_btn": "प्रकरण चाचणी (वेळेबद्ध)",
+    "board_back": "← बोर्ड मोड",
+    "board_test_heading": "प्रकरण चाचणी 🎯",
+    "board_start_test": "प्रकरण चाचणी सुरू करा",
+    "board_topic_label": "प्रश्न या विषयातून:",
+    "board_fallback_note": "सर्वात जवळचा विषय जुळतो — या प्रकरणासाठी "
+                           "स्वतंत्र जनरेटर अजून यायचा आहे.",
+    "quiz_topic_sequences": "अनुक्रम व श्रेणी",
+    "quiz_topic_probability": "संभाव्यता",
+    "quiz_topic_calculus": "कलनशास्त्र (कॅल्क्युलस)",
+    "quiz_topic_linear_algebra": "रेषीय बीजगणित",
+    "quiz_topic_geometry": "भूमिती",
+    "mistakes_heading": "चुकांची वही 📒",
+    "mistakes_intro": "क्विझ आणि प्रकरण चाचण्यांमध्ये चुकलेले "
+                      "प्रश्न, सर्वात नवीन आधी. ही वही फक्त तुमच्या "
+                      "ब्राउझर सत्रात राहते — सत्र संपताच ती साफ "
+                      "होते.",
+    "mistakes_empty": "अजून एकही चूक नोंदवलेली नाही — क्विझ किंवा "
+                      "प्रकरण चाचणी द्या, चुकलेले प्रश्न इथे येतील.",
+    "mistakes_practice_btn": "↻ हे पुन्हा सराव करा",
+    "mistakes_clear_btn": "वही साफ करा",
+    "mistakes_correct_is": "बरोबर उत्तर:",
+    "pdf_link": "🖨 PDF डाउनलोड करा",
+    "print_btn": "प्रिंट / PDF म्हणून जतन करा",
+    "print_footer": "Ganitra ने सोडवले",
+}
+
+_TA_W5 = {
+    "nav_board": "போர்டு பயன்முறை",
+    "nav_mistakes": "தவறுகள்",
+    "chat_welcome": "வணக்கம்! 🙏 எந்தக் கணிதக் கேள்வியையும் "
+                    "கேளுங்கள் — தட்டச்சு செய்து, பேசி 🎤, அல்லது "
+                    "புகைப்படம் அனுப்பி 📷 — நான் இங்கேயே "
+                    "அரட்டையில் படிப்படியாகத் தீர்த்து வைப்பேன்.",
+    "chat_solving": "தீர்த்து வருகிறது…",
+    "chat_full_solution": "முழு தீர்வுப் பக்கம் →",
+    "chat_error": "ஏதோ தவறு நடந்துவிட்டது — மீண்டும் முயற்சிக்கவும்.",
+    "board_heading": "போர்டு பயன்முறை 📚",
+    "board_intro": "6–12 ஆம் வகுப்புகளுக்கான NCERT கணித "
+                   "அத்தியாயங்கள். அத்தியாயப் பட்டியல் CBSE, ICSE "
+                   "மற்றும் மாநில போர்டுகளுக்கு ஒன்றே — உங்கள் "
+                   "போர்டைத் தேர்ந்தெடுத்து, வகுப்பைத் "
+                   "தேர்ந்தெடுத்து, அத்தியாயம் வாரியாகப் பயிற்சி "
+                   "செய்யுங்கள்.",
+    "board_choose_board": "உங்கள் போர்டு",
+    "board_choose_class": "உங்கள் வகுப்பைத் தேர்ந்தெடுங்கள்",
+    "board_class_word": "வகுப்பு",
+    "board_chapters_heading": "அத்தியாயங்கள்",
+    "board_practice_btn": "பயிற்சி (நேர வரம்பின்றி)",
+    "board_test_btn": "அத்தியாயத் தேர்வு (நேர அடிப்படையில்)",
+    "board_back": "← போர்டு பயன்முறை",
+    "board_test_heading": "அத்தியாயத் தேர்வு 🎯",
+    "board_start_test": "அத்தியாயத் தேர்வைத் தொடங்குங்கள்",
+    "board_topic_label": "கேள்விகள் இந்தத் தலைப்பிலிருந்து:",
+    "board_fallback_note": "மிக அருகிலுள்ள தலைப்புப் பொருத்தம் — "
+                           "இந்த அத்தியாயத்திற்கான தனி ஜெனரேட்டர் "
+                           "இன்னும் வரவில்லை.",
+    "quiz_topic_sequences": "தொடர்கள் & தொடர்வரிசைகள்",
+    "quiz_topic_probability": "நிகழ்தகவு",
+    "quiz_topic_calculus": "கால்குலஸ்",
+    "quiz_topic_linear_algebra": "நேரியல் இயற்கணிதம்",
+    "quiz_topic_geometry": "வடிவியல்",
+    "mistakes_heading": "தவறுகள் குறிப்பேடு 📒",
+    "mistakes_intro": "வினாடி வினாக்கள் மற்றும் அத்தியாயத் "
+                      "தேர்வுகளில் நீங்கள் தவறவிட்ட கேள்விகள், "
+                      "புதியவை முதலில். இந்தக் குறிப்பேடு உங்கள் "
+                      "உலாவி அமர்வில் மட்டுமே இருக்கும் — அமர்வு "
+                      "முடிந்ததும் அழிந்துவிடும்.",
+    "mistakes_empty": "இன்னும் தவறுகள் எதுவும் பதிவாகவில்லை — ஒரு "
+                      "வினாடி வினா அல்லது அத்தியாயத் தேர்வு "
+                      "எழுதுங்கள், தவறவிட்ட கேள்விகள் இங்கே வரும்.",
+    "mistakes_practice_btn": "↻ இவற்றை மீண்டும் பயிற்சி செய்யுங்கள்",
+    "mistakes_clear_btn": "குறிப்பேட்டை அழிக்கவும்",
+    "mistakes_correct_is": "சரியான விடை:",
+    "pdf_link": "🖨 PDF பதிவிறக்கவும்",
+    "print_btn": "அச்சிடு / PDF ஆகச் சேமி",
+    "print_footer": "Ganitra ஆல் தீர்க்கப்பட்டது",
+}
+
+_TE_W5 = {
+    "nav_board": "బోర్డు మోడ్",
+    "nav_mistakes": "తప్పులు",
+    "chat_welcome": "నమస్తే! 🙏 ఏ గణిత ప్రశ్ననైనా అడగండి — టైప్ "
+                    "చేసి, మాట్లాడి 🎤, లేదా ఫోటో పంపి 📷 — నేను "
+                    "ఇక్కడే చాట్‌లో దశలవారీగా పరిష్కరిస్తాను.",
+    "chat_solving": "పరిష్కరిస్తోంది…",
+    "chat_full_solution": "పూర్తి పరిష్కార పేజీ →",
+    "chat_error": "ఏదో తప్పు జరిగింది — దయచేసి మళ్లీ ప్రయత్నించండి.",
+    "board_heading": "బోర్డు మోడ్ 📚",
+    "board_intro": "6–12 తరగతుల కోసం NCERT గణిత అధ్యాయాలు. "
+                   "అధ్యాయాల జాబితా CBSE, ICSE మరియు రాష్ట్ర "
+                   "బోర్డులకు ఒకటే — మీ బోర్డును ఎంచుకోండి, "
+                   "తరగతిని ఎంచుకోండి, అధ్యాయాల వారీగా సాధన "
+                   "చేయండి.",
+    "board_choose_board": "మీ బోర్డు",
+    "board_choose_class": "మీ తరగతిని ఎంచుకోండి",
+    "board_class_word": "తరగతి",
+    "board_chapters_heading": "అధ్యాయాలు",
+    "board_practice_btn": "సాధన (సమయ పరిమితి లేకుండా)",
+    "board_test_btn": "అధ్యాయ పరీక్ష (సమయంతో)",
+    "board_back": "← బోర్డు మోడ్",
+    "board_test_heading": "అధ్యాయ పరీక్ష 🎯",
+    "board_start_test": "అధ్యాయ పరీక్ష ప్రారంభించండి",
+    "board_topic_label": "ప్రశ్నలు ఈ అంశం నుండి:",
+    "board_fallback_note": "అత్యంత దగ్గరి అంశ సరిపోలిక — ఈ అధ్యాయం "
+                           "కోసం ప్రత్యేక జనరేటర్ ఇంకా రావాలి.",
+    "quiz_topic_sequences": "శ్రేణులు & క్రమాలు",
+    "quiz_topic_probability": "సంభావ్యత",
+    "quiz_topic_calculus": "కాల్కులస్",
+    "quiz_topic_linear_algebra": "రేఖీయ బీజగణితం",
+    "quiz_topic_geometry": "జ్యామితి",
+    "mistakes_heading": "తప్పుల నోట్‌బుక్ 📒",
+    "mistakes_intro": "క్విజ్‌లు మరియు అధ్యాయ పరీక్షల్లో మీరు "
+                      "తప్పు చేసిన ప్రశ్నలు, కొత్తవి ముందు. ఈ "
+                      "నోట్‌బుక్ మీ బ్రౌజర్ సెషన్‌లో మాత్రమే "
+                      "ఉంటుంది — సెషన్ ముగిస్తే తుడిచిపోతుంది.",
+    "mistakes_empty": "ఇంకా తప్పులు ఏవీ నమోదు కాలేదు — ఒక క్విజ్ "
+                      "లేదా అధ్యాయ పరీక్ష రాయండి, తప్పు చేసిన "
+                      "ప్రశ్నలు ఇక్కడ వస్తాయి.",
+    "mistakes_practice_btn": "↻ వీటిని మళ్లీ సాధన చేయండి",
+    "mistakes_clear_btn": "నోట్‌బుక్ తుడిచేయండి",
+    "mistakes_correct_is": "సరైన సమాధానం:",
+    "pdf_link": "🖨 PDF డౌన్‌లోడ్ చేయండి",
+    "print_btn": "ప్రింట్ / PDF గా సేవ్ చేయండి",
+    "print_footer": "Ganitra చే పరిష్కరించబడింది",
+}
+
+STRINGS["en"].update(_EN_W5)
+STRINGS["hi"].update(_HI_W5)
+STRINGS["bn"].update(_BN_W5)
+STRINGS["mr"].update(_MR_W5)
+STRINGS["ta"].update(_TA_W5)
+STRINGS["te"].update(_TE_W5)
+
+
+# ---------------------------------------------------------------------------
+# Wave 5b: Teacher's Advice — curated study tips per solver topic.
+# Same pattern as EXPLANATIONS: lookup "type:op" -> quadratic special
+# case (below) -> "type" -> English fallback -> "generic". Each line
+# combines the concept to revise, the classic student mistake on this
+# question type, and a practice suggestion. These are standard,
+# generic teaching points — no curriculum claims are made.
+# ---------------------------------------------------------------------------
+
+_ADVICE_EN = {
+    "generic": "Read the question twice and underline what is "
+               "actually asked. After solving, put your answer back "
+               "into the question to check it — this one habit "
+               "catches most silly mistakes.",
+    "arithmetic": "Do one operation per line and follow BODMAS "
+                  "strictly. Common mistake: rushing the sign when "
+                  "subtracting a negative — put brackets around "
+                  "negatives until it becomes habit.",
+    "algebra": "Write each step on its own line and keep the equation "
+               "balanced. Most algebra marks are lost to sign slips, "
+               "not hard ideas — slow down at every minus sign.",
+    "algebra:equation": "Revise balancing: whatever you do to one "
+                        "side, do to the other. The most common slip "
+                        "is a sign error when a term crosses the "
+                        "'=' — always check by putting your answer "
+                        "back into the original equation. Try 2 more "
+                        "like this in Practice.",
+    "algebra:quadratic": "For quadratics, first try factorising; if "
+                         "that fails, the quadratic formula always "
+                         "works. Common mistakes: dropping the ± and "
+                         "sign errors with b. The discriminant "
+                         "(b²−4ac) tells you how many real roots to "
+                         "expect — check it before you start.",
+    "trigonometry": "Revise the standard values (sin/cos/tan of 0°, "
+                    "30°, 45°, 60°, 90°) until they are automatic. "
+                    "Common mistake: mixing up sin and cos, or using "
+                    "radians when the question is in degrees.",
+    "calculus": "Learn the basic rules (power rule, chain rule, "
+                "standard integrals) as a small table and revise it "
+                "weekly — calculus rewards steady practice more than "
+                "last-minute cramming.",
+    "calculus:derivative": "Revise the power rule: the derivative of "
+                           "x^n is n·x^(n−1). Common mistake: "
+                           "forgetting the chain rule for brackets "
+                           "like (2x+1)^3 — differentiate the outside, "
+                           "then multiply by the derivative of the "
+                           "inside.",
+    "calculus:integral": "Integration is differentiation backwards — "
+                         "check any integral by differentiating your "
+                         "answer. Common mistake: forgetting the "
+                         "constant of integration (+C).",
+    "calculus:definite_integral": "Integration is differentiation "
+                                  "backwards — check the indefinite "
+                                  "integral by differentiating it. "
+                                  "Then substitute the top limit "
+                                  "minus the bottom limit carefully; "
+                                  "sign slips there are the classic "
+                                  "mistake.",
+    "statistics": "First decide what is being asked — mean, median "
+                  "and mode are different tools. Common mistake: "
+                  "computing the mean when the question wants the "
+                  "median (the middle value, after sorting).",
+    "statistics:probability": "Probability = favourable outcomes ÷ "
+                              "total outcomes, and the total must "
+                              "count equally likely cases. Common "
+                              "mistake: with two dice, treating sums "
+                              "as equally likely — they are not; "
+                              "list the pairs.",
+    "distributions": "For the normal distribution, always convert to "
+                     "a z-score first and sketch the curve — the "
+                     "picture prevents most errors. Common mistake: "
+                     "using the variance where the standard deviation "
+                     "belongs.",
+    "geometry": "Write the formula first, then substitute — and keep "
+                "units with every number. Common mistake: using the "
+                "diameter where the formula needs the radius.",
+    "sequences": "Identify whether it is an AP (same difference) or "
+                 "GP (same ratio) before touching a formula. Common "
+                 "mistake: using n instead of (n−1) in the nth-term "
+                 "formula.",
+}
+
+_ADVICE_HI = {
+    "generic": "प्रश्न दो बार पढ़िए और जो पूछा है उसे रेखांकित "
+               "कीजिए। हल के बाद उत्तर को प्रश्न में वापस रखकर "
+               "जाँचिए — यही एक आदत अधिकांश छोटी ग़लतियाँ पकड़ "
+               "लेती है।",
+    "arithmetic": "एक पंक्ति में एक ही संक्रिया कीजिए और BODMAS "
+                  "क्रम का कड़ाई से पालन कीजिए। आम ग़लती: "
+                  "ऋणात्मक संख्या घटाते समय जल्दबाज़ी — आदत बनने "
+                  "तक ऋणात्मक संख्याओं पर कोष्ठक लगाइए।",
+    "algebra": "हर चरण अलग पंक्ति में लिखिए और समीकरण संतुलित "
+               "रखिए। बीजगणित में अधिकांश अंक कठिन विचारों से "
+               "नहीं, चिह्न की छोटी भूलों से कटते हैं — हर ऋण "
+               "चिह्न पर धीरे चलिए।",
+    "algebra:equation": "संतुलन याद रखिए: जो एक तरफ करें, वही "
+                        "दूसरी तरफ भी। सबसे आम ग़लती है पद को '=' "
+                        "के पार ले जाते समय चिह्न की भूल — अपना "
+                        "उत्तर मूल समीकरण में रखकर हमेशा जाँचिए। "
+                        "अभ्यास में ऐसे 2 प्रश्न और हल कीजिए।",
+    "algebra:quadratic": "द्विघात समीकरणों में पहले गुणनखंड "
+                         "आज़माइए; न बने तो द्विघात सूत्र हमेशा "
+                         "काम करता है। आम ग़लतियाँ: ± भूल जाना और "
+                         "b के चिह्न की भूल। विविक्तकर (b²−4ac) "
+                         "बता देता है कि कितने वास्तविक मूल "
+                         "आएँगे — शुरू करने से पहले उसे देख "
+                         "लीजिए।",
+    "trigonometry": "मानक मान (0°, 30°, 45°, 60°, 90° के sin/cos/"
+                    "tan) इतने अभ्यास कीजिए कि वे अपने आप याद आ "
+                    "जाएँ। आम ग़लती: sin और cos में गड़बड़ी, या "
+                    "डिग्री वाले प्रश्न में रेडियन का उपयोग।",
+    "calculus": "बुनियादी नियमों (घात नियम, शृंखला नियम, मानक "
+                "समाकल) की छोटी-सी तालिका बनाकर हर सप्ताह "
+                "दोहराइए — कलन अंतिम समय की घबराहट से नहीं, "
+                "नियमित अभ्यास से आता है।",
+    "calculus:derivative": "घात नियम याद रखिए: x^n का अवकलज "
+                           "n·x^(n−1) होता है। आम ग़लती: (2x+1)^3 "
+                           "जैसे कोष्ठकों में शृंखला नियम भूल "
+                           "जाना — पहले बाहर का अवकलज, फिर अंदर "
+                           "के अवकलज से गुणा।",
+    "calculus:integral": "समाकलन अवकलन का उल्टा है — अपने उत्तर "
+                         "का अवकलन करके हर समाकल जाँचिए। आम "
+                         "ग़लती: समाकलन स्थिरांक (+C) भूल जाना।",
+    "calculus:definite_integral": "समाकलन अवकलन का उल्टा है — "
+                                  "अनिश्चित समाकल को अवकलन करके "
+                                  "जाँचिए। फिर ऊपर की सीमा घटा "
+                                  "नीचे की सीमा सावधानी से रखिए; "
+                                  "वहीं चिह्न की भूल सबसे आम "
+                                  "है।",
+    "statistics": "पहले तय कीजिए कि पूछा क्या है — माध्य, माध्यक "
+                  "और बहुलक अलग-अलग साधन हैं। आम ग़लती: जहाँ "
+                  "माध्यक (क्रम में रखने पर बीच का मान) चाहिए, "
+                  "वहाँ माध्य निकाल देना।",
+    "statistics:probability": "प्रायिकता = अनुकूल परिणाम ÷ कुल "
+                              "परिणाम, और कुल में सभी समान "
+                              "संभावना वाले मामले गिनने चाहिए। "
+                              "आम ग़लती: दो पासों के योगों को "
+                              "समान संभावना मान लेना — वे नहीं "
+                              "होते; जोड़ियाँ लिखकर गिनिए।",
+    "distributions": "सामान्य बंटन में पहले z-स्कोर बनाइए और वक्र "
+                     "का चित्र अवश्य बनाइए — चित्र अधिकांश "
+                     "ग़लतियाँ रोक देता है। आम ग़लती: जहाँ मानक "
+                     "विचलन चाहिए, वहाँ प्रसरण रख देना।",
+    "geometry": "पहले सूत्र लिखिए, फिर मान रखिए — और हर संख्या के "
+                "साथ इकाई भी। आम ग़लती: जहाँ सूत्र में त्रिज्या "
+                "चाहिए, वहाँ व्यास रख देना।",
+    "sequences": "सूत्र छूने से पहले पहचानिए कि यह AP है (समान "
+                 "अंतर) या GP (समान अनुपात)। आम ग़लती: nवें पद "
+                 "के सूत्र में (n−1) की जगह n रख देना।",
+}
+
+ADVICE = {"en": _ADVICE_EN, "hi": _ADVICE_HI}
+
+_ADVICE_BN = {
+    "generic": "প্রশ্নটি দুবার পড়ুন এবং যা চাওয়া হয়েছে তার "
+               "নিচে দাগ দিন। সমাধানের পর উত্তরটি প্রশ্নে ফিরিয়ে "
+               "বসিয়ে যাচাই করুন — এই একটি অভ্যাসই বেশিরভাগ "
+               "ছোট ভুল ধরে ফেলে।",
+    "arithmetic": "এক লাইনে একটি করে ক্রিয়া করুন এবং BODMAS "
+                  "ক্রম কঠোরভাবে মানুন। সাধারণ ভুল: ঋণাত্মক "
+                  "সংখ্যা বিয়োগের সময় তাড়াহুড়ো — অভ্যাস না "
+                  "হওয়া পর্যন্ত ঋণাত্মক সংখ্যায় বন্ধনী দিন।",
+    "algebra": "প্রতিটি ধাপ আলাদা লাইনে লিখুন এবং সমীকরণের "
+               "ভারসাম্য রাখুন। বীজগণিতের বেশিরভাগ নম্বর কঠিন "
+               "ধারণায় নয়, চিহ্নের ছোট ভুলে কাটা যায় — "
+               "প্রতিটি বিয়োগ চিহ্নে ধীরে চলুন।",
+    "algebra:equation": "ভারসাম্য মনে রাখুন: এক পাশে যা করবেন, "
+                        "অন্য পাশেও তাই। সবচেয়ে সাধারণ ভুল হলো "
+                        "পদকে '=' চিহ্নের ওপারে নেওয়ার সময় "
+                        "চিহ্নের ভুল — আপনার উত্তরটি মূল সমীকরণে "
+                        "বসিয়ে সবসময় যাচাই করুন। অনুশীলনে এমন "
+                        "আরও ২টি প্রশ্ন করুন।",
+    "algebra:quadratic": "দ্বিঘাত সমীকরণে প্রথমে উৎপাদকে "
+                         "বিশ্লেষণ চেষ্টা করুন; না হলে দ্বিঘাত "
+                         "সূত্র সবসময় কাজ করে। সাধারণ ভুল: ± "
+                         "ভুলে যাওয়া এবং b-এর চিহ্নের ভুল। "
+                         "নিরূপক (b²−4ac) বলে দেয় কয়টি বাস্তব "
+                         "মূল আসবে — শুরু করার আগে তা দেখে নিন।",
+    "trigonometry": "মানক মানগুলি (0°, 30°, 45°, 60°, 90°-এর "
+                    "sin/cos/tan) এতটাই অনুশীলন করুন যেন সেগুলি "
+                    "নিজে থেকেই মনে থাকে। সাধারণ ভুল: sin ও cos "
+                    "গুলিয়ে ফেলা, কিংবা ডিগ্রির প্রশ্নে রেডিয়ান "
+                    "ব্যবহার করা।",
+    "calculus": "মৌলিক নিয়মগুলির (ঘাত নিয়ম, শৃঙ্খল নিয়ম, মানক "
+                "সমাকল) একটি ছোট তালিকা তৈরি করে প্রতি সপ্তাহে "
+                "পুনরাবৃত্তি করুন — ক্যালকুলাস শেষ মুহূর্তের "
+                "তাড়ায় নয়, নিয়মিত অনুশীলনে আসে।",
+    "calculus:derivative": "ঘাত নিয়মটি মনে রাখুন: x^n-এর "
+                           "অন্তরকলজ n·x^(n−1)। সাধারণ ভুল: "
+                           "(2x+1)^3-এর মতো বন্ধনীতে শৃঙ্খল নিয়ম "
+                           "ভুলে যাওয়া — প্রথমে বাইরের অন্তরকলজ, "
+                           "তারপর ভেতরের অন্তরকলজ দিয়ে গুণ।",
+    "calculus:integral": "সমাকলন হলো অন্তরকলনের উল্টো — আপনার "
+                         "উত্তরকে অন্তরকলন করে প্রতিটি সমাকল "
+                         "যাচাই করুন। সাধারণ ভুল: সমাকলন ধ্রুবক "
+                         "(+C) ভুলে যাওয়া।",
+    "calculus:definite_integral": "সমাকলন হলো অন্তরকলনের উল্টো — "
+                                  "অনির্দিষ্ট সমাকলকে অন্তরকলন "
+                                  "করে যাচাই করুন। তারপর ঊর্ধ্ব "
+                                  "সীমা বিয়োগ নিম্ন সীমা "
+                                  "সাবধানে বসান; চিহ্নের ভুল "
+                                  "সেখানেই সবচেয়ে বেশি হয়।",
+    "statistics": "প্রথমে ঠিক করুন কী চাওয়া হয়েছে — গড়, মধ্যক "
+                  "ও প্রচুরক আলাদা হাতিয়ার। সাধারণ ভুল: যেখানে "
+                  "মধ্যক (সাজানোর পর মাঝের মান) চাই, সেখানে গড় "
+                  "বের করা।",
+    "statistics:probability": "সম্ভাবনা = অনুকূল ফলাফল ÷ মোট "
+                              "ফলাফল, এবং মোটে সম-সম্ভাব্য সব "
+                              "ক্ষেত্র গুনতে হবে। সাধারণ ভুল: "
+                              "দুটি পাশার যোগফলগুলিকে সম-সম্ভাব্য "
+                              "ধরা — তারা তা নয়; জোড়গুলি লিখে "
+                              "গুনুন।",
+    "distributions": "স্বাভাবিক বণ্টনে প্রথমে z-স্কোর বের করুন "
+                     "এবং বক্ররেখার ছবি আঁকুন — ছবিই বেশিরভাগ "
+                     "ভুল আটকায়। সাধারণ ভুল: যেখানে প্রমাণ "
+                     "বিচ্যুতি দরকার, সেখানে ভেদাঙ্ক ব্যবহার "
+                     "করা।",
+    "geometry": "প্রথমে সূত্র লিখুন, তারপর মান বসান — প্রতিটি "
+                "সংখ্যার সঙ্গে একক রাখুন। সাধারণ ভুল: যেখানে "
+                "সূত্রে ব্যাসার্ধ দরকার, সেখানে ব্যাস ব্যবহার "
+                "করা।",
+    "sequences": "সূত্র ছোঁয়ার আগে চিনুন এটি AP (সমান অন্তর) "
+                 "নাকি GP (সমান অনুপাত)। সাধারণ ভুল: n-তম পদের "
+                 "সূত্রে (n−1)-এর বদলে n ব্যবহার করা।",
+}
+
+_ADVICE_MR = {
+    "generic": "प्रश्न दोनदा वाचा आणि जे विचारले आहे त्याखाली "
+               "रेघ ओढा। सोडवल्यानंतर उत्तर प्रश्नात परत ठेवून "
+               "तपासा — ही एकच सवय बहुतेक छोट्या चुका पकडते.",
+    "arithmetic": "एका ओळीत एकच क्रिया करा आणि BODMAS क्रम "
+                  "काटेकोरपणे पाळा। सामान्य चूक: ऋण संख्या वजा "
+                  "करताना घाई — सवय होईपर्यंत ऋण संख्यांभोवती "
+                  "कंस घाला.",
+    "algebra": "प्रत्येक पायरी वेगळ्या ओळीत लिहा आणि समीकरण "
+               "संतुलित ठेवा। बीजगणितातील बहुतेक गुण कठीण "
+               "कल्पनांमुळे नाही, तर चिन्हांच्या छोट्या "
+               "चुकांमुळे जातात — प्रत्येक वजाबाकीच्या "
+               "चिन्हाजवळ सावकाश व्हा.",
+    "algebra:equation": "संतुलन लक्षात ठेवा: एका बाजूला जे कराल "
+                        "तेच दुसऱ्या बाजूलाही। सर्वात सामान्य चूक "
+                        "म्हणजे पद '=' चिन्हाच्या पलीकडे नेताना "
+                        "चिन्हाची चूक — तुमचे उत्तर मूळ समीकरणात "
+                        "ठेवून नेहमी तपासा। सरावात अशी आणखी २ "
+                        "उदाहरणे सोडवा.",
+    "algebra:quadratic": "वर्ग समीकरणांमध्ये आधी अवयव पाडून "
+                         "पाहा; जमले नाही तर वर्ग सूत्र नेहमी "
+                         "काम करते। सामान्य चुका: ± विसरणे आणि "
+                         "b च्या चिन्हाची चूक। विवेचक (b²−4ac) "
+                         "किती वास्तव मुळे येतील ते सांगतो — "
+                         "सुरुवात करण्याआधी तो पाहा.",
+    "trigonometry": "प्रमाण मूल्ये (0°, 30°, 45°, 60°, 90° चे "
+                    "sin/cos/tan) आपोआप आठवतील इतका सराव करा। "
+                    "सामान्य चूक: sin आणि cos ची गल्लत, किंवा "
+                    "अंशांच्या प्रश्नात रेडियन वापरणे.",
+    "calculus": "मूलभूत नियमांची (घात नियम, साखळी नियम, प्रमाण "
+                "समाकले) छोटी यादी करून दर आठवड्याला उजळणी "
+                "करा — कॅल्क्युलस शेवटच्या क्षणाच्या गडबडीने "
+                "नाही, तर नियमित सरावाने येते.",
+    "calculus:derivative": "घात नियम लक्षात ठेवा: x^n चे विकलज "
+                           "n·x^(n−1)। सामान्य चूक: (2x+1)^3 "
+                           "सारख्या कंसांमध्ये साखळी नियम "
+                           "विसरणे — आधी बाहेरचे विकलज, मग "
+                           "आतल्या विकलजाने गुणा.",
+    "calculus:integral": "समाकलन म्हणजे विकलनाची उलटी क्रिया — "
+                         "तुमच्या उत्तराचे विकलज काढून प्रत्येक "
+                         "समाकल तपासा। सामान्य चूक: समाकलन स्थिरांक "
+                         "(+C) विसरणे.",
+    "calculus:definite_integral": "समाकलन म्हणजे विकलनाची उलटी "
+                                  "क्रिया — अनिश्चित समाकलाचे "
+                                  "विकलज काढून ते तपासा। मग वरची "
+                                  "मर्यादा वजा खालची मर्यादा "
+                                  "काळजीपूर्वक ठेवा; चिन्हाची "
+                                  "चूक तिथेच सर्वाधिक होते.",
+    "statistics": "आधी ठरवा काय विचारले आहे — मध्य, मध्यक आणि "
+                  "बहुलक ही वेगळी साधने आहेत। सामान्य चूक: जिथे "
+                  "मध्यक (क्रम लावल्यानंतरचे मधले मूल्य) हवा "
+                  "असतो तिथे मध्य काढणे.",
+    "statistics:probability": "संभाव्यता = अनुकूल निष्पत्ती ÷ "
+                              "एकूण निष्पत्ती, आणि एकूणमध्ये "
+                              "सर्व समान-शक्य प्रकरणे मोजली "
+                              "पाहिजेत। सामान्य चूक: दोन "
+                              "फाशांच्या बेरजांना समान-शक्य मानणे "
+                              "— त्या नसतात; जोड्या लिहून मोजा.",
+    "distributions": "सामान्य वितरणात आधी z-गुण काढा आणि "
+                     "वक्राची आकृती अवश्य काढा — आकृती "
+                     "बहुतेक चुका टाळते। सामान्य चूक: जिथे "
+                     "प्रमाण विचलन हवे तिथे प्रसरण वापरणे.",
+    "geometry": "आधी सूत्र लिहा, मग किमती ठेवा — आणि प्रत्येक "
+                "संख्येसोबत एकक ठेवा। सामान्य चूक: सूत्रात "
+                "त्रिज्या हवी असताना व्यास वापरणे.",
+    "sequences": "सूत्राला हात लावण्याआधी ओळखा की ही AP आहे "
+                 "(समान फरक) की GP (समान गुणोत्तर)। सामान्य "
+                 "चूक: n व्या पदाच्या सूत्रात (n−1) ऐवजी n "
+                 "वापरणे.",
+}
+
+ADVICE["bn"] = _ADVICE_BN
+ADVICE["mr"] = _ADVICE_MR
+
+_ADVICE_TA = {
+    "generic": "கேள்வியை இருமுறை படித்து, என்ன கேட்கப்படுகிறது "
+               "என்பதை அடிக்கோடிடுங்கள். தீர்த்த பின் உங்கள் "
+               "விடையைக் கேள்வியில் மீண்டும் இட்டுச் "
+               "சரிபாருங்கள் — இந்த ஒரு பழக்கமே பெரும்பாலான "
+               "சிறு தவறுகளைப் பிடிக்கும்.",
+    "arithmetic": "ஒரு வரியில் ஒரு செயலை மட்டும் செய்து "
+                  "BODMAS வரிசையைக் கடுமையாகப் பின்பற்றுங்கள். "
+                  "பொதுவான தவறு: எதிர்மறை எண்ணைக் "
+                  "கழிக்கும்போது அவசரம் — பழக்கமாகும் வரை "
+                  "எதிர்மறை எண்களை அடைப்புக்குள் வைக்கவும்.",
+    "algebra": "ஒவ்வொரு படியையும் தனி வரியில் எழுதி "
+               "சமன்பாட்டைச் சமநிலையில் வைக்கவும். இயற்கணித "
+               "மதிப்பெண்கள் பெரும்பாலும் கடினமான கருத்துகளால் "
+               "அல்ல, குறியீட்டுச் சிறு பிழைகளால் "
+               "இழக்கப்படுகின்றன — ஒவ்வொரு கழித்தல் "
+               "குறியிடமும் மெதுவாகச் செல்லுங்கள்.",
+    "algebra:equation": "சமநிலையை நினைவில் கொள்ளுங்கள்: ஒரு "
+                        "பக்கத்தில் என்ன செய்கிறீர்களோ அதையே "
+                        "மறு பக்கத்திலும் செய்யுங்கள். மிகப் "
+                        "பொதுவான தவறு, உறுப்பை '=' குறியின் "
+                        "மறுபுறம் கொண்டு செல்லும்போது ஏற்படும் "
+                        "குறியீட்டுப் பிழை — உங்கள் விடையை "
+                        "மூலச் சமன்பாட்டில் இட்டு எப்போதும் "
+                        "சரிபாருங்கள். பயிற்சியில் இது போல் "
+                        "மேலும் 2 கேள்விகளை முயற்சிக்கவும்.",
+    "algebra:quadratic": "இருபடிச் சமன்பாடுகளில் முதலில் "
+                         "காரணிப்படுத்திப் பாருங்கள்; "
+                         "முடியாவிட்டால் இருபடி சூத்திரம் "
+                         "எப்போதும் வேலை செய்யும். பொதுவான "
+                         "தவறுகள்: ± ஐ மறப்பது மற்றும் b இன் "
+                         "குறியீட்டுப் பிழை. பிரித்தறிவான் "
+                         "(b²−4ac) எத்தனை மெய் மூலங்கள் வரும் "
+                         "என்பதைச் சொல்லும் — தொடங்குவதற்கு "
+                         "முன் அதைப் பாருங்கள்.",
+    "trigonometry": "நிலையான மதிப்புகளை (0°, 30°, 45°, 60°, "
+                    "90° இன் sin/cos/tan) தானாகவே நினைவுக்கு "
+                    "வரும் அளவுக்குப் பயிற்சி செய்யுங்கள். "
+                    "பொதுவான தவறு: sin மற்றும் cos ஐக் "
+                    "குழப்புவது, அல்லது டிகிரி கேள்வியில் "
+                    "ரேடியனைப் பயன்படுத்துவது.",
+    "calculus": "அடிப்படை விதிகளை (அடுக்கு விதி, சங்கிலி விதி, "
+                "நிலையான தொகையீடுகள்) சிறு அட்டவணையாக்கி "
+                "வாரந்தோறும் மீள்பார்வை செய்யுங்கள் — "
+                "கால்குலஸ் கடைசி நிமிட அவசரத்தால் அல்ல, "
+                "தொடர் பயிற்சியால் வரும்.",
+    "calculus:derivative": "அடுக்கு விதியை நினைவில் "
+                           "கொள்ளுங்கள்: x^n இன் வகைக்கெழு "
+                           "n·x^(n−1). பொதுவான தவறு: (2x+1)^3 "
+                           "போன்ற அடைப்புகளில் சங்கிலி விதியை "
+                           "மறப்பது — முதலில் வெளிப்புறத்தின் "
+                           "வகைக்கெழு, பின் உட்புறத்தின் "
+                           "வகைக்கெழுவால் பெருக்கவும்.",
+    "calculus:integral": "தொகையீடு என்பது வகையீட்டின் "
+                         "எதிர்மறை — உங்கள் விடையை வகைக்கெழு "
+                         "எடுத்து ஒவ்வொரு தொகையீட்டையும் "
+                         "சரிபாருங்கள். பொதுவான தவறு: தொகையீட்டு "
+                         "மாறிலியை (+C) மறப்பது.",
+    "calculus:definite_integral": "தொகையீடு என்பது வகையீட்டின் "
+                                  "எதிர்மறை — வரையறா "
+                                  "தொகையீட்டை வகைக்கெழு எடுத்து "
+                                  "சரிபாருங்கள். பின் மேல் "
+                                  "எல்லை கழித்தல் கீழ் எல்லையை "
+                                  "கவனமாக இடுங்கள்; குறியீட்டுப் "
+                                  "பிழை அங்கேயே அதிகம் "
+                                  "நடக்கும்.",
+    "statistics": "முதலில் என்ன கேட்கப்படுகிறது என்பதை "
+                  "முடிவு செய்யுங்கள் — சராசரி, இடைநிலை, "
+                  "ஆகாரம் வெவ்வேறு கருவிகள். பொதுவான தவறு: "
+                  "இடைநிலை (வரிசைப்படுத்திய பின் நடு மதிப்பு) "
+                  "வேண்டிய இடத்தில் சராசரியைக் கணக்கிடுவது.",
+    "statistics:probability": "நிகழ்தகவு = சாதகமான விளைவுகள் ÷ "
+                              "மொத்த விளைவுகள், மொத்தத்தில் சம "
+                              "வாய்ப்புள்ள எல்லா நிகழ்வுகளும் "
+                              "எண்ணப்பட வேண்டும். பொதுவான "
+                              "தவறு: இரு பகடைகளின் "
+                              "கூட்டுத்தொகைகளை சம வாய்ப்புள்ளவை "
+                              "எனக் கருதுவது — அவை அப்படியல்ல; "
+                              "இணைகளை எழுதி எண்ணுங்கள்.",
+    "distributions": "இயல்புப் பரவலில் முதலில் z-மதிப்பெண்ணாக "
+                     "மாற்றி வளைவரையின் படத்தை வரையுங்கள் — "
+                     "படமே பெரும்பாலான பிழைகளைத் தடுக்கும். "
+                     "பொதுவான தவறு: நிலையான விலக்கம் வேண்டிய "
+                     "இடத்தில் மாறுபாட்டைப் பயன்படுத்துவது.",
+    "geometry": "முதலில் சூத்திரத்தை எழுதி, பின் மதிப்புகளை "
+                "இடுங்கள் — ஒவ்வொரு எண்ணுடனும் அலகையும் "
+                "வைக்கவும். பொதுவான தவறு: சூத்திரத்தில் ஆரம் "
+                "வேண்டிய இடத்தில் விட்டத்தைப் பயன்படுத்துவது.",
+    "sequences": "சூத்திரத்தைத் தொடுவதற்கு முன் அது AP (சம "
+                 "வித்தியாசம்) அல்லது GP (சம விகிதம்) என்பதை "
+                 "அடையாளம் காணுங்கள். பொதுவான தவறு: n-ஆம் "
+                 "உறுப்பு சூத்திரத்தில் (n−1) க்குப் பதில் n "
+                 "ஐப் பயன்படுத்துவது.",
+}
+
+_ADVICE_TE = {
+    "generic": "ప్రశ్నను రెండుసార్లు చదివి, ఏమి అడుగుతున్నారో "
+               "దాని కింద గీత గీయండి. పరిష్కరించిన తరువాత మీ "
+               "సమాధానాన్ని ప్రశ్నలో తిరిగి ఉంచి పరీక్షించండి "
+               "— ఈ ఒక్క అలవాటే చాలా చిన్న తప్పులను "
+               "పట్టుకుంటుంది.",
+    "arithmetic": "ఒక వరుసలో ఒకే క్రియ చేసి BODMAS క్రమాన్ని "
+                  "కఠినంగా పాటించండి. సాధారణ తప్పు: రుణ "
+                  "సంఖ్యను తీసివేసేటప్పుడు తొందర — అలవాటయ్యే "
+                  "వరకు రుణ సంఖ్యల చుట్టూ బ్రాకెట్లు వేయండి.",
+    "algebra": "ప్రతి దశను ప్రత్యేక వరుసలో రాసి సమీకరణాన్ని "
+               "సమతుల్యంగా ఉంచండి. బీజగణిత మార్కులు ఎక్కువగా "
+               "కఠినమైన ఆలోచనల వల్ల కాక, గుర్తుల చిన్న "
+               "పొరపాట్ల వల్లే పోతాయి — ప్రతి మైనస్ గుర్తు "
+               "దగ్గర నెమ్మదిగా వెళ్లండి.",
+    "algebra:equation": "సమతుల్యతను గుర్తుంచుకోండి: ఒక వైపు "
+                        "ఏది చేస్తారో అదే మరో వైపు కూడా "
+                        "చేయండి. అత్యంత సాధారణ తప్పు, పదాన్ని "
+                        "'=' గుర్తుకు అవతలికి తీసుకెళ్లేటప్పుడు "
+                        "గుర్తు పొరపాటు — మీ సమాధానాన్ని అసలు "
+                        "సమీకరణంలో ఉంచి ఎప్పుడూ పరీక్షించండి. "
+                        "సాధనలో ఇలాంటివి మరో 2 ప్రయత్నించండి.",
+    "algebra:quadratic": "వర్గ సమీకరణాల్లో ముందు కారణాంకాలుగా "
+                         "విడగొట్టి చూడండి; కుదరకపోతే వర్గ "
+                         "సూత్రం ఎప్పుడూ పనిచేస్తుంది. సాధారణ "
+                         "తప్పులు: ± ను మరచిపోవడం మరియు b గుర్తు "
+                         "పొరపాటు. విచక్షణి (b²−4ac) ఎన్ని "
+                         "వాస్తవ మూలాలు వస్తాయో చెబుతుంది — "
+                         "మొదలుపెట్టే ముందు దాన్ని చూడండి.",
+    "trigonometry": "ప్రామాణిక విలువలను (0°, 30°, 45°, 60°, "
+                    "90° ల sin/cos/tan) అవి స్వయంచాలకంగా "
+                    "గుర్తుకు వచ్చేంతగా సాధన చేయండి. సాధారణ "
+                    "తప్పు: sin మరియు cos లను కలగలపడం, లేదా "
+                    "డిగ్రీల ప్రశ్నలో రేడియన్లు వాడటం.",
+    "calculus": "ప్రాథమిక నియమాలను (ఘాత నియమం, శృంఖల నియమం, "
+                "ప్రామాణిక సమాకలనులు) చిన్న పట్టికగా చేసి "
+                "ప్రతి వారం పునరావృతం చేయండి — కాల్కులస్ "
+                "చివరి నిమిషపు హడావుడితో కాక, క్రమ సాధనతో "
+                "వస్తుంది.",
+    "calculus:derivative": "ఘాత నియమాన్ని గుర్తుంచుకోండి: x^n "
+                           "యొక్క అవకలజం n·x^(n−1). సాధారణ "
+                           "తప్పు: (2x+1)^3 వంటి బ్రాకెట్లలో "
+                           "శృంఖల నియమాన్ని మరచిపోవడం — "
+                           "ముందు బయటి అవకలజం, తరువాత లోపలి "
+                           "అవకలజంతో గుణించండి.",
+    "calculus:integral": "సమాకలనం అంటే అవకలనానికి వ్యతిరేకం — "
+                         "మీ సమాధానాన్ని అవకలజం చేసి ప్రతి "
+                         "సమాకలనిని పరీక్షించండి. సాధారణ "
+                         "తప్పు: సమాకలన స్థిరాంకాన్ని (+C) "
+                         "మరచిపోవడం.",
+    "calculus:definite_integral": "సమాకలనం అంటే అవకలనానికి "
+                                  "వ్యతిరేకం — అనిశ్చిత "
+                                  "సమాకలనిని అవకలజం చేసి "
+                                  "పరీక్షించండి. తరువాత పై "
+                                  "హద్దు మైనస్ కింది హద్దును "
+                                  "జాగ్రత్తగా ఉంచండి; గుర్తు "
+                                  "పొరపాటు అక్కడే ఎక్కువగా "
+                                  "జరుగుతుంది.",
+    "statistics": "ముందు ఏమి అడుగుతున్నారో నిర్ణయించండి — "
+                  "సగటు, మధ్యగతం, బాహుళ్యం వేర్వేరు సాధనాలు. "
+                  "సాధారణ తప్పు: మధ్యగతం (క్రమంలో పెట్టిన "
+                  "తరువాత మధ్య విలువ) కావలసిన చోట సగటును "
+                  "లెక్కించడం.",
+    "statistics:probability": "సంభావ్యత = అనుకూల ఫలితాలు ÷ "
+                              "మొత్తం ఫలితాలు, మొత్తంలో సమాన "
+                              "అవకాశం ఉన్న అన్ని సందర్భాలను "
+                              "లెక్కించాలి. సాధారణ తప్పు: రెండు "
+                              "పాచికల మొత్తాలను సమాన అవకాశం "
+                              "ఉన్నవిగా భావించడం — అవి అలా కావు; "
+                              "జతలను రాసి లెక్కించండి.",
+    "distributions": "సాధారణ పంపిణీలో ముందు z-స్కోరుగా మార్చి "
+                     "వక్రరేఖ చిత్రాన్ని తప్పకుండా గీయండి — "
+                     "చిత్రమే చాలా తప్పులను ఆపుతుంది. సాధారణ "
+                     "తప్పు: ప్రామాణిక విచలనం కావలసిన చోట "
+                     "విస్తృతిని వాడటం.",
+    "geometry": "ముందు సూత్రాన్ని రాయండి, తరువాత విలువలు "
+                "ఉంచండి — ప్రతి సంఖ్యతో పాటు ప్రమాణాన్ని "
+                "కూడా ఉంచండి. సాధారణ తప్పు: సూత్రంలో "
+                "వ్యాసార్థం కావలసిన చోట వ్యాసాన్ని వాడటం.",
+    "sequences": "సూత్రాన్ని తాకే ముందు అది AP (సమాన భేదం) "
+                 "లేక GP (సమాన నిష్పత్తి) అనేది గుర్తించండి. "
+                 "సాధారణ తప్పు: nవ పద సూత్రంలో (n−1) కు "
+                 "బదులు n ను వాడటం.",
+}
+
+ADVICE["ta"] = _ADVICE_TA
+ADVICE["te"] = _ADVICE_TE
+
+
+def advice_for(result, lang):
+    """The curated teacher's-advice line for a solver result dict.
+
+    Fallback chain: "type:op" -> (algebra equations whose steps use
+    the discriminant/quadratic formula -> "algebra:quadratic") ->
+    "type" -> English equivalents -> "generic". Never raises.
+    """
+    table = ADVICE.get(lang) or ADVICE["en"]
+    fallback = ADVICE["en"]
+    result = result or {}
+    rtype = result.get("type", "") or ""
+    rop = result.get("op", "") or ""
+    key = f"{rtype}:{rop}"
+    if key == "algebra:equation":
+        steps_text = " ".join(result.get("steps") or []).lower()
+        if "discriminant" in steps_text or "quadratic" in steps_text:
+            key = "algebra:quadratic"
+    return (table.get(key) or table.get(rtype)
+            or fallback.get(key) or fallback.get(rtype)
+            or table.get("generic") or fallback["generic"])
+
+
+# ---------------------------------------------------------------------------
+# Wave 5b UI strings: Teacher's Advice headings, the Listen button,
+# and the rotating Advice of the Day (7 tips, one per weekday cycle).
+# ---------------------------------------------------------------------------
+
+_EN_W5B = {
+    "advice_heading": "👩‍🏫 Teacher's Advice",
+    "advice_day_heading": "👩‍🏫 Teacher's Advice of the Day",
+    "listen_btn": "🔊 Listen",
+    "tip_day_0": "Revise a little every day — 20 focused minutes "
+                 "beat 3 hours the night before an exam.",
+    "tip_day_1": "Keep a mistake notebook: write every question you "
+                 "got wrong and redo it after two days.",
+    "tip_day_2": "Always check your answer by putting it back into "
+                 "the question.",
+    "tip_day_3": "Draw the diagram. Half of geometry and "
+                 "trigonometry becomes easy once the picture is on "
+                 "paper.",
+    "tip_day_4": "Learn formulas by using them: solve two questions "
+                 "right after learning any new formula.",
+    "tip_day_5": "In the exam, attempt the questions you know first "
+                 "and mark the hard ones for later.",
+    "tip_day_6": "Write every step — in board exams, correct steps "
+                 "earn marks even if the final answer slips.",
+}
+
+_HI_W5B = {
+    "advice_heading": "👩‍🏫 शिक्षक की सलाह",
+    "advice_day_heading": "👩‍🏫 आज की शिक्षक सलाह",
+    "listen_btn": "🔊 सुनिए",
+    "tip_day_0": "रोज़ थोड़ा-थोड़ा दोहराइए — परीक्षा से पहली रात "
+                 "के 3 घंटे से 20 मिनट का नियमित अभ्यास बेहतर "
+                 "है।",
+    "tip_day_1": "ग़लतियों की नोटबुक रखिए: जो प्रश्न ग़लत हो उसे "
+                 "लिखिए और दो दिन बाद फिर हल कीजिए।",
+    "tip_day_2": "अपना उत्तर हमेशा प्रश्न में वापस रखकर जाँचिए।",
+    "tip_day_3": "चित्र बनाइए। ज्यामिति और त्रिकोणमिति का आधा "
+                 "हिस्सा काग़ज़ पर चित्र बनते ही आसान हो जाता "
+                 "है।",
+    "tip_day_4": "सूत्र उन्हें इस्तेमाल करके सीखिए: नया सूत्र "
+                 "सीखते ही तुरंत दो प्रश्न हल कीजिए।",
+    "tip_day_5": "परीक्षा में पहले वे प्रश्न कीजिए जो आते हैं, "
+                 "कठिन प्रश्नों को बाद के लिए चिह्नित कीजिए।",
+    "tip_day_6": "हर चरण लिखिए — बोर्ड परीक्षा में अंतिम उत्तर "
+                 "फिसल भी जाए तो सही चरणों के अंक मिलते हैं।",
+}
+
+_BN_W5B = {
+    "advice_heading": "👩‍🏫 শিক্ষকের পরামর্শ",
+    "advice_day_heading": "👩‍🏫 আজকের শিক্ষকের পরামর্শ",
+    "listen_btn": "🔊 শুনুন",
+    "tip_day_0": "রোজ অল্প অল্প করে পুনরাবৃত্তি করুন — পরীক্ষার "
+                 "আগের রাতের ৩ ঘণ্টার চেয়ে ২০ মিনিটের নিয়মিত "
+                 "অনুশীলন ভালো।",
+    "tip_day_1": "ভুলের খাতা রাখুন: যে প্রশ্ন ভুল হবে তা লিখে "
+                 "রাখুন এবং দুদিন পরে আবার করুন।",
+    "tip_day_2": "আপনার উত্তর সর্বদা প্রশ্নে ফিরিয়ে বসিয়ে "
+                 "যাচাই করুন।",
+    "tip_day_3": "ছবি আঁকুন। কাগজে ছবি আঁকলেই জ্যামিতি ও "
+                 "ত্রিকোণমিতির অর্ধেক সহজ হয়ে যায়।",
+    "tip_day_4": "সূত্র ব্যবহার করে শিখুন: নতুন সূত্র শেখার "
+                 "সঙ্গে সঙ্গে দুটি প্রশ্ন সমাধান করুন।",
+    "tip_day_5": "পরীক্ষায় প্রথমে জানা প্রশ্নগুলি করুন এবং "
+                 "কঠিনগুলি পরে করার জন্য চিহ্নিত রাখুন।",
+    "tip_day_6": "প্রতিটি ধাপ লিখুন — বোর্ড পরীক্ষায় শেষ উত্তর "
+                 "ভুল হলেও সঠিক ধাপের জন্য নম্বর মেলে।",
+}
+
+_MR_W5B = {
+    "advice_heading": "👩‍🏫 शिक्षकांचा सल्ला",
+    "advice_day_heading": "👩‍🏫 आजचा शिक्षकांचा सल्ला",
+    "listen_btn": "🔊 ऐका",
+    "tip_day_0": "रोज थोडा थोडा अभ्यास करा — परीक्षेच्या आदल्या "
+                 "रात्रीच्या ३ तासांपेक्षा २० मिनिटांचा नियमित "
+                 "सराव चांगला.",
+    "tip_day_1": "चुकांची वही ठेवा: जे उदाहरण चुकेल ते लिहा आणि "
+                 "दोन दिवसांनी पुन्हा सोडवा.",
+    "tip_day_2": "तुमचे उत्तर नेहमी प्रश्नात परत ठेवून तपासा.",
+    "tip_day_3": "आकृती काढा। कागदावर आकृती आली की भूमिती आणि "
+                 "त्रिकोणमितीचा अर्धा भाग सोपा होतो.",
+    "tip_day_4": "सूत्रे वापरून शिका: नवीन सूत्र शिकताच लगेच "
+                 "दोन उदाहरणे सोडवा.",
+    "tip_day_5": "परीक्षेत आधी येत असलेली उदाहरणे सोडवा आणि "
+                 "कठीण उदाहरणे नंतरसाठी चिन्हांकित करा.",
+    "tip_day_6": "प्रत्येक पायरी लिहा — बोर्ड परीक्षेत अंतिम "
+                 "उत्तर चुकले तरी बरोबर पायऱ्यांना गुण मिळतात.",
+}
+
+_TA_W5B = {
+    "advice_heading": "👩‍🏫 ஆசிரியரின் அறிவுரை",
+    "advice_day_heading": "👩‍🏫 இன்றைய ஆசிரியர் அறிவுரை",
+    "listen_btn": "🔊 கேளுங்கள்",
+    "tip_day_0": "தினமும் கொஞ்சம் கொஞ்சமாக மீள்பார்வை "
+                 "செய்யுங்கள் — தேர்வுக்கு முந்தைய இரவின் 3 "
+                 "மணி நேரத்தை விட 20 நிமிட தொடர் பயிற்சி "
+                 "சிறந்தது.",
+    "tip_day_1": "தவறுகள் குறிப்பேட்டை வைத்திருங்கள்: "
+                 "தவறவிட்ட கேள்வியை எழுதி, இரண்டு "
+                 "நாட்களுக்குப் பின் மீண்டும் செய்யுங்கள்.",
+    "tip_day_2": "உங்கள் விடையை எப்போதும் கேள்வியில் மீண்டும் "
+                 "இட்டுச் சரிபாருங்கள்.",
+    "tip_day_3": "படத்தை வரையுங்கள். வடிவியல் மற்றும் "
+                 "முக்கோணவியலின் பாதி, காகிதத்தில் படம் "
+                 "வந்ததுமே எளிதாகிவிடும்.",
+    "tip_day_4": "சூத்திரங்களைப் பயன்படுத்திக் கற்றுக் "
+                 "கொள்ளுங்கள்: புதிய சூத்திரத்தைக் கற்ற உடனே "
+                 "இரண்டு கேள்விகளைத் தீர்க்கவும்.",
+    "tip_day_5": "தேர்வில் முதலில் தெரிந்த கேள்விகளை "
+                 "முயற்சித்து, கடினமானவற்றைப் பின்னர் செய்யக் "
+                 "குறித்து வைக்கவும்.",
+    "tip_day_6": "ஒவ்வொரு படியையும் எழுதுங்கள் — போர்டு "
+                 "தேர்வுகளில் இறுதி விடை தவறினாலும் சரியான "
+                 "படிகளுக்கு மதிப்பெண் கிடைக்கும்.",
+}
+
+_TE_W5B = {
+    "advice_heading": "👩‍🏫 గురువు సలహా",
+    "advice_day_heading": "👩‍🏫 ఈ రోజు గురువు సలహా",
+    "listen_btn": "🔊 వినండి",
+    "tip_day_0": "రోజూ కొంచెం కొంచెంగా పునరావృతం చేయండి — "
+                 "పరీక్షకు ముందు రాత్రి 3 గంటల కంటే 20 నిమిషాల "
+                 "క్రమ సాధన మేలు.",
+    "tip_day_1": "తప్పుల నోట్‌బుక్ ఉంచండి: తప్పు చేసిన "
+                 "ప్రశ్నను రాసి, రెండు రోజుల తరువాత మళ్లీ "
+                 "చేయండి.",
+    "tip_day_2": "మీ సమాధానాన్ని ఎప్పుడూ ప్రశ్నలో తిరిగి ఉంచి "
+                 "పరీక్షించండి.",
+    "tip_day_3": "చిత్రాన్ని గీయండి. కాగితంపై చిత్రం వస్తే "
+                 "జ్యామితి మరియు త్రికోణమితిలో సగం "
+                 "సులభమవుతుంది.",
+    "tip_day_4": "సూత్రాలను వాడుతూ నేర్చుకోండి: కొత్త సూత్రం "
+                 "నేర్చుకున్న వెంటనే రెండు ప్రశ్నలు "
+                 "పరిష్కరించండి.",
+    "tip_day_5": "పరీక్షలో ముందు తెలిసిన ప్రశ్నలను "
+                 "ప్రయత్నించి, కఠినమైన వాటిని తరువాత కోసం "
+                 "గుర్తు పెట్టండి.",
+    "tip_day_6": "ప్రతి దశను రాయండి — బోర్డు పరీక్షల్లో తుది "
+                 "సమాధానం తప్పినా సరైన దశలకు మార్కులు "
+                 "వస్తాయి.",
+}
+
+STRINGS["en"].update(_EN_W5B)
+STRINGS["hi"].update(_HI_W5B)
+STRINGS["bn"].update(_BN_W5B)
+STRINGS["mr"].update(_MR_W5B)
+STRINGS["ta"].update(_TA_W5B)
+STRINGS["te"].update(_TE_W5B)
+
+
+# Wave 5c: stop label for the step-by-step Suno (Listen) control.
+_STRINGS_STOP = {
+    "en": "⏸ Stop",
+    "hi": "⏸ रुकिए",
+    "bn": "⏸ থামুন",
+    "mr": "⏸ थांबा",
+    "ta": "⏸ நிறுத்துங்கள்",
+    "te": "⏸ ఆపండి",
+}
+for _code, _label in _STRINGS_STOP.items():
+    STRINGS[_code]["listen_stop_btn"] = _label
+
+
+# ---------------------------------------------------------------------------
+# Wave 5b: student-proofing strings — friendly solve errors (no raw
+# error text ever), the chat slow-server note, the too-long note, the
+# photo no-text message and the generic "no questions here yet" empty
+# state. Same completeness rule as every wave: every key exists in
+# all 6 languages (get_strings() also falls back to English).
+# ---------------------------------------------------------------------------
+
+_EN_W5C = {
+    "error_heading": "🤔 Hmm, I couldn't solve this one",
+    "error_intro": "No problem — this can happen when the question is "
+                   "unclear or in a form I don't recognise yet. "
+                   "Try once more like this:",
+    "error_tip1": "Check the question once for any typing mistake.",
+    "error_tip2": "Write powers like this: x^2 (not x2 or x²).",
+    "error_tip3": "Ask one question at a time, with all its numbers.",
+    "error_retry_btn": "↻ Try again",
+    "try_again_link": "✏️ Ask again",
+    "chat_waking_note": "⏳ The first answer can take a little time — "
+                        "the free server wakes up. Please wait a "
+                        "moment.",
+    "flash_too_long": "That question is a bit long — please keep it "
+                      "under about 500 characters and ask one part at "
+                      "a time.",
+    "photo_no_text": "📷 I couldn't read any text in that photo. "
+                     "Please pick a clearer photo of the question.",
+    "empty_no_questions": "No questions here yet — check back in a "
+                          "moment.",
+}
+
+_HI_W5C = {
+    "error_heading": "🤔 हम्म, यह प्रश्न हल नहीं हो पाया",
+    "error_intro": "कोई बात नहीं — ऐसा तब होता है जब प्रश्न स्पष्ट "
+                   "न हो या ऐसे रूप में हो जिसे मैं अभी पहचान "
+                   "नहीं पाया। एक बार ऐसे आज़माएँ:",
+    "error_tip1": "प्रश्न को एक बार ध्यान से देखें — कोई लिखने की "
+                  "ग़लती तो नहीं।",
+    "error_tip2": "घात इस तरह लिखें: x^2 (x2 या x² नहीं)।",
+    "error_tip3": "एक बार में एक ही प्रश्न पूछें, सारे अंकों के साथ।",
+    "error_retry_btn": "↻ फिर से कोशिश करें",
+    "try_again_link": "✏️ फिर से पूछें",
+    "chat_waking_note": "⏳ पहला उत्तर आने में थोड़ा समय लग सकता है — "
+                        "मुफ़्त सर्वर जागता है। कृपया थोड़ा "
+                        "रुकें।",
+    "flash_too_long": "यह प्रश्न थोड़ा लंबा है — कृपया इसे लगभग 500 "
+                      "अक्षरों से छोटा रखें और एक बार में एक भाग "
+                      "पूछें।",
+    "photo_no_text": "📷 इस फ़ोटो में कोई प्रश्न नहीं पढ़ा जा सका। "
+                     "कृपया प्रश्न की साफ़ फ़ोटो चुनें।",
+    "empty_no_questions": "यहाँ अभी कोई प्रश्न नहीं है — थोड़ी देर "
+                          "में फिर देखें।",
+}
+
+_BN_W5C = {
+    "error_heading": "🤔 হুম, এই প্রশ্নটি সমাধান করা গেল না",
+    "error_intro": "কোনো সমস্যা নেই — প্রশ্নটি অস্পষ্ট হলে বা আমি "
+                   "এখনও চিনতে পারি না এমন আকারে থাকলে এমন হয়। "
+                   "আরেকবার এভাবে চেষ্টা করুন:",
+    "error_tip1": "প্রশ্নটি একবার দেখে নিন — কোনো লেখার ভুল আছে "
+                  "কিনা।",
+    "error_tip2": "ঘাত এভাবে লিখুন: x^2 (x2 বা x² নয়)।",
+    "error_tip3": "একবারে একটি প্রশ্নই করুন, সব সংখ্যাসহ।",
+    "error_retry_btn": "↻ আবার চেষ্টা করুন",
+    "try_again_link": "✏️ আবার জিজ্ঞাসা করুন",
+    "chat_waking_note": "⏳ প্রথম উত্তরে একটু সময় লাগতে পারে — "
+                        "ফ্রি সার্ভার জেগে ওঠে। একটু অপেক্ষা "
+                        "করুন।",
+    "flash_too_long": "এই প্রশ্নটি একটু লম্বা — অনুগ্রহ করে এটি "
+                      "প্রায় 500 অক্ষরের মধ্যে রাখুন এবং একবারে "
+                      "একটি অংশ জিজ্ঞাসা করুন।",
+    "photo_no_text": "📷 এই ছবিতে কোনো লেখা পড়া গেল না। অনুগ্রহ করে "
+                     "প্রশ্নের আরও পরিষ্কার ছবি বেছে নিন।",
+    "empty_no_questions": "এখানে এখনও কোনো প্রশ্ন নেই — একটু পরে আবার "
+                          "দেখুন।",
+}
+
+_MR_W5C = {
+    "error_heading": "🤔 हं, हा प्रश्न सोडवता आला नाही",
+    "error_intro": "काही हरकत नाही — प्रश्न स्पष्ट नसल्यास किंवा मी "
+                   "अजून ओळखत नाही अशा रूपात असल्यास असं होतं. "
+                   "एकदा असा प्रयत्न करा:",
+    "error_tip1": "प्रश्न एकदा नीट पाहा — लिहिताना काही चूक झाली "
+                  "आहे का.",
+    "error_tip2": "घात असा लिहा: x^2 (x2 किंवा x² नाही).",
+    "error_tip3": "एकावेळी एकच प्रश्न विचारा, सर्व संख्यांसह.",
+    "error_retry_btn": "↻ पुन्हा प्रयत्न करा",
+    "try_again_link": "✏️ पुन्हा विचारा",
+    "chat_waking_note": "⏳ पहिल्या उत्तराला थोडा वेळ लागू शकतो — "
+                        "मोफत सर्व्हर जागा होतो. कृपया थोडं "
+                        "थांबा.",
+    "flash_too_long": "हा प्रश्न थोडा लांब आहे — कृपया तो सुमारे 500 "
+                      "अक्षरांपेक्षा कमी ठेवा आणि एकावेळी एक भाग "
+                      "विचारा.",
+    "photo_no_text": "📷 या फोटोत काही मजकूर वाचता आला नाही. कृपया "
+                     "प्रश्नाचा अधिक स्पष्ट फोटो निवडा.",
+    "empty_no_questions": "इथे अजून एकही प्रश्न नाही — थोड्या वेळाने "
+                          "पुन्हा पाहा.",
+}
+
+_TA_W5C = {
+    "error_heading": "🤔 ம்ம், இந்த கேள்வியை தீர்க்க முடியவில்லை",
+    "error_intro": "பரவாயில்லை — கேள்வி தெளிவில்லாமல் இருந்தாலோ, "
+                   "நான் இன்னும் அடையாளம் காணாத வடிவில் இருந்தாலோ "
+                   "இப்படி நடக்கும். இப்படி மீண்டும் முயற்சிக்கவும்:",
+    "error_tip1": "கேள்வியை ஒருமுறை சரிபார்க்கவும் — தட்டச்சுப் "
+                  "பிழை உள்ளதா என்று.",
+    "error_tip2": "அடுக்குகளை இப்படி எழுதவும்: x^2 (x2 அல்லது x² "
+                  "அல்ல).",
+    "error_tip3": "ஒரு நேரத்தில் ஒரு கேள்வி மட்டும், எல்லா "
+                  "எண்களுடன் கேட்கவும்.",
+    "error_retry_btn": "↻ மீண்டும் முயற்சிக்கவும்",
+    "try_again_link": "✏️ மீண்டும் கேட்கவும்",
+    "chat_waking_note": "⏳ முதல் பதில் வர சிறிது நேரம் ஆகலாம் — "
+                        "இலவச சர்வர் விழித்தெழுகிறது. சற்று "
+                        "காத்திருக்கவும்.",
+    "flash_too_long": "இந்த கேள்வி சற்று நீளமானது — சுமார் 500 "
+                      "எழுத்துகளுக்குள் வைத்து, ஒரு நேரத்தில் ஒரு "
+                      "பகுதியைக் கேட்கவும்.",
+    "photo_no_text": "📷 இந்த புகைப்படத்தில் எந்த உரையும் படிக்க "
+                     "முடியவில்லை. கேள்வியின் தெளிவான புகைப்படத்தைத் "
+                     "தேர்ந்தெடுக்கவும்.",
+    "empty_no_questions": "இங்கே இன்னும் கேள்விகள் இல்லை — சற்று "
+                          "நேரத்தில் மீண்டும் பார்க்கவும்.",
+}
+
+_TE_W5C = {
+    "error_heading": "🤔 హ్మ్, ఈ ప్రశ్నను పరిష్కరించలేకపోయాను",
+    "error_intro": "పర్వాలేదు — ప్రశ్న స్పష్టంగా లేకపోతే లేదా నేను "
+                   "ఇంకా గుర్తించని రూపంలో ఉంటే ఇలా జరుగుతుంది. "
+                   "ఇలా మళ్ళీ ప్రయత్నించండి:",
+    "error_tip1": "ప్రశ్నను ఒక్కసారి సరిచూడండి — టైపింగ్ పొరపాటు "
+                  "ఉందేమో.",
+    "error_tip2": "ఘాతాలను ఇలా రాయండి: x^2 (x2 లేదా x² కాదు).",
+    "error_tip3": "ఒకసారి ఒకే ప్రశ్న, అన్ని సంఖ్యలతో అడగండి.",
+    "error_retry_btn": "↻ మళ్ళీ ప్రయత్నించండి",
+    "try_again_link": "✏️ మళ్ళీ అడగండి",
+    "chat_waking_note": "⏳ మొదటి సమాధానం రావడానికి కొంచెం సమయం "
+                        "పట్టవచ్చు — ఉచిత సర్వర్ మేల్కొంటుంది. "
+                        "కొంచెం వేచి ఉండండి.",
+    "flash_too_long": "ఈ ప్రశ్న కొంచెం పొడవుగా ఉంది — దయచేసి దీన్ని "
+                      "సుమారు 500 అక్షరాల్లోపు ఉంచి, ఒకసారి ఒక "
+                      "భాగాన్ని అడగండి.",
+    "photo_no_text": "📷 ఈ ఫోటోలో ఏ వచనమూ చదవలేకపోయాను. దయచేసి "
+                     "ప్రశ్న యొక్క స్పష్టమైన ఫోటోను ఎంచుకోండి.",
+    "empty_no_questions": "ఇక్కడ ఇంకా ప్రశ్నలు లేవు — కొంచెం సేపట్లో "
+                          "మళ్ళీ చూడండి.",
+}
+
+STRINGS["en"].update(_EN_W5C)
+STRINGS["hi"].update(_HI_W5C)
+STRINGS["bn"].update(_BN_W5C)
+STRINGS["mr"].update(_MR_W5C)
+STRINGS["ta"].update(_TA_W5C)
+STRINGS["te"].update(_TE_W5C)
+
+
+# ---------------------------------------------------------------------------
+# Wave 5d: ✍️ Copy Style (handwriting) strings — the steps can be read
+# like a teacher's hand-written copy. Label + the print-in-copy-style
+# link, in all 6 languages (same completeness rule as every wave).
+# ---------------------------------------------------------------------------
+
+_EN_W5D = {
+    "handwriting_btn": "✍️ Copy Style (handwriting)",
+    "print_copy_link": "🖨 Print in copy style",
+}
+
+_HI_W5D = {
+    "handwriting_btn": "✍️ कॉपी शैली (हस्तलेख)",
+    "print_copy_link": "🖨 कॉपी शैली में प्रिंट करें",
+}
+
+_BN_W5D = {
+    "handwriting_btn": "✍️ খাতার শৈলী (হাতের লেখা)",
+    "print_copy_link": "🖨 খাতার শৈলীতে প্রিন্ট করুন",
+}
+
+_MR_W5D = {
+    "handwriting_btn": "✍️ वही शैली (हस्ताक्षर)",
+    "print_copy_link": "🖨 वही शैलीत प्रिंट करा",
+}
+
+_TA_W5D = {
+    "handwriting_btn": "✍️ நோட்டு பாணி (கையெழுத்து)",
+    "print_copy_link": "🖨 நோட்டு பாணியில் அச்சிடவும்",
+}
+
+_TE_W5D = {
+    "handwriting_btn": "✍️ నోట్‌బుక్ శైలి (చేతిరాత)",
+    "print_copy_link": "🖨 నోట్‌బుక్ శైలిలో ప్రింట్ చేయండి",
+}
+
+STRINGS["en"].update(_EN_W5D)
+STRINGS["hi"].update(_HI_W5D)
+STRINGS["bn"].update(_BN_W5D)
+STRINGS["mr"].update(_MR_W5D)
+STRINGS["ta"].update(_TA_W5D)
+STRINGS["te"].update(_TE_W5D)
+
+
+# ---------------------------------------------------------------------------
+# Wave 5e: board-style copy check + Dhyaan meter + Badhai celebration.
+# Copy check = the teacher-checked answer copy after a quiz/test:
+# marks, a remark by score band, where marks were lost (topics) — it
+# checks FINAL ANSWERS only, honestly; no handwriting/step claims.
+# Dhyaan = today's study record (localStorage, per calendar day).
+# Badhai = the gentle congratulations shown on >= 80% results and on
+# finishing a mistakes-retry round. All 6 languages, zero missing.
+# ---------------------------------------------------------------------------
+
+_EN_W5E = {
+    "copycheck_heading": "📋 Copy Check (teacher style)",
+    "copycheck_note": "Your answers were checked like a copy — "
+                      "final answers only.",
+    "copycheck_lost_label": "Marks were lost in these topics:",
+    "copycheck_all_clear": "No marks lost anywhere — every topic "
+                           "is clear. 🎉",
+    "copycheck_practice_link": "Practise the lost topics",
+    "remark_perfect": "Perfect — every answer is right. Bahut "
+                      "badhiya! 🌟",
+    "remark_great": "Bahut badhiya — almost everything is right!",
+    "remark_good": "Achha kiya — keep going, a little more practice "
+                   "and it will be perfect.",
+    "remark_keep": "Good effort — marks were lost in a few places. "
+                   "Check them below and practise those topics.",
+    "remark_try": "Koi baat nahi — every mistake teaches you. Look "
+                  "at the correct answers and try once more.",
+    "celebrate_msg": "🎉 Badhai ho! Excellent work — keep this "
+                     "rhythm going!",
+    "mistakes_done_msg": "🎉 Badhai ho! You finished the mistakes "
+                         "practice round.",
+    "dhyaan_label": "🧘 Dhyaan",
+    "dhyaan_today": "Today: {minutes} min · {count} questions",
+}
+
+_HI_W5E = {
+    "copycheck_heading": "📋 कॉपी जाँच (शिक्षक शैली)",
+    "copycheck_note": "आपके उत्तर कॉपी की तरह जाँचे गए — केवल अंतिम "
+                      "उत्तर।",
+    "copycheck_lost_label": "इन विषयों में अंक कटे:",
+    "copycheck_all_clear": "कहीं अंक नहीं कटे — हर विषय स्पष्ट है। 🎉",
+    "copycheck_practice_link": "कटे हुए विषयों का अभ्यास करें",
+    "remark_perfect": "एकदम सही — हर उत्तर सही है। बहुत बढ़िया! 🌟",
+    "remark_great": "बहुत बढ़िया — लगभग सब कुछ सही है!",
+    "remark_good": "अच्छा किया — ऐसे ही आगे बढ़ें, थोड़ा और अभ्यास "
+                   "और सब एकदम सही होगा।",
+    "remark_keep": "अच्छा प्रयास — कुछ जगहों पर अंक कटे हैं। नीचे "
+                   "देखें और उन विषयों का अभ्यास करें।",
+    "remark_try": "कोई बात नहीं — हर ग़लती कुछ सिखाती है। सही उत्तर "
+                  "देखें और एक बार फिर कोशिश करें।",
+    "celebrate_msg": "🎉 बधाई हो! शानदार काम — यही लय बनाए रखें!",
+    "mistakes_done_msg": "🎉 बधाई हो! आपने ग़लतियों के अभ्यास का दौर "
+                         "पूरा किया।",
+    "dhyaan_label": "🧘 ध्यान",
+    "dhyaan_today": "आज: {minutes} मिनट · {count} प्रश्न",
+}
+
+_BN_W5E = {
+    "copycheck_heading": "📋 খাতা যাচাই (শিক্ষকের শৈলী)",
+    "copycheck_note": "আপনার উত্তরগুলো খাতার মতো যাচাই করা হয়েছে — "
+                      "শুধু চূড়ান্ত উত্তর।",
+    "copycheck_lost_label": "এই বিষয়গুলোতে নম্বর কাটা গেছে:",
+    "copycheck_all_clear": "কোথাও নম্বর কাটা যায়নি — সব বিষয় পরিষ্কার। 🎉",
+    "copycheck_practice_link": "কাটা যাওয়া বিষয়গুলো অনুশীলন করুন",
+    "remark_perfect": "নিখুঁত — সব উত্তর সঠিক। বাহ, খুব ভালো! 🌟",
+    "remark_great": "খুব ভালো — প্রায় সবকিছুই সঠিক!",
+    "remark_good": "ভালো করেছেন — এগিয়ে যান, আরেকটু অনুশীলনেই "
+                   "সব নিখুঁত হবে।",
+    "remark_keep": "ভালো চেষ্টা — কয়েক জায়গায় নম্বর কেটেছে। নীচে "
+                   "দেখুন এবং ওই বিষয়গুলো অনুশীলন করুন।",
+    "remark_try": "কোনো সমস্যা নেই — প্রতিটি ভুল কিছু শেখায়। সঠিক "
+                  "উত্তর দেখুন এবং আরেকবার চেষ্টা করুন।",
+    "celebrate_msg": "🎉 অভিনন্দন! দুর্দান্ত কাজ — এই ছন্দ ধরে "
+                     "রাখুন!",
+    "mistakes_done_msg": "🎉 অভিনন্দন! আপনি ভুলের অনুশীলন পর্ব শেষ "
+                         "করেছেন।",
+    "dhyaan_label": "🧘 মনোযোগ",
+    "dhyaan_today": "আজ: {minutes} মিনিট · {count}টি প্রশ্ন",
+}
+
+_MR_W5E = {
+    "copycheck_heading": "📋 वही तपासणी (शिक्षक शैली)",
+    "copycheck_note": "तुमची उत्तरं वहीसारखी तपासली — फक्त अंतिम "
+                      "उत्तरं.",
+    "copycheck_lost_label": "या विषयांमध्ये गुण कटले:",
+    "copycheck_all_clear": "कुठेही गुण कटले नाहीत — प्रत्येक विषय "
+                           "स्पष्ट आहे. 🎉",
+    "copycheck_practice_link": "कटलेल्या विषयांचा सराव करा",
+    "remark_perfect": "अगदी अचूक — प्रत्येक उत्तर बरोबर. खूप छान! 🌟",
+    "remark_great": "खूप छान — जवळजवळ सर्व काही बरोबर आहे!",
+    "remark_good": "छान केलंत — असंच पुढे चला, थोडा आणखी सराव आणि "
+                   "सर्व अचूक होईल.",
+    "remark_keep": "चांगला प्रयत्न — काही ठिकाणी गुण कटले. खाली "
+                   "पाहा आणि त्या विषयांचा सराव करा.",
+    "remark_try": "काही हरकत नाही — प्रत्येक चूक काहीतरी शिकवते. "
+                  "बरोबर उत्तरं पाहा आणि पुन्हा एकदा प्रयत्न करा.",
+    "celebrate_msg": "🎉 अभिनंदन! अप्रतिम काम — हीच लय कायम ठेवा!",
+    "mistakes_done_msg": "🎉 अभिनंदन! तुम्ही चुकांच्या सरावाची फेरी "
+                         "पूर्ण केली.",
+    "dhyaan_label": "🧘 लक्ष",
+    "dhyaan_today": "आज: {minutes} मि. · {count} प्रश्न",
+}
+
+_TA_W5E = {
+    "copycheck_heading": "📋 நோட்டு சரிபார்ப்பு (ஆசிரியர் பாணி)",
+    "copycheck_note": "உங்கள் விடைகள் நோட்டைப் போல சரிபார்க்கப்பட்டன "
+                      "— இறுதி விடைகள் மட்டும்.",
+    "copycheck_lost_label": "இந்த தலைப்புகளில் மதிப்பெண்கள் "
+                            "குறைந்தன:",
+    "copycheck_all_clear": "எங்கும் மதிப்பெண் குறையவில்லை — ஒவ்வொரு "
+                           "தலைப்பும் தெளிவு. 🎉",
+    "copycheck_practice_link": "குறைந்த தலைப்புகளைப் பயிற்சி செய்யவும்",
+    "remark_perfect": "சரியானது — ஒவ்வொரு விடையும் சரி. மிகவும் "
+                      "நன்று! 🌟",
+    "remark_great": "மிகவும் நன்று — கிட்டத்தட்ட எல்லாமே சரி!",
+    "remark_good": "நன்றாகச் செய்தீர்கள் — தொடரவும், இன்னும் கொஞ்சம் "
+                   "பயிற்சி செய்தால் எல்லாம் சரியாகும்.",
+    "remark_keep": "நல்ல முயற்சி — சில இடங்களில் மதிப்பெண்கள் "
+                   "குறைந்தன. கீழே பார்த்து அந்த தலைப்புகளைப் "
+                   "பயிற்சி செய்யவும்.",
+    "remark_try": "பரவாயில்லை — ஒவ்வொரு தவறும் கற்றுத் தரும். சரியான "
+                  "விடைகளைப் பார்த்து மீண்டும் முயற்சிக்கவும்.",
+    "celebrate_msg": "🎉 வாழ்த்துகள்! அருமையான வேலை — இந்த வேகத்தைத் "
+                     "தொடரவும்!",
+    "mistakes_done_msg": "🎉 வாழ்த்துகள்! தவறுகள் பயிற்சிச் சுற்றை "
+                         "முடித்தீர்கள்.",
+    "dhyaan_label": "🧘 கவனம்",
+    "dhyaan_today": "இன்று: {minutes} நிமி · {count} கேள்விகள்",
+}
+
+_TE_W5E = {
+    "copycheck_heading": "📋 నోట్‌బుక్ తనిఖీ (ఉపాధ్యాయ శైలి)",
+    "copycheck_note": "మీ సమాధానాలు నోట్‌బుక్‌లా తనిఖీ చేయబడ్డాయి — "
+                      "చివరి సమాధానాలు మాత్రమే.",
+    "copycheck_lost_label": "ఈ అంశాలలో మార్కులు తగ్గాయి:",
+    "copycheck_all_clear": "ఎక్కడా మార్కులు తగ్గలేదు — ప్రతి అంశం "
+                           "స్పష్టంగా ఉంది. 🎉",
+    "copycheck_practice_link": "తగ్గిన అంశాలను సాధన చేయండి",
+    "remark_perfect": "పరిపూర్ణం — ప్రతి సమాధానం సరైనదే. చాలా "
+                      "బాగుంది! 🌟",
+    "remark_great": "చాలా బాగుంది — దాదాపు అన్నీ సరైనవే!",
+    "remark_good": "బాగా చేశారు — ఇలాగే కొనసాగండి, కొంచెం ఎక్కువ "
+                   "సాధన చేస్తే అన్నీ సరిగ్గా వస్తాయి.",
+    "remark_keep": "మంచి ప్రయత్నం — కొన్ని చోట్ల మార్కులు తగ్గాయి. "
+                   "క్రింద చూసి ఆ అంశాలను సాధన చేయండి.",
+    "remark_try": "పర్వాలేదు — ప్రతి తప్పు ఏదో నేర్పుతుంది. సరైన "
+                  "సమాధానాలు చూసి మళ్ళీ ప్రయత్నించండి.",
+    "celebrate_msg": "🎉 అభినందనలు! అద్భుతమైన పని — ఈ లయను "
+                     "కొనసాగించండి!",
+    "mistakes_done_msg": "🎉 అభినందనలు! మీరు తప్పుల సాధన రౌండ్‌ను "
+                         "పూర్తి చేశారు.",
+    "dhyaan_label": "🧘 ధ్యానం",
+    "dhyaan_today": "ఈరోజు: {minutes} నిమి · {count} ప్రశ్నలు",
+}
+
+STRINGS["en"].update(_EN_W5E)
+STRINGS["hi"].update(_HI_W5E)
+STRINGS["bn"].update(_BN_W5E)
+STRINGS["mr"].update(_MR_W5E)
+STRINGS["ta"].update(_TA_W5E)
+STRINGS["te"].update(_TE_W5E)
+
+
+def remark_key_for(score, total):
+    """Wave 5e: the teacher-style remark for a score band.
+
+    Bands (share of total): 100% -> perfect; >= 80% -> great;
+    >= 60% -> good; >= 40% -> keep going; below -> try again.
+    """
+    if total <= 0:
+        return "remark_good"
+    ratio = score / total
+    if ratio >= 1.0:
+        return "remark_perfect"
+    if ratio >= 0.8:
+        return "remark_great"
+    if ratio >= 0.6:
+        return "remark_good"
+    if ratio >= 0.4:
+        return "remark_keep"
+    return "remark_try"

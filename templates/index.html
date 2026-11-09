@@ -5,34 +5,32 @@
     <h1>Gani<span class="gold">tra</span></h1>
     <p class="hero-tag">{{ t.hero_tag }}</p>
 
-    <form method="post" action="/solve" class="hero-form">
-      <label for="q">{{ t.enter_question }}</label>
-      <textarea id="q" name="question" rows="3"
-        placeholder="{{ t.question_placeholder }}"
-        required></textarea>
-      <div class="input-tools">
-        <button type="button" id="mic-btn" class="tool-btn">{{ t.voice_btn }}</button>
-        <label class="tool-btn" for="photo-input">{{ t.photo_btn }}</label>
-        <input type="file" id="photo-input" accept="image/*" hidden />
-        <span id="input-note" class="tool-note" role="status"></span>
+    <div class="chat-wrap">
+      <div class="chat-log" id="chat-log" aria-live="polite">
+        <div class="bubble bot"><p>{{ t.chat_welcome }}</p></div>
       </div>
-      <button type="submit" class="hero-solve">{{ t.solve_btn }}</button>
-    </form>
+
+      <form method="post" action="/solve" class="chat-form" id="chat-form">
+        <label for="q">{{ t.enter_question }}</label>
+        <div class="chat-bar">
+          <textarea id="q" name="question" rows="1"
+            placeholder="{{ t.question_placeholder }}"
+            required></textarea>
+          <div class="chat-bar-tools">
+            <button type="button" id="mic-btn" class="tool-btn">{{ t.voice_btn }}</button>
+            <label class="tool-btn" for="photo-input">{{ t.photo_btn }}</label>
+            <input type="file" id="photo-input" accept="image/*" hidden />
+            <span id="input-note" class="tool-note" role="status"></span>
+            <button type="submit" class="hero-solve chat-send">{{ t.solve_btn }}</button>
+          </div>
+        </div>
+        <p class="waking-note">{{ t.chat_waking_note }}</p>
+      </form>
+    </div>
 
     <form id="photo-form" method="post" action="/photo-solve" hidden>
       <input type="hidden" name="question" id="photo-question" />
     </form>
-
-    <div class="chips" aria-label="Example questions">
-      <button type="button" class="chip">x^2 - 5x + 6 = 0</button>
-      <button type="button" class="chip">derivative of x^3 + 2x</button>
-      <button type="button" class="chip">integrate x^2 from 0 to 1 and show the graph</button>
-      <button type="button" class="chip">normal distribution mean 0 sd 1, P(X &lt; 1)</button>
-      <button type="button" class="chip">Laplace transform of t</button>
-      <button type="button" class="chip">plot x^2 and x+1</button>
-      <button type="button" class="chip">probability of sum 7 with two dice</button>
-      <button type="button" class="chip">sin 30 ka maan</button>
-    </div>
 
     <div class="new-strip">
       <span class="new-badge">✨ NEW · Normal · Poisson · Binomial</span>
@@ -83,16 +81,370 @@
       var L = {{ js_t | tojson }};
       var VOICE_BTN = {{ voice_label | tojson }};
       var SPEECH_LANG = {{ speech_lang | tojson }};
+      var UI_CODE = {{ lang | tojson }};
+      var CHAT = {
+        solving: {{ t.chat_solving | tojson }},
+        fullSolution: {{ t.chat_full_solution | tojson }},
+        error: {{ t.chat_error | tojson }},
+        steps: {{ t.steps_heading | tojson }},
+        explanation: {{ t.explanation_heading | tojson }},
+        adviceHeading: {{ t.advice_heading | tojson }},
+        listen: {{ t.listen_btn | tojson }},
+        stopListen: {{ t.listen_stop_btn | tojson }},
+        handwriting: {{ t.handwriting_btn | tojson }},
+        printCopy: {{ t.print_copy_link | tojson }},
+        errorHeading: {{ t.error_heading | tojson }},
+        errorIntro: {{ t.error_intro | tojson }},
+        errorTips: [{{ t.error_tip1 | tojson }},
+                    {{ t.error_tip2 | tojson }},
+                    {{ t.error_tip3 | tojson }}],
+        errorRetry: {{ t.error_retry_btn | tojson }}
+      };
       var box = document.getElementById("q");
       var note = document.getElementById("input-note");
-      document.querySelectorAll(".chip").forEach(function (chip) {
-        chip.addEventListener("click", function () {
-          box.value = chip.textContent.trim();
+      var form = document.getElementById("chat-form");
+      var log = document.getElementById("chat-log");
+
+      function say(msg) { if (note) note.textContent = msg; }
+
+      /* ---------- Chat thread (progressive enhancement) ----------
+         The form still POSTs to /solve exactly as before; with JS we
+         intercept, call /api/solve, and append Q&A bubbles in place.
+         Any failure falls back to the classic full-page submit.     */
+      function scrollLog() {
+        log.scrollTop = log.scrollHeight;
+      }
+
+      /* ---------- Suno: step-by-step speech (question -> steps ->
+         answer -> advice), with maths-symbol cleanup per language.
+         Steps are spoken in English, the rest in the UI language. */
+      var WORDS = {
+        en: { squared: "squared", cubed: "cubed", plus: "plus", minus: "minus", into: "multiplied by", divided_by: "divided by", equals: "equals", sqrt: "square root of", pi: "pi", power: "to the power" },
+        hi: { squared: "का वर्ग", cubed: "का घन", plus: "जमा", minus: "घटाव", into: "गुणा", divided_by: "बटा", equals: "बराबर", sqrt: "का वर्गमूल", pi: "पाई", power: "की घात" },
+        bn: { squared: "এর বর্গ", cubed: "এর ঘন", plus: "যোগ", minus: "বিয়োগ", into: "গুণ", divided_by: "ভাগ", equals: "সমান", sqrt: "এর বর্গমূল", pi: "পাই", power: "এর ঘাত" },
+        mr: { squared: "चा वर्ग", cubed: "चा घन", plus: "बेरीज", minus: "वजाबाकी", into: "गुणिले", divided_by: "भागिले", equals: "बरोबर", sqrt: "चे वर्गमूळ", pi: "पाय", power: "चा घात" },
+        ta: { squared: "இன் வர்க்கம்", cubed: "இன் கனம்", plus: "கூட்டல்", minus: "கழித்தல்", into: "பெருக்கல்", divided_by: "வகுத்தல்", equals: "சமம்", sqrt: "இன் வர்க்கமூலம்", pi: "பை", power: "இன் அடுக்கு" },
+        te: { squared: "యొక్క వర్గం", cubed: "యొక్క ఘనం", plus: "కూడిక", minus: "తీసివేత", into: "గుణకారం", divided_by: "భాగహారం", equals: "సమానం", sqrt: "యొక్క వర్గమూలం", pi: "పై", power: "యొక్క ఘాతం" }
+      };
+      function speakable(text, code) {
+        var w = WORDS[code] || WORDS.en;
+        var s = String(text || "");
+        s = s.replace(/√/g, " " + w.sqrt + " ");
+        s = s.replace(/²/g, " " + w.squared);
+        s = s.replace(/³/g, " " + w.cubed);
+        s = s.replace(/\^2/g, " " + w.squared);
+        s = s.replace(/\^3/g, " " + w.cubed);
+        s = s.replace(/\^/g, " " + w.power + " ");
+        s = s.replace(/[·*]/g, " " + w.into + " ");
+        s = s.replace(/\//g, " " + w.divided_by + " ");
+        s = s.replace(/−/g, " " + w.minus + " ");
+        s = s.replace(/ - /g, " " + w.minus + " ");
+        s = s.replace(/\+/g, " " + w.plus + " ");
+        s = s.replace(/=/g, " " + w.equals + " ");
+        s = s.replace(/π/g, " " + w.pi + " ");
+        return s.replace(/\s+/g, " ").trim();
+      }
+      function makeListenButton(parts) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "listen-btn";
+        btn.textContent = CHAT.listen;
+        var speaking = false;
+        var speakId = 0;
+        function paint() {
+          btn.textContent = speaking ? CHAT.stopListen : CHAT.listen;
+        }
+        btn.addEventListener("click", function () {
+          if (speaking) {
+            speakId += 1;
+            speaking = false;
+            window.speechSynthesis.cancel();
+            paint();
+            return;
+          }
+          if (!parts.length) return;
+          speaking = true;
+          paint();
+          var id = ++speakId;
+          parts.forEach(function (p, idx) {
+            var u = new SpeechSynthesisUtterance(p.text);
+            u.lang = p.lang;
+            if (idx === parts.length - 1) {
+              u.onend = u.onerror = function () {
+                if (id === speakId) {
+                  speaking = false;
+                  paint();
+                }
+              };
+            }
+            window.speechSynthesis.speak(u);
+          });
+        });
+        return btn;
+      }
+
+      /* ---------- Dhyaan meter: count a solved question ----------
+         The pill itself lives in base.html; here we only record the
+         solve (the header script reads the same localStorage key). */
+      function dhyaanSolved() {
+        try {
+          var today = new Date();
+          var key = "ganitra-dhyaan-" + today.getFullYear() + "-"
+            + (today.getMonth() + 1) + "-" + today.getDate();
+          var raw = window.localStorage.getItem(key);
+          var rec = raw ? JSON.parse(raw) : { seconds: 0, count: 0 };
+          rec.count = (rec.count || 0) + 1;
+          window.localStorage.setItem(key, JSON.stringify(rec));
+          if (window.ganitraDhyaanPaint) window.ganitraDhyaanPaint();
+        } catch (e) { /* localStorage unavailable: stay silent */ }
+      }
+
+      /* ---------- ✍️ Copy Style (handwriting) for chat steps ------
+         Same localStorage key as the answer page, so the choice is
+         shared. Default ON; the toggle switches back to clean print. */
+      var HW_KEY = "ganitra-handwriting";
+      function hwOn() {
+        try {
+          return window.localStorage.getItem(HW_KEY) !== "off";
+        } catch (e) { return true; }
+      }
+      function makeHwToggle(ol) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "hw-toggle";
+        btn.textContent = CHAT.handwriting;
+        btn.setAttribute("aria-pressed", hwOn() ? "true" : "false");
+        btn.addEventListener("click", function () {
+          var on = !ol.classList.contains("handwriting-on");
+          ol.classList.toggle("handwriting-on", on);
+          btn.setAttribute("aria-pressed", on ? "true" : "false");
+          try {
+            window.localStorage.setItem(HW_KEY, on ? "on" : "off");
+          } catch (e) { /* ignore */ }
+        });
+        return btn;
+      }
+
+      function addBubble(cls, text) {
+        var div = document.createElement("div");
+        div.className = "bubble " + cls;
+        var p = document.createElement("p");
+        p.textContent = text;
+        div.appendChild(p);
+        log.appendChild(div);
+        scrollLog();
+        return div;
+      }
+
+      function addAnswerBubble(question, data) {
+        var result = data.result || {};
+        var div = document.createElement("div");
+        div.className = "bubble bot";
+
+        var badge = document.createElement("span");
+        badge.className = "badge";
+        badge.textContent = result.type
+          ? result.type + (result.op ? " · " + result.op : "")
+          : "Ganitra";
+        div.appendChild(badge);
+
+        var ans = document.createElement("p");
+        ans.className = "answer-big";
+        if (result.latex) {
+          ans.textContent = "\\(" + result.latex + "\\)";
+        } else {
+          ans.textContent = result.answer || "";
+        }
+        div.appendChild(ans);
+
+        if (data.explanation) {
+          var expl = document.createElement("p");
+          expl.className = "explain";
+          expl.textContent = data.explanation;
+          div.appendChild(expl);
+        }
+
+        if (data.advice) {
+          var card = document.createElement("div");
+          card.className = "advice-card";
+          var ah = document.createElement("h3");
+          ah.textContent = CHAT.adviceHeading;
+          var ap = document.createElement("p");
+          ap.textContent = data.advice;
+          card.appendChild(ah);
+          card.appendChild(ap);
+          div.appendChild(card);
+        }
+
+        if ("speechSynthesis" in window) {
+          var parts = [];
+          parts.push({ text: speakable(question, UI_CODE),
+                       lang: SPEECH_LANG });
+          (result.steps || []).forEach(function (step) {
+            parts.push({ text: speakable(step, "en"),
+                         lang: "en-IN" });
+          });
+          if (result.answer) {
+            parts.push({ text: speakable(result.answer, UI_CODE),
+                         lang: SPEECH_LANG });
+          }
+          if (data.advice) {
+            parts.push({ text: speakable(data.advice, UI_CODE),
+                         lang: SPEECH_LANG });
+          }
+          parts = parts.filter(function (p) { return p.text; });
+          if (parts.length) div.appendChild(makeListenButton(parts));
+        }
+
+        if (result.image) {
+          var img = document.createElement("img");
+          img.className = "graph";
+          img.src = "/static/" + result.image;
+          img.alt = "Graph";
+          div.appendChild(img);
+        }
+
+        if (result.steps && result.steps.length) {
+          var tools = document.createElement("div");
+          tools.className = "steps-tools";
+          var ol = document.createElement("ol");
+          ol.className = "steps notebook"
+            + (hwOn() ? " handwriting-on" : "");
+          result.steps.forEach(function (step) {
+            var li = document.createElement("li");
+            li.textContent = step;
+            ol.appendChild(li);
+          });
+          tools.appendChild(makeHwToggle(ol));
+          var plink = document.createElement("a");
+          plink.className = "back";
+          plink.target = "_blank";
+          plink.rel = "noopener";
+          plink.href = "/solution/print?style=hand";
+          plink.textContent = CHAT.printCopy;
+          tools.appendChild(plink);
+          var det = document.createElement("details");
+          var sum = document.createElement("summary");
+          sum.textContent = CHAT.steps;
+          det.appendChild(sum);
+          det.appendChild(tools);
+          det.appendChild(ol);
+          div.appendChild(det);
+        }
+
+        var full = document.createElement("form");
+        full.method = "post";
+        full.action = "/solve";
+        var hidden = document.createElement("input");
+        hidden.type = "hidden";
+        hidden.name = "question";
+        hidden.value = question;
+        var btn = document.createElement("button");
+        btn.type = "submit";
+        btn.className = "linklike";
+        btn.textContent = CHAT.fullSolution;
+        full.appendChild(hidden);
+        full.appendChild(btn);
+        div.appendChild(full);
+
+        log.appendChild(div);
+        scrollLog();
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise([div]).catch(function () {});
+        }
+      }
+
+      function addErrorBubble(question, err) {
+        var div = document.createElement("div");
+        div.className = "bubble bot error-bubble";
+        var h = document.createElement("p");
+        h.className = "error-heading";
+        h.textContent = (err && err.heading) || CHAT.errorHeading;
+        div.appendChild(h);
+        var intro = document.createElement("p");
+        intro.textContent = (err && err.intro) || CHAT.errorIntro;
+        div.appendChild(intro);
+        var tips = (err && err.tips) || CHAT.errorTips;
+        var ul = document.createElement("ul");
+        ul.className = "error-tips";
+        tips.forEach(function (tip) {
+          var li = document.createElement("li");
+          li.textContent = tip;
+          ul.appendChild(li);
+        });
+        div.appendChild(ul);
+        var retry = document.createElement("button");
+        retry.type = "button";
+        retry.className = "hero-solve retry-btn";
+        retry.textContent = (err && err.retry_label) || CHAT.errorRetry;
+        retry.addEventListener("click", function () {
+          box.value = question;
+          box.dispatchEvent(new Event("input"));
+          if (!solving) form.requestSubmit();
+        });
+        div.appendChild(retry);
+        log.appendChild(div);
+        scrollLog();
+      }
+
+      var solving = false;
+      form.addEventListener("submit", function (ev) {
+        if (!window.fetch || solving) return;  // classic submit
+        var question = box.value.trim();
+        if (!question) return;               // let HTML validation run
+        ev.preventDefault();
+        solving = true;
+        addBubble("user", question);
+        var typing = addBubble("bot typing", CHAT.solving);
+        var dots = document.createElement("span");
+        dots.className = "dots";
+        dots.setAttribute("aria-hidden", "true");
+        for (var d = 0; d < 3; d++) {
+          dots.appendChild(document.createElement("i"));
+        }
+        typing.appendChild(dots);
+        box.value = "";
+        box.style.height = "auto";
+        fetch("/api/solve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: question })
+        }).then(function (resp) {
+          return resp.json();
+        }).then(function (data) {
+          typing.remove();
+          solving = false;
+          if (data && data.ok) {
+            addAnswerBubble(question, data);
+            dhyaanSolved();
+          } else if (data && data.unsolvable) {
+            addErrorBubble(question, data.error);
+          } else if (data && data.message) {
+            addBubble("bot", data.message);
+          } else {
+            addErrorBubble(question, null);
+          }
           box.focus();
+        }).catch(function () {
+          // Network/API trouble: fall back to the classic page.
+          typing.remove();
+          solving = false;
+          box.value = question;
+          form.submit();
         });
       });
 
-      function say(msg) { if (note) note.textContent = msg; }
+      /* Enter sends, Shift+Enter makes a new line; box auto-grows. */
+      box.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter" && !ev.shiftKey) {
+          ev.preventDefault();
+          if (!solving && box.value.trim()) form.requestSubmit();
+        }
+      });
+      box.addEventListener("input", function () {
+        box.style.height = "auto";
+        box.style.height = Math.min(box.scrollHeight, 160) + "px";
+      });
 
       /* ---------- Voice input (Web Speech API, browser-side) ---------- */
       var micBtn = document.getElementById("mic-btn");
@@ -112,6 +464,7 @@
             var text = ev.results[0][0].transcript || "";
             if (text) {
               box.value = text;
+              box.dispatchEvent(new Event("input"));
               say(L.js_voice_heard.replace("{text}", text));
             }
           };

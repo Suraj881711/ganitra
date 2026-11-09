@@ -1,50 +1,62 @@
 :root {
-  --bg: #0b1020;
-  --card: #121a33;
-  --text: #e9ecf1;
-  --muted: #aab2c7;
-  --accent: #6aa6ff;
+  /* Wave-5 premium & comfort palette: soft warm white everywhere,
+     calm ink text (no harsh black), gold as the sparing accent and
+     muted teal as the calm secondary. */
+  --bg: #fdfaf3;
+  --card: #ffffff;
+  --text: #25324e;
+  --muted: #66738d;
+  --accent: #2f7d6e;
+  --line: #e9dfc9;
 }
 * { box-sizing: border-box; }
-body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; }
-header { padding: 16px 24px; border-bottom: 1px solid #1f2a4a; }
-header h1 { margin: 0; font-size: 20px; }
+body {
+  background:
+    radial-gradient(900px 420px at 85% -5%, rgba(231, 200, 119, .16), transparent 60%),
+    linear-gradient(180deg, #fffdf8 0%, var(--bg) 320px);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-size: 17px; line-height: 1.65;
+  margin: 0;
+}
+header { padding: 16px 24px; border-bottom: 1px solid var(--line); background: rgba(255, 253, 248, .9); }
+header h1 { margin: 0; font-size: 21px; }
 header a { color: var(--text); text-decoration: none; }
-main { padding: 24px; max-width: 880px; margin: 0 auto; }
-.card { background: var(--card); border: 1px solid #1f2a4a; border-radius: 14px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }
+main { padding: 28px 24px; max-width: 880px; margin: 0 auto; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 26px 28px; box-shadow: 0 14px 34px rgba(101, 84, 40, .08); }
 label { display: block; margin-bottom: 8px; color: var(--muted); }
-textarea { width: 100%; background: #0e1630; color: var(--text); border: 1px solid #233462; border-radius: 10px; padding: 12px; font-size: 15px; }
-button { margin-top: 12px; background: var(--accent); border: none; color: #081020; padding: 10px 16px; border-radius: 10px; cursor: pointer; font-weight: 600; }
+textarea { width: 100%; background: #fff; color: var(--text); border: 1.5px solid #ddd3ba; border-radius: 12px; padding: 13px 14px; font-size: 16px; line-height: 1.55; }
+button { margin-top: 12px; background: var(--accent); border: none; color: #fff; padding: 12px 20px; min-height: 44px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 15.5px; }
 .help { margin-top: 24px; }
-.help code { background: #0e1630; padding: 2px 6px; border-radius: 6px; }
-.flash { background: #3d2830; border: 1px solid #6b3947; padding: 8px 12px; border-radius: 10px; margin-bottom: 10px; }
-pre { white-space: pre-wrap; word-wrap: break-word; background: #0e1630; padding: 12px; border-radius: 10px; border: 1px solid #233462; }
-.back { display: inline-block; margin-top: 12px; color: var(--accent); }
-footer { color: var(--muted); font-size: 12px; text-align: center; padding: 24px; }
+.help code { background: #f4efe2; padding: 2px 6px; border-radius: 6px; }
+.flash { background: #fdeeee; border: 1px solid #eec9c9; color: #7c3535; padding: 12px 16px; border-radius: 12px; margin-bottom: 14px; }
+pre { white-space: pre-wrap; word-wrap: break-word; background: #faf6ec; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); }
+.back { display: inline-block; margin-top: 14px; color: var(--accent); font-weight: 600; }
+footer { color: var(--muted); font-size: 13px; text-align: center; padding: 24px; }
 
 /* --- additions: nav, answer page, steps, practice --- */
 nav { display: inline-block; margin-left: 18px; }
-nav a { color: var(--accent); margin-right: 14px; font-size: 14px; }
+nav a { color: var(--accent); margin-right: 14px; font-size: 15px; font-weight: 600; display: inline-block; padding: 8px 2px; }
 .muted { color: var(--muted); }
-.badge { background: #233462; color: var(--text); font-size: 12px; padding: 3px 8px; border-radius: 999px; vertical-align: middle; }
-.answer-big { font-size: 22px; font-weight: 700; }
-.steps li { margin: 6px 0; line-height: 1.5; }
+.badge { background: #f6ead0; color: #7a5a10; font-size: 12.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; vertical-align: middle; }
+.answer-big { font-size: 23px; font-weight: 700; }
+.steps li { margin: 7px 0; line-height: 1.6; }
 img.graph { max-width: 100%; background: #fff; border-radius: 10px; margin-top: 10px; }
 details { margin-top: 14px; }
 details summary { cursor: pointer; color: var(--accent); }
-.practice-q { border-top: 1px solid #1f2a4a; padding: 10px 0; }
+.practice-q { border-top: 1px solid var(--line); padding: 14px 0; }
 
 /* --- additions (wave 2): quiz, history, download, light-theme fixes --- */
 .quiz-setup { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-bottom: 8px; }
 .quiz-setup label { margin: 0; }
 .quiz-setup select, .practice-q input[type="text"] {
-  background: #0e1630; color: var(--text); border: 1px solid #233462;
-  border-radius: 10px; padding: 9px 10px; font-size: 14px;
+  background: #fff; color: var(--text); border: 1.5px solid #ddd3ba;
+  border-radius: 12px; padding: 11px 12px; font-size: 15.5px; min-height: 44px;
 }
-.practice-q input[type="text"] { width: 100%; max-width: 320px; }
-.quiz-timer { font-weight: 700; color: #e0a458; margin: 12px 0 4px; }
-.ok { color: #57d38c; font-weight: 600; }
-.bad { color: #ff7a7a; font-weight: 600; }
+.practice-q input[type="text"] { width: 100%; max-width: 340px; }
+.quiz-timer { font-weight: 700; color: #b4762a; margin: 14px 0 6px; }
+.ok { color: #1e8e4f; font-weight: 600; }
+.bad { color: #c0452f; font-weight: 600; }
 .history-form { display: inline; }
 .linklike {
   background: none; border: none; color: var(--accent); cursor: pointer;
@@ -78,15 +90,6 @@ details summary { cursor: pointer; color: var(--accent); }
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .hero-tag { color: var(--sub); font-size: clamp(15px, 2.4vw, 19px); margin: 0 auto 26px; max-width: 560px; }
-.hero-form { max-width: 640px; margin: 0 auto; text-align: left; }
-.hero-form label { color: var(--sub); font-weight: 600; }
-.hero-form textarea {
-  background: #ffffff; color: var(--ink);
-  border: 1.5px solid #d8dfec; border-radius: 14px;
-  box-shadow: 0 8px 24px rgba(22, 33, 58, .06);
-  font-size: 16px; padding: 14px;
-}
-.hero-form textarea:focus { outline: 2px solid var(--gold2); border-color: var(--gold); }
 .hero-solve {
   width: 100%; margin-top: 14px; padding: 14px;
   font-size: 16px; font-weight: 700; color: #fff;
@@ -96,12 +99,11 @@ details summary { cursor: pointer; color: var(--accent); }
   transition: transform .18s ease, box-shadow .18s ease;
 }
 .hero-solve:hover { transform: translateY(-2px); box-shadow: 0 18px 34px rgba(185, 140, 46, .42); }
-.input-tools { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .tool-btn {
   background: #fff; color: var(--ink); border: 1px solid #dfe6f2;
-  padding: 8px 14px; border-radius: 999px; font-size: 13.5px; font-weight: 600;
+  padding: 10px 16px; min-height: 44px; border-radius: 999px; font-size: 14px; font-weight: 600;
   cursor: pointer; box-shadow: 0 3px 10px rgba(22, 33, 58, .05);
-  transition: all .16s ease; margin: 0; display: inline-block;
+  transition: all .16s ease; margin: 0; display: inline-flex; align-items: center;
 }
 .tool-btn:hover { border-color: var(--gold); color: #8a6414; transform: translateY(-1px); }
 .tool-note { font-size: 13px; color: var(--sub); }
@@ -116,14 +118,94 @@ details summary { cursor: pointer; color: var(--accent); }
   border: 1.5px solid #d8dfec; border-radius: 10px;
   padding: 10px; font-size: 15px; margin: 8px 0 4px;
 }
-.chips { margin-top: 20px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.chip {
-  background: #fff; color: var(--ink); border: 1px solid #dfe6f2;
-  padding: 7px 13px; border-radius: 999px; font-size: 13px; cursor: pointer;
-  box-shadow: 0 3px 10px rgba(22, 33, 58, .05);
-  transition: all .16s ease; margin: 0;
+/* Wave-5 chat homepage: conversation log + chat-style input bar.
+   The white premium hero stays; the ask box is now the centrepiece. */
+.chat-wrap { max-width: 800px; margin: 0 auto; text-align: left; }
+.chat-log {
+  display: flex; flex-direction: column; gap: 12px;
+  max-height: 460px; overflow-y: auto;
+  padding: 10px 4px 16px; scroll-behavior: smooth;
 }
-.chip:hover { border-color: var(--gold); color: #8a6414; transform: translateY(-1px); }
+.bubble {
+  max-width: 86%; padding: 15px 19px; border-radius: 18px;
+  font-size: 16.5px; line-height: 1.65;
+  box-shadow: 0 8px 22px rgba(101, 84, 40, .08);
+  animation: rise .45s cubic-bezier(.2, .7, .2, 1) both;
+}
+.bubble p { margin: 5px 0; overflow-wrap: break-word; }
+.bubble.bot {
+  align-self: flex-start; background: #fff; color: var(--ink);
+  border: 1px solid #eee2c6; border-bottom-left-radius: 6px;
+}
+.bubble.user {
+  align-self: flex-end; color: #5c4303;
+  background: linear-gradient(120deg, #fdf3d8, #fbe9bb);
+  border: 1px solid #ecd9a0;
+  border-bottom-right-radius: 6px;
+}
+.bubble.typing { color: var(--sub); font-style: italic; }
+.bubble.typing .dots { display: inline-flex; gap: 5px; margin-left: 8px; vertical-align: middle; }
+.bubble.typing .dots i {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #c9a24b; display: inline-block;
+  animation: softpulse 1.15s ease-in-out infinite;
+}
+.bubble.typing .dots i:nth-child(2) { animation-delay: .18s; }
+.bubble.typing .dots i:nth-child(3) { animation-delay: .36s; }
+@keyframes softpulse {
+  0%, 100% { opacity: .25; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-2.5px); }
+}
+.bubble .steps li { color: var(--ink); }
+.bubble .graph { max-width: 100%; border-radius: 10px; margin-top: 8px; }
+.bubble form { margin-top: 6px; }
+.chat-form { text-align: left; }
+.chat-form > label { color: var(--sub); font-weight: 600; }
+.chat-bar {
+  margin-top: 10px; background: #fff;
+  border: 1.5px solid #e0d3ae; border-radius: 18px;
+  box-shadow: 0 16px 38px rgba(101, 84, 40, .12);
+  padding: 14px 14px 14px;
+}
+.chat-bar:focus-within { outline: 2px solid var(--gold2); border-color: var(--gold); }
+.chat-bar textarea {
+  width: 100%; border: none; resize: none; background: transparent;
+  color: var(--ink); font-size: 17px; line-height: 1.6;
+  padding: 4px 6px; max-height: 160px;
+}
+.chat-bar textarea:focus { outline: none; }
+.chat-bar-tools {
+  display: flex; flex-wrap: wrap; gap: 9px; align-items: center;
+  margin-top: 8px;
+}
+.chat-bar-tools .tool-note { flex: 1 1 auto; }
+.chat-send {
+  width: auto; margin: 0 0 0 auto; padding: 12px 26px;
+  border-radius: 999px; min-height: 48px; font-size: 16px;
+}
+/* Wave-5 Board Mode + Mistake Notebook */
+.board-opts { display: flex; flex-wrap: wrap; gap: 10px; margin: 12px 0 20px; }
+.board-opt {
+  display: inline-flex; align-items: center; min-height: 46px;
+  background: #fff; color: var(--text);
+  border: 1.5px solid #e3d9c2; padding: 10px 20px; border-radius: 999px;
+  font-weight: 600; text-decoration: none;
+  box-shadow: 0 6px 16px rgba(101, 84, 40, .06);
+}
+.board-opt:hover { border-color: var(--gold); }
+.board-opt.active {
+  background: linear-gradient(120deg, #fdf3d8, #fbe9bb);
+  border-color: var(--gold); color: #7a5a10;
+}
+.chapter-list { padding-left: 22px; }
+.chapter-list li {
+  margin: 0; padding: 13px 10px; line-height: 1.6;
+  border-bottom: 1px solid var(--line);
+}
+.chapter-list a { color: var(--text); font-weight: 600; }
+.board-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 18px 0 8px; }
+.board-actions .hero-solve { width: auto; margin: 0; padding: 12px 24px; min-height: 48px; }
+.inline-form { display: inline; }
 .new-strip { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .new-badge {
   background: linear-gradient(92deg, #fdf3d8, #fbe9bb);
@@ -151,7 +233,8 @@ details summary { cursor: pointer; color: var(--accent); }
 .how { margin-top: 34px; }
 .how-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
 .how-card {
-  background: var(--card); border: 1px solid #1f2a4a; border-radius: 16px; padding: 16px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 20px;
+  box-shadow: 0 10px 24px rgba(101, 84, 40, .06);
 }
 .how-card .n {
   display: inline-flex; width: 28px; height: 28px; border-radius: 50%;
@@ -167,6 +250,169 @@ details summary { cursor: pointer; color: var(--accent); }
 @media (max-width: 560px) {
   .hero { padding: 32px 18px 24px; }
   .topic-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  main { padding: 20px 14px; }
+  .card { padding: 22px 18px; }
+  .bubble { max-width: 94%; padding: 13px 15px; }
+  .chat-log { max-height: 56vh; }
+  .chat-send { width: 100%; margin-left: 0; }
+  .board-opt { flex: 1 1 auto; justify-content: center; }
 }
 
 .explain { background: #fdf6e3; border-left: 4px solid #d4af37; padding: .6rem .9rem; border-radius: .4rem; }
+
+/* Wave-5b Teacher's Advice card + Listen button: soft warm tint,
+   gentle gold edge, calm inside cards and chat bubbles alike. */
+.advice-card {
+  background: linear-gradient(120deg, #fdf6e0, #fdf0da);
+  border: 1px solid #ecd9a0; border-left: 4px solid #d4af37;
+  border-radius: 16px; padding: 18px 20px; margin: 20px 0 6px;
+}
+.advice-card h3 { margin: 0 0 6px; font-size: 17px; color: #7a5a10; }
+.advice-card p { margin: 0; line-height: 1.65; }
+.bubble .advice-card { margin: 12px 0 4px; padding: 13px 15px; }
+.bubble .advice-card h3 { font-size: 15.5px; }
+.listen-btn {
+  margin-top: 12px; min-height: 44px; padding: 10px 20px;
+  background: #fff; color: #7a5a10; border: 1.5px solid #e3d9c2;
+  border-radius: 999px; font-weight: 600; font-size: 15px;
+  cursor: pointer; box-shadow: 0 6px 16px rgba(101, 84, 40, .08);
+}
+.listen-btn:hover { border-color: #c9a24b; }
+.bubble .listen-btn { margin-top: 10px; }
+
+/* --- Wave 5b/5d/5e: student-proofing, Copy Style, copy check,
+   Dhyaan + Badhai ------------------------------------------------ */
+
+/* No horizontal scroll at 360px: long maths strings wrap, wide
+   elements shrink to the viewport. */
+html, body { overflow-x: hidden; }
+img, svg, table, pre { max-width: 100%; }
+main, .card, .hero, .chat-wrap, .bubble { min-width: 0; }
+
+/* Comfort floors: answer text line-height >= 1.6 everywhere; the
+   quiz form controls join the >=16px input rule (iOS zoom guard). */
+.steps li { line-height: 1.65; }
+.quiz-setup select, .practice-q input[type="text"] { font-size: 16px; }
+.photo-box textarea { font-size: 16px; }
+
+/* Bigger tap targets on the text-link class of controls. */
+nav a { padding: 12px 4px; }
+a.back { display: inline-flex; align-items: center; min-height: 44px;
+         padding: 6px 2px; margin-right: 14px; }
+details summary { padding: 10px 0; min-height: 44px; }
+.linklike { min-height: 44px; padding: 8px 2px; }
+
+/* Friendly error card (answer page) + error bubble (chat). */
+.error-card {
+  background: linear-gradient(120deg, #fdf6e0, #fdf0da);
+  border: 1px solid #ecd9a0; border-left: 4px solid #d4af37;
+  border-radius: 16px; padding: 20px 22px; margin: 18px 0 8px;
+}
+.error-card h2 { margin-top: 0; }
+.error-card p { line-height: 1.65; }
+.error-tips { margin: 10px 0 6px; padding-left: 22px; }
+.error-tips li { margin: 6px 0; line-height: 1.6; }
+.error-card .hero-solve { width: auto; padding: 12px 26px;
+                          min-height: 48px; }
+.bubble.error-bubble { border-left: 4px solid #d4af37; }
+.bubble .error-heading { font-weight: 700; font-size: 17px; }
+.bubble .error-tips { padding-left: 20px; margin: 8px 0; }
+.bubble .error-tips li { margin: 5px 0; line-height: 1.6; }
+.retry-btn { width: auto; margin-top: 10px; padding: 11px 24px;
+             min-height: 48px; }
+
+/* Calm slow-server note under the chat bar. */
+.waking-note { color: var(--sub); font-size: 13.5px; text-align: center;
+               margin: 10px 4px 0; line-height: 1.55; }
+
+/* ✍️ Copy Style (handwriting): Kalam/Caveat on a ruled notebook
+   page — ivory paper, faint blue rules, soft pink margin line.
+   Presentation only: the steps text is unchanged and MathJax
+   output keeps its own rendering. */
+.steps-tools { display: flex; flex-wrap: wrap; gap: 10px;
+               align-items: center; margin: 10px 0 4px; }
+.steps-tools .back { margin-top: 0; }
+.hw-toggle {
+  margin: 0; min-height: 44px; padding: 10px 18px;
+  background: linear-gradient(120deg, #fdf3d8, #fbe9bb);
+  color: #7a5a10; border: 1.5px solid #ecd9a0;
+  border-radius: 999px; font-weight: 700; font-size: 14.5px;
+  cursor: pointer; box-shadow: 0 6px 16px rgba(101, 84, 40, .08);
+}
+.hw-toggle.hw-off { background: #fff; color: var(--muted);
+                    border-color: #e3d9c2; }
+ol.steps.notebook {
+  background-color: #fffdf4;
+  background-image:
+    linear-gradient(90deg, transparent 0, transparent 34px,
+                    rgba(232, 120, 140, .45) 34px,
+                    rgba(232, 120, 140, .45) 36px,
+                    transparent 36px),
+    repeating-linear-gradient(180deg, transparent 0, transparent 35px,
+                              rgba(90, 130, 200, .28) 36px);
+  border: 1px solid #e8dfc4; border-radius: 10px;
+  padding: 12px 16px 14px 56px;
+}
+ol.steps.notebook.handwriting-on li {
+  font-family: "Kalam", "Caveat", cursive;
+  line-height: 1.95; letter-spacing: .012em; font-size: 17.5px;
+}
+
+/* 📋 Copy Check card: a teacher-checked answer copy — soft red-ink
+   accents on ivory, marks + remark + where marks were lost. */
+.copycheck-card {
+  background: #fffdf4;
+  border: 1.5px solid #e8dfc4; border-left: 4px solid #c0452f;
+  border-radius: 16px; padding: 20px 22px; margin: 22px 0 8px;
+  box-shadow: 0 10px 24px rgba(101, 84, 40, .07);
+}
+.copycheck-card h3 { margin: 0 0 8px; font-size: 18px; color: #8a2f22; }
+.copycheck-marks { font-size: 18px; margin: 4px 0; }
+.copycheck-remark {
+  font-family: "Kalam", "Caveat", cursive; font-size: 19px;
+  color: #a03428; margin: 8px 0; line-height: 1.7;
+}
+.copycheck-card p { line-height: 1.65; }
+
+/* 🎉 Badhai: a calm congratulations card + a light pure-CSS
+   confetti burst (no library, no sound). */
+.celebrate-card {
+  position: relative; overflow: hidden;
+  background: linear-gradient(120deg, #fdf3d8, #fbe9bb);
+  border: 1px solid #ecd9a0; border-radius: 16px;
+  padding: 20px 22px; margin: 18px 0 8px; text-align: center;
+}
+.celebrate-msg { font-size: 19px; font-weight: 700; color: #7a5a10;
+                 margin: 0; line-height: 1.6; }
+.confetti { position: absolute; inset: 0; pointer-events: none; }
+.confetti-piece {
+  position: absolute; top: -10px; width: 8px; height: 13px;
+  border-radius: 2px; opacity: 0;
+  animation: confetti-fall 2.6s ease-in .15s both;
+}
+.confetti-piece:nth-child(3n) { background: #c9a24b; }
+.confetti-piece:nth-child(3n+1) { background: #2f7d6e; }
+.confetti-piece:nth-child(3n+2) { background: #e8879a; }
+.confetti-piece:nth-child(1) { left: 6%; animation-delay: .1s; }
+.confetti-piece:nth-child(2) { left: 14%; animation-delay: .35s; }
+.confetti-piece:nth-child(3) { left: 22%; animation-delay: .2s; }
+.confetti-piece:nth-child(4) { left: 31%; animation-delay: .5s; }
+.confetti-piece:nth-child(5) { left: 39%; animation-delay: .15s; }
+.confetti-piece:nth-child(6) { left: 47%; animation-delay: .45s; }
+.confetti-piece:nth-child(7) { left: 55%; animation-delay: .25s; }
+.confetti-piece:nth-child(8) { left: 63%; animation-delay: .55s; }
+.confetti-piece:nth-child(9) { left: 71%; animation-delay: .3s; }
+.confetti-piece:nth-child(10) { left: 79%; animation-delay: .6s; }
+.confetti-piece:nth-child(11) { left: 86%; animation-delay: .2s; }
+.confetti-piece:nth-child(12) { left: 92%; animation-delay: .4s; }
+.confetti-piece:nth-child(13) { left: 26%; animation-delay: .65s; }
+.confetti-piece:nth-child(14) { left: 67%; animation-delay: .7s; }
+@keyframes confetti-fall {
+  0% { opacity: 0; transform: translateY(-12px) rotate(0deg); }
+  12% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(150px) rotate(300deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece { animation: none; opacity: 0; }
+  .bubble, .rise { animation: none; }
+}

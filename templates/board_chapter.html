@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>{{ chapter.title }}</h2>
+    <p class="muted">{{ t.board_class_word }} {{ class_num }} ·
+      {{ t.board_topic_label }}
+      <strong>{{ t["quiz_topic_" + chapter.topic] }}</strong></p>
+    {% if chapter.approximate %}
+      <p class="muted">≈ {{ t.board_fallback_note }}</p>
+    {% endif %}
+
+    <div class="board-actions">
+      <a class="board-opt" href="/board/{{ class_num }}/{{ chapter.slug }}/practice">{{ t.board_practice_btn }}</a>
+      <form method="post" action="/board/test/start" class="inline-form">
+        <input type="hidden" name="class_num" value="{{ class_num }}" />
+        <input type="hidden" name="slug" value="{{ chapter.slug }}" />
+        <button type="submit" class="hero-solve">{{ t.board_test_btn }}</button>
+      </form>
+    </div>
+
+    <a class="back" href="/board/{{ class_num }}">← {{ t.board_class_word }} {{ class_num }}</a>
+    <a class="back" href="/board">{{ t.board_back }}</a>
+  </div>
+{% endblock %}

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>{{ t.board_test_heading }}</h2>
+    <p class="muted">{{ chapter.title }} · {{ t.board_class_word }} {{ class_num }} ·
+      {{ t["quiz_topic_" + test.topic] }}</p>
+    <p class="muted">{{ t.quiz_intro }}</p>
+
+    <div class="quiz-timer">{{ t.time_left }} <span id="timer">{{ time_limit }}</span>s</div>
+    {% if test.questions %}
+    <form method="post" action="/board/test/submit" id="quiz-form">
+      <input type="hidden" name="time_taken" id="time-taken" value="" />
+      {% for item in test.questions %}
+        <div class="practice-q">
+          <p><strong>Q{{ loop.index }}.</strong> {{ item.question }}</p>
+          <input type="text" name="answer_{{ loop.index0 }}"
+                 placeholder="{{ t.your_answer_ph }}" autocomplete="off" />
+        </div>
+      {% endfor %}
+      <button type="submit">{{ t.submit_answers }}</button>
+    </form>
+    {% else %}
+      <p class="muted">{{ t.empty_no_questions }}</p>
+    {% endif %}
+    <script>
+      (function () {
+        var left = {{ time_limit }};
+        var start = Date.now();
+        var el = document.getElementById("timer");
+        var tick = setInterval(function () {
+          left -= 1;
+          if (el) el.textContent = Math.max(left, 0);
+          if (left <= 0) {
+            clearInterval(tick);
+            document.getElementById("time-taken").value =
+              Math.round((Date.now() - start) / 1000);
+            document.getElementById("quiz-form").submit();
+          }
+        }, 1000);
+        document.getElementById("quiz-form").addEventListener(
+          "submit", function () {
+            document.getElementById("time-taken").value =
+              Math.round((Date.now() - start) / 1000);
+          });
+      })();
+    </script>
+  </div>
+{% endblock %}

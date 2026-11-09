@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="{{ lang }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ganitra — {{ question }}</title>
+    <style>
+      body { font-family: Georgia, "Times New Roman", serif;
+             color: #25324e; background: #fff; margin: 48px auto;
+             max-width: 760px; padding: 0 24px; line-height: 1.65;
+             font-size: 17px; }
+      h1 { font-size: 23px; margin-bottom: 2px; }
+      h2 { font-size: 16px; margin-top: 26px; border-bottom: 1px solid #ccc;
+           padding-bottom: 4px; }
+      .brand { color: #8a6414; letter-spacing: .04em; font-size: 13px;
+               text-transform: uppercase; }
+      .answer { font-size: 20px; font-weight: 700; }
+      ol.steps li { margin: 6px 0; }
+      pre { white-space: pre-wrap; font: inherit; }
+      .muted { color: #555; }
+      footer { margin-top: 36px; border-top: 1px solid #ccc;
+               padding-top: 10px; color: #555; font-size: 13px;
+               text-align: center; }
+      .print-btn { font: inherit; padding: 12px 22px; min-height: 48px;
+                   cursor: pointer;
+                   border: 1px solid #8a6414; background: #fdf6dd;
+                   border-radius: 12px; }
+      /* Copy Style (handwriting) — Wave 5d: Kalam on a ruled
+         notebook page with a soft pink margin line. */
+      .notebook { background-color: #fffdf4;
+        background-image:
+          linear-gradient(90deg, transparent 0, transparent 34px,
+                          rgba(232, 120, 140, .45) 34px,
+                          rgba(232, 120, 140, .45) 36px,
+                          transparent 36px),
+          repeating-linear-gradient(180deg, transparent 0,
+                                    transparent 35px,
+                                    rgba(90, 130, 200, .28) 36px);
+        border: 1px solid #e8dfc4; border-radius: 6px;
+        padding: 6px 14px 10px 52px; }
+      .notebook.handwriting-on, .notebook li {
+        font-family: "Kalam", "Caveat", cursive; }
+      .notebook li { line-height: 1.95; letter-spacing: .012em;
+                     font-size: 17.5px; }
+      @media print { .no-print { display: none !important; } }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Kalam:wght@400;700&family=Caveat:wght@500;700&display=swap"
+          rel="stylesheet" />
+    <script>
+      MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+            async></script>
+  </head>
+  <body>
+    <p class="brand">Ganitra</p>
+    <h1>{{ t.question_heading }}</h1>
+    <pre>{{ question }}</pre>
+    {% if result.interpreted_as %}
+      <p class="muted">{{ t.understood_as }} {{ result.interpreted_as }}</p>
+    {% endif %}
+
+    <h2>{{ t.answer_heading }}</h2>
+    <p class="answer">
+      {% if result.latex %}\[ {{ result.latex }} \]{% else %}{{ result.answer }}{% endif %}
+    </p>
+
+    {% if explanation %}
+      <h2>{{ t.explanation_heading }}</h2>
+      <p>{{ explanation }}</p>
+    {% endif %}
+
+    {% if result.steps %}
+      <h2>{{ t.steps_heading }}</h2>
+      <ol class="steps{% if handwriting_style %} notebook handwriting-on{% endif %}">
+        {% for step in result.steps %}<li>{{ step }}</li>{% endfor %}
+      </ol>
+    {% endif %}
+
+    <p class="no-print" style="margin-top: 28px;">
+      <button class="print-btn" onclick="window.print()">{{ t.print_btn }}</button>
+    </p>
+
+    <footer>{{ t.print_footer }} · Ganitra</footer>
+    <script>
+      // Open the print dialog once the page (and MathJax) has settled;
+      // the button above stays as the manual fallback.
+      window.addEventListener("load", function () {
+        setTimeout(function () { window.print(); }, 600);
+      });
+    </script>
+  </body>
+</html>

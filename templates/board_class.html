@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>{{ t.board_class_word }} {{ class_num }} · {{ board_name }}</h2>
+    <h3>{{ t.board_chapters_heading }}</h3>
+    <ol class="chapter-list">
+      {% for chapter in chapters %}
+        <li>
+          <a href="/board/{{ class_num }}/{{ chapter.slug }}">{{ chapter.title }}</a>
+          <span class="badge">{{ t["quiz_topic_" + chapter.topic] }}</span>
+          {% if chapter.approximate %}<span class="muted">≈</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ol>
+    <a class="back" href="/board">{{ t.board_back }}</a>
+  </div>
+{% endblock %}

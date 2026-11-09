@@ -122,9 +122,14 @@ client = app.test_client()
 
 r = client.get("/")
 body = r.get_data(as_text=True)
+# Wave 5: the homepage is a chat UI now and the example chips were
+# removed on the user's explicit instruction, so this check asserts
+# the new contract (chat log + chat bar, zero chips) instead of the
+# old chip count.
 check("homepage premium", r.status_code == 200 and 'class="hero' in body
       and 'name="question"' in body and 'action="/solve"' in body
-      and body.count('class="chip"') >= 5 and "topic-grid" in body,
+      and 'id="chat-log"' in body and 'class="chat-bar"' in body
+      and 'class="chip"' not in body and "topic-grid" in body,
       f"status={r.status_code} chips={body.count(chr(34).join(['class=', 'chip', '']))}")
 
 r = client.post("/solve", data={"question": "mean of 2, 4, 6, 8"})

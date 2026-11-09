@@ -15,6 +15,22 @@
     {% endif %}
     <h2>{{ t.question_heading }}</h2>
     <pre>{{ question }}</pre>
+    {% if unsolvable %}
+      <div class="error-card" role="alert">
+        <h2>{{ t.error_heading }}</h2>
+        <p>{{ t.error_intro }}</p>
+        <ul class="error-tips">
+          <li>{{ t.error_tip1 }}</li>
+          <li>{{ t.error_tip2 }}</li>
+          <li>{{ t.error_tip3 }}</li>
+        </ul>
+        <form method="post" action="/solve">
+          <input type="hidden" name="question" value="{{ question }}" />
+          <button type="submit" class="hero-solve">{{ t.error_retry_btn }}</button>
+        </form>
+      </div>
+      <a class="back" href="/">{{ t.try_again_link }}</a>
+    {% else %}
     {% if result.interpreted_as %}
       <p class="muted">{{ t.understood_as }} <code>{{ result.interpreted_as }}</code></p>
     {% endif %}
@@ -30,6 +46,117 @@
       <p class="explain">{{ explanation }}</p>
     {% endif %}
 
+    {% if advice %}
+      <div class="advice-card">
+        <h3>{{ t.advice_heading }}</h3>
+        <p>{{ advice }}</p>
+      </div>
+    {% endif %}
+
+    {% if advice %}
+      <button type="button" id="listen-btn" class="listen-btn">{{ t.listen_btn }}</button>
+      <script>
+        (function () {
+          var btn = document.getElementById("listen-btn");
+          if (!("speechSynthesis" in window)) {
+            btn.style.display = "none";
+            return;
+          }
+          /* Suno: read the solution aloud like a teacher —
+             question, then each step one by one, then the final
+             answer, then the Teacher's Advice. Question/answer/
+             advice are spoken in the UI language; the steps stay in
+             English (as on the page) with English speech cleanup. */
+          var SPEAK = {{ {"question": question,
+                          "steps": result.steps or [],
+                          "answer": result.answer or "",
+                          "advice": advice or ""} | tojson }};
+          var UI_LANG = {{ speech_lang | tojson }};
+          var UI_CODE = {{ lang | tojson }};
+          var LISTEN_LABEL = {{ t.listen_btn | tojson }};
+          var STOP_LABEL = {{ t.listen_stop_btn | tojson }};
+          var WORDS = {
+            en: { squared: "squared", cubed: "cubed", plus: "plus", minus: "minus", into: "multiplied by", divided_by: "divided by", equals: "equals", sqrt: "square root of", pi: "pi", power: "to the power" },
+            hi: { squared: "का वर्ग", cubed: "का घन", plus: "जमा", minus: "घटाव", into: "गुणा", divided_by: "बटा", equals: "बराबर", sqrt: "का वर्गमूल", pi: "पाई", power: "की घात" },
+            bn: { squared: "এর বর্গ", cubed: "এর ঘন", plus: "যোগ", minus: "বিয়োগ", into: "গুণ", divided_by: "ভাগ", equals: "সমান", sqrt: "এর বর্গমূল", pi: "পাই", power: "এর ঘাত" },
+            mr: { squared: "चा वर्ग", cubed: "चा घन", plus: "बेरीज", minus: "वजाबाकी", into: "गुणिले", divided_by: "भागिले", equals: "बरोबर", sqrt: "चे वर्गमूळ", pi: "पाय", power: "चा घात" },
+            ta: { squared: "இன் வர்க்கம்", cubed: "இன் கனம்", plus: "கூட்டல்", minus: "கழித்தல்", into: "பெருக்கல்", divided_by: "வகுத்தல்", equals: "சமம்", sqrt: "இன் வர்க்கமூலம்", pi: "பை", power: "இன் அடுக்கு" },
+            te: { squared: "యొక్క వర్గం", cubed: "యొక్క ఘనం", plus: "కూడిక", minus: "తీసివేత", into: "గుణకారం", divided_by: "భాగహారం", equals: "సమానం", sqrt: "యొక్క వర్గమూలం", pi: "పై", power: "యొక్క ఘాతం" }
+          };
+          function speakable(text, code) {
+            var w = WORDS[code] || WORDS.en;
+            var s = String(text || "");
+            s = s.replace(/√/g, " " + w.sqrt + " ");
+            s = s.replace(/²/g, " " + w.squared);
+            s = s.replace(/³/g, " " + w.cubed);
+            s = s.replace(/\^2/g, " " + w.squared);
+            s = s.replace(/\^3/g, " " + w.cubed);
+            s = s.replace(/\^/g, " " + w.power + " ");
+            s = s.replace(/[·*]/g, " " + w.into + " ");
+            s = s.replace(/\//g, " " + w.divided_by + " ");
+            s = s.replace(/−/g, " " + w.minus + " ");
+            s = s.replace(/ - /g, " " + w.minus + " ");
+            s = s.replace(/\+/g, " " + w.plus + " ");
+            s = s.replace(/=/g, " " + w.equals + " ");
+            s = s.replace(/π/g, " " + w.pi + " ");
+            return s.replace(/\s+/g, " ").trim();
+          }
+          function buildQueue() {
+            var parts = [];
+            if (SPEAK.question) {
+              parts.push({ text: speakable(SPEAK.question, UI_CODE),
+                           lang: UI_LANG });
+            }
+            (SPEAK.steps || []).forEach(function (step) {
+              parts.push({ text: speakable(step, "en"),
+                           lang: "en-IN" });
+            });
+            if (SPEAK.answer) {
+              parts.push({ text: speakable(SPEAK.answer, UI_CODE),
+                           lang: UI_LANG });
+            }
+            if (SPEAK.advice) {
+              parts.push({ text: speakable(SPEAK.advice, UI_CODE),
+                           lang: UI_LANG });
+            }
+            return parts.filter(function (p) { return p.text; });
+          }
+          var speaking = false;
+          var speakId = 0;
+          function paint() {
+            btn.textContent = speaking ? STOP_LABEL : LISTEN_LABEL;
+          }
+          function stop() {
+            speakId += 1;
+            speaking = false;
+            window.speechSynthesis.cancel();
+            paint();
+          }
+          btn.addEventListener("click", function () {
+            if (speaking) { stop(); return; }
+            var parts = buildQueue();
+            if (!parts.length) return;
+            speaking = true;
+            paint();
+            var id = ++speakId;
+            parts.forEach(function (p, idx) {
+              var u = new SpeechSynthesisUtterance(p.text);
+              u.lang = p.lang;
+              if (idx === parts.length - 1) {
+                u.onend = u.onerror = function () {
+                  if (id === speakId) {
+                    speaking = false;
+                    paint();
+                  }
+                };
+              }
+              window.speechSynthesis.speak(u);
+            });
+          });
+        })();
+      </script>
+    {% endif %}
+
     {% if result.image %}
       <img class="graph" src="{{ url_for('static', filename=result.image) }}"
            alt="Graph of the function" />
@@ -37,18 +164,47 @@
 
     {% if result.steps %}
       <h2>{{ t.steps_heading }}</h2>
-      <ol class="steps">
+      <div class="steps-tools">
+        <button type="button" class="hw-toggle" id="hw-toggle"
+          aria-pressed="true">{{ t.handwriting_btn }}</button>
+        <a class="back" href="/solution/print?style=hand" target="_blank"
+          rel="noopener">{{ t.print_copy_link }}</a>
+      </div>
+      <ol class="steps notebook handwriting-on" id="steps-list">
         {% for step in result.steps %}<li>{{ step }}</li>{% endfor %}
       </ol>
+      <script>
+        (function () {
+          var KEY = "ganitra-handwriting";
+          var btn = document.getElementById("hw-toggle");
+          var list = document.getElementById("steps-list");
+          if (!btn || !list) return;
+          function paint(on) {
+            list.classList.toggle("handwriting-on", on);
+            btn.setAttribute("aria-pressed", on ? "true" : "false");
+            btn.classList.toggle("hw-off", !on);
+          }
+          var on = true;
+          try {
+            var saved = window.localStorage.getItem(KEY);
+            if (saved === "off") on = false;
+          } catch (e) { /* private mode: default stays ON */ }
+          paint(on);
+          btn.addEventListener("click", function () {
+            on = !list.classList.contains("handwriting-on");
+            paint(on);
+            try {
+              window.localStorage.setItem(KEY, on ? "on" : "off");
+            } catch (e) { /* ignore */ }
+          });
+        })();
+      </script>
     {% endif %}
 
-    <details>
-      <summary>{{ t.full_result }}</summary>
-      <pre>{{ result | tojson(indent=2) }}</pre>
-    </details>
-
     <a class="back" href="/download">{{ t.download_link }}</a>
+    <a class="back" href="/solution/print" target="_blank" rel="noopener">{{ t.pdf_link }}</a>
     <a class="back" href="/">{{ t.ask_another }}</a>
     <a class="back" href="/history">{{ t.nav_history }}</a>
+    {% endif %}
   </div>
 {% endblock %}

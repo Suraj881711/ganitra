@@ -27,9 +27,105 @@ in the web UI, through a JSON API, or on the command line.
   (arithmetic, algebra, trigonometry, statistics) and difficulty, with
   a countdown timer and a server-checked score; the classic
   reveal-the-answer practice set is still there too.
+- **Chat homepage** 💬 — the home page is a chat: ask a question and
+  the answer appears right there as a conversation (your question on
+  the right, Ganitra's answer — with collapsible step-by-step working
+  — on the left), so follow-up questions stay in one thread. Enter
+  sends, Shift+Enter adds a line, and there is a calm "Solving…"
+  indicator while it works. It is progressively enhanced: with
+  JavaScript the chat uses the JSON API in place; without it, the
+  same form simply opens the classic full answer page.
+- **Student-proofing (Wave 5b)** 🛟 — *"student ko koi problem nhi
+  honi chahiye"*: if a question can't be solved, the student never
+  sees a raw error or a JSON dump — the answer page and the chat
+  show a gentle localised card (all 6 languages) saying what likely
+  went wrong, with three tips (check for a typing mistake, write
+  powers as `x^2`, one question at a time) and a **↻ Try again**
+  button. The chat renders the same card as a Ganitra bubble with a
+  Retry button that resends the same question. A soft note under
+  the chat input warns that the first answer can take a moment
+  (the free server wakes up). Empty questions get a friendly
+  prompt (no crash), questions over ~500 characters get a friendly
+  "a bit long" note, and word-salad input (e.g. `asdf qwer zxq`,
+  which the solver would otherwise "simplify" into a meaningless
+  letter product) is recognised and treated as unsolvable —
+  while real symbolic simplifies like `x + y` or `2x + 3x` still
+  solve normally. Empty pages (history, mistakes, practice sets)
+  show friendly localised empty-state text. Comfort audit: input
+  text is ≥ 16 px (no iOS zoom), tap targets are ≥ 44 px, answer
+  text line-height is ≥ 1.6, and there is no horizontal scrolling
+  at 360 px width.
+- **✍️ Copy Style — handwriting-style steps (Wave 5d)** — the
+  step-by-step solution is presented **like a teacher's
+  hand-written copy**: the steps render in the **Kalam** handwriting
+  font (Caveat as fallback) on a notebook page — ivory paper,
+  faint ruled lines and a soft pink margin line, with extra
+  line-height and letter spacing. It is a handwriting-style
+  *presentation* of the same solver steps (the text is unchanged,
+  and MathJax expressions keep their normal rendering). The style
+  is **ON by default** on the answer page and in chat bubbles; the
+  "✍️ Copy Style (handwriting)" toggle switches back to the clean
+  printed style, and the choice is remembered in `localStorage`.
+  The answer page also has a "Print in copy style" link that opens
+  the print page with `?style=hand`, so the saved PDF keeps the
+  notebook look.
+- **📋 Copy Check (Wave 5e)** — after a timed quiz or a chapter
+  test, the result page shows a **board-style copy-check card**
+  like a teacher checking your answer copy: your marks
+  (`7 / 10` style), a warm teacher remark chosen by score band
+  (perfect / great / good / keep going / try again), the
+  per-question ✓/✗ list with the correct answers for the wrong
+  ones, and a line naming the topics or chapters **where marks
+  were lost**, with a link to practise them (the Mistake
+  Notebook). Honest scope: the copy check looks at your **final
+  answers** and where marks were lost by topic — it does **not**
+  judge handwriting or step presentation. The last test report is
+  kept in the session for the result page.
+- **🧘 Dhyaan meter + 🎉 Badhai (Wave 5e)** — a small calm pill in
+  the header shows **today's study record**: minutes spent on
+  Ganitra today (counted while a page is open and visible) and
+  questions solved today, stored only in your browser's
+  `localStorage` and reset each calendar day. And when you score
+  **80% or more** on a quiz/test, or finish a Mistake Notebook
+  practice round, a gentle **Badhai** card celebrates with a
+  light pure-CSS confetti burst (no library, no sound, and it
+  respects `prefers-reduced-motion`).
+- **Board Mode** 📚 — `/board`: pick a board (CBSE, ICSE, MP Board,
+  Rajasthan Board, UP Board, or Other State Board) and a class
+  (6–12), then open any **NCERT maths chapter** for untimed practice
+  or a **timed chapter test** (5 questions, 150 seconds,
+  server-checked score) built from the chapter's topic.
+- **Mistake Notebook** 📒 — `/mistakes`: questions you get wrong in
+  the timed quiz or a chapter test are saved here (newest first,
+  with the correct answer) so you can practise exactly those again.
+- **Teacher's Advice** 👩‍🏫 — under every answer (answer page and
+  chat bubble) a small card gives a curated teacher tip for that
+  question's topic: the concept to revise, the common mistake
+  students make on this type, and a quick practice suggestion.
+  Tips are hand-written templates per topic (quadratic, equations,
+  trigonometry, calculus, statistics, probability, distributions,
+  geometry, sequences, and more, with a generic fallback) in all
+  6 languages. Board Mode also shows a rotating **Advice of the
+  Day** (7 tips, one per weekday).
+- **🔊 Suno — step-by-step audio samjhaya** — the "🔊 Suno" button
+  on the answer page and in every chat answer reads the solution
+  aloud like a teacher, in order: **the question → each step one
+  by one → the final answer → the Teacher's Advice**. Maths
+  symbols are cleaned up before speaking (`x^2` → "x squared",
+  `*` → "multiplied by", `/` → "divided by", `√` → "square root
+  of", `=` → "equals", with per-language words for all six
+  languages). While it plays, the button becomes "⏸ Ruko / Stop"
+  and clicking it stops the voice; it resets when the queue ends.
+  The question, answer and advice are spoken in the UI language;
+  **the steps are spoken in English** (the steps themselves are in
+  English, as noted above). It uses the browser's built-in
+  `speechSynthesis` — voice quality and language support depend
+  on the device/browser, and the button hides itself when speech
+  is unavailable. (Audio only — there are no video lessons.)
 - **History & download** — `/history` lists the questions you solved in
   this session (click to re-open a solution), and every answer page can
-  download its step-by-step solution as a `.txt` file.
+  download its step-by-step solution as a `.txt` file, or open a
+  clean **print page to save as PDF** (see the honest note below).
 - **Hinglish input** — e.g. `5 aur 3 ko jodo`, `240 ka 15 pratishat`,
   `2, 4, 6 ka ausat`, `sin 30 ka maan`.
 - **Voice input** 🎤 — "Bol ke poochho": speak your question (Hindi or
@@ -131,9 +227,17 @@ python verify_wave2.py  # wave-2 samples (distributions, ODEs,
 ## Project structure
 
 ```
-app.py                  Flask app (/, /solve, /practice + timed quiz,
-                        /history, /download, /set-lang/<code>)
+app.py                  Flask app (/, /solve, /chat API history,
+                        /practice + timed quiz, /board Board Mode,
+                        /mistakes, /history, /download,
+                        /solution/print, /set-lang/<code>)
 api.py                  JSON API blueprint (/api/solve)
+board_data.py           NCERT chapter lists for Classes 6-12, each
+                        chapter mapped to a practice topic
+board_quiz.py           chapter-test generators for the topics
+                        solver/practice.py does not cover (sequences,
+                        probability, calculus, linear algebra,
+                        geometry); delegates to it for the rest
 i18n.py                 UI strings + explanation templates in 6 languages
                         (en/hi/bn/mr/ta/te); English is the fallback
 cli.py                  Command-line interface
@@ -166,6 +270,11 @@ verify_all.py           wave-1 end-to-end verification (not part of the app)
 verify_wave2.py         wave-2 end-to-end verification (not part of the app)
 verify_wave3.py         wave-3 verification: voice/photo inputs (not part of the app)
 verify_wave4.py         wave-4 verification: multi-language UI (not part of the app)
+verify_wave5.py         wave-5 verification: chat homepage, Board Mode,
+                        Mistake Notebook, print/PDF page (not part of the app)
+verify_wave5b.py        wave-5b/5d/5e verification: friendly errors,
+                        Copy Style (handwriting), Copy Check, Dhyaan
+                        meter + Badhai (not part of the app)
 ```
 
 ## Notes & honest limits
@@ -192,3 +301,26 @@ verify_wave4.py         wave-4 verification: multi-language UI (not part of the 
   English in every language mode. The explanation line is a fixed
   template sentence (per topic/operation) with the final answer
   filled in, not a free-form translation.
+- Board Mode chapter lists are the rationalised NCERT lists, and the
+  chapter list is NCERT-common across boards — the board choice does
+  not change the chapters, because CBSE/ICSE/state-board maths
+  chapters for Classes 6–12 are essentially the same list. Each
+  chapter's practice/test questions come from the closest matching
+  question generator; chapters whose match is only approximate are
+  marked "≈" in the UI rather than presented as an exact fit, and
+  some chapters (e.g. Symmetry, Sets) currently borrow a neighbouring
+  topic's questions until a dedicated generator exists.
+- The "Download PDF" button does not generate a PDF on the server —
+  it opens a clean print-friendly page and the **browser's own
+  Print → Save as PDF** produces the file. That keeps the app free
+  of PDF libraries and extra dependencies.
+- The Mistake Notebook (like History) is **session-based**: it lives
+  in your browser session and clears when the session ends. Student
+  accounts with a permanent notebook are a future wave.
+- **Copy Style is a presentation, not handwriting generation**: the
+  steps are the solver's own text set in a handwriting font on a
+  notebook-styled page — nothing is drawn or re-written by hand.
+  The Dhyaan meter counts only time with a Ganitra page open and
+  visible in this browser, and solves done in this browser; it is
+  a gentle study diary, not a proctored record. The Copy Check
+  compares final answers only.

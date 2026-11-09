@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>{{ chapter.title }} — {{ t.practice_heading }}</h2>
+    <p class="muted">{{ t.board_class_word }} {{ class_num }} ·
+      {{ t.board_topic_label }} {{ t["quiz_topic_" + chapter.topic] }}</p>
+    <p class="muted">{{ t.practice_intro }}</p>
+    {% if questions %}
+    {% for item in questions %}
+      <div class="practice-q">
+        <p><strong>Q{{ loop.index }}.</strong> {{ item.question }}</p>
+        <details>
+          <summary>{{ t.show_answer }}</summary>
+          <p class="answer-big">{{ item.answer }}</p>
+        </details>
+      </div>
+    {% endfor %}
+    {% else %}
+      <p class="muted">{{ t.empty_no_questions }}</p>
+    {% endif %}
+    <a class="back" href="/board/{{ class_num }}/{{ chapter.slug }}/practice">{{ t.new_set }}</a>
+    <a class="back" href="/board/{{ class_num }}/{{ chapter.slug }}">← {{ chapter.title }}</a>
+  </div>
+{% endblock %}

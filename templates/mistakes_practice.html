@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>{{ t.mistakes_heading }} — {{ t.practice_heading }}</h2>
+    <p class="muted">{{ t.practice_intro }}</p>
+    {% if round_done %}
+      <div class="celebrate-card" data-celebrate role="status">
+        <p class="celebrate-msg">{{ t.mistakes_done_msg }}</p>
+        <div class="confetti" aria-hidden="true">
+          {% for i in range(14) %}<span class="confetti-piece"></span>{% endfor %}
+        </div>
+      </div>
+    {% endif %}
+    {% if questions %}
+    {% for item in questions %}
+      <div class="practice-q">
+        <p><strong>Q{{ loop.index }}.</strong> {{ item.question }}</p>
+        <details>
+          <summary>{{ t.show_answer }}</summary>
+          <p class="answer-big">{{ item.answer }}</p>
+        </details>
+      </div>
+    {% endfor %}
+    {% if not round_done %}
+      <form method="post" action="/mistakes/practice/submit">
+        <button type="submit" class="hero-solve">{{ t.mistakes_done_msg }}</button>
+      </form>
+    {% endif %}
+    {% else %}
+      <p class="muted">{{ t.empty_no_questions }}</p>
+    {% endif %}
+    <a class="back" href="/mistakes">← {{ t.mistakes_heading }}</a>
+  </div>
+{% endblock %}
