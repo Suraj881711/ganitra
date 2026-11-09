@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     paths:
-      - Advanced_Projects_Suraj.zip
+      - maths-gpt-wave2.zip
 
 permissions:
   contents: write
@@ -14,16 +14,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Unzip and stage maths-gpt
+      - name: Unzip and stage project
         run: |
           set -e
-          unzip -o Advanced_Projects_Suraj.zip -d _unpacked
-          SRC=$(find _unpacked -type d -name maths-gpt -print -quit)
+          unzip -o maths-gpt-wave2.zip -d _unpacked
+          SRC=$(find _unpacked -type f -name app.py -print -quit | xargs -r dirname)
           if [ -z "$SRC" ]; then SRC=_unpacked; fi
           echo "Source dir: $SRC"
           ls -la "$SRC"
           cp -a "$SRC"/. .
-          rm -rf _unpacked Advanced_Projects_Suraj.zip
+          rm -rf _unpacked maths-gpt-wave2.zip
           find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
           rm -rf .venv venv
           git status --short
@@ -32,5 +32,5 @@ jobs:
           git config user.name "Suraj881711"
           git config user.email "Suraj881711@users.noreply.github.com"
           git add -A
-          git commit -m "Add maths-gpt project files" || echo "nothing to commit"
+          git commit -m "Update project to wave 2 (Ganitra)" || echo "nothing to commit"
           git push
