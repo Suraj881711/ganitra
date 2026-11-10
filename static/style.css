@@ -573,6 +573,18 @@ body.chat-page .chat-log {
 }
 .chat-empty { text-align: center; padding: 6vh 8px 20px; }
 .empty-logo { font-size: 46px; line-height: 1.1; }
+/* Wave 8: final approved logo. The artwork's own background is cream
+   (#f3ebe0); the page bg is #fdfaf3 — close but visibly different, so
+   the full logo sits on its sampled cream tone with soft corners. */
+.chat-brand .brand-mark {
+  height: 30px; width: auto; vertical-align: middle;
+  border-radius: 6px; margin-right: 2px;
+}
+.empty-logo-img {
+  width: min(340px, 70vw); height: auto; display: block;
+  margin: 0 auto; border-radius: 18px; background: #f3ebe0;
+  box-shadow: 0 10px 28px rgba(101, 84, 40, .10);
+}
 .empty-greeting {
   font-family: "Fraunces", Georgia, serif;
   font-size: clamp(25px, 4.6vw, 36px); line-height: 1.3;

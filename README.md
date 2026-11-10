@@ -133,6 +133,24 @@ in the web UI, through a JSON API, or on the command line.
   background and white text. All other pages keep their
   existing look; the chat layout is scoped to a `chat-page`
   body class.
+- **🎨 Final logo (Wave 8)** — Suraj's approved logo is wired
+  in, prepared from his own delivered file
+  (`Ganitra_Logo_Final.png`, 1920×1020: the dark-teal
+  silk-ribbon "G" monogram above the serif word "Ganitra" —
+  at his word the "MATHS" line under the name was removed,
+  *"maths ko hata do"*). Three web assets live in `static/`:
+  `logo-full.png` (900px-wide resize of that final file,
+  artwork otherwise untouched), `logo-mark.png` (a tight crop
+  of the ribbon-G monogram alone, cropped from the same
+  artwork) and `favicon.png` (64×64, the monogram composited
+  on the artwork's sampled cream background `#f3ebe0`). Where
+  used: the chat homepage's **empty state** shows the full
+  logo above the greeting (on its cream tone with soft rounded
+  corners, since the page background `#fdfaf3` is close but
+  not identical), the **slim chat top bar** shows the mark at
+  30px next to the HTML "Ganitra" wordmark (the full lockup is
+  not baked into the bar), and **every page** gets the favicon
+  via `base.html`. Other pages' headers are unchanged.
 - **👨‍👩‍👧 Parent Report (Wave 6)** — `/parent-report` (linked as
   "For Parents" in the nav and footer) builds a calm report
   from data the app already tracks: how many questions are in

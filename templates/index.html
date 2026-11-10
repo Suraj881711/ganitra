@@ -5,7 +5,9 @@
   {# Wave 7: slim chat top bar — brand, Saathi pill, compact Dhyaan
      pill, language switch and one hamburger menu. Nothing else. #}
   <header class="chat-header">
-    <a class="chat-brand" href="/">🧮 Ganitra</a>
+    <a class="chat-brand" href="/"><img class="brand-mark"
+      src="{{ url_for('static', filename='logo-mark.png') }}"
+      alt="" aria-hidden="true" /> Ganitra</a>
     <div class="header-tools">
       {% if saathi_name %}
         <span class="saathi-pill">🧒 {{ saathi_name }}{% if saathi_class %} · {{ t.saathi_class_word }} {{ saathi_class }}{% endif %}
@@ -47,7 +49,9 @@
     <div class="chat-scroll" id="chat-scroll">
       <div class="chat-log" id="chat-log" aria-live="polite">
         <div class="chat-empty" id="chat-empty">
-          <div class="empty-logo" aria-hidden="true">🧮</div>
+          <div class="empty-logo"><img class="empty-logo-img"
+            src="{{ url_for('static', filename='logo-full.png') }}"
+            alt="Ganitra" /></div>
           {% if saathi_name %}
             <h2 class="empty-greeting">{{ saathi_greeting }}</h2>
             <p class="empty-sub">{{ t.chat_empty_sub }}</p>
