@@ -104,6 +104,35 @@ in the web UI, through a JSON API, or on the command line.
   30-character cap, escaped again on render). There is **no
   login and no database**: the profile lives in the Flask
   session and is mirrored in the browser's `localStorage`.
+- **💬 Pure chat screen (Wave 7)** — the homepage is now
+  *only* a chat, ChatGPT-style (the landing-style front was
+  rejected by the user): a slim top bar (Ganitra brand, the
+  Saathi pill, a compact Dhyaan pill, the language switch and
+  one ☰ menu linking Board Mode, Practice, Mistakes, History,
+  For Parents and Topics), the message thread in the middle,
+  and the composer **fixed at the bottom** of the viewport —
+  one rounded bar with the auto-growing textarea, 🎤 mic and
+  📷 photo buttons inside it, and a round ➤ send button. No
+  hero, no marketing sections, no topic grid on the home page:
+  the topic list and "How it works" moved to their own page,
+  **`/topics`**. The empty state is just a centred greeting
+  (personalised with the Saathi name when set) plus one short
+  line, with the small Mera Saathi card inside it on a first
+  visit. Chat behaviour fixes from a real phone report ("kaam
+  nahi kar raha, bas normal dikh raha hai"): after sending,
+  the thread **auto-scrolls** to the newest answer; a typing
+  indicator shows the localised **"Ganitra is thinking…"**
+  line with animated dots, and if the wait passes ~6 seconds
+  it swaps to the calm server-waking-up note, so a cold start
+  never looks like a hang. Also fixed: the Board chapter
+  page's **"Chapter test (timed)" button** rendered white text
+  on a white button (its `.hero-solve` gold gradient reads
+  `var(--gold)`, a variable defined only inside `.hero`, so
+  the background was invalid outside the hero) — it now uses
+  its own `.board-test-btn` rule with an explicit teal
+  background and white text. All other pages keep their
+  existing look; the chat layout is scoped to a `chat-page`
+  body class.
 - **👨‍👩‍👧 Parent Report (Wave 6)** — `/parent-report` (linked as
   "For Parents" in the nav and footer) builds a calm report
   from data the app already tracks: how many questions are in

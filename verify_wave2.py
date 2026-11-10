@@ -122,14 +122,16 @@ client = app.test_client()
 
 r = client.get("/")
 body = r.get_data(as_text=True)
-# Wave 5: the homepage is a chat UI now and the example chips were
-# removed on the user's explicit instruction, so this check asserts
-# the new contract (chat log + chat bar, zero chips) instead of the
-# old chip count.
-check("homepage premium", r.status_code == 200 and 'class="hero' in body
+# Wave 7: the homepage is now a PURE chat screen (the user rejected
+# the landing-style front), so this check asserts the new contract —
+# chat shell + composer, and NO hero / topic grid / how-it-works on
+# the home page (the topics moved to /topics) — instead of the old
+# wave-2/5 hero-and-topics contract.
+check("homepage premium", r.status_code == 200 and 'class="chat-shell"' in body
       and 'name="question"' in body and 'action="/solve"' in body
       and 'id="chat-log"' in body and 'class="chat-bar"' in body
-      and 'class="chip"' not in body and "topic-grid" in body,
+      and 'class="chip"' not in body and "topic-grid" not in body
+      and 'class="hero rise"' not in body,
       f"status={r.status_code} chips={body.count(chr(34).join(['class=', 'chip', '']))}")
 
 r = client.post("/solve", data={"question": "mean of 2, 4, 6, 8"})

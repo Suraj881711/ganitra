@@ -3053,3 +3053,72 @@ STRINGS["bn"].update(_BN_W6)
 STRINGS["mr"].update(_MR_W6)
 STRINGS["ta"].update(_TA_W6)
 STRINGS["te"].update(_TE_W6)
+
+# ---------------------------------------------------------------------------
+# Wave 7 strings: the pure chat-screen homepage (ChatGPT-style — slim
+# top bar, message thread, bottom composer, nothing else) and the
+# /topics page that now holds the topic list. Every key exists in
+# all 6 languages.
+# ---------------------------------------------------------------------------
+
+_EN_W7 = {
+    "nav_topics": "Topics",
+    "menu_label": "Menu",
+    "chat_greeting_plain": "Namaste! 👋",
+    "chat_empty_sub": "Type it, speak it 🎤, or send a photo 📷 — "
+                      "step-by-step solution, right here.",
+    "chat_thinking": "Ganitra is thinking…",
+}
+
+_HI_W7 = {
+    "nav_topics": "विषय",
+    "menu_label": "मेनू",
+    "chat_greeting_plain": "नमस्ते! 👋",
+    "chat_empty_sub": "लिखिए, बोलिए 🎤 या फ़ोटो भेजिए 📷 — "
+                      "चरण-दर-चरण हल, यहीं।",
+    "chat_thinking": "Ganitra सोच रहा है…",
+}
+
+_BN_W7 = {
+    "nav_topics": "বিষয়সমূহ",
+    "menu_label": "মেনু",
+    "chat_greeting_plain": "নমস্কার! 👋",
+    "chat_empty_sub": "লিখুন, বলুন 🎤 বা ছবি পাঠান 📷 — "
+                      "ধাপে ধাপে সমাধান, এখানেই।",
+    "chat_thinking": "Ganitra ভাবছে…",
+}
+
+_MR_W7 = {
+    "nav_topics": "विषय",
+    "menu_label": "मेनू",
+    "chat_greeting_plain": "नमस्कार! 👋",
+    "chat_empty_sub": "लिहा, बोला 🎤 किंवा फोटो पाठवा 📷 — "
+                      "टप्प्याटप्प्याने उत्तर, इथेच.",
+    "chat_thinking": "Ganitra विचार करत आहे…",
+}
+
+_TA_W7 = {
+    "nav_topics": "தலைப்புகள்",
+    "menu_label": "பட்டி",
+    "chat_greeting_plain": "வணக்கம்! 👋",
+    "chat_empty_sub": "தட்டச்சு செய்யுங்கள், பேசுங்கள் 🎤 அல்லது "
+                      "புகைப்படம் அனுப்புங்கள் 📷 — படிப்படியான "
+                      "தீர்வு, இங்கேயே.",
+    "chat_thinking": "Ganitra யோசித்து வருகிறது…",
+}
+
+_TE_W7 = {
+    "nav_topics": "అంశాలు",
+    "menu_label": "మెను",
+    "chat_greeting_plain": "నమస్తే! 👋",
+    "chat_empty_sub": "టైప్ చేయండి, మాట్లాడండి 🎤 లేదా ఫోటో "
+                      "పంపండి 📷 — దశలవారీ పరిష్కారం, ఇక్కడే.",
+    "chat_thinking": "Ganitra ఆలోచిస్తోంది…",
+}
+
+STRINGS["en"].update(_EN_W7)
+STRINGS["hi"].update(_HI_W7)
+STRINGS["bn"].update(_BN_W7)
+STRINGS["mr"].update(_MR_W7)
+STRINGS["ta"].update(_TA_W7)
+STRINGS["te"].update(_TE_W7)

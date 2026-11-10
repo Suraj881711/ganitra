@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+  {# Wave 7: this page holds the topic list + "how it works" that
+     used to sit under the chat on the homepage. The homepage is now
+     a pure chat screen; nothing was deleted, it just lives here. #}
+  <section class="topics rise">
+    <h2>{{ t.topics_heading }}</h2>
+    <p class="sub">{{ t.topics_sub }}</p>
+    <div class="topic-grid">
+      <div class="topic-card"><div class="ic">➗</div><h3>{{ t.t_arithmetic }}</h3><p>Fractions, percentages, BODMAS — with reduction steps.</p></div>
+      <div class="topic-card"><div class="ic">✖️</div><h3>{{ t.t_algebra }}</h3><p>Equations, systems, inequalities, factor, expand, simplify.</p></div>
+      <div class="topic-card"><div class="ic">📈</div><h3>{{ t.t_exponents_logs }}</h3><p>Powers, logarithms and log equations.</p></div>
+      <div class="topic-card"><div class="ic">📐</div><h3>{{ t.t_trigonometry }}</h3><p>Values, identities, equations and inverse trig (degrees by default).</p></div>
+      <div class="topic-card"><div class="ic">∫</div><h3>{{ t.t_calculus }}</h3><p>Limits, derivatives (partial &amp; implicit), integrals, ODEs.</p></div>
+      <div class="topic-card star"><div class="ic">🔀</div><h3>{{ t.t_transforms }}</h3><p>Laplace &amp; inverse Laplace, Taylor/Maclaurin series, partial fractions.</p></div>
+      <div class="topic-card"><div class="ic">🔢</div><h3>{{ t.t_linear_algebra }}</h3><p>Determinant, inverse, eigenvalues, rank, Ax = b.</p></div>
+      <div class="topic-card"><div class="ic">🔷</div><h3>{{ t.t_geometry }}</h3><p>Areas, volumes and coordinate geometry.</p></div>
+      <div class="topic-card"><div class="ic">🎲</div><h3>{{ t.t_statistics }}</h3><p>Mean, median, mode, SD, dice, coins, cards, counting.</p></div>
+      <div class="topic-card star"><div class="ic">📊</div><h3>{{ t.t_distributions }}</h3><p>Normal (z-scores, percentiles), Poisson and binomial probabilities.</p></div>
+      <div class="topic-card"><div class="ic">#️⃣</div><h3>{{ t.t_number_theory }}</h3><p>Primes, GCD/LCM with factorisation steps, modulo.</p></div>
+      <div class="topic-card"><div class="ic">🔁</div><h3>{{ t.t_sequences }}</h3><p>AP/GP terms and sums, natural-number series.</p></div>
+      <div class="topic-card"><div class="ic">ℹ️</div><h3>{{ t.t_complex }}</h3><p>Arithmetic, modulus, conjugate, argument.</p></div>
+      <div class="topic-card"><div class="ic">🧮</div><h3>{{ t.t_sets }}</h3><p>Union, intersection, difference, symmetric difference.</p></div>
+      <div class="topic-card"><div class="ic">🔄</div><h3>{{ t.t_units }}</h3><p>Length, mass, time, volume, area and temperature.</p></div>
+      <div class="topic-card"><div class="ic">📝</div><h3>{{ t.t_word_problems }}</h3><p>Percent change, speed–distance, simple interest.</p></div>
+      <div class="topic-card star"><div class="ic">📉</div><h3>{{ t.t_graphs }}</h3><p>Plot one or two functions; shaded area for definite integrals.</p></div>
+    </div>
+  </section>
+
+  <section class="how rise rise-2">
+    <h2>{{ t.how_heading }}</h2>
+    <p class="sub">{{ t.how_sub }}</p>
+    <div class="how-grid">
+      <div class="how-card"><span class="n">1</span><h3>{{ t.how1_title }}</h3><p>{{ t.how1_text }}</p></div>
+      <div class="how-card"><span class="n">2</span><h3>{{ t.how2_title }}</h3><p>{{ t.how2_text }}</p></div>
+      <div class="how-card"><span class="n">3</span><h3>{{ t.how3_title }}</h3><p>{{ t.how3_text }}</p></div>
+    </div>
+  </section>
+
+  <p style="text-align:center"><a class="back" href="/">{{ t.ask_another }}</a></p>
+{% endblock %}

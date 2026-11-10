@@ -259,6 +259,13 @@ def create_app():
     def index():
         return render_template("index.html")
 
+    @app.get("/topics")
+    def topics():
+        """Wave 7: the topic list that used to sit under the chat on
+        the homepage now lives on its own simple page — the home
+        page is a pure chat screen (ChatGPT-style), nothing else."""
+        return render_template("topics.html")
+
     @app.post("/solve")
     def solve():
         question = request.form.get("question", "").strip()

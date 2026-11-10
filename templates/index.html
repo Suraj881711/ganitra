@@ -1,112 +1,133 @@
 {% extends "base.html" %}
+{% block body_class %}chat-page{% endblock %}
+{% block main_class %}chat-main{% endblock %}
+{% block header %}
+  {# Wave 7: slim chat top bar — brand, Saathi pill, compact Dhyaan
+     pill, language switch and one hamburger menu. Nothing else. #}
+  <header class="chat-header">
+    <a class="chat-brand" href="/">🧮 Ganitra</a>
+    <div class="header-tools">
+      {% if saathi_name %}
+        <span class="saathi-pill">🧒 {{ saathi_name }}{% if saathi_class %} · {{ t.saathi_class_word }} {{ saathi_class }}{% endif %}
+          <a href="/?saathi=edit#saathi-card">{{ t.saathi_edit }}</a></span>
+      {% endif %}
+      <span class="dhyaan-pill" id="dhyaan-pill"
+        title="{{ t.dhyaan_label }}"><span class="dhyaan-label" aria-hidden="true">{{ t.dhyaan_label }}</span>
+        <span id="dhyaan-text"></span></span>
+      <label class="lang-switch"><span class="lang-label-text">{{ t.lang_label }}</span>
+        <select id="lang-select" aria-label="{{ t.lang_label }}"
+                onchange="if (this.value) window.location.href = '/set-lang/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search);">
+          {% for code, name in lang_options %}
+            <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <details class="nav-menu">
+        <summary class="nav-menu-btn" aria-label="{{ t.menu_label }}"
+                 title="{{ t.menu_label }}">☰</summary>
+        <nav class="nav-dropdown">
+          <a href="/">{{ t.nav_solve }}</a>
+          <a href="/practice">{{ t.nav_practice }}</a>
+          <a href="/board">{{ t.nav_board }}</a>
+          <a href="/mistakes">{{ t.nav_mistakes }}</a>
+          <a href="/history">{{ t.nav_history }}</a>
+          <a href="/parent-report">{{ t.nav_parents }}</a>
+          <a href="/topics">{{ t.nav_topics }}</a>
+        </nav>
+      </details>
+    </div>
+  </header>
+{% endblock %}
+{% block footer %}{% endblock %}
 {% block content %}
-  <section class="hero rise">
-    <div class="hero-logo">🧮</div>
-    <h1>Gani<span class="gold">tra</span></h1>
-    <p class="hero-tag">{{ t.hero_tag }}</p>
-
-    {% if saathi_edit or (not saathi_name and not saathi_skipped) %}
-      <section class="saathi-card" id="saathi-card">
-        <h2>{{ t.saathi_card_heading }}</h2>
-        <p>{{ t.saathi_card_text }}</p>
-        <form method="post" action="/saathi" class="saathi-form"
-              id="saathi-form">
-          <input type="hidden" name="next" value="/" />
-          <div class="saathi-fields">
-            <label>{{ t.saathi_name_label }}
-              <input type="text" name="name" maxlength="30"
-                     autocomplete="given-name"
-                     value="{{ saathi_name }}"
-                     placeholder="{{ t.saathi_name_placeholder }}" />
-            </label>
-            <label>{{ t.saathi_class_label }}
-              <select name="class">
-                <option value="">{{ t.saathi_class_any }}</option>
-                {% for n in range(1, 13) %}
-                  <option value="{{ n }}" {% if saathi_class == n %}selected{% endif %}>{{ t.saathi_class_word }} {{ n }}</option>
-                {% endfor %}
-              </select>
-            </label>
-          </div>
-          <div class="saathi-actions">
-            <button type="submit" name="action" value="save"
-                    class="hero-solve saathi-save">{{ t.saathi_save_btn }}</button>
-            <button type="submit" name="action" value="skip"
-                    class="tool-btn" formnovalidate>{{ t.saathi_skip_btn }}</button>
-          </div>
-        </form>
-      </section>
-    {% endif %}
-
-    <div class="chat-wrap">
+  {# Wave 7: PURE CHAT SCREEN — thread in the middle, composer fixed
+     at the bottom, no marketing sections anywhere on this page.
+     The topic list moved to /topics. #}
+  <div class="chat-shell">
+    <div class="chat-scroll" id="chat-scroll">
       <div class="chat-log" id="chat-log" aria-live="polite">
-        <div class="bubble bot"><p>{{ saathi_greeting }}</p></div>
-      </div>
+        <div class="chat-empty" id="chat-empty">
+          <div class="empty-logo" aria-hidden="true">🧮</div>
+          {% if saathi_name %}
+            <h2 class="empty-greeting">{{ saathi_greeting }}</h2>
+            <p class="empty-sub">{{ t.chat_empty_sub }}</p>
+          {% else %}
+            <h2 class="empty-greeting">{{ t.chat_greeting_plain }}</h2>
+            <p class="empty-sub">{{ t.chat_welcome }}</p>
+          {% endif %}
 
+          {% if saathi_edit or (not saathi_name and not saathi_skipped) %}
+            <section class="saathi-card" id="saathi-card">
+              <h2>{{ t.saathi_card_heading }}</h2>
+              <p>{{ t.saathi_card_text }}</p>
+              <form method="post" action="/saathi" class="saathi-form"
+                    id="saathi-form">
+                <input type="hidden" name="next" value="/" />
+                <div class="saathi-fields">
+                  <label>{{ t.saathi_name_label }}
+                    <input type="text" name="name" maxlength="30"
+                           autocomplete="given-name"
+                           value="{{ saathi_name }}"
+                           placeholder="{{ t.saathi_name_placeholder }}" />
+                  </label>
+                  <label>{{ t.saathi_class_label }}
+                    <select name="class">
+                      <option value="">{{ t.saathi_class_any }}</option>
+                      {% for n in range(1, 13) %}
+                        <option value="{{ n }}" {% if saathi_class == n %}selected{% endif %}>{{ t.saathi_class_word }} {{ n }}</option>
+                      {% endfor %}
+                    </select>
+                  </label>
+                </div>
+                <div class="saathi-actions">
+                  <button type="submit" name="action" value="save"
+                          class="hero-solve saathi-save">{{ t.saathi_save_btn }}</button>
+                  <button type="submit" name="action" value="skip"
+                          class="tool-btn" formnovalidate>{{ t.saathi_skip_btn }}</button>
+                </div>
+              </form>
+            </section>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="composer-wrap">
       <form method="post" action="/solve" class="chat-form" id="chat-form">
-        <label for="q">{{ t.enter_question }}</label>
+        <label class="sr-only" for="q">{{ t.enter_question }}</label>
         <div class="chat-bar">
           <textarea id="q" name="question" rows="1"
             placeholder="{{ t.question_placeholder }}"
+            aria-label="{{ t.enter_question }}"
             required></textarea>
           <div class="chat-bar-tools">
-            <button type="button" id="mic-btn" class="tool-btn">{{ t.voice_btn }}</button>
-            <label class="tool-btn" for="photo-input">{{ t.photo_btn }}</label>
+            <button type="button" id="mic-btn" class="composer-btn"
+                    aria-label="{{ t.voice_btn }}"
+                    title="{{ t.voice_btn }}">🎤</button>
+            <label class="composer-btn" for="photo-input"
+                   aria-label="{{ t.photo_btn }}"
+                   title="{{ t.photo_btn }}">📷</label>
             <input type="file" id="photo-input" accept="image/*" hidden />
-            <span id="input-note" class="tool-note" role="status"></span>
-            <button type="submit" class="hero-solve chat-send">{{ t.solve_btn }}</button>
+            <button type="submit" class="send-btn"
+                    aria-label="{{ t.solve_btn }}"
+                    title="{{ t.solve_btn }}">➤</button>
           </div>
         </div>
-        <p class="waking-note">{{ t.chat_waking_note }}</p>
+        <span id="input-note" class="tool-note" role="status"></span>
+        <span id="waking-note-text" hidden>{{ t.chat_waking_note }}</span>
       </form>
     </div>
+
+    <template id="typing-template">
+      <div class="bubble bot typing typing-indicator" role="status">
+        <p><span class="typing-text">{{ t.chat_thinking }}</span><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span></p>
+      </div>
+    </template>
 
     <form id="photo-form" method="post" action="/photo-solve" hidden>
       <input type="hidden" name="question" id="photo-question" />
     </form>
-
-    <div class="new-strip">
-      <span class="new-badge">✨ NEW · Normal · Poisson · Binomial</span>
-      <span class="new-badge">✨ NEW · Laplace transforms</span>
-      <span class="new-badge">✨ NEW · Timed quiz</span>
-      <span class="new-badge">✨ NEW · Two-function graphs</span>
-      <span class="new-badge">✨ NEW · Photo &amp; voice se sawaal</span>
-    </div>
-  </section>
-
-  <section class="topics rise rise-2">
-    <h2>{{ t.topics_heading }}</h2>
-    <p class="sub">{{ t.topics_sub }}</p>
-    <div class="topic-grid">
-      <div class="topic-card"><div class="ic">➗</div><h3>{{ t.t_arithmetic }}</h3><p>Fractions, percentages, BODMAS — with reduction steps.</p></div>
-      <div class="topic-card"><div class="ic">✖️</div><h3>{{ t.t_algebra }}</h3><p>Equations, systems, inequalities, factor, expand, simplify.</p></div>
-      <div class="topic-card"><div class="ic">📈</div><h3>{{ t.t_exponents_logs }}</h3><p>Powers, logarithms and log equations.</p></div>
-      <div class="topic-card"><div class="ic">📐</div><h3>{{ t.t_trigonometry }}</h3><p>Values, identities, equations and inverse trig (degrees by default).</p></div>
-      <div class="topic-card"><div class="ic">∫</div><h3>{{ t.t_calculus }}</h3><p>Limits, derivatives (partial &amp; implicit), integrals, ODEs.</p></div>
-      <div class="topic-card star"><div class="ic">🔀</div><h3>{{ t.t_transforms }}</h3><p>Laplace &amp; inverse Laplace, Taylor/Maclaurin series, partial fractions.</p></div>
-      <div class="topic-card"><div class="ic">🔢</div><h3>{{ t.t_linear_algebra }}</h3><p>Determinant, inverse, eigenvalues, rank, Ax = b.</p></div>
-      <div class="topic-card"><div class="ic">🔷</div><h3>{{ t.t_geometry }}</h3><p>Areas, volumes and coordinate geometry.</p></div>
-      <div class="topic-card"><div class="ic">🎲</div><h3>{{ t.t_statistics }}</h3><p>Mean, median, mode, SD, dice, coins, cards, counting.</p></div>
-      <div class="topic-card star"><div class="ic">📊</div><h3>{{ t.t_distributions }}</h3><p>Normal (z-scores, percentiles), Poisson and binomial probabilities.</p></div>
-      <div class="topic-card"><div class="ic">#️⃣</div><h3>{{ t.t_number_theory }}</h3><p>Primes, GCD/LCM with factorisation steps, modulo.</p></div>
-      <div class="topic-card"><div class="ic">🔁</div><h3>{{ t.t_sequences }}</h3><p>AP/GP terms and sums, natural-number series.</p></div>
-      <div class="topic-card"><div class="ic">ℹ️</div><h3>{{ t.t_complex }}</h3><p>Arithmetic, modulus, conjugate, argument.</p></div>
-      <div class="topic-card"><div class="ic">🧮</div><h3>{{ t.t_sets }}</h3><p>Union, intersection, difference, symmetric difference.</p></div>
-      <div class="topic-card"><div class="ic">🔄</div><h3>{{ t.t_units }}</h3><p>Length, mass, time, volume, area and temperature.</p></div>
-      <div class="topic-card"><div class="ic">📝</div><h3>{{ t.t_word_problems }}</h3><p>Percent change, speed–distance, simple interest.</p></div>
-      <div class="topic-card star"><div class="ic">📉</div><h3>{{ t.t_graphs }}</h3><p>Plot one or two functions; shaded area for definite integrals.</p></div>
-    </div>
-  </section>
-
-  <section class="how rise rise-3">
-    <h2>{{ t.how_heading }}</h2>
-    <p class="sub">{{ t.how_sub }}</p>
-    <div class="how-grid">
-      <div class="how-card"><span class="n">1</span><h3>{{ t.how1_title }}</h3><p>{{ t.how1_text }}</p></div>
-      <div class="how-card"><span class="n">2</span><h3>{{ t.how2_title }}</h3><p>{{ t.how2_text }}</p></div>
-      <div class="how-card"><span class="n">3</span><h3>{{ t.how3_title }}</h3><p>{{ t.how3_text }}</p></div>
-    </div>
-  </section>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
@@ -116,7 +137,7 @@
       var SPEECH_LANG = {{ speech_lang | tojson }};
       var UI_CODE = {{ lang | tojson }};
       var CHAT = {
-        solving: {{ t.chat_solving | tojson }},
+        solving: {{ t.chat_thinking | tojson }},
         fullSolution: {{ t.chat_full_solution | tojson }},
         error: {{ t.chat_error | tojson }},
         steps: {{ t.steps_heading | tojson }},
@@ -137,6 +158,10 @@
       var note = document.getElementById("input-note");
       var form = document.getElementById("chat-form");
       var log = document.getElementById("chat-log");
+      var scroller = document.getElementById("chat-scroll");
+      var wakingText = "";
+      var wakingEl = document.getElementById("waking-note-text");
+      if (wakingEl) wakingText = wakingEl.textContent.trim();
 
       function say(msg) { if (note) note.textContent = msg; }
 
@@ -145,7 +170,22 @@
          intercept, call /api/solve, and append Q&A bubbles in place.
          Any failure falls back to the classic full-page submit.     */
       function scrollLog() {
-        log.scrollTop = log.scrollHeight;
+        // Wave 7: the thread area (.chat-scroll) is the scroller now;
+        // always land on the newest message so the answer is never
+        // hidden below the fold on a phone.
+        function go() {
+          if (scroller) scroller.scrollTop = scroller.scrollHeight;
+          log.scrollTop = log.scrollHeight;
+        }
+        go();
+        if (window.requestAnimationFrame) {
+          window.requestAnimationFrame(go);
+        }
+      }
+
+      function hideEmpty() {
+        var empty = document.getElementById("chat-empty");
+        if (empty) empty.remove();
       }
 
       /* ---------- Suno: step-by-step speech (question -> steps ->
@@ -267,6 +307,20 @@
         log.appendChild(div);
         scrollLog();
         return div;
+      }
+
+      function addTyping() {
+        // Wave 7: clone the server-rendered typing template (it
+        // carries the localised "Ganitra is thinking…" line). Falls
+        // back to a plain bubble if templates are unavailable.
+        var tpl = document.getElementById("typing-template");
+        if (tpl && tpl.content && tpl.content.firstElementChild) {
+          var node = tpl.content.firstElementChild.cloneNode(true);
+          log.appendChild(node);
+          scrollLog();
+          return node;
+        }
+        return addBubble("bot typing", CHAT.solving);
       }
 
       function addAnswerBubble(question, data) {
@@ -433,15 +487,20 @@
         if (!question) return;               // let HTML validation run
         ev.preventDefault();
         solving = true;
+        hideEmpty();
         addBubble("user", question);
-        var typing = addBubble("bot typing", CHAT.solving);
-        var dots = document.createElement("span");
-        dots.className = "dots";
-        dots.setAttribute("aria-hidden", "true");
-        for (var d = 0; d < 3; d++) {
-          dots.appendChild(document.createElement("i"));
+        var typing = addTyping();
+        // Wave 7: if the answer takes a while (free server waking
+        // up), swap the thinking line for the calm waking-up note
+        // after ~6 seconds so the wait never looks like a hang.
+        var wakeTimer = null;
+        if (wakingText) {
+          wakeTimer = window.setTimeout(function () {
+            var tt = typing.querySelector(".typing-text");
+            if (tt) tt.textContent = wakingText;
+            scrollLog();
+          }, 6000);
         }
-        typing.appendChild(dots);
         box.value = "";
         box.style.height = "auto";
         fetch("/api/solve", {
@@ -451,6 +510,7 @@
         }).then(function (resp) {
           return resp.json();
         }).then(function (data) {
+          if (wakeTimer) window.clearTimeout(wakeTimer);
           typing.remove();
           solving = false;
           if (data && data.ok) {
@@ -466,6 +526,7 @@
           box.focus();
         }).catch(function () {
           // Network/API trouble: fall back to the classic page.
+          if (wakeTimer) window.clearTimeout(wakeTimer);
           typing.remove();
           solving = false;
           box.value = question;
@@ -513,17 +574,17 @@
               return;
             }
             listening = false;
-            micBtn.textContent = VOICE_BTN;
+            micBtn.textContent = "🎤";
             say(ev.error === "not-allowed" ? L.js_voice_denied : L.js_voice_failed);
           };
           recog.onend = function () {
             listening = false;
-            micBtn.textContent = VOICE_BTN;
+            micBtn.textContent = "🎤";
           };
           try {
             recog.start();
             listening = true;
-            micBtn.textContent = L.js_voice_listening_btn;
+            micBtn.textContent = "🎙️";
             say(L.js_voice_speak);
           } catch (e) { /* already running */ }
         }

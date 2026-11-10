@@ -34,7 +34,9 @@ client = app.test_client()
 r = client.get("/")
 body = r.get_data(as_text=True)
 check("GET / (en)", r.status_code == 200, f"status={r.status_code}")
-check("en hero string", "Ask any maths question" in body)
+# Wave 7: the hero is gone (pure chat screen) — the homepage now
+# greets with the chat welcome line instead of the hero tagline.
+check("en hero string", "Ask me any maths question" in body)
 check("en tagline", STRINGS["en"]["tagline"] in body)
 check("en solve button", STRINGS["en"]["solve_btn"] in body)
 check("en speech lang", f'"{SPEECH_LANGS["en"]}"' in body)
@@ -48,8 +50,8 @@ check("set-lang hi redirects", r.status_code == 302,
 r = client.get("/")
 body = r.get_data(as_text=True)
 hi = STRINGS["hi"]
-hindi_hits = [k for k in ("nav_solve", "solve_btn", "topics_heading",
-                          "voice_btn", "hero_tag", "enter_question")
+hindi_hits = [k for k in ("nav_solve", "solve_btn", "chat_welcome",
+                          "voice_btn", "chat_thinking", "enter_question")
               if hi[k] in body]
 check("hindi UI strings >= 3", len(hindi_hits) >= 3,
       f"found={hindi_hits}")

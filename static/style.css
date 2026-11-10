@@ -489,3 +489,152 @@ footer a { color: var(--accent); font-weight: 600; }
   .whatsapp-btn { width: 100%; }
   .saathi-pill { margin-top: 6px; }
 }
+
+
+/* --- Wave 7: pure chat screen homepage + board test button fix --- */
+
+/* Board chapter page: the timed-test button used .hero-solve, whose
+   gold gradient reads var(--gold) — a variable defined only inside
+   .hero — so outside the hero the background was invalid and the
+   white label sat on a white button. Give it its own explicit,
+   high-contrast rule (teal background from :root, white text). */
+.board-test-btn {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+  font: inherit; font-weight: 700; cursor: pointer;
+  box-shadow: 0 8px 20px rgba(47, 125, 110, .25);
+}
+.board-test-btn:hover { border-color: var(--accent); color: #fff; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; margin: 0;
+}
+
+/* The chat top bar (homepage only, rendered by index.html). */
+.chat-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; min-height: 57px;
+}
+.chat-brand {
+  font-family: "Fraunces", Georgia, serif; font-size: 21px;
+  font-weight: 700; color: var(--text); text-decoration: none;
+  white-space: nowrap;
+}
+.header-tools {
+  margin-left: auto; display: flex; align-items: center;
+  gap: 8px; flex-wrap: nowrap; min-width: 0;
+}
+.header-tools .lang-switch select { min-height: 40px; padding: .3rem .5rem; }
+.header-tools .dhyaan-pill { min-height: 40px; padding: .2rem .6rem; font-size: .85rem; }
+.header-tools .saathi-pill { min-height: 40px; margin-right: 0; padding: .2rem .6rem; font-size: .88rem; }
+.nav-menu { position: relative; }
+.nav-menu-btn {
+  list-style: none; cursor: pointer; display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 999px;
+  border: 1.5px solid #ddd3ba; background: #fff; font-size: 19px;
+  color: var(--text); box-shadow: 0 3px 10px rgba(22, 33, 58, .05);
+}
+.nav-menu-btn::-webkit-details-marker { display: none; }
+.nav-dropdown {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 60;
+  display: flex; flex-direction: column; min-width: 210px;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(101, 84, 40, .16); padding: 6px;
+  margin: 0;
+}
+.nav-dropdown a {
+  color: var(--text); font-weight: 600; font-size: 15.5px;
+  text-decoration: none; padding: 11px 14px; min-height: 44px;
+  border-radius: 9px; margin: 0; display: flex; align-items: center;
+}
+.nav-dropdown a:hover { background: #fdf6e3; }
+
+/* Full-viewport chat layout — scoped to the homepage body class so
+   every other page keeps its existing look. */
+body.chat-page {
+  height: 100dvh; display: flex; flex-direction: column;
+  overflow: hidden;
+}
+body.chat-page header { flex: none; }
+body.chat-page main.chat-main {
+  flex: 1 1 auto; display: flex; flex-direction: column;
+  min-height: 0; width: 100%; max-width: none;
+  margin: 0; padding: 0;
+}
+.chat-shell {
+  flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;
+}
+.chat-scroll { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+body.chat-page .chat-log {
+  max-height: none; overflow: visible;
+  max-width: 800px; width: 100%; margin: 0 auto;
+  padding: 22px 16px 12px;
+}
+.chat-empty { text-align: center; padding: 6vh 8px 20px; }
+.empty-logo { font-size: 46px; line-height: 1.1; }
+.empty-greeting {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: clamp(25px, 4.6vw, 36px); line-height: 1.3;
+  margin: 12px 0 8px; color: var(--text);
+}
+.empty-sub {
+  color: var(--muted); font-size: 16.5px; line-height: 1.6;
+  max-width: 560px; margin: 0 auto;
+}
+body.chat-page .saathi-card {
+  max-width: 560px; margin: 24px auto 4px; padding: 18px 20px;
+  text-align: left;
+}
+body.chat-page .saathi-card h2 { font-size: 19px; }
+
+/* Composer: fixed at the bottom of the viewport, always visible. */
+.composer-wrap {
+  flex: none; padding: 8px 14px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(253, 250, 243, 0), var(--bg) 32%);
+}
+body.chat-page .chat-form { max-width: 800px; margin: 0 auto; }
+body.chat-page .chat-bar {
+  display: flex; align-items: flex-end; gap: 6px;
+  margin-top: 0; border-radius: 26px; padding: 8px;
+  box-shadow: 0 14px 34px rgba(101, 84, 40, .14);
+}
+body.chat-page .chat-bar textarea {
+  flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 1.55;
+  padding: 10px 8px; max-height: 160px;
+}
+body.chat-page .chat-bar-tools {
+  display: flex; flex-direction: row; flex: none;
+  gap: 6px; align-items: center; margin-top: 0;
+}
+.composer-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0;
+  border-radius: 999px; border: none; background: transparent;
+  font-size: 19px; cursor: pointer; color: var(--text);
+}
+.composer-btn:hover { background: #f6ead0; }
+.send-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0;
+  border-radius: 999px; border: none; cursor: pointer;
+  background: var(--accent); color: #fff; font-size: 17px;
+  box-shadow: 0 8px 18px rgba(47, 125, 110, .28);
+}
+.send-btn:hover { filter: brightness(1.07); }
+body.chat-page .tool-note {
+  display: block; text-align: center; margin-top: 6px; min-height: 0;
+}
+
+@media (max-width: 560px) {
+  .chat-header { padding: 6px 10px; gap: 6px; }
+  .chat-brand { font-size: 19px; }
+  .header-tools { gap: 5px; }
+  .header-tools .dhyaan-label,
+  .header-tools .lang-label-text { display: none; }
+  .header-tools .dhyaan-pill { font-size: .8rem; padding: .15rem .5rem; }
+  .header-tools .saathi-pill { font-size: .82rem; }
+  .composer-wrap { padding: 6px 10px calc(8px + env(safe-area-inset-bottom)); }
+  body.chat-page .chat-log { padding: 16px 10px 10px; }
+  .chat-empty { padding-top: 4vh; }
+}
