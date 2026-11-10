@@ -40,5 +40,5 @@ jobs:
           git config user.name "Suraj881711"
           git config user.email "Suraj881711@users.noreply.github.com"
           git add -A
-          git commit -m "Update project to wave 6 (Ganitra) - Mera Saathi name companion + Parent Report" || echo "nothing to commit"
+          git commit -m "Update project to wave 7 (Ganitra) - Chat-only homepage, /topics page, Board chapter-test label fix" || echo "nothing to commit"
           git push
