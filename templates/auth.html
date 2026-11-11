@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block body_class %}auth-page{% endblock %}
+{% block main_class %}auth-main{% endblock %}
+{% block header %}
+  {# Wave 10: the sign-in page IS the first page — a slimmer top
+     strip than other pages (language switch only, so a returning
+     student can still read it in his language; no nav to pages
+     that expect a signed-in student). #}
+  <header class="chat-header auth-header">
+    <a class="chat-brand" href="/"><img class="brand-mark"
+      src="{{ url_for('static', filename='logo-mark-t.png') }}"
+      alt="" aria-hidden="true" /> Ganitra</a>
+    <div class="header-tools">
+      <label class="lang-switch"><span class="lang-label-text">{{ t.lang_label }}</span>
+        <select id="lang-select" aria-label="{{ t.lang_label }}"
+                onchange="if (this.value) window.location.href = '/set-lang/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search);">
+          {% for code, name in lang_options %}
+            <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+    </div>
+  </header>
+{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+  {# Wave 10: ONE page, ONE warm background, logo blended at the
+     top (same cream-card treatment as the chat empty state), then
+     the approved fields — every field is TYPE-IN: the student
+     fills in everything himself, no ready-made chips anywhere.
+     Two modes share the page: sign-up (default) and Welcome back
+     (returning students), switched by the small links. #}
+  <div class="auth-wrap">
+    <div class="auth-logo"><img class="auth-logo-img"
+      src="{{ url_for('static', filename='logo-full-t.png') }}"
+      alt="Ganitra" /></div>
+
+    {% if error %}
+      <p class="auth-error" role="alert">{{ error }}</p>
+    {% endif %}
+
+    {% if mode == "login" %}
+      <section class="auth-card" id="login-card">
+        <h2 class="auth-heading">{{ t.auth_welcome_back }}</h2>
+        <form method="post" action="/login" class="auth-form">
+          <label class="auth-field">{{ t.auth_name_label }}
+            <input type="text" name="name" class="auth-input"
+                   value="{{ form_name }}"
+                   placeholder="{{ t.auth_name_placeholder }}"
+                   autocomplete="username" required />
+          </label>
+          <label class="auth-field">{{ t.auth_password_label }}
+            <input type="password" name="password" class="auth-input"
+                   autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="auth-submit">{{ t.auth_login_btn }}</button>
+        </form>
+        <p class="auth-switch">
+          <a href="/?mode=login" id="forgot-toggle">{{ t.auth_login_fav_link }}</a>
+        </p>
+        {# Wave 10 update (Suraj): the favourite-things login card
+           stays HIDDEN until "Forgot password?" is tapped —
+           "forgot kare jab hi fav things kaa option de, jab tak
+           nhi". The toggle below reveals it in place (no reload);
+           inputs inside a hidden container are not required, so
+           the plain login form is never blocked by them. Server
+           errors from /login-favourite re-open it (fav_error). #}
+        <div class="auth-fav-login" id="fav-login"
+             {% if not fav_error %}hidden{% endif %}>
+          <form method="post" action="/login-favourite" class="auth-form">
+            <div class="auth-fav-card">
+              <h3 class="auth-fav-heading">{{ t.auth_fav_heading }}</h3>
+              <label class="auth-field">{{ t.auth_name_label }}
+                <input type="text" name="name" class="auth-input"
+                       value="{{ form_name }}"
+                       placeholder="{{ t.auth_name_placeholder }}"
+                       autocomplete="username" required />
+              </label>
+              <label class="auth-field">{{ t.auth_fav_field_label }}
+                <input type="text" name="favourite" class="auth-input"
+                       autocomplete="off" required />
+              </label>
+              <label class="auth-field auth-pw-field">{{ t.auth_new_password_label }}
+                <input type="password" name="new_password" class="auth-input"
+                       autocomplete="new-password" required />
+              </label>
+            </div>
+            <button type="submit" class="auth-submit">{{ t.auth_fav_login_btn }}</button>
+          </form>
+        </div>
+        <p class="auth-switch">
+          <a href="/">{{ t.auth_new_here }}</a>
+        </p>
+        <script>
+          /* Wave 10: reveal the favourite-things login card in
+             place when "Forgot password?" is tapped. The link's
+             href stays a normal URL (/?mode=login renders this
+             same page), so without JS nothing breaks — the card
+             is simply already rendered below, one tap away. */
+          (function () {
+            var toggle = document.getElementById("forgot-toggle");
+            var card = document.getElementById("fav-login");
+            if (!toggle || !card) return;
+            toggle.addEventListener("click", function (ev) {
+              ev.preventDefault();
+              card.hidden = !card.hidden;
+              if (!card.hidden) {
+                var input = card.querySelector("input");
+                if (input) input.focus();
+              }
+            });
+          })();
+        </script>
+      </section>
+    {% else %}
+      <section class="auth-card" id="signup-card">
+        <form method="post" action="/signup" class="auth-form">
+          <label class="auth-field">{{ t.auth_name_label }}
+            <input type="text" name="name" class="auth-input"
+                   value="{{ form_name }}"
+                   placeholder="{{ t.auth_name_placeholder }}"
+                   autocomplete="username" required />
+          </label>
+          <label class="auth-field">{{ t.auth_class_label }}
+            <input type="text" name="class" class="auth-input"
+                   value="{{ form_class }}"
+                   placeholder="{{ t.auth_class_placeholder }}"
+                   inputmode="numeric" required />
+          </label>
+          <label class="auth-field">{{ t.auth_board_label }}
+            <input type="text" name="board" class="auth-input"
+                   value="{{ form_board }}"
+                   placeholder="{{ t.auth_board_placeholder }}"
+                   required />
+          </label>
+
+          <div class="auth-fav-card">
+            <h3 class="auth-fav-heading">{{ t.auth_fav_heading }}</h3>
+            <label class="auth-fav-line">🎯 {{ t.auth_goal_label }}
+              <input type="text" name="goal" class="auth-line-input"
+                     value="{{ form_goal }}" autocomplete="off"
+                     required />
+            </label>
+            <label class="auth-fav-line">🎨 {{ t.auth_hobby_label }}
+              <input type="text" name="hobby" class="auth-line-input"
+                     value="{{ form_hobby }}" autocomplete="off"
+                     required />
+            </label>
+            <label class="auth-fav-line">❤️ {{ t.auth_fav_label }}
+              <input type="text" name="favourite" class="auth-line-input"
+                     value="{{ form_favourite }}" autocomplete="off"
+                     required />
+            </label>
+            <label class="auth-field auth-pw-field">{{ t.auth_password_label }}
+              <input type="password" name="password" class="auth-input"
+                     autocomplete="new-password" required />
+            </label>
+          </div>
+
+          <button type="submit" class="auth-submit">{{ t.auth_signup_btn }}</button>
+          <p class="auth-forgot-line">{{ t.auth_forgot_line }}</p>
+        </form>
+        <p class="auth-switch">
+          <a href="/?mode=login">{{ t.auth_have_account }}</a>
+        </p>
+      </section>
+    {% endif %}
+  </div>
+{% endblock %}

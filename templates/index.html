@@ -6,13 +6,9 @@
      pill, language switch and one hamburger menu. Nothing else. #}
   <header class="chat-header">
     <a class="chat-brand" href="/"><img class="brand-mark"
-      src="{{ url_for('static', filename='logo-mark.png') }}"
+      src="{{ url_for('static', filename='logo-mark-t.png') }}"
       alt="" aria-hidden="true" /> Ganitra</a>
     <div class="header-tools">
-      {% if saathi_name %}
-        <span class="saathi-pill">🧒 {{ saathi_name }}{% if saathi_class %} · {{ t.saathi_class_word }} {{ saathi_class }}{% endif %}
-          <a href="/?saathi=edit#saathi-card">{{ t.saathi_edit }}</a></span>
-      {% endif %}
       <span class="dhyaan-pill" id="dhyaan-pill"
         title="{{ t.dhyaan_label }}"><span class="dhyaan-label" aria-hidden="true">{{ t.dhyaan_label }}</span>
         <span id="dhyaan-text"></span></span>
@@ -27,16 +23,79 @@
       <details class="nav-menu">
         <summary class="nav-menu-btn" aria-label="{{ t.menu_label }}"
                  title="{{ t.menu_label }}">☰</summary>
-        <nav class="nav-dropdown">
-          <a href="/">{{ t.nav_solve }}</a>
-          <a href="/practice">{{ t.nav_practice }}</a>
-          <a href="/board">{{ t.nav_board }}</a>
-          <a href="/mistakes">{{ t.nav_mistakes }}</a>
-          <a href="/history">{{ t.nav_history }}</a>
-          <a href="/parent-report">{{ t.nav_parents }}</a>
-          <a href="/topics">{{ t.nav_topics }}</a>
+        {# Wave 12: Suraj's approved FULL-PAGE menu (LinkedIn
+           style) — an overlay panel, not a small dropdown. The
+           profile block (photo + name + class/board lines) links
+           to My Account; below it the real stats lines, then the
+           bold item list, Language as an expanding row, a Settings
+           row, and the gold strip. Log out is NOT here — it lives
+           only inside My Account (Suraj's rule). #}
+        <nav class="nav-dropdown menu-panel">
+          <div class="menu-panel-inner">
+            <div class="menu-panel-top">
+              <span class="menu-panel-title">{{ t.menu_label }}</span>
+              <button type="button" class="menu-close"
+                      aria-label="{{ t.menu_label }}"
+                      onclick="this.closest('details').removeAttribute('open')">✕</button>
+            </div>
+            {# nav-dropdown is the menu nav's class (above). #}
+            {% if user_name %}
+            <a class="menu-profile" href="/account">
+              {% if user_has_photo %}
+                <img class="menu-photo"
+                     src="/account/photo/file"
+                     alt="" aria-hidden="true" />
+              {% else %}
+                <img class="menu-photo"
+                     src="{{ url_for('static', filename='logo-mark-t.png') }}"
+                     alt="" aria-hidden="true" />
+              {% endif %}
+              <span class="menu-profile-text">
+                <span class="menu-name">{{ user_name }} <span class="menu-verified" aria-hidden="true">✓</span></span>
+                <span class="menu-line">{{ t.acct_student_line }}</span>
+                <span class="menu-line">{{ user_board_text }} {{ t.field_board }}</span>
+                <span class="menu-line menu-line-dim">{{ t.acct_verified_line }}</span>
+              </span>
+            </a>
+            <div class="menu-stats">
+              <p class="menu-stat-line"><span class="menu-stat-num" id="menu-stat-questions">–</span> <span class="menu-stat-word">{{ t.acct_questions_word }}</span></p>
+              <p class="menu-stat-line"><span class="menu-stat-num" id="menu-stat-chats">–</span> <span class="menu-stat-word">{{ t.acct_chats_word }}</span></p>
+            </div>
+            {% endif %}
+            <div class="menu-items">
+              <a href="/chats">{{ t.menu_your_chats }}</a>
+              <a href="/board">{{ t.nav_board }}</a>
+              <a href="/papers">{{ t.menu_papers }}</a>
+              <a href="/practice">{{ t.nav_practice }}</a>
+              <a href="/topics">{{ t.nav_topics }}</a>
+              <a href="/mistakes">{{ t.nav_mistakes }}</a>
+              <a href="/solution/print?style=hand">{{ t.menu_copy_style }}</a>
+              <a href="/parent-report">{{ t.nav_parents }}</a>
+              <details class="menu-lang">
+                <summary class="menu-lang-summary">{{ t.menu_language }}</summary>
+                <div class="menu-lang-row">
+                  {% for code, name in lang_options %}
+                    <a class="menu-lang-link" href="/set-lang/{{ code }}?next=/">{{ name }}</a>
+                  {% endfor %}
+                </div>
+              </details>
+            </div>
+            {% if user_name %}
+            <a class="menu-settings-row" href="/account">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"/></svg>
+              <span>{{ t.menu_settings }}</span>
+            </a>
+            {% endif %}
+            <div class="menu-gold-strip">{{ t.menu_keep_line }}</div>
+          </div>
         </nav>
       </details>
+      {# Wave 11: Suraj's Brave-style multi-chat — the plain "+"
+         at the FAR RIGHT of the bar opens the all-chats view
+         (no circle around it, per his photo iterations). #}
+      <a class="chats-plus" id="chats-open" href="/chats"
+         aria-label="{{ t.chats_open_label }}"
+         title="{{ t.chats_open_label }}">+</a>
     </div>
   </header>
 {% endblock %}
@@ -50,18 +109,28 @@
       <div class="chat-log" id="chat-log" aria-live="polite">
         <div class="chat-empty" id="chat-empty">
           <div class="empty-logo"><img class="empty-logo-img"
-            src="{{ url_for('static', filename='logo-full.png') }}"
+            src="{{ url_for('static', filename='logo-full-t.png') }}"
             alt="Ganitra" /></div>
           {% if saathi_name %}
             <h2 class="empty-greeting">{{ saathi_greeting }}</h2>
-            <p class="empty-sub">{{ t.chat_empty_sub }}</p>
+            {# Wave 11: Suraj removed the "Type it, speak it..."
+               sub-line — the empty state is logo + greeting only. #}
           {% else %}
             <h2 class="empty-greeting">{{ t.chat_greeting_plain }}</h2>
             <p class="empty-sub">{{ t.chat_welcome }}</p>
           {% endif %}
 
           {% if saathi_edit or (not saathi_name and not saathi_skipped) %}
-            <section class="saathi-card" id="saathi-card">
+            {# Wave 10: a signed-in student's name/class come from
+               his account — the optional first-visit card must
+               never appear for him. #}
+            {% if not user_name %}
+            {# Wave 10: the section's id is `signin-card-style` — it
+               must NOT be `saathi-card`: the Wave-6 localStorage
+               sync script looks that id up and would auto-submit
+               this form for a browser signed in on another page.
+               Class stays saathi-card (shared styling). #}
+            <section class="saathi-card" id="signin-card-style">
               <h2>{{ t.saathi_card_heading }}</h2>
               <p>{{ t.saathi_card_text }}</p>
               <form method="post" action="/saathi" class="saathi-form"
@@ -91,6 +160,7 @@
                 </div>
               </form>
             </section>
+            {% endif %}
           {% endif %}
         </div>
       </div>
@@ -100,21 +170,29 @@
       <form method="post" action="/solve" class="chat-form" id="chat-form">
         <label class="sr-only" for="q">{{ t.enter_question }}</label>
         <div class="chat-bar">
+          {# Wave 11 composer: everything INSIDE the pill — LEFT a
+             📎 file-select button (opens the SAME picker/input as
+             the camera), then the text box, RIGHT mic + camera +
+             send. All four are clean line-style SVG icons in the
+             site teal — no emoji characters. #}
+          <button type="button" id="file-btn" class="composer-btn icon-btn"
+                  aria-label="{{ t.file_btn }}"
+                  title="{{ t.file_btn }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l8.57-8.57A4 4 0 1118 8.84l-8.59 8.57a2 2 0 01-2.83-2.83l8.49-8.48"/></svg></button>
           <textarea id="q" name="question" rows="1"
             placeholder="{{ t.question_placeholder }}"
             aria-label="{{ t.enter_question }}"
             required></textarea>
           <div class="chat-bar-tools">
-            <button type="button" id="mic-btn" class="composer-btn"
+            <button type="button" id="mic-btn" class="composer-btn icon-btn"
                     aria-label="{{ t.voice_btn }}"
-                    title="{{ t.voice_btn }}">🎤</button>
-            <label class="composer-btn" for="photo-input"
+                    title="{{ t.voice_btn }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
+            <label class="composer-btn icon-btn" for="photo-input"
                    aria-label="{{ t.photo_btn }}"
-                   title="{{ t.photo_btn }}">📷</label>
+                   title="{{ t.photo_btn }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></label>
             <input type="file" id="photo-input" accept="image/*" hidden />
-            <button type="submit" class="send-btn"
+            <button type="submit" class="send-btn icon-btn"
                     aria-label="{{ t.solve_btn }}"
-                    title="{{ t.solve_btn }}">➤</button>
+                    title="{{ t.solve_btn }}"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
           </div>
         </div>
         <span id="input-note" class="tool-note" role="status"></span>
@@ -156,7 +234,16 @@
         errorTips: [{{ t.error_tip1 | tojson }},
                     {{ t.error_tip2 | tojson }},
                     {{ t.error_tip3 | tojson }}],
-        errorRetry: {{ t.error_retry_btn | tojson }}
+        errorRetry: {{ t.error_retry_btn | tojson }},
+        moreMethods: {{ t.mm_more | tojson }},
+        otherHeading: {{ t.mm_other_heading | tojson }},
+        methodLabel: {{ t.mm_method_label | tojson }},
+        solveBtn: {{ t.mm_solve_btn | tojson }},
+        teachBtn: {{ t.mm_teach_btn | tojson }},
+        teacherMode: {{ t.mm_teacher_mode | tojson }},
+        copyBtn: {{ t.mm_copy_btn | tojson }},
+        copied: {{ t.mm_copied | tojson }},
+        simpleBtn: {{ t.mm_simple_btn | tojson }}
       };
       var box = document.getElementById("q");
       var note = document.getElementById("input-note");
@@ -173,10 +260,29 @@
          The form still POSTs to /solve exactly as before; with JS we
          intercept, call /api/solve, and append Q&A bubbles in place.
          Any failure falls back to the classic full-page submit.     */
-      function scrollLog() {
+      /* Wave 18: stick-to-bottom scrolling — the thread follows
+         the newest message ONLY while the student is (near) the
+         bottom. If he has scrolled up to re-read an earlier
+         answer, a landing answer must not yank him back down.
+         Sending a new question always re-sticks (submit handler
+         and loadThread pass force=true). */
+      var stickBottom = true;
+      function updateStick() {
+        if (!scroller) { stickBottom = true; return; }
+        var gap = scroller.scrollHeight - scroller.scrollTop
+          - scroller.clientHeight;
+        stickBottom = gap < 140;
+      }
+      if (scroller) {
+        scroller.addEventListener("scroll", updateStick,
+                                  { passive: true });
+      }
+      function scrollLog(force) {
         // Wave 7: the thread area (.chat-scroll) is the scroller now;
-        // always land on the newest message so the answer is never
-        // hidden below the fold on a phone.
+        // land on the newest message so the answer is never
+        // hidden below the fold on a phone — unless (Wave 18)
+        // the student has scrolled up on purpose.
+        if (!force && !stickBottom) return;
         function go() {
           if (scroller) scroller.scrollTop = scroller.scrollHeight;
           log.scrollTop = log.scrollHeight;
@@ -190,6 +296,133 @@
       function hideEmpty() {
         var empty = document.getElementById("chat-empty");
         if (empty) empty.remove();
+        // Wave 11: the empty state also carried the greeting — as
+        // soon as chatting starts, the composer belongs at the
+        // BOTTOM of the screen (Suraj's layout), not under the
+        // greeting.
+        document.body.classList.add("chat-active");
+      }
+
+      /* ---------- Wave 11: multi-chat (account threads) ----------
+         Suraj's Brave-style design: the signed-in chat page works
+         on ACCOUNT chats stored server-side (/api/chats). The
+         current chat id rides in the URL (?chat=<id>) so the
+         all-chats view's cards can deep-link back here. Thread
+         records are portable: {role:"user", text} and
+         {role:"bot", data:<the /api/solve response>} — reopening
+         a chat re-renders the very same bubbles. Saves are
+         whole-thread and debounced. If the account API is
+         unreachable, the page simply works unsaved, exactly like
+         the old single-chat flow. */
+      var SIGNED_IN = {{ (user_name or "") | tojson }} !== "";
+      var thread = [];
+      var chatId = null;
+      var saveTimer = null;
+
+      function threadTitle() {
+        for (var i = 0; i < thread.length; i++) {
+          if (thread[i].role === "user" && thread[i].text) {
+            return thread[i].text;
+          }
+        }
+        return L.chats_new || "New chat";
+      }
+
+      function scheduleSave() {
+        if (!SIGNED_IN || !chatId) return;
+        if (saveTimer) window.clearTimeout(saveTimer);
+        saveTimer = window.setTimeout(saveThread, 600);
+      }
+
+      function saveThread() {
+        if (!SIGNED_IN || !chatId) return;
+        try {
+          fetch("/api/chats/" + chatId, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: thread })
+          }).catch(function () { /* offline: page still works */ });
+        } catch (e) { /* ignore */ }
+      }
+
+      function recordTurn(rec) {
+        thread.push(rec);
+        scheduleSave();
+      }
+
+      function renderRecord(rec) {
+        if (rec.role === "user") {
+          addBubble("user", rec.text || "");
+          return;
+        }
+        var data = rec.data || {};
+        if (data.ok) {
+          addAnswerBubble(data.question || data._q || "", data);
+        } else if (data.unsolvable) {
+          addErrorBubble(data.question || data._q || "",
+                         data.error, true);
+        } else if (data.message) {
+          addBubble("bot", data.message);
+        }
+      }
+
+      function loadThread(messages) {
+        messages.forEach(function (rec) {
+          if (rec && rec.role === "user") {
+            thread.push({ role: "user", text: rec.text || "" });
+          } else if (rec && rec.role === "bot") {
+            thread.push({ role: "bot", data: rec.data || {} });
+          }
+        });
+        if (thread.length) {
+          hideEmpty();
+          thread.slice().forEach(renderRecord);
+          scrollLog(true);
+        }
+      }
+
+      function initChats() {
+        if (!SIGNED_IN || !window.fetch) return;
+        var wanted = null;
+        try {
+          wanted = new URLSearchParams(
+            window.location.search).get("chat");
+        } catch (e) { /* ignore */ }
+        function openChat(id) {
+          return fetch("/api/chats/" + id).then(function (r) {
+            return r.json();
+          }).then(function (d) {
+            if (!(d && d.ok && d.chat)) return false;
+            chatId = id;
+            try {
+              var url = new URL(window.location.href);
+              url.searchParams.set("chat", String(id));
+              window.history.replaceState(null, "", url);
+            } catch (e) { /* ignore */ }
+            loadThread(d.chat.messages || []);
+            return true;
+          }).catch(function () { return false; });
+        }
+        function newChat() {
+          return fetch("/api/chats", { method: "POST" })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d && d.ok && d.chat) return openChat(d.chat.id);
+            }).catch(function () { /* unsaved mode */ });
+        }
+        if (wanted) {
+          openChat(wanted).then(function (ok) {
+            if (!ok) newChat();
+          });
+          return;
+        }
+        fetch("/api/chats").then(function (r) {
+          return r.json();
+        }).then(function (d) {
+          var list = (d && d.chats) || [];
+          if (list.length) openChat(list[0].id);
+          else newChat();
+        }).catch(function () { /* unsaved mode */ });
       }
 
       /* ---------- Suno: step-by-step speech (question -> steps ->
@@ -327,7 +560,76 @@
         return addBubble("bot typing", CHAT.solving);
       }
 
+      /* ---------- Wave 12: More methods + Teach me chips ------
+         Small side chips under each answer: [+ More methods (N)]
+         [🔊 Listen] [👩‍🏫 Teach me]. The methods and teach lines
+         ride inside the solve response itself, so a reopened
+         account chat re-renders the very same chips. Opening a
+         method calls /api/solve-method for its stored steps and
+         appends a sub-block inside the bubble. */
+      function renderMethodInto(host, method) {
+        if (host.dataset.rendered) {
+          host.hidden = !host.hidden;
+          return;
+        }
+        host.dataset.rendered = "1";
+        host.hidden = false;
+        var title = document.createElement("p");
+        title.className = "method-title";
+        title.textContent = method.label || "";
+        host.appendChild(title);
+        var ol = document.createElement("ol");
+        ol.className = "steps method-steps";
+        (method.steps || []).forEach(function (step) {
+          var li = document.createElement("li");
+          li.textContent = step;
+          ol.appendChild(li);
+        });
+        host.appendChild(ol);
+        if ("speechSynthesis" in window) {
+          var parts = (method.steps || []).map(function (s) {
+            return { text: speakable(s, "en"), lang: "en-IN" };
+          }).filter(function (p) { return p.text; });
+          if (parts.length) {
+            var lb = makeListenButton(parts);
+            lb.classList.add("method-listen");
+            host.appendChild(lb);
+          }
+        }
+      }
+
+      function openMethod(host, question, method) {
+        // The stored response already carries the steps; the
+        // endpoint is the contract fallback if a replayed record
+        // somehow lacks them.
+        if (method.steps && method.steps.length) {
+          renderMethodInto(host, method);
+          scrollLog();
+          return;
+        }
+        host.hidden = false;
+        fetch("/api/solve-method", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: question,
+                                 method: method.id })
+        }).then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.ok && d.method) {
+              renderMethodInto(host, d.method);
+              scrollLog();
+            }
+          }).catch(function () { /* stay closed-quiet */ });
+      }
+
       function addAnswerBubble(question, data) {
+        // Wave 11: the solver result payload is rendered from a
+        // stable shape — seed the classic "full solution" form
+        // from the payload's own question when the caller did
+        // not pass one (re-rendered account chats).
+        if (!question && data) {
+          question = data.question || data._q || "";
+        }
         var result = data.result || {};
         var div = document.createElement("div");
         div.className = "bubble bot";
@@ -367,6 +669,12 @@
           div.appendChild(card);
         }
 
+        /* Wave 12: the actions row — small gold chips. The main
+           Listen button moves INTO this row (class .listen-chip
+           makes it match the other chips). */
+        var actions = document.createElement("div");
+        actions.className = "answer-actions";
+        var listenBtn = null;
         if ("speechSynthesis" in window) {
           var parts = [];
           parts.push({ text: speakable(question, UI_CODE),
@@ -384,8 +692,160 @@
                          lang: SPEECH_LANG });
           }
           parts = parts.filter(function (p) { return p.text; });
-          if (parts.length) div.appendChild(makeListenButton(parts));
+          if (parts.length) {
+            listenBtn = makeListenButton(parts);
+            listenBtn.classList.add("listen-chip");
+          }
         }
+
+        var methods = data.methods || [];
+        var methodsPanel = null;
+        if (methods.length) {
+          var chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = "method-chip";
+          chip.textContent = "+ " + CHAT.moreMethods
+            + " (" + methods.length + ")";
+          methodsPanel = document.createElement("div");
+          methodsPanel.className = "methods-panel";
+          methodsPanel.hidden = true;
+          var mh = document.createElement("p");
+          mh.className = "methods-heading";
+          mh.textContent = CHAT.otherHeading;
+          methodsPanel.appendChild(mh);
+          methods.forEach(function (m, idx) {
+            var row = document.createElement("div");
+            row.className = "method-row";
+            var lbl = document.createElement("span");
+            lbl.className = "method-name";
+            lbl.textContent = CHAT.methodLabel + " "
+              + (idx + 2) + " - " + (m.label || "");
+            var sb = document.createElement("button");
+            sb.type = "button";
+            sb.className = "method-solve-btn";
+            sb.textContent = CHAT.solveBtn + " ›";
+            var host = document.createElement("div");
+            host.className = "method-body";
+            host.hidden = true;
+            sb.addEventListener("click", function () {
+              openMethod(host, question, m);
+            });
+            row.appendChild(lbl);
+            row.appendChild(sb);
+            methodsPanel.appendChild(row);
+            methodsPanel.appendChild(host);
+          });
+          chip.addEventListener("click", function () {
+            methodsPanel.hidden = !methodsPanel.hidden;
+            scrollLog();
+          });
+          actions.appendChild(chip);
+        }
+        if (listenBtn) actions.appendChild(listenBtn);
+
+        var teach = data.teach || [];
+        var teachPanel = null;
+        if (teach.length) {
+          var tchip = document.createElement("button");
+          tchip.type = "button";
+          tchip.className = "method-chip";
+          tchip.setAttribute("data-role", "teach");
+          tchip.textContent = "👩‍🏫 " + CHAT.teachBtn;
+          teachPanel = document.createElement("div");
+          teachPanel.className = "teach-panel";
+          teachPanel.hidden = true;
+          var th = document.createElement("p");
+          th.className = "methods-heading";
+          th.textContent = CHAT.teacherMode;
+          teachPanel.appendChild(th);
+          var tul = document.createElement("ul");
+          tul.className = "teach-lines";
+          teach.forEach(function (line) {
+            var li = document.createElement("li");
+            li.textContent = line;
+            tul.appendChild(li);
+          });
+          teachPanel.appendChild(tul);
+          if ("speechSynthesis" in window) {
+            var tparts = teach.map(function (line) {
+              return { text: String(line), lang: SPEECH_LANG };
+            });
+            var tlb = makeListenButton(tparts);
+            tlb.classList.add("method-listen");
+            teachPanel.appendChild(tlb);
+          }
+          tchip.addEventListener("click", function () {
+            teachPanel.hidden = !teachPanel.hidden;
+            scrollLog();
+          });
+          actions.appendChild(tchip);
+        }
+
+        /* Wave 18 comfort: 📋 Copy + 🔁 Explain-more-simply
+           under EVERY answer (real, fallback, replayed). Copy
+           puts the question + answer + steps on the clipboard
+           as plain text. "Explain more simply" opens this
+           bubble's Teach-me panel (the existing teacher-mode
+           machinery); when a bubble has no teach lines, it
+           re-asks the question with "samjhao" so the concept /
+           fallback layer answers it more simply, and the new
+           bubble's teach panel auto-opens. */
+        var copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.className = "method-chip util-btn";
+        copyBtn.textContent = "📋 " + CHAT.copyBtn;
+        copyBtn.addEventListener("click", function () {
+          var lines = [];
+          if (question) lines.push(question);
+          if (result.answer) lines.push(result.answer);
+          (result.steps || []).forEach(function (s, i) {
+            lines.push((i + 1) + ". " + s);
+          });
+          var text = lines.join("\n");
+          function done() {
+            copyBtn.textContent = CHAT.copied;
+            window.setTimeout(function () {
+              copyBtn.textContent = "📋 " + CHAT.copyBtn;
+            }, 1500);
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done,
+                                                     done);
+          } else {
+            var ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand("copy"); } catch (e) {}
+            ta.remove();
+            done();
+          }
+        });
+        actions.appendChild(copyBtn);
+
+        var simpleBtn = document.createElement("button");
+        simpleBtn.type = "button";
+        simpleBtn.className = "method-chip util-btn";
+        simpleBtn.textContent = "🔁 " + CHAT.simpleBtn;
+        simpleBtn.addEventListener("click", function () {
+          if (teachPanel) {
+            teachPanel.hidden = false;
+            scrollLog();
+            return;
+          }
+          if (!question || solving) return;
+          window.__w18OpenTeach = true;
+          box.value = "samjhao " + question;
+          box.dispatchEvent(new Event("input"));
+          form.requestSubmit();
+        });
+        actions.appendChild(simpleBtn);
+
+        if (actions.children.length) div.appendChild(actions);
+        if (methodsPanel) div.appendChild(methodsPanel);
+        if (teachPanel) div.appendChild(teachPanel);
 
         if (result.image) {
           var img = document.createElement("img");
@@ -445,7 +905,7 @@
         }
       }
 
-      function addErrorBubble(question, err) {
+      function addErrorBubble(question, err, replay) {
         var div = document.createElement("div");
         div.className = "bubble bot error-bubble";
         var h = document.createElement("p");
@@ -470,18 +930,154 @@
           ul.appendChild(li);
         });
         div.appendChild(ul);
-        var retry = document.createElement("button");
-        retry.type = "button";
-        retry.className = "hero-solve retry-btn";
-        retry.textContent = (err && err.retry_label) || CHAT.errorRetry;
-        retry.addEventListener("click", function () {
-          box.value = question;
-          box.dispatchEvent(new Event("input"));
-          if (!solving) form.requestSubmit();
-        });
-        div.appendChild(retry);
+        // Wave 11: a REPLAYED error card (from a saved account
+        // chat) has no Retry button — retrying belongs to the
+        // live turn; the stored card is a record, not a control.
+        if (!replay) {
+          var retry = document.createElement("button");
+          retry.type = "button";
+          retry.className = "hero-solve retry-btn";
+          retry.textContent = (err && err.retry_label) || CHAT.errorRetry;
+          retry.addEventListener("click", function () {
+            box.value = question;
+            box.dispatchEvent(new Event("input"));
+            if (!solving) form.requestSubmit();
+          });
+          div.appendChild(retry);
+        }
         log.appendChild(div);
         scrollLog();
+      }
+
+      /* ---------- Wave 9: auto language switch ----------
+         When the server says this chat message switched the site
+         language, re-skin the visible chat UI from the string map
+         in the response (no reload), persist via /set-lang in the
+         background (the session is already set server-side), and
+         show the one-line localised notice in the thread. The
+         empty state (greeting) is already gone by now — it was
+         removed when the message was sent — so on the next load
+         the server renders it in the new language. */
+      function applyLanguage(data) {
+        var ui = data.ui || {};
+        var sel = document.getElementById("lang-select");
+        if (data.language) {
+          UI_CODE = data.language;
+          if (sel) sel.value = data.language;
+          try {
+            fetch("/set-lang/" + data.language).catch(
+              function () {});
+          } catch (e) { /* session already set server-side */ }
+        }
+        if (ui.speech_lang) SPEECH_LANG = ui.speech_lang;
+        Object.keys(ui).forEach(function (k) {
+          if (k.indexOf("js_") === 0 || k.indexOf("error_") === 0) {
+            L[k] = ui[k];
+          }
+        });
+        if (ui.chat_thinking) {
+          CHAT.solving = ui.chat_thinking;
+          var tt = document.querySelector(
+            "#typing-template .typing-text");
+          if (tt) tt.textContent = ui.chat_thinking;
+        }
+        if (ui.chat_full_solution) {
+          CHAT.fullSolution = ui.chat_full_solution;
+        }
+        if (ui.chat_error) CHAT.error = ui.chat_error;
+        if (ui.steps_heading) CHAT.steps = ui.steps_heading;
+        if (ui.explanation_heading) {
+          CHAT.explanation = ui.explanation_heading;
+        }
+        if (ui.advice_heading) CHAT.adviceHeading = ui.advice_heading;
+        if (ui.listen_btn) CHAT.listen = ui.listen_btn;
+        if (ui.listen_stop_btn) CHAT.stopListen = ui.listen_stop_btn;
+        if (ui.handwriting_btn) CHAT.handwriting = ui.handwriting_btn;
+        if (ui.print_copy_link) CHAT.printCopy = ui.print_copy_link;
+        if (ui.error_heading) CHAT.errorHeading = ui.error_heading;
+        if (ui.error_intro) CHAT.errorIntro = ui.error_intro;
+        if (ui.error_tip1) {
+          CHAT.errorTips = [ui.error_tip1, ui.error_tip2,
+                            ui.error_tip3];
+        }
+        if (ui.error_retry_btn) CHAT.errorRetry = ui.error_retry_btn;
+        if (ui.question_placeholder) {
+          box.placeholder = ui.question_placeholder;
+        }
+        if (ui.enter_question) {
+          box.setAttribute("aria-label", ui.enter_question);
+          var qLabel = document.querySelector('label[for="q"]');
+          if (qLabel) qLabel.textContent = ui.enter_question;
+        }
+        if (ui.voice_btn) {
+          VOICE_BTN = ui.voice_btn;
+          var mic = document.getElementById("mic-btn");
+          if (mic) {
+            mic.setAttribute("aria-label", ui.voice_btn);
+            mic.title = ui.voice_btn;
+            if (listening) mic.classList.add("mic-live");
+            else mic.classList.remove("mic-live");
+          }
+        }
+        if (ui.file_btn) {
+          var fileBtn = document.getElementById("file-btn");
+          if (fileBtn) {
+            fileBtn.setAttribute("aria-label", ui.file_btn);
+            fileBtn.title = ui.file_btn;
+          }
+        }
+        if (ui.photo_btn) {
+          var photoLabel = document.querySelector(
+            'label[for="photo-input"]');
+          if (photoLabel) {
+            photoLabel.setAttribute("aria-label", ui.photo_btn);
+            photoLabel.title = ui.photo_btn;
+          }
+        }
+        if (ui.solve_btn) {
+          var sendBtn = document.querySelector(".send-btn");
+          if (sendBtn) {
+            sendBtn.setAttribute("aria-label", ui.solve_btn);
+            sendBtn.title = ui.solve_btn;
+          }
+        }
+        if (ui.lang_label) {
+          var langLabel = document.querySelector(".lang-label-text");
+          if (langLabel) langLabel.textContent = ui.lang_label;
+          if (sel) sel.setAttribute("aria-label", ui.lang_label);
+        }
+        if (ui.menu_label) {
+          var menuBtn = document.querySelector(".nav-menu-btn");
+          if (menuBtn) {
+            menuBtn.setAttribute("aria-label", ui.menu_label);
+            menuBtn.title = ui.menu_label;
+          }
+        }
+        if (ui.dhyaan_label) {
+          var dhLabel = document.querySelector(".dhyaan-label");
+          if (dhLabel) dhLabel.textContent = ui.dhyaan_label;
+          var pill = document.getElementById("dhyaan-pill");
+          if (pill) pill.title = ui.dhyaan_label;
+        }
+        var navMap = {
+          "/": ui.nav_solve, "/practice": ui.nav_practice,
+          "/board": ui.nav_board, "/mistakes": ui.nav_mistakes,
+          "/history": ui.nav_history,
+          "/parent-report": ui.nav_parents,
+          "/topics": ui.nav_topics
+        };
+        document.querySelectorAll(".nav-dropdown a").forEach(
+          function (a) {
+            var txt = navMap[a.getAttribute("href")];
+            if (txt) a.textContent = txt;
+          });
+        if (ui.chat_waking_note) {
+          wakingText = ui.chat_waking_note;
+          if (wakingEl) wakingEl.textContent = ui.chat_waking_note;
+        }
+        if (data.lang_notice) {
+          addBubble("bot lang-note", data.lang_notice);
+        }
       }
 
       var solving = false;
@@ -492,7 +1088,11 @@
         ev.preventDefault();
         solving = true;
         hideEmpty();
+        stickBottom = true;  // Wave 18: my own new question re-sticks
         addBubble("user", question);
+        // Wave 11: the user turn joins the account thread now;
+        // the bot turn is appended when the answer lands.
+        recordTurn({ role: "user", text: question });
         var typing = addTyping();
         // Wave 7: if the answer takes a while (free server waking
         // up), swap the thinking line for the calm waking-up note
@@ -517,16 +1117,36 @@
           if (wakeTimer) window.clearTimeout(wakeTimer);
           typing.remove();
           solving = false;
+          // Wave 9: the server may have auto-switched the site
+          // language for this message — re-skin + toast first.
+          if (data && data.language_switched) applyLanguage(data);
+          // Wave 11: persist this turn to the account chat (the
+          // stored bot record carries its question so a reopened
+          // chat re-renders identically).
+          if (data) data._q = question;
           if (data && data.ok) {
             addAnswerBubble(question, data);
             dhyaanSolved();
+            // Wave 18: a "🔁 Explain more simply" re-ask lands
+            // here — open the fresh bubble's Teach-me panel so
+            // the simpler explanation is what the student sees.
+            if (window.__w18OpenTeach) {
+              window.__w18OpenTeach = false;
+              var tchips = log.querySelectorAll(
+                '[data-role="teach"]');
+              if (tchips.length) {
+                tchips[tchips.length - 1].click();
+              }
+            }
           } else if (data && data.unsolvable) {
             addErrorBubble(question, data.error);
           } else if (data && data.message) {
             addBubble("bot", data.message);
           } else {
             addErrorBubble(question, null);
+            data = null;
           }
+          if (data) recordTurn({ role: "bot", data: data });
           box.focus();
         }).catch(function () {
           // Network/API trouble: fall back to the classic page.
@@ -578,17 +1198,17 @@
               return;
             }
             listening = false;
-            micBtn.textContent = "🎤";
+            micBtn.classList.remove("mic-live");
             say(ev.error === "not-allowed" ? L.js_voice_denied : L.js_voice_failed);
           };
           recog.onend = function () {
             listening = false;
-            micBtn.textContent = "🎤";
+            micBtn.classList.remove("mic-live");
           };
           try {
             recog.start();
             listening = true;
-            micBtn.textContent = "🎙️";
+            micBtn.classList.add("mic-live");
             say(L.js_voice_speak);
           } catch (e) { /* already running */ }
         }
@@ -598,8 +1218,18 @@
         });
       }
 
-      /* ---------- Photo input (Tesseract.js OCR, browser-side) ---------- */
+      /* ---------- Photo + file input (Tesseract.js OCR) ----------
+         Wave 11: the 📎 file-select button and the 📷 camera
+         label drive the SAME hidden file input and the same OCR
+         flow — the clip simply opens the picker directly (where
+         the student can also pick a gallery photo or a file). */
       var photoInput = document.getElementById("photo-input");
+      var fileBtn = document.getElementById("file-btn");
+      if (fileBtn && photoInput) {
+        fileBtn.addEventListener("click", function () {
+          photoInput.click();
+        });
+      }
       var photoForm = document.getElementById("photo-form");
       var photoQuestion = document.getElementById("photo-question");
       if (typeof window.Tesseract === "undefined") {
@@ -629,6 +1259,28 @@
             say(L.js_photo_error);
           });
       });
+
+      /* Wave 12: fill the full-page menu's stats lines with the
+         signed-in student's real counts (questions asked across
+         all his chats + how many chats). Silent when signed out
+         or offline — the lines keep their placeholder dash. */
+      (function () {
+        var qEl = document.getElementById("menu-stat-questions");
+        var cEl = document.getElementById("menu-stat-chats");
+        if (!qEl || !cEl || !window.fetch) return;
+        fetch("/account/stats.json").then(function (r) {
+          return r.json();
+        }).then(function (d) {
+          if (d && d.ok) {
+            qEl.textContent = String(d.questions || 0);
+            cEl.textContent = String(d.chats || 0);
+          }
+        }).catch(function () { /* placeholders stay */ });
+      })();
+
+      /* Wave 11: restore (or create) the account chat for this
+         visit — runs last so every renderer above is ready. */
+      initChats();
     })();
   </script>
   <script>
@@ -658,6 +1310,13 @@
         save({ name: serverName, class: serverClass || "" });
         return;
       }
+      {% if user_name %}
+      /* Wave 10: a signed-in student is identified by his account,
+         never by this optional profile. The localStorage sync below
+         only exists for the anonymous first-visit flow — with no
+         server name AND an account present, do nothing at all. */
+      if (true) return;
+      {% endif %}
       var form = document.getElementById("saathi-form");
       if (!form) {
         if (serverSkipped) save({ skipped: true });
@@ -670,7 +1329,9 @@
       }
       var stored = load();
       if (stored && stored.skipped && !serverEdit) {
-        var card = document.getElementById("saathi-card");
+        // Wave 10: the card's id changed (see template note), so
+        // find it by its styling class instead.
+        var card = document.querySelector(".saathi-card");
         if (card) card.style.display = "none";
         return;
       }

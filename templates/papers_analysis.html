@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+  {# Wave 16: pattern analysis — every number on this page is
+     computed from the collected papers in papers_data.py. #}
+  <div class="card">
+    <a class="back" href="/papers">{{ t.papers_back }}</a>
+    <h2>{{ t.papers_analysis_heading }}</h2>
+    <p class="muted">{{ t.papers_analysis_intro }}</p>
+
+    {% for a in analyses %}
+      <h3>{{ t.board_class_word }} {{ a.class_num }}</h3>
+      <p class="muted">{{ t.papers_coverage_line.format(papers=a.paper_count, years=a.years | join(", "), questions=a.total_questions, marks=a.total_marks) }}</p>
+
+      <h4>{{ t.papers_weightage_heading }}</h4>
+      <table class="weight-table">
+        <thead>
+          <tr><th>{{ t.papers_chapter_col }}</th>
+              <th>{{ t.papers_marks_col }}</th>
+              <th>{{ t.papers_share_col }}</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for row in a.chapters %}
+            <tr>
+              <td>{{ row.title }}</td>
+              <td>{{ row.marks }}</td>
+              <td>{{ row.share }}%</td>
+              <td class="weight-bar-cell">
+                <span class="weight-bar"><span class="weight-fill" style="width: {{ row.share }}%"></span></span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <h4>{{ t.papers_focus_heading }}</h4>
+      <ol>
+        {% for row in a.focus %}
+          <li><strong>{{ row.title }}</strong> — {{ row.marks }} {{ t.papers_marks_word }} ({{ row.share }}%)</li>
+        {% endfor %}
+      </ol>
+
+      <h4>{{ t.papers_repeat_heading }}</h4>
+      <ol>
+        {% for row in a.most_repeated[:5] %}
+          <li><strong>{{ row.title }}</strong> — {{ row.questions }} {{ t.papers_questions_word }}</li>
+        {% endfor %}
+      </ol>
+    {% endfor %}
+
+    <div class="board-actions">
+      <a class="board-opt" href="/papers/generate">{{ t.papers_generate_btn }}</a>
+    </div>
+    <a class="back" href="/papers">{{ t.papers_back }}</a>
+  </div>
+{% endblock %}

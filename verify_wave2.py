@@ -7,6 +7,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mplconfig")
+# Wave 10 rerun note: account names are unique per DB, so
+# sign-ups below use a per-run random suffix (RUN_ID) — a
+# rerun can never collide with the previous run.
+os.environ["GANITRA_DB_PATH"] = "/tmp/ganitra-verify-wave2.db"  # Wave 10: FORCE a scratch account DB (assignment, not setdefault — a stray env value must not point these checks at a shared/real DB)
+import uuid as _uuid
+RUN_ID = _uuid.uuid4().hex[:8]
 
 from app import create_app  # noqa: E402
 from solver.router import solve_question  # noqa: E402
@@ -127,6 +133,15 @@ body = r.get_data(as_text=True)
 # chat shell + composer, and NO hero / topic grid / how-it-works on
 # the home page (the topics moved to /topics) — instead of the old
 # wave-2/5 hero-and-topics contract.
+# Wave 10: / is login-gated — an anonymous visitor gets the
+# sign-in page, so sign up a test student first and assert the
+# chat-screen contract on HIS homepage.
+client.post("/signup", data={"name": "W2 Tester " + RUN_ID, "class": "8",
+                             "board": "CBSE", "goal": "Doctor",
+                             "hobby": "Cricket", "favourite": "Pizza",
+                             "password": "w2test-pass"})
+r = client.get("/")
+body = r.get_data(as_text=True)
 check("homepage premium", r.status_code == 200 and 'class="chat-shell"' in body
       and 'name="question"' in body and 'action="/solve"' in body
       and 'id="chat-log"' in body and 'class="chat-bar"' in body

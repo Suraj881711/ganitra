@@ -7,9 +7,13 @@ from .expression_parser import fmt_num
 _UNITS = {
     "length": {
         "mm": 0.001, "millimetre": 0.001, "millimeter": 0.001,
+        "millimetres": 0.001, "millimeters": 0.001,
         "cm": 0.01, "centimetre": 0.01, "centimeter": 0.01,
+        "centimetres": 0.01, "centimeters": 0.01,
         "m": 1.0, "metre": 1.0, "meter": 1.0,
+        "metres": 1.0, "meters": 1.0,
         "km": 1000.0, "kilometre": 1000.0, "kilometer": 1000.0,
+        "kilometres": 1000.0, "kilometers": 1000.0,
         "inch": 0.0254, "inches": 0.0254, "in": 0.0254,
         "foot": 0.3048, "feet": 0.3048, "ft": 0.3048,
         "yard": 0.9144, "yards": 0.9144, "yd": 0.9144,
@@ -85,18 +89,26 @@ def _from_celsius(v, u):
 
 def solve_units(question: str):
     q = question.strip()
-    m = re.search(
+    # Wave 13: "5 kg = how many grams" — value first, question
+    # form second (the two patterns below cannot see this shape).
+    m0 = re.search(
+        r"(-?\d+(?:\.\d+)?)\s*([a-zA-Z]+)\s*=\s*how\s+many\s+"
+        r"([a-zA-Z]+)", q, re.I)
+    m = None if m0 else re.search(
         r"(?:convert\s+)?(-?\d+(?:\.\d+)?)\s*([a-zA-Z°\^²2 ]+?)\s+"
-        r"(?:to|in|=)\s+([a-zA-Z°\^²2 ]+?)\s*$",
+        r"(?:to|into|in|=)\s+([a-zA-Z°\^²2 ]+?)\s*$",
         q, re.I,
     ) or re.search(
         r"how\s+many\s+([a-zA-Z°\^2 ]+?)\s+in\s+(-?\d+(?:\.\d+)?)\s*"
         r"([a-zA-Z°\^2 ]+)",
         q, re.I,
     )
-    if not m:
+    if m0:
+        val, from_u, to_u = float(m0.group(1)), m0.group(2), \
+            m0.group(3)
+    elif not m:
         return None
-    if m.re.pattern.startswith("how"):
+    elif m.re.pattern.startswith("how"):
         to_u, val, from_u = m.group(1), float(m.group(2)), m.group(3)
     else:
         val, from_u, to_u = float(m.group(1)), m.group(2), m.group(3)

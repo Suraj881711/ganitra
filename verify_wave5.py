@@ -15,6 +15,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mplconfig")
+# Wave 10 rerun note: account names are unique per DB, so
+# sign-ups below use a per-run random suffix (RUN_ID) — a
+# rerun can never collide with the previous run.
+os.environ["GANITRA_DB_PATH"] = "/tmp/ganitra-verify-wave5.db"  # Wave 10: FORCE a scratch account DB (assignment, not setdefault — a stray env value must not point these checks at a shared/real DB)
+import uuid as _uuid
+RUN_ID = _uuid.uuid4().hex[:8]
 
 from app import create_app  # noqa: E402
 from board_data import (CHAPTERS, CLASS_NUMBERS, KNOWN_TOPICS,  # noqa: E402
@@ -74,6 +80,12 @@ for code in SUPPORTED_LANGS:
 
 # --- 3. Chat homepage -------------------------------------------------------
 client = app.test_client()
+# Wave 10: / is login-gated — sign up a test student first so the
+# homepage under test is his chat screen.
+client.post("/signup", data={"name": "W5 Tester " + RUN_ID, "class": "8",
+                             "board": "CBSE", "goal": "Doctor",
+                             "hobby": "Cricket", "favourite": "Pizza",
+                             "password": "w5test-pass"})
 r = client.get("/")
 body = r.get_data(as_text=True)
 check("GET / (chat)", r.status_code == 200, f"status={r.status_code}")
@@ -83,7 +95,18 @@ check("chat log + bar present", 'id="chat-log"' in body
       and 'class="chat-bar"' in body and 'id="chat-form"' in body)
 check("chat form contract", 'action="/solve"' in body
       and 'name="question"' in body)
-check("welcome bubble", STRINGS["en"]["chat_welcome"] in body)
+# Wave 10: a signed-in student's empty state greets him by name,
+# so the plain chat_welcome string renders in the chat's welcome
+# bubble (after the first question), not the empty state. The
+# homepage contract here is the personalised greeting pair.
+# Wave 11: the empty state is greeting ONLY — the chat_empty_sub
+# "Type it, speak it..." line was removed by Suraj's design, so
+# the welcome contract is now the named greeting + the sub-line's
+# ABSENCE from the homepage.
+check("welcome bubble",
+      esc(STRINGS["en"]["saathi_welcome_name"].format(
+          name="W5 Tester " + RUN_ID)) in body
+      and esc(STRINGS["en"]["chat_empty_sub"]) not in body)
 check("voice + photo in bar", 'id="mic-btn"' in body
       and 'id="photo-input"' in body)
 
@@ -220,8 +243,18 @@ check("board page (hi)", STRINGS["hi"]["board_heading"]
 r = c.get("/mistakes")
 check("mistakes page (hi)", STRINGS["hi"]["mistakes_heading"]
       in r.get_data(as_text=True))
+# Wave 10: the chat welcome lives behind the login gate — sign up
+# a test student in this Hindi session to see his chat homepage.
+# The named empty state renders the PERSONALISED welcome line
+# (chat_welcome is the no-name fallback, unused once signed in),
+# so the Hindi contract here is the personalised greeting.
+c.post("/signup", data={"name": "W5 Hindi Tester " + RUN_ID, "class": "8",
+                        "board": "CBSE", "goal": "Doctor",
+                        "hobby": "Cricket", "favourite": "Pizza",
+                        "password": "w5test-pass"})
 r = c.get("/")
-check("chat welcome (hi)", STRINGS["hi"]["chat_welcome"]
+check("chat welcome (hi)", esc(STRINGS["hi"][
+    "saathi_welcome_name"].format(name="W5 Hindi Tester " + RUN_ID))
       in r.get_data(as_text=True))
 
 # --- 11. Teacher's Advice + Listen button -----------------------------------

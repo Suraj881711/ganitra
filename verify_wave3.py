@@ -12,6 +12,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mplconfig")
+# Wave 10 rerun note: account names are unique per DB, so
+# sign-ups below use a per-run random suffix (RUN_ID) — a
+# rerun can never collide with the previous run.
+os.environ["GANITRA_DB_PATH"] = "/tmp/ganitra-verify-wave3.db"  # Wave 10: FORCE a scratch account DB (assignment, not setdefault — a stray env value must not point these checks at a shared/real DB)
+import uuid as _uuid
+RUN_ID = _uuid.uuid4().hex[:8]
 
 from app import create_app, normalize_ocr_text  # noqa: E402
 
@@ -44,6 +50,12 @@ for raw, expected in cases:
 # --- 2. Homepage carries both input methods ------------------------------
 app = create_app()
 client = app.test_client()
+# Wave 10: / is login-gated — sign up a test student first so the
+# homepage under test is his chat screen.
+client.post("/signup", data={"name": "W3 Tester " + RUN_ID, "class": "8",
+                             "board": "CBSE", "goal": "Doctor",
+                             "hobby": "Cricket", "favourite": "Pizza",
+                             "password": "w3test-pass"})
 r = client.get("/")
 body = r.get_data(as_text=True)
 check("GET /", r.status_code == 200, f"status={r.status_code}")

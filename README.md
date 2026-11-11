@@ -104,6 +104,77 @@ in the web UI, through a JSON API, or on the command line.
   30-character cap, escaped again on render). There is **no
   login and no database**: the profile lives in the Flask
   session and is mirrored in the browser's `localStorage`.
+  **Wave 10 supersedes this for the homepage:** the chat now
+  sits behind a real account sign-in (next bullet), and the
+  account itself supplies the Saathi name + class — the
+  first-visit card no longer renders for signed-in students.
+  The `/saathi` endpoint and the localStorage mirror remain
+  for the other pages' personalisation.
+- **🔐 Real sign-in first page (Wave 10)** — the chat opens
+  only after sign-in, exactly as designed and approved by the
+  user: ONE page, ONE warm background, the frozen logo blended
+  in at the top, and **every field type-in** (no option chips
+  anywhere — the student writes everything himself): name,
+  class (text; accepts "8", "Class 8", "8th", must be 6–12),
+  board (free text, mapped to the Board Mode slug), a
+  gold-tinted **"Your 3 Favourite Things"** card (My Goal, My
+  Hobby, My Favourite) with the password inside it, and a teal
+  **Create my account** button. Returning students use
+  **Welcome back** (name + password). The favourite-things
+  login card stays **hidden until "Forgot password?" is
+  tapped** (the user's explicit refinement); then the student
+  types ANY ONE of his 3 favourite things plus a NEW password
+  and is logged in with the password reset in the same step.
+  Accounts live in **SQLite** (`accounts.py`, stdlib only):
+  passwords AND favourite answers are stored as salted
+  **PBKDF2-HMAC-SHA256** hashes — never plaintext. Sign-up
+  also sets the Mera Saathi session (name + class) and the
+  board session, so personalisation and Board Mode work
+  immediately; **Log out** sits in the chat ☰ menu. After 8
+  failed login attempts for a name in one session, that name
+  is locked out with a friendly "try later" message.
+  **Honest limits:** (1) Render's free filesystem is
+  **ephemeral** — the SQLite file (path from
+  `GANITRA_DB_PATH`, default `ganitra_users.db` beside the
+  app) is wiped on redeploy/restart, so **accounts are
+  per-deployment until a hosted database is added**;
+  (2) names are the login key, so a second student with the
+  **exact same name** cannot register under it — sign-up
+  shows a friendly error asking him to add something to the
+  name (e.g. "Aarav S.") and never overwrites the first
+  account; (3) the gate applies to **`/` (the chat home)
+  only** — `/solve`, `/board`, `/topics` and the other pages
+  keep their previous behaviour.
+- **🗂️ Many chats, like browser tabs (Wave 11)** — a signed-in
+  student can keep **many chats at once**, in the style the
+  user approved from his own Brave-browser screenshot. The
+  chat top bar no longer shows the name–class pill (the name
+  still greets him in the empty state, which is now just the
+  logo + greeting — the "Type it, speak it…" line is gone);
+  at the **far right edge** sits a plain **+** sign (no circle)
+  that opens the **all-chats view**: a chats-count chip and a
+  grid/list toggle on top, a **"Search your chats"** bar that
+  really filters the cards by title/first question, the chats
+  as a **2-column grid of preview cards** (mini logo + title +
+  ✕ close with a confirm, and a preview body with the first
+  question and first answer; the currently-open chat's card
+  is marked), a **big blue + button** bottom-centre that
+  creates and opens a new chat, and a **⋮ menu** holding
+  "Close all chats" (with a confirm). The composer gained a
+  **📎 file-select button on the LEFT inside the pill** — it
+  opens the same picker/input as the 📷 camera button (same
+  OCR flow); all four composer controls are clean line-style
+  SVG icons in the site teal. In the empty state the composer
+  sits directly under the greeting; once chatting starts it
+  stays pinned to the bottom. **Chats are stored per
+  account, server-side**, in the same SQLite file as the
+  accounts (a `chats` table via `chats.py`; JSON endpoints
+  `GET/POST /api/chats`, `GET/PUT/DELETE
+  /api/chats/<id>`, `DELETE /api/chats`, every query scoped
+  to the signed-in user) — so a student's chats now **follow
+  his account across devices**, replacing the earlier
+  per-browser behaviour for the chat page. The classic
+  `/solve`, photo and other flows are unchanged.
 - **💬 Pure chat screen (Wave 7)** — the homepage is now
   *only* a chat, ChatGPT-style (the landing-style front was
   rejected by the user): a slim top bar (Ganitra brand, the
@@ -226,8 +297,67 @@ in the web UI, through a JSON API, or on the command line.
   answer. Honest scope: the UI, voice and that summary line are
   localised — the step-by-step working itself is still shown in
   English (full step translation is future work).
+- **Auto language (Wave 9)** 🪄 — the site language stays
+  **English by default**, but when a student chats in another
+  language the site switches to it **automatically**: ask in
+  Hindi, Hinglish ("mujhe ye sawaal samjhao"), Marathi — including
+  WhatsApp-style Roman Marathi ("mala ha prashna samjat nahiye,
+  sanga na") — Bengali, Tamil or Telugu, and the answer, the
+  interface and the voice all follow, with a small "language
+  changed" note in the chat. Detection is local and deterministic
+  (`langdetect_local.py`: script ranges + curated marker words —
+  no external service). The manual language switcher is always
+  available and is never fought: auto-switch only reacts to a chat
+  message written in a different language.
 - **Pretty maths** — MathJax rendering in the web UI.
 - Three interfaces: web UI, REST API (`POST /api/solve`), and a CLI.
+
+### Wave 12 — the menu-inside package (10 Nov 2026)
+
+- **Full-page menu** 🎛️ — the ☰ menu on the chat and all-chats
+  pages is now a full-screen panel, LinkedIn-style: a **profile
+  block** (the student's photo, or the Ganitra mark, plus name,
+  "Class N Student", board and "Ganitra Maths") that opens My
+  Account; **live stats** ("N questions solved", "N chats" —
+  counted from the student's own saved chats, blue numbers);
+  bold entries for Your chats, Board Mode, Practice Test, Topics,
+  Mistake Notebook, Copy Style, Parent Report; a Language row
+  that expands to the six languages; a **Settings** row that
+  opens My Account; and a gold strip — *"Keep learning, keep
+  shining."* There is deliberately **no History link and no Log
+  out in this menu**: Log out lives only inside My Account.
+- **My Account (`/account`)** ⚙️ — a simple settings list: change
+  the profile photo (PNG/JPEG, max 2 MB, checked by file magic —
+  not just the file name), edit Name / Class / Board, replace any
+  of the three favourite things, and change the password (the
+  current password is required). Saved changes apply everywhere
+  at once — the menu stats, the board page and the greeting.
+- **More methods + Teach me** 🧮 — every answer still shows ONE
+  method first, fully solved. Beside it, small gold chips offer
+  **More methods** (only methods that genuinely differ and agree
+  with the same answer: factorisation, completing the square and
+  the graph method for quadratics; the graph method for linear
+  equations; fraction and unitary methods for percentages; a
+  bracket-first grouping for multi-step arithmetic), **Listen**,
+  and **Teach me** — short teacher-style concept lines for the
+  question type (real content in English and Hindi; the other
+  four languages fall back to the English lines for now, the same
+  precedent as the step text). The classic answer page shows the
+  same methods and teaching under the solution.
+- **Small polish** — the chat composer is slimmer, the method
+  chips are small (13px), the sign-in boxes are plain white, and
+  the pages use **transparent logo copies**
+  (`logo-full-t.png` / `logo-mark-t.png` — the cream background
+  removed) so the logo blends into the page instead of looking
+  pasted on. The frozen original logo files are untouched.
+- **All devices** 📱💻 — the layout is checked at 360px (small
+  Android), 390–430px (iPhone), 768px (tablet) and 1280px+
+  (laptop/desktop): no horizontal scroll, the all-chats grid goes
+  to 3 columns on wide screens, the full-page menu is a centred
+  640px column on desktop, account rows stack on small phones,
+  tap targets are at least 44px and inputs at least 16px (the
+  iOS zoom guard), and long maths expressions wrap instead of
+  overflowing.
 
 ## Topics covered
 
@@ -286,6 +416,12 @@ pytest            # 23 tests
 python verify_all.py    # wave-1 samples (76 questions + flows)
 python verify_wave2.py  # wave-2 samples (distributions, ODEs,
                         # transforms, graphs, quiz, history, download)
+GANITRA_DB_PATH=/tmp/w10-test.db python verify_wave10.py
+                        # wave-10 sign-in system (needs the scratch
+                        # DB path; the older wave scripts force their
+                        # own /tmp scratch account DBs themselves)
+python verify_wave11.py # wave-11 multi-chat system (forces its
+                        # own /tmp scratch account DB)
 ```
 
 ## Screenshots
@@ -308,8 +444,15 @@ app.py                  Flask app (/, /solve, /chat API history,
                         /practice + timed quiz, /board Board Mode,
                         /mistakes, /history, /download,
                         /solution/print, /set-lang/<code>,
-                        /saathi, /parent-report)
+                        /saathi, /parent-report, plus Wave-10
+                        sign-in: /signup, /login, /login-favourite,
+                        /logout and the login gate on /)
+accounts.py             Wave-10 account store: SQLite (stdlib),
+                        PBKDF2-hashed passwords + favourite
+                        answers, name/class/board helpers
 api.py                  JSON API blueprint (/api/solve)
+langdetect_local.py     Wave-9 dependency-free chat-language
+                        detection (script ranges + marker words)
 board_data.py           NCERT chapter lists for Classes 6-12, each
                         chapter mapped to a practice topic
 board_quiz.py           chapter-test generators for the topics
@@ -356,6 +499,26 @@ verify_wave5b.py        wave-5b/5d/5e verification: friendly errors,
 verify_wave6.py         wave-6 verification: Mera Saathi (personal
                         greeting, encouragement, XSS-safe name) and
                         the Parent Report (not part of the app)
+verify_wave7.py         wave-7 verification: pure chat homepage
+                        (not part of the app)
+verify_wave8.py         wave-8 verification: frozen logo wiring
+                        (not part of the app)
+verify_wave9.py         wave-9 verification: auto language
+                        detection/switching (not part of the app)
+verify_wave10.py        wave-10 verification: sign-in gate,
+                        sign-up/login/favourite-login flows,
+                        lockout, no-plaintext storage (run it with
+                        GANITRA_DB_PATH=/tmp/w10-test.db)
+verify_wave11.py        wave-11 verification: per-account
+                        multi-chat API, ownership, header "+",
+                        composer icons, all-chats view (own
+                        scratch DB)
+templates/auth.html     Wave-10 sign-in page (sign-up + Welcome
+                        back + hidden favourite-login card)
+templates/chats.html    Wave-11 all-chats view (Brave-style chat
+                        cards grid + search + blue new-chat button)
+chats.py                Wave-11 per-account chat storage (same
+                        SQLite file as accounts.py)
 ```
 
 ## Notes & honest limits
@@ -413,3 +576,147 @@ verify_wave6.py         wave-6 verification: Mera Saathi (personal
   switching phones starts both from zero. The session history
   behind the report is also capped (30 entries), so the report
   is a friendly family summary, not an official record.
+- **Auto-language detection (Wave 9) is heuristic, honestly**:
+  questions written in the Bengali, Tamil, Telugu or Devanagari
+  scripts are detected solidly (Devanagari Hindi vs Marathi is
+  decided by Marathi-only letters/words like ळ / आहे / मला).
+  Roman-script detection is strongest for Hinglish and Roman
+  Marathi, which have curated marker lists; Roman Bengali, Tamil
+  and Telugu are covered conservatively (two or more strong,
+  distinctive marker words are required), so a short or unusual
+  Roman sentence in those languages may stay in English until the
+  student uses the manual switcher. Genuinely mixed Hindi–Marathi
+  Roman text prefers Hindi. Pure maths ("x^2-5x+6=0") carries no
+  language signal and never triggers a switch. As before, the
+  step-by-step working remains in English in every language.
+- **Wave 12 limits, honestly**: the profile photo is stored in
+  the same SQLite database as the accounts and chats, so it is
+  **per-deployment** until a hosted database is added — a fresh
+  deploy starts with no photos, exactly like the accounts and
+  chats themselves. The three favourite things are **write-only
+  secrets**: they are stored hashed and are never displayed
+  anywhere, including My Account — a "change" always replaces the
+  old one blind. The account **name IS the login id**, so renaming
+  in My Account changes the name the student must type at login
+  (old-name logins stop working immediately). Multi-method answers
+  are honest: a question with only one genuine method (a plain
+  "2+2") gets **no** extra methods rather than a dressed-up copy
+  of the same working, and every extra method is generated from
+  the same question and checked to reach the same answer.
+  Teach-me lines are full in English and Hindi; Bengali, Marathi,
+  Tamil and Telugu fall back to the English lines until native
+  translations are added. The all-device check is verified
+  through the test client's HTML and the CSS rules (breakpoints,
+  meta tags, size guards), **not on physical devices**.
+
+---
+
+## Wave 13 — Classes 0–12 coverage + more methods
+
+Wave 13 (Suraj's directive, 10 Nov 2026: *"0-12th tak sabhi
+question solve hone chahiye"* and *"Question ke method badane
+hai"*) widens the solver so every class band's standard
+question families solve, and adds genuinely-distinct alternate
+methods where they exist. Two new solver modules:
+`solver/junior.py` (Classes 0–5) and `solver/applied.py`
+(Classes 6–8 applied maths + two Class 9–10 gaps), wired into
+the router after all established intents so nothing that
+worked before changes its path.
+
+**Coverage by class band**
+
+- **Classes 0–2** — number names ("write 457 in words" →
+  "Four hundred fifty-seven", international system, no
+  "and"), tables ("table of 7", "7 ka table"), small-number
+  commands ("add 245 and 178", "subtract 96 from 250",
+  "product of 12 and 5"), add/take-away stories ("Ram has 15
+  mangoes. He gives 6 to Sita. How many are left?"), even/odd
+  ("is 47 odd or even", including correcting a wrong claim:
+  "47 is even" → "47 is odd").
+- **Classes 3–5** — place value and expanded form, fraction
+  basics ("1/2 of 18", "half of 24", "quarter of 100",
+  fraction ↔ decimal, comparing two fractions by
+  cross-multiplication), money ("cost of 5 pens at Rs 12
+  each", change-making stories), clock maths ("45 minutes
+  after 3:30", "from 2 pm to 5 pm how many hours"), unit
+  conversions ("convert 3 km into metres", "5 kg = how many
+  grams", hours↔minutes, days↔weeks, months↔years), shape
+  facts ("how many sides does a hexagon have", "name the
+  shape with 3 sides"), perimeter/area of square and
+  rectangle in plain words, sequences ("next number: 2, 4, 6,
+  8, ?", missing middle number, odd numbers between),
+  multiples ("multiples of 6 up to 30", "first 5 multiples
+  of 6"), prime numbers between two numbers. "Factors of 12"
+  keeps its established prime-factorisation answer, and
+  HCF/LCM route to the number-theory solver as before.
+- **Classes 6–8** — ratio (simplify, "ratio of 20 to 45",
+  divide an amount in a ratio, two numbers in a ratio with
+  a given sum), the unitary method ("5 pens cost Rs 60,
+  cost of 8 pens"), simple interest in every NCERT phrasing
+  (Rs amounts, months converted to years, SI + amount),
+  profit & loss with profit/loss percent, speed–distance–
+  time stories plus km/h ↔ m/s conversion, and simple
+  linear word equations ("a number increased by 7 is 15",
+  "twice a number is 26").
+- **Classes 9–10** — discriminant and nature of roots of a
+  quadratic (new in Wave 13); AP/GP nth term and sums,
+  coordinate geometry (distance, midpoint, slope),
+  mensuration (circle, sphere, cylinder, cone, cube, square,
+  rectangle, triangle) and mean/median/mode were already
+  covered by earlier solvers and are unchanged.
+- **Classes 11–12** — calculus, matrices, trigonometry,
+  probability and distributions from earlier waves,
+  unchanged.
+
+**New alternate methods (Wave 13)** — every alternate is
+computed independently and only shown when its answer equals
+the primary answer:
+
+- Linear equations: **transposition** (move terms across
+  `=` with sign change), alongside the existing graph
+  method — up to 3 methods total.
+- Percentage: **proportion** (x/base = pct/100,
+  cross-multiply) — up to 4 methods total.
+- Simple interest: **year-by-year breakup** (one year's
+  interest × number of years).
+- HCF: **Euclid's division**; LCM: **via the HCF relation**
+  (a × b = HCF × LCM).
+- Distance between points: **graph method** (the two points
+  plotted, legs Δx/Δy drawn and read as a right triangle).
+- Triangle area: **half of a rectangle** reasoning.
+- AP/GP nth term (n ≤ 12): **writing out the terms**.
+- Mean (≥ 4 numbers): **assumed mean method**.
+- Two candidates were deliberately **not** added: a
+  profit-percent "per Rs 100" alternate and a rectangle-area
+  alternate — neither is a genuinely distinct school method,
+  and the honesty rule prefers no method over a dressed-up
+  copy.
+
+**Honest limits (Wave 13)**
+
+- Word-problem solving is **pattern-based**, not general
+  language understanding. The recognised story patterns are:
+  has→gives/loses away (subtraction), has→gets/buys more
+  (addition), money spent with left/change asked, groups with
+  "each"/"in all" (multiplication), sharing equally
+  (division), and the value commands listed above. A story
+  outside these patterns falls through to the existing
+  friendly "couldn't solve" card — it never receives a
+  guessed answer.
+- Coverage means the standard question *families* of each
+  class band, not arbitrary textbook prose: theorem proofs,
+  constructions, "show that" questions and multi-step
+  reasoning chains are out of scope for a step solver.
+- Mensuration uses π = 3.14159 in the geometry solver (the
+  junior fallback patterns mirror the same value); answers
+  are rounded the way the existing solvers round.
+- Steps for all new solvers are in English, like every other
+  solver; the explanation line, teacher's advice and Teach-me
+  lines cover the new types (Teach-me in English and Hindi,
+  other languages fall back to English as documented).
+- `verify_wave13.py` guards this wave: a coverage battery of
+  90+ sample questions across all five class bands, a
+  methods battery asserting every new alternate agrees with
+  its primary answer, a gibberish fuzz check (no fabricated
+  answers from the new types), and the i18n completeness of
+  the new keys in all 6 languages.

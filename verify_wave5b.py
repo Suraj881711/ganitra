@@ -15,6 +15,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mplconfig")
+# Wave 10 rerun note: account names are unique per DB, so
+# sign-ups below use a per-run random suffix (RUN_ID) — a
+# rerun can never collide with the previous run.
+os.environ["GANITRA_DB_PATH"] = "/tmp/ganitra-verify-wave5b.db"  # Wave 10: FORCE a scratch account DB (assignment, not setdefault — a stray env value must not point these checks at a shared/real DB)
+import uuid as _uuid
+RUN_ID = _uuid.uuid4().hex[:8]
 
 from app import create_app  # noqa: E402
 from i18n import (STRINGS, SUPPORTED_LANGS, get_strings,  # noqa: E402
@@ -48,21 +54,28 @@ r = c.post("/solve", data={"question": "asdf qwer zxq"})
 body = r.get_data(as_text=True)
 check("gibberish POST /solve status", r.status_code == 200,
       f"status={r.status_code}")
-check("gibberish friendly heading", esc(EN["error_heading"]) in body)
-check("gibberish friendly intro", esc(EN["error_intro"]) in body)
-check("gibberish tips x3",
-      all(esc(EN[f"error_tip{i}"]) in body for i in (1, 2, 3)))
-check("gibberish retry button", esc(EN["error_retry_btn"]) in body
-      and 'name="question"' in body)
+# Wave 18 amendment (Suraj, 10 Nov 2026: "har ek question ka
+# answer milna chahiye"): gibberish and solver failures no
+# longer land on the error card — the no-dead-end fallback
+# (fallback.py) answers them in the answer block with a
+# friendly reply. The error-card strings stay in i18n as the
+# template's last resort; the checks below assert the NEW
+# contract (the no-raw-error guarantees are unchanged).
+check("gibberish friendly fallback reply",
+      esc("didn't look like a maths question") in body)
+check("gibberish fallback how-to-ask tip",
+      "Try writing it like" in body)
+check("gibberish NO error card", "error-card" not in body)
+check("gibberish answer block present (Wave 18)",
+      'class="answer-big"' in body)
 check("gibberish NO JSON dump", "Full result" not in body
       and "full_result" not in body and "a*d*e*f" not in body)
 check("gibberish NO raw error text", "Could not solve" not in body)
-check("gibberish NO answer block", 'class="answer-big"' not in body)
 
 r = c.post("/solve", data={"question": "who is the prime minister"})
 body = r.get_data(as_text=True)
 check("solver-error friendly card", r.status_code == 200
-      and esc(EN["error_heading"]) in body
+      and "not a maths question" in body
       and "Could not solve" not in body
       and "Give a number to test" not in body)
 
@@ -82,14 +95,17 @@ check("blank question no 500", r.status_code == 200)
 r = c.post("/api/solve", json={"question": "asdf qwer zxq"})
 data = r.get_json() or {}
 err = data.get("error") or {}
-check("api gibberish unsolvable", r.status_code == 200
-      and data.get("ok") is False and data.get("unsolvable") is True,
+# Wave 18 amendment: the chat failure contract is now the
+# fallback contract — gibberish returns ok=True with a flagged
+# friendly fallback result, not the unsolvable error payload.
+check("api gibberish answered (Wave 18 fallback)",
+      r.status_code == 200 and data.get("ok") is True
+      and (data.get("result") or {}).get("fallback_kind")
+      == "gibberish",
       f"status={r.status_code}")
-check("api error contract", err.get("heading") == EN["error_heading"]
-      and err.get("intro") == EN["error_intro"]
-      and err.get("tips") == [EN["error_tip1"], EN["error_tip2"],
-                              EN["error_tip3"]]
-      and err.get("retry_label") == EN["error_retry_btn"])
+check("api fallback contract (no error payload)",
+      "error" not in data and "unsolvable" not in data
+      and bool((data.get("result") or {}).get("answer")))
 check("api error NO raw text", "Could not solve" not in r.get_data(
     as_text=True) and "a*d*e*f" not in r.get_data(as_text=True))
 r = c.post("/api/solve", json={"question": ""})
@@ -101,7 +117,15 @@ check("api 600-char friendly", (r.get_json() or {}).get("message")
 r = c.post("/api/solve", json={"question": "x^2-5x+6=0"})
 data = r.get_json() or {}
 check("api success shape unchanged",
-      sorted(data.keys()) == ["advice", "explanation", "ok", "result"]
+      # Wave 9: the success contract gained language_switched +
+      # language (auto-language); for a neutral English question
+      # nothing else is added (ui/lang_notice appear only on a
+      # switch), so the exact key set below is the Wave-9 contract.
+      # Wave 12: the success contract gains "methods" + "teach"
+      # (additive, per the §5c brief) — key set updated here.
+      sorted(data.keys()) == ["advice", "explanation", "language",
+                              "language_switched", "methods", "ok",
+                              "result", "teach"]
       and data.get("ok") is True
       and (data.get("result") or {}).get("answer") == "x = 2, x = 3")
 
@@ -117,11 +141,21 @@ check("x + y solves normally", r.status_code == 200
       and "error-card" not in r.get_data(as_text=True))
 
 # --- 5. Slow-server note (en + hi) ---------------------------------------------
+# Wave 10: the waking note lives on the chat homepage, which is
+# login-gated now — sign up test students (en + hi) to see it.
+r = c.post("/signup", data={"name": "W5b Tester " + RUN_ID, "class": "8",
+                            "board": "CBSE", "goal": "Doctor",
+                            "hobby": "Cricket", "favourite": "Pizza",
+                            "password": "w5btest-pass"})
 r = c.get("/")
 body = r.get_data(as_text=True)
 check("waking note (en)", esc(EN["chat_waking_note"]) in body)
 c2 = app.test_client()
 c2.get("/set-lang/hi")
+c2.post("/signup", data={"name": "W5b Hindi Tester " + RUN_ID, "class": "8",
+                         "board": "CBSE", "goal": "Doctor",
+                         "hobby": "Cricket", "favourite": "Pizza",
+                         "password": "w5btest-pass"})
 r = c2.get("/")
 check("waking note (hi)", esc(HI["chat_waking_note"])
       in r.get_data(as_text=True))
@@ -298,7 +332,15 @@ check("css tap target floor", "min-height: 44px" in css)
 node = shutil.which("node")
 for page, maker in (("answer", lambda cl: cl.post(
         "/solve", data={"question": "x^2-5x+6=0"})),
-        ("home", lambda cl: cl.get("/")),
+        # Wave 10: the homepage scripts live behind the login
+        # gate — sign up a test student so "home" really is the
+        # chat page's scripts, not the sign-in page's.
+        ("home", lambda cl: (cl.post(
+            "/signup", data={"name": "W5b JS Tester " + RUN_ID, "class": "8",
+                             "board": "CBSE", "goal": "Doctor",
+                             "hobby": "Cricket", "favourite": "Pizza",
+                             "password": "w5btest-pass"}),
+            cl.get("/"))[1]),
         ("board", lambda cl: cl.get("/board"))):
     cl = app.test_client()
     html = maker(cl).get_data(as_text=True)

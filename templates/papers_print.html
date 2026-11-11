@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="{{ lang }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ganitra — {{ t.papers_gen_title.format(n=paper.class_num) }}</title>
+    <style>
+      body { font-family: Georgia, "Times New Roman", serif;
+             color: #25324e; background: #fff; margin: 48px auto;
+             max-width: 760px; padding: 0 24px; line-height: 1.65;
+             font-size: 16px; }
+      h1 { font-size: 22px; margin-bottom: 2px; }
+      h2 { font-size: 16px; margin-top: 26px; border-bottom: 1px solid #ccc;
+           padding-bottom: 4px; }
+      .brand { color: #8a6414; letter-spacing: .04em; font-size: 13px;
+               text-transform: uppercase; }
+      .muted { color: #555; }
+      .meta { font-size: 13px; color: #555; }
+      ol.steps li { margin: 6px 0; }
+      footer { margin-top: 36px; border-top: 1px solid #ccc;
+               padding-top: 10px; color: #555; font-size: 13px;
+               text-align: center; }
+      .print-btn { font: inherit; padding: 12px 22px; min-height: 48px;
+                   cursor: pointer;
+                   border: 1px solid #8a6414; background: #fdf6dd;
+                   border-radius: 12px; }
+      @media print { .no-print { display: none !important; } }
+    </style>
+    <script>
+      MathJax = { tex: { inlineMath: [['$', '$'], ['\\(', '\\)']] } };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+            async></script>
+  </head>
+  <body>
+    <p class="brand">Ganitra</p>
+    <h1>{{ t.papers_gen_title.format(n=paper.class_num) }}</h1>
+    <p class="muted">{{ t.papers_gen_sub.format(papers=paper.based_on.papers) }}</p>
+
+    {% set qno = namespace(n=0) %}
+    {% for sec in paper.sections %}
+      <h2>{{ sec.title }}</h2>
+      {% for q in sec.questions %}
+        {% set qno.n = qno.n + 1 %}
+        <p><strong>Q{{ qno.n }}.</strong> {{ q.text }}
+          <span class="meta">[{{ q.chapter_title }} · {{ q.marks }}]</span>
+          {% if q.source == "generated" %}<span class="meta">({{ t.papers_practice_tag }})</span>{% endif %}
+        </p>
+      {% endfor %}
+    {% endfor %}
+
+    <h2>{{ t.papers_answer_key_heading }}</h2>
+    {% set kno = namespace(n=0) %}
+    {% for sec in paper.sections %}
+      {% for q in sec.questions %}
+        {% set kno.n = kno.n + 1 %}
+        <p><strong>Q{{ kno.n }}.</strong>
+          {% if q.answer_key.kind == "solver" %}
+            {{ t.papers_answer_label }}: {{ q.answer_key.answer }}
+          {% elif q.answer_key.kind == "scheme" %}
+            {{ q.answer_key.text }}: {{ q.answer_key.url }}
+          {% else %}
+            {{ q.answer_key.text }}
+          {% endif %}
+        </p>
+        {% if q.answer_key.kind == "solver" and q.answer_key.steps %}
+          <ol class="steps">
+            {% for step in q.answer_key.steps %}<li>{{ step }}</li>{% endfor %}
+          </ol>
+        {% endif %}
+      {% endfor %}
+    {% endfor %}
+
+    <p class="no-print" style="margin-top: 28px;">
+      <button class="print-btn" onclick="window.print()">{{ t.print_btn }}</button>
+    </p>
+
+    <footer>{{ t.print_footer }} · Ganitra</footer>
+    <script>
+      window.addEventListener("load", function () {
+        setTimeout(function () { window.print(); }, 600);
+      });
+    </script>
+  </body>
+</html>

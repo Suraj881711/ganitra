@@ -48,6 +48,16 @@ def _area_perimeter_volume(q: str):
         l = find_param(q, ["length", "l"])
         b = find_param(q, ["breadth", "width", "b", "w"])
         if l is None or b is None:
+            # Wave 13: "rectangle 8 cm by 5 cm" / "rectangle 8 by 5"
+            # — the two bare numbers after the word rectangle.
+            m2 = re.search(
+                r"rectangle\s+(?:of\s+)?(\d+(?:\.\d+)?)\s*"
+                r"(?:cm|m|mm)?\s*(?:by|x|×)\s*(\d+(?:\.\d+)?)", q)
+            if m2:
+                l, b = float(m2.group(1)), float(m2.group(2))
+                l = int(l) if l == int(l) else l
+                b = int(b) if b == int(b) else b
+        if l is None or b is None:
             return None
         if "perimeter" in q:
             steps = [f"Perimeter = 2(l + b) = 2({fmt_num(l)} + "

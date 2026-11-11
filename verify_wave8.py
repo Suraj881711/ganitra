@@ -12,6 +12,14 @@
 
 The empty state of the chat homepage shows logo-full; the top bar
 shows logo-mark. Run with the project venv:  python verify_wave8.py
+
+Wave 12 note (Suraj, 10 Nov 2026): the logo looked "cropped and
+pasted" because the artwork sits on its cream background — so the
+pages now use TRANSPARENT presentation copies (logo-full-t.png /
+logo-mark-t.png, background removed). The originals below stay
+byte-identical frozen source files; only the two homepage
+filename assertions now point at the -t variants. All disk
+geometry checks on the originals are unchanged.
 """
 import os
 import sys
@@ -19,6 +27,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mplconfig")
+# Wave 10 rerun note: account names are unique per DB, so
+# sign-ups below use a per-run random suffix (RUN_ID) — a
+# rerun can never collide with the previous run.
+os.environ["GANITRA_DB_PATH"] = "/tmp/ganitra-verify-wave8.db"  # Wave 10: FORCE a scratch account DB (assignment, not setdefault — a stray env value must not point these checks at a shared/real DB)
+import uuid as _uuid
+RUN_ID = _uuid.uuid4().hex[:8]
 
 from PIL import Image  # noqa: E402
 
@@ -35,6 +49,14 @@ def check(cat, cond, detail=""):
 
 app = create_app()
 c = app.test_client()
+# Wave 10: the chat homepage is login-gated — sign up a test
+# student so the logo wiring below is checked on his homepage.
+# (The sign-in page itself also carries the logo; asserted in
+# verify_wave10.)
+c.post("/signup", data={"name": "W8 Tester " + RUN_ID, "class": "8",
+                        "board": "CBSE", "goal": "Doctor",
+                        "hobby": "Cricket", "favourite": "Pizza",
+                        "password": "w8test-pass"})
 
 # --- 1. Asset files on disk ------------------------------------------------
 STATIC = Path("static")
@@ -64,15 +86,15 @@ r = c.get("/")
 body = r.get_data(as_text=True)
 check("GET / 200", r.status_code == 200)
 check("top bar uses logo-mark", 'class="brand-mark"' in body
-      and "logo-mark.png" in body)
+      and "logo-mark-t.png" in body)
 check("top bar keeps HTML Ganitra wordmark", "> Ganitra</a>" in body)
 check("empty state uses logo-full (final-file asset)",
-      'class="empty-logo-img"' in body and "logo-full.png" in body)
+      'class="empty-logo-img"' in body and "logo-full-t.png" in body)
 check("rendered logo-full is the verified final file's resize",
       full.size == (900, 478),
       f"size={full.size} (resize of the 1920x1020 final file)")
 check("empty state shows logo-full above the greeting",
-      body.index("logo-full.png") < body.index("empty-greeting"))
+      body.index("logo-full-t.png") < body.index("empty-greeting"))
 check("old empty-state emoji gone", '<div class="empty-logo"'
       ' aria-hidden="true">🧮' not in body)
 

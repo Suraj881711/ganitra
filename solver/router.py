@@ -6,12 +6,14 @@ Every result is a dict with at least: type, answer, steps.
 import re
 
 from .algebra import solve_algebra
+from .applied import solve_applied
 from .arithmetic import solve_arithmetic
 from .calculus import solve_calculus
 from .complex_numbers import solve_complex
 from .distributions import solve_distributions
 from .exponents_logs import solve_exponents_logs
 from .geometry import solve_geometry
+from .junior import solve_junior
 from .linear_algebra import solve_linear_algebra
 from .number_theory import solve_number_theory
 from .plotting import solve_plot
@@ -185,6 +187,11 @@ def route_intent(question: str) -> str:
     # Number theory. "mod" must be a standalone token so words like
     # "mode"/"model" are not matched; factor-of-a-number check: strip the
     # word "factor..." and filler; if no letters remain it is a number.
+    # Wave 13: "prime numbers between A and B" is a LIST question —
+    # the junior solver owns it (the single-number prime check
+    # below cannot answer it).
+    if re.search(r"\bprime\s+numbers?\s+(between|from)\b", q):
+        return "junior"
     if re.search(r"\b(prime|gcd|hcf|lcm|modulo|divisible)\b", q) or \
             re.search(r"(?<![a-z])mod(?![a-z])", q):
         return "number_theory"
@@ -192,6 +199,64 @@ def route_intent(question: str) -> str:
             r"\bfactors?\b|\bfactorise\b|\bfactorize\b|\bof\b|"
             r"\bthe\b|\bis\b|\bplease\b", "", q)):
         return "number_theory"
+
+    # Wave 13 junior families (Classes 0-5). Deliberately
+    # placed late: every established intent above keeps its
+    # priority, and these triggers are phrase-specific. The
+    # junior solver itself returns None when its stricter
+    # patterns do not extract clean numbers (see solve_question
+    # for the fallback).
+    if re.search(
+            r"(\bin\s+words\b|\bnumber\s+name\b|\bplace\s+value\b|"
+            r"\bexpanded\s+form\b|\btable\s+of\s+\d|"
+            r"\d\s+ka\s+table\b|\bhalf\s+of\s+\d|"
+            r"\bquarter\s+of\s+\d|\d\s*/\s*\d\s+of\s+\d|"
+            r"\bas\s+(a\s+)?decimal\b|\bin\s+decimal\b|"
+            r"\bas\s+(a\s+)?fraction\b|"
+            r"\bwhich\s+is\s+(bigger|greater|larger|smaller)\b|"
+            r"\badd\s+\d|\bsubtract\s+\d|\bsum\s+of\s+\d|"
+            r"\bdifference\s+between\s+\d|\bproduct\s+of\s+\d|"
+            r"\bdivide\s+\d|\bmultiply\s+\d|"
+            r"\bshared\s+equally\b|\bdivided\s+equally\b|"
+            r"\bhow\s+many\s+months\s+in\s+\d|"
+            r"\bminutes?\s+after\s+\d|\bhours?\s+after\s+\d|"
+            r"\bfrom\s+\d{1,2}(?::\d{2})?\s*(am|pm)\s+to\s+\d|"
+            r"\bhow\s+many\s+(sides|corners|vertices)\b|"
+            r"\bshape\s+with\s+\d+\s+sides|\b\d\s*-\s*sided\b|"
+            r"\bname\s+the\s+shape\b|\bodd\s+or\s+even\b|"
+            r"\b(odd|even)\s+numbers?\s+(between|from)\b|"
+            r"\bnext\s+number\b|\bwhat\s+comes\s+next\b|"
+            r"\bcomes\s+next\s*:?\s*\d|\bmissing\s+number\b|"
+            r"^\s*\d+\s+is\s+(odd|even)\b|"
+            r"\bmultiples?\s+of\s+\d|\bfirst\s+\d+\s+multiples?\b|"
+            r"\bprime\s+numbers?\s+(between|from)\b)", q) or \
+            re.search(r"\bhas\s+(?:rs\.?\s+|₹\s*|rupees\s+)?"
+                      r"\d+\b.{0,90}?\b(gives|gave|lost|loses|"
+                      r"eats|ate|buys|bought|gets|got|sells|"
+                      r"sold)\b", q) or \
+            re.search(r"\d\s+\w+\s+(have|has|contain|contains)\s+"
+                      r"\d.{0,40}?\beach\b", q) or \
+            re.search(r"\bcost\s+of\s+\d.{0,40}?\beach\b", q) or \
+            re.search(r"^\s*(what\s+is\s+)?\d{1,3}\s*(x|×)\s*"
+                      r"\d{1,3}\s*\?*\s*$", q.strip()):
+        return "junior"
+
+    # Wave 13 applied families (Classes 6-12 gaps): ratio,
+    # simple interest (all forms — solve_question falls back
+    # to word_problems when applied returns None), profit &
+    # loss, speed stories, word equations, discriminant.
+    if re.search(
+            r"(\bratio\b|\bsimple\s+interest\b|\bprofit\b|"
+            r"\bloss\b|\bdiscriminant\b|"
+            r"\bnature\s+of\s+(the\s+)?roots\b|"
+            r"km/h\s+(to|in)\s+m/s|m/s\s+(to|in)\s+km/h|"
+            r"\bnumber\s+(increased|decreased|multiplied)\s+by\b|"
+            r"\b(twice|thrice|double)\s+(a\s+)?number\b|"
+            r"\bsum\s+of\s+a\s+number\s+and\s+\d|"
+            r"\bwhen\s+\d+\s+is\s+added\s+to\s+a\s+number\b|"
+            r"\btravels?\b.{0,40}?\bkm\b|\bcovers\s+\d+\s*km\b)",
+            q):
+        return "applied"
 
     # Word problems
     if re.search(
@@ -211,6 +276,8 @@ def route_intent(question: str) -> str:
 _SOLVERS = {
     "arithmetic": solve_arithmetic,
     "algebra": solve_algebra,
+    "junior": solve_junior,
+    "applied": solve_applied,
     "calculus": solve_calculus,
     "linear_algebra": solve_linear_algebra,
     "number_theory": solve_number_theory,
@@ -228,13 +295,16 @@ _SOLVERS = {
 }
 
 _TOPICS = (
-    "arithmetic & percentages, algebra (equations, systems, "
+    "junior maths for Classes 0-5 (number names, place value, "
+    "tables, story sums, fraction basics, money, clock and shape "
+    "facts), arithmetic & percentages, algebra (equations, systems, "
     "inequalities, factor/expand/simplify), exponents & logarithms, "
     "trigonometry, calculus (limits, derivatives, integrals, ODEs "
     "incl. second-order and initial conditions), Laplace transforms "
     "and series, linear algebra (matrices), geometry & coordinate "
     "geometry, statistics & probability (incl. normal, Poisson and "
     "binomial distributions), number theory, sequences & series, "
+    "ratio & proportion, simple interest, profit & loss, speed, "
     "complex numbers, sets, unit conversion, word problems and graphs "
     "(one or two functions, shaded integral area)"
 )
@@ -249,7 +319,11 @@ def solve_question(question: str):
     # Explicit unit conversion ("convert 5 km to miles", temperatures):
     # try it directly first; solve_units returns None when it is not a
     # conversion, and we then fall through to normal routing.
-    if re.search(r"\bconvert\b", working, re.I):
+    # Wave 13: "how many minutes in 3 hours" is the same conversion
+    # asked as a question — solve_units validates the units itself
+    # and returns None for non-unit "how many" questions.
+    if re.search(r"\bconvert\b", working, re.I) or re.search(
+            r"\bhow\s+many\b", working, re.I):
         out = solve_units(working)
         if out is not None:
             if was_translated:
@@ -264,7 +338,53 @@ def solve_question(question: str):
             if was_translated:
                 out["interpreted_as"] = translated
             return out
+        # Wave 13: the units pattern also catches speed stories
+        # ("180 km in 3 hours") and km/h <-> m/s requests, which
+        # are not unit conversions — the applied solver owns them.
+        out = solve_applied(working)
+        if out is not None:
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
         intent = "arithmetic"
+
+    # Wave 13: the unitary-cost story ("5 pens cost Rs 60, cost
+    # of 8 pens") names no intent keyword, so when the classic
+    # pipeline cannot even parse the question, give the applied
+    # patterns one chance before reporting the error.
+    if intent in ("arithmetic", "algebra"):
+        probe_solver = _SOLVERS.get(intent, solve_arithmetic)
+        try:
+            probe = probe_solver(working)
+        except Exception:
+            probe = None
+        if probe is None or (isinstance(probe, dict)
+                             and probe.get("op") == "error"):
+            alt = solve_applied(working)
+            if alt is not None:
+                if was_translated:
+                    alt["interpreted_as"] = translated
+                return alt
+
+    # Wave 13 solvers return None when their strict patterns do
+    # not match; fall back to the closest established pipeline
+    # instead of failing (junior -> arithmetic, applied -> the
+    # classic word-problem patterns).
+    if intent == "junior":
+        out = solve_junior(working)
+        if out is not None:
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+        intent = "arithmetic"
+
+    if intent == "applied":
+        out = solve_applied(working)
+        if out is not None:
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+        intent = "word_problems"
 
     solver = _SOLVERS.get(intent, solve_arithmetic)
     try:

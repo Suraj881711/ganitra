@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block body_class %}chats-page{% endblock %}
+{% block main_class %}chats-main{% endblock %}
+{% block header %}
+  {# Wave 11: the all-chats view keeps the chat page's slim bar
+     (brand + tools), minus the "+" (we are already in the view it
+     opens) — its job moves to the big blue button at the bottom. #}
+  <header class="chat-header">
+    <a class="chat-brand" href="/"><img class="brand-mark"
+      src="{{ url_for('static', filename='logo-mark-t.png') }}"
+      alt="" aria-hidden="true" /> Ganitra</a>
+    <div class="header-tools">
+      <span class="dhyaan-pill" id="dhyaan-pill"
+        title="{{ t.dhyaan_label }}"><span class="dhyaan-label" aria-hidden="true">{{ t.dhyaan_label }}</span>
+        <span id="dhyaan-text"></span></span>
+      <label class="lang-switch"><span class="lang-label-text">{{ t.lang_label }}</span>
+        <select id="lang-select" aria-label="{{ t.lang_label }}"
+                onchange="if (this.value) window.location.href = '/set-lang/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search);">
+          {% for code, name in lang_options %}
+            <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <details class="nav-menu">
+        <summary class="nav-menu-btn" aria-label="{{ t.menu_label }}"
+                 title="{{ t.menu_label }}">☰</summary>
+        {# Wave 12: the same full-page menu as the chat page
+           (profile block -> My Account, stats lines, bold items,
+           Language row, Settings, gold strip; NO Log out here). #}
+        <nav class="nav-dropdown menu-panel">
+          <div class="menu-panel-inner">
+            <div class="menu-panel-top">
+              <span class="menu-panel-title">{{ t.menu_label }}</span>
+              <button type="button" class="menu-close"
+                      aria-label="{{ t.menu_label }}"
+                      onclick="this.closest('details').removeAttribute('open')">✕</button>
+            </div>
+            {# Same full-page menu markup as the chat page. #}
+            {% if user_name %}
+            <a class="menu-profile" href="/account">
+              {% if user_has_photo %}
+                <img class="menu-photo"
+                     src="/account/photo/file"
+                     alt="" aria-hidden="true" />
+              {% else %}
+                <img class="menu-photo"
+                     src="{{ url_for('static', filename='logo-mark-t.png') }}"
+                     alt="" aria-hidden="true" />
+              {% endif %}
+              <span class="menu-profile-text">
+                <span class="menu-name">{{ user_name }} <span class="menu-verified" aria-hidden="true">✓</span></span>
+                <span class="menu-line">{{ t.acct_student_line }}</span>
+                <span class="menu-line">{{ user_board_text }} {{ t.field_board }}</span>
+                <span class="menu-line menu-line-dim">{{ t.acct_verified_line }}</span>
+              </span>
+            </a>
+            <div class="menu-stats">
+              <p class="menu-stat-line"><span class="menu-stat-num" id="menu-stat-questions">–</span> <span class="menu-stat-word">{{ t.acct_questions_word }}</span></p>
+              <p class="menu-stat-line"><span class="menu-stat-num" id="menu-stat-chats">–</span> <span class="menu-stat-word">{{ t.acct_chats_word }}</span></p>
+            </div>
+            {% endif %}
+            <div class="menu-items">
+              <a href="/chats">{{ t.menu_your_chats }}</a>
+              <a href="/board">{{ t.nav_board }}</a>
+              <a href="/papers">{{ t.menu_papers }}</a>
+              <a href="/practice">{{ t.nav_practice }}</a>
+              <a href="/topics">{{ t.nav_topics }}</a>
+              <a href="/mistakes">{{ t.nav_mistakes }}</a>
+              <a href="/solution/print?style=hand">{{ t.menu_copy_style }}</a>
+              <a href="/parent-report">{{ t.nav_parents }}</a>
+              <details class="menu-lang">
+                <summary class="menu-lang-summary">{{ t.menu_language }}</summary>
+                <div class="menu-lang-row">
+                  {% for code, name in lang_options %}
+                    <a class="menu-lang-link" href="/set-lang/{{ code }}?next=/chats">{{ name }}</a>
+                  {% endfor %}
+                </div>
+              </details>
+            </div>
+            {% if user_name %}
+            <a class="menu-settings-row" href="/account">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"/></svg>
+              <span>{{ t.menu_settings }}</span>
+            </a>
+            {% endif %}
+            <div class="menu-gold-strip">{{ t.menu_keep_line }}</div>
+          </div>
+        </nav>
+      </details>
+    </div>
+  </header>
+{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+  {# Wave 11: Brave-mobile-tabs style all-chats view (Suraj's own
+     screenshot): count chip + grid toggle on top, a REAL search
+     bar, the chats as a 2-column grid of preview cards, and the
+     big blue "+" (new chat) bottom-centre with a ⋮ at the right. #}
+  <div class="chats-shell">
+    <div class="chats-top">
+      <span class="chats-count-chip" id="chats-count-chip"
+            title="{{ t.chats_heading }}"><span class="chats-count-num"
+            id="chats-count">0</span></span>
+      <button type="button" class="chats-view-toggle" id="chats-view-toggle"
+              aria-label="{{ t.chats_view_label }}"
+              title="{{ t.chats_view_label }}"
+              aria-pressed="false"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></button>
+    </div>
+    <h2 class="chats-heading">{{ t.chats_heading }}</h2>
+    <label class="sr-only" for="chats-search">{{ t.chats_search_placeholder }}</label>
+    <input type="search" id="chats-search" class="chats-search"
+           placeholder="{{ t.chats_search_placeholder }}"
+           aria-label="{{ t.chats_search_placeholder }}"
+           autocomplete="off" />
+    <p class="chats-empty-note" id="chats-empty-note" hidden></p>
+    <div class="chats-grid" id="chats-grid" aria-live="polite"></div>
+    <div class="chats-bottom">
+      <button type="button" class="chats-new-big" id="chats-new"
+              aria-label="{{ t.chats_new_label }}"
+              title="{{ t.chats_new_label }}">+</button>
+      <details class="chats-more">
+        <summary class="chats-more-btn"
+                 aria-label="{{ t.chats_menu_label }}"
+                 title="{{ t.chats_menu_label }}">⋮</summary>
+        <div class="chats-more-menu">
+          <button type="button" id="chats-close-all">{{ t.chats_close_all }}</button>
+        </div>
+      </details>
+    </div>
+  </div>
+
+  <template id="chat-card-template">
+    <article class="chat-card">
+      <header class="chat-card-head">
+        <img class="chat-card-mark"
+             src="{{ url_for('static', filename='logo-mark-t.png') }}"
+             alt="" aria-hidden="true" />
+        <h3 class="chat-card-title"></h3>
+        <button type="button" class="chat-card-close"
+                aria-label="{{ t.chats_close_one_label }}"
+                title="{{ t.chats_close_one_label }}">✕</button>
+      </header>
+      <div class="chat-card-body">
+        <img class="chat-card-logo"
+             src="{{ url_for('static', filename='logo-full-t.png') }}"
+             alt="" aria-hidden="true" />
+        <p class="chat-card-q"></p>
+        <p class="chat-card-a"></p>
+        <p class="chat-card-open" hidden>{{ t.chats_open_now }}</p>
+      </div>
+    </article>
+  </template>
+
+  <script>
+    (function () {
+      var L = {{ js_t | tojson }};
+      var grid = document.getElementById("chats-grid");
+      var countEl = document.getElementById("chats-count");
+      var chipEl = document.getElementById("chats-count-chip");
+      var searchEl = document.getElementById("chats-search");
+      var noteEl = document.getElementById("chats-empty-note");
+      var tpl = document.getElementById("chat-card-template");
+      var chats = [];
+      var currentId = null;
+      try {
+        currentId = new URLSearchParams(
+          window.location.search).get("current");
+        if (currentId) currentId = parseInt(currentId, 10) || null;
+        if (!currentId) {
+          var stored = window.sessionStorage.getItem(
+            "ganitra-current-chat");
+          if (stored) currentId = parseInt(stored, 10) || null;
+        }
+      } catch (e) { /* ignore */ }
+
+      function openChat(id) {
+        try {
+          window.sessionStorage.setItem("ganitra-current-chat",
+                                        String(id));
+        } catch (e) { /* ignore */ }
+        window.location.href = "/?chat=" + id;
+      }
+
+      function snippet(text, n) {
+        text = String(text || "").replace(/\s+/g, " ").trim();
+        return text.length > n ? text.slice(0, n - 1) + "…" : text;
+      }
+
+      function matches(chat, q) {
+        if (!q) return true;
+        q = q.toLowerCase();
+        return (chat.title || "").toLowerCase().indexOf(q) >= 0
+          || (chat.first_question || "").toLowerCase()
+               .indexOf(q) >= 0;
+      }
+
+      function paint() {
+        var q = searchEl.value.trim().toLowerCase();
+        grid.innerHTML = "";
+        var shown = 0;
+        chats.forEach(function (chat) {
+          if (!matches(chat, q)) return;
+          shown += 1;
+          var node = tpl.content.firstElementChild.cloneNode(true);
+          if (chat.id === currentId) node.classList.add("is-current");
+          node.querySelector(".chat-card-title").textContent =
+            chat.title || L.chats_new;
+          var qEl = node.querySelector(".chat-card-q");
+          if (chat.first_question) {
+            qEl.textContent = snippet(chat.first_question, 60);
+          } else {
+            qEl.textContent = L.chats_new;
+          }
+          var aEl = node.querySelector(".chat-card-a");
+          if (chat.first_answer) {
+            aEl.textContent = (L.chats_answer_snippet || "Answer")
+              + ": " + snippet(chat.first_answer, 60);
+          } else {
+            aEl.textContent = "";
+          }
+          var openEl = node.querySelector(".chat-card-open");
+          if (chat.id === currentId) openEl.hidden = false;
+          node.querySelector(".chat-card-body").addEventListener(
+            "click", function () { openChat(chat.id); });
+          node.querySelector(".chat-card-title").addEventListener(
+            "click", function () { openChat(chat.id); });
+          node.querySelector(".chat-card-close").addEventListener(
+            "click", function (ev) {
+              ev.stopPropagation();
+              if (!window.confirm(L.chats_delete_confirm)) return;
+              fetch("/api/chats/" + chat.id, { method: "DELETE" })
+                .then(function () { load(); })
+                .catch(function () { load(); });
+            });
+          grid.appendChild(node);
+        });
+        countEl.textContent = String(chats.length);
+        chipEl.title = (L.chats_count_label || "{count}")
+          .replace("{count}", String(chats.length));
+        if (!chats.length) {
+          noteEl.textContent = L.chats_none_yet;
+          noteEl.hidden = false;
+        } else if (!shown) {
+          noteEl.textContent = L.chats_no_results;
+          noteEl.hidden = false;
+        } else {
+          noteEl.hidden = true;
+        }
+      }
+
+      function load() {
+        fetch("/api/chats").then(function (r) {
+          return r.json();
+        }).then(function (d) {
+          chats = (d && d.chats) || [];
+          paint();
+        }).catch(function () {
+          chats = [];
+          paint();
+        });
+      }
+
+      searchEl.addEventListener("input", paint);
+
+      document.getElementById("chats-new").addEventListener(
+        "click", function () {
+          fetch("/api/chats", { method: "POST" }).then(function (r) {
+            return r.json();
+          }).then(function (d) {
+            if (d && d.ok && d.chat) openChat(d.chat.id);
+          }).catch(function () { /* stay here */ });
+        });
+
+      document.getElementById("chats-close-all").addEventListener(
+        "click", function () {
+          if (!chats.length) return;
+          if (!window.confirm(L.chats_close_all_confirm)) return;
+          fetch("/api/chats", { method: "DELETE" })
+            .then(function () { load(); })
+            .catch(function () { load(); });
+        });
+
+      var toggle = document.getElementById("chats-view-toggle");
+      toggle.addEventListener("click", function () {
+        var list = document.body.classList.toggle("chats-list-view");
+        toggle.setAttribute("aria-pressed", list ? "true" : "false");
+      });
+
+      load();
+
+      /* Wave 12: menu stats lines (same tiny fetch as the chat
+         page — small duplication is the norm for these headers). */
+      (function () {
+        var qEl = document.getElementById("menu-stat-questions");
+        var cEl = document.getElementById("menu-stat-chats");
+        if (!qEl || !cEl || !window.fetch) return;
+        fetch("/account/stats.json").then(function (r) {
+          return r.json();
+        }).then(function (d) {
+          if (d && d.ok) {
+            qEl.textContent = String(d.questions || 0);
+            cEl.textContent = String(d.chats || 0);
+          }
+        }).catch(function () { /* placeholders stay */ });
+      })();
+    })();
+  </script>
+{% endblock %}

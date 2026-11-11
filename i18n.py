@@ -3122,3 +3122,1864 @@ STRINGS["bn"].update(_BN_W7)
 STRINGS["mr"].update(_MR_W7)
 STRINGS["ta"].update(_TA_W7)
 STRINGS["te"].update(_TE_W7)
+
+# --- Wave 9 additions: auto-language switch toast --------------------------
+# Shown once in the chat after an automatic language switch (the
+# student chatted in another language). "{lang}" is the language's
+# own name (e.g. हिन्दी). The client also receives the full chat-UI
+# string set in the NEW language inside the /api/solve response so
+# it can re-skin the page without a reload.
+STRINGS["en"].update({
+    "lang_switched_toast": "🌐 Language changed to {lang} — "
+                           "keep asking in any language!",
+})
+STRINGS["hi"].update({
+    "lang_switched_toast": "🌐 भाषा {lang} में बदल गई है — "
+                           "किसी भी भाषा में पूछते रहो!",
+})
+STRINGS["bn"].update({
+    "lang_switched_toast": "🌐 ভাষা {lang}-এ বদলে গেছে — "
+                           "যেকোনো ভাষায় জিজ্ঞেস করতে থাকো!",
+})
+STRINGS["mr"].update({
+    "lang_switched_toast": "🌐 भाषा {lang} मध्ये बदलली आहे — "
+                           "कोणत्याही भाषेत विचारत राहा!",
+})
+STRINGS["ta"].update({
+    "lang_switched_toast": "🌐 மொழி {lang} ஆக மாறிவிட்டது — "
+                           "எந்த மொழியிலும் கேட்கலாம்!",
+})
+STRINGS["te"].update({
+    "lang_switched_toast": "🌐 భాష {lang}కి మారింది — "
+                           "ఏ భాషలోనైనా అడగండి!",
+})
+
+# --- Wave 10 additions: the first-page sign-in ---------------------------
+# Suraj's approved design (one page, one background, logo on top):
+# name + class + board are all TYPE-IN fields (no ready-made chips),
+# then the gold "Your 3 Favourite Things" card (goal, hobby,
+# favourite) with the password inside it, one big button, and the
+# forgot line. Returning students use the Welcome-back mode on the
+# same page: name + password, or name + ANY ONE favourite thing
+# (+ a new password) when the password is forgotten. Every key
+# exists in all 6 languages.
+_EN_W10 = {
+    "nav_logout": "Log out",
+    "auth_name_label": "Your name",
+    "auth_name_placeholder": "Enter your name",
+    "auth_class_label": "Class",
+    "auth_class_placeholder": "Write your class (6 to 12)",
+    "auth_board_label": "Board",
+    "auth_board_placeholder": "Write your board (CBSE, ICSE...)",
+    "auth_fav_heading": "Your 3 Favourite Things",
+    "auth_goal_label": "My Goal",
+    "auth_hobby_label": "My Hobby",
+    "auth_fav_label": "My Favourite",
+    "auth_password_label": "Password",
+    "auth_new_password_label": "New password",
+    "auth_signup_btn": "Create my account",
+    "auth_forgot_line": "Forgot password? Any one favourite thing "
+                        "will log you in",
+    "auth_welcome_back": "Welcome back",
+    "auth_have_account": "Already have an account? Log in",
+    "auth_new_here": "New here? Create your account",
+    "auth_login_btn": "Log in",
+    "auth_login_fav_link": "Forgot password? Log in with a "
+                           "favourite thing",
+    "auth_fav_field_label": "Any one of your 3 favourite things",
+    "auth_fav_login_btn": "Log in & set new password",
+    "auth_err_fill_all": "Please fill every field — name, class, "
+                         "board, all 3 favourite things and a "
+                         "password.",
+    "auth_err_class": "Class must be between 6 and 12 — please "
+                      "write it like 8 or Class 8.",
+    "auth_err_password_short": "Password needs at least 4 "
+                               "characters — pick one you will "
+                               "remember.",
+    "auth_err_name_taken": "This name is already registered. Add "
+                           "something to your name to make it "
+                           "yours — like Aarav S. — and try again.",
+    "auth_err_login": "Name or password did not match. Please "
+                      "check and try again.",
+    "auth_err_fav": "That does not match any of your 3 favourite "
+                    "things. Try another one, exactly as you "
+                    "wrote it.",
+    "auth_err_lockout": "Too many tries — please wait a little "
+                        "and try again.",
+    "auth_err_fav_short": "Each favourite thing needs at least "
+                          "3 letters — write the full word, like "
+                          "Cricket or Pizza.",
+}
+
+_HI_W10 = {
+    "nav_logout": "लॉग आउट",
+    "auth_name_label": "तुम्हारा नाम",
+    "auth_name_placeholder": "अपना नाम लिखो",
+    "auth_class_label": "कक्षा",
+    "auth_class_placeholder": "अपनी कक्षा लिखो (6 से 12)",
+    "auth_board_label": "बोर्ड",
+    "auth_board_placeholder": "अपना बोर्ड लिखो (CBSE, ICSE...)",
+    "auth_fav_heading": "तुम्हारी 3 पसंदीदा चीज़ें",
+    "auth_goal_label": "मेरा लक्ष्य",
+    "auth_hobby_label": "मेरा शौक",
+    "auth_fav_label": "मेरी पसंदीदा चीज़",
+    "auth_password_label": "पासवर्ड",
+    "auth_new_password_label": "नया पासवर्ड",
+    "auth_signup_btn": "मेरा खाता बनाओ",
+    "auth_forgot_line": "पासवर्ड भूल गए? कोई एक पसंदीदा चीज़ "
+                        "तुम्हें लॉग इन करा देगी",
+    "auth_welcome_back": "फिर से स्वागत है",
+    "auth_have_account": "पहले से खाता है? लॉग इन करो",
+    "auth_new_here": "यहाँ नए हो? अपना खाता बनाओ",
+    "auth_login_btn": "लॉग इन",
+    "auth_login_fav_link": "पासवर्ड भूल गए? पसंदीदा चीज़ से "
+                           "लॉग इन करो",
+    "auth_fav_field_label": "तुम्हारी 3 पसंदीदा चीज़ों में से "
+                            "कोई एक",
+    "auth_fav_login_btn": "लॉग इन करो और नया पासवर्ड बनाओ",
+    "auth_err_fill_all": "कृपया हर खाना भरो — नाम, कक्षा, बोर्ड, "
+                         "तीनों पसंदीदा चीज़ें और पासवर्ड।",
+    "auth_err_class": "कक्षा 6 से 12 के बीच होनी चाहिए — ऐसे "
+                      "लिखो जैसे 8 या Class 8।",
+    "auth_err_password_short": "पासवर्ड कम से कम 4 अक्षरों का हो "
+                               "— ऐसा चुनो जो याद रहे।",
+    "auth_err_name_taken": "यह नाम पहले से दर्ज है। अपने नाम में "
+                           "कुछ जोड़कर उसे अपना बनाओ — जैसे "
+                           "Aarav S. — और फिर कोशिश करो।",
+    "auth_err_login": "नाम या पासवर्ड मेल नहीं खाया। जाँचकर फिर "
+                      "कोशिश करो।",
+    "auth_err_fav": "यह तुम्हारी 3 पसंदीदा चीज़ों में से किसी से "
+                    "मेल नहीं खाता। कोई और, बिल्कुल वैसी ही "
+                    "लिखकर देखो जैसी लिखी थी।",
+    "auth_err_lockout": "बहुत कोशिशें हो गईं — थोड़ी देर रुककर "
+                        "फिर कोशिश करो।",
+    "auth_err_fav_short": "हर पसंदीदा चीज़ कम से कम 3 अक्षरों "
+                          "की हो — पूरा शब्द लिखो, जैसे Cricket "
+                          "या Pizza।",
+}
+
+_BN_W10 = {
+    "nav_logout": "লগ আউট",
+    "auth_name_label": "তোমার নাম",
+    "auth_name_placeholder": "তোমার নাম লেখো",
+    "auth_class_label": "শ্রেণি",
+    "auth_class_placeholder": "তোমার শ্রেণি লেখো (6 থেকে 12)",
+    "auth_board_label": "বোর্ড",
+    "auth_board_placeholder": "তোমার বোর্ড লেখো (CBSE, ICSE...)",
+    "auth_fav_heading": "তোমার 3টি প্রিয় জিনিস",
+    "auth_goal_label": "আমার লক্ষ্য",
+    "auth_hobby_label": "আমার শখ",
+    "auth_fav_label": "আমার প্রিয় জিনিস",
+    "auth_password_label": "পাসওয়ার্ড",
+    "auth_new_password_label": "নতুন পাসওয়ার্ড",
+    "auth_signup_btn": "আমার অ্যাকাউন্ট তৈরি করো",
+    "auth_forgot_line": "পাসওয়ার্ড ভুলে গেছো? যেকোনো একটি প্রিয় "
+                        "জিনিস দিয়েই লগ ইন হয়ে যাবে",
+    "auth_welcome_back": "আবার স্বাগতম",
+    "auth_have_account": "আগে থেকেই অ্যাকাউন্ট আছে? লগ ইন করো",
+    "auth_new_here": "এখানে নতুন? তোমার অ্যাকাউন্ট তৈরি করো",
+    "auth_login_btn": "লগ ইন",
+    "auth_login_fav_link": "পাসওয়ার্ড ভুলে গেছো? প্রিয় জিনিস "
+                           "দিয়ে লগ ইন করো",
+    "auth_fav_field_label": "তোমার 3টি প্রিয় জিনিসের যেকোনো একটি",
+    "auth_fav_login_btn": "লগ ইন করো ও নতুন পাসওয়ার্ড বসাও",
+    "auth_err_fill_all": "অনুগ্রহ করে প্রতিটি ঘর পূরণ করো — নাম, "
+                         "শ্রেণি, বোর্ড, 3টি প্রিয় জিনিসই এবং "
+                         "পাসওয়ার্ড।",
+    "auth_err_class": "শ্রেণি 6 থেকে 12-এর মধ্যে হতে হবে — "
+                      "এভাবে লেখো যেমন 8 বা Class 8।",
+    "auth_err_password_short": "পাসওয়ার্ড অন্তত 4 অক্ষরের হতে "
+                               "হবে — এমন একটি বেছে নাও যা মনে "
+                               "থাকবে।",
+    "auth_err_name_taken": "এই নামটি আগেই নথিভুক্ত আছে। তোমার "
+                           "নামের সঙ্গে কিছু যোগ করে সেটাকে "
+                           "তোমার নিজের করে নাও — যেমন Aarav S. "
+                           "— তারপর আবার চেষ্টা করো।",
+    "auth_err_login": "নাম বা পাসওয়ার্ড মেলেনি। যাচাই করে আবার "
+                      "চেষ্টা করো।",
+    "auth_err_fav": "এটি তোমার 3টি প্রিয় জিনিসের কোনোটির সঙ্গে "
+                    "মিলছে না। অন্যটি, ঠিক যেমন লিখেছিলে "
+                    "তেমনভাবেই লিখে দেখো।",
+    "auth_err_lockout": "অনেকবার চেষ্টা হয়ে গেছে — একটু অপেক্ষা "
+                        "করে আবার চেষ্টা করো।",
+    "auth_err_fav_short": "প্রতিটি প্রিয় জিনিস অন্তত 3 অক্ষরের "
+                          "হতে হবে — পুরো শব্দটি লেখো, যেমন "
+                          "Cricket বা Pizza।",
+}
+
+_MR_W10 = {
+    "nav_logout": "लॉग आउट",
+    "auth_name_label": "तुमचे नाव",
+    "auth_name_placeholder": "तुमचे नाव लिहा",
+    "auth_class_label": "इयत्ता",
+    "auth_class_placeholder": "तुमची इयत्ता लिहा (6 ते 12)",
+    "auth_board_label": "बोर्ड",
+    "auth_board_placeholder": "तुमचे बोर्ड लिहा (CBSE, ICSE...)",
+    "auth_fav_heading": "तुमच्या 3 आवडत्या गोष्टी",
+    "auth_goal_label": "माझे ध्येय",
+    "auth_hobby_label": "माझा छंद",
+    "auth_fav_label": "माझी आवडती गोष्ट",
+    "auth_password_label": "पासवर्ड",
+    "auth_new_password_label": "नवीन पासवर्ड",
+    "auth_signup_btn": "माझे खाते तयार करा",
+    "auth_forgot_line": "पासवर्ड विसरलात? कोणतीही एक आवडती गोष्ट "
+                        "तुम्हाला लॉग इन करेल",
+    "auth_welcome_back": "पुन्हा स्वागत आहे",
+    "auth_have_account": "आधीपासून खाते आहे? लॉग इन करा",
+    "auth_new_here": "इथे नवीन आहात? तुमचे खाते तयार करा",
+    "auth_login_btn": "लॉग इन",
+    "auth_login_fav_link": "पासवर्ड विसरलात? आवडत्या गोष्टीने "
+                           "लॉग इन करा",
+    "auth_fav_field_label": "तुमच्या 3 आवडत्या गोष्टींपैकी "
+                            "कोणतीही एक",
+    "auth_fav_login_btn": "लॉग इन करा आणि नवीन पासवर्ड ठेवा",
+    "auth_err_fill_all": "कृपया प्रत्येक रकाना भरा — नाव, "
+                         "इयत्ता, बोर्ड, तिन्ही आवडत्या गोष्टी "
+                         "आणि पासवर्ड.",
+    "auth_err_class": "इयत्ता 6 ते 12 च्या दरम्यान हवी — अशी "
+                      "लिहा जसे 8 किंवा Class 8.",
+    "auth_err_password_short": "पासवर्ड किमान 4 अक्षरांचा हवा "
+                               "— लक्षात राहील असा निवडा.",
+    "auth_err_name_taken": "हे नाव आधीच नोंदवलेले आहे. तुमच्या "
+                           "नावात काही जोडून ते तुमचे स्वतःचे "
+                           "करा — जसे Aarav S. — आणि पुन्हा "
+                           "प्रयत्न करा.",
+    "auth_err_login": "नाव किंवा पासवर्ड जुळला नाही. तपासून "
+                      "पुन्हा प्रयत्न करा.",
+    "auth_err_fav": "हे तुमच्या 3 आवडत्या गोष्टींपैकी कोणत्याही "
+                    "गोष्टीशी जुळत नाही. दुसरी गोष्ट, जशी "
+                    "लिहिली होती तशीच लिहून पहा.",
+    "auth_err_lockout": "खूप प्रयत्न झाले — थोडा वेळ थांबून "
+                        "पुन्हा प्रयत्न करा.",
+    "auth_err_fav_short": "प्रत्येक आवडती गोष्ट किमान 3 "
+                          "अक्षरांची हवी — पूर्ण शब्द लिहा, जसे "
+                          "Cricket किंवा Pizza.",
+}
+
+_TA_W10 = {
+    "nav_logout": "வெளியேறு",
+    "auth_name_label": "உங்கள் பெயர்",
+    "auth_name_placeholder": "உங்கள் பெயரை எழுதுங்கள்",
+    "auth_class_label": "வகுப்பு",
+    "auth_class_placeholder": "உங்கள் வகுப்பை எழுதுங்கள் (6 முதல் 12)",
+    "auth_board_label": "வாரியம்",
+    "auth_board_placeholder": "உங்கள் வாரியத்தை எழுதுங்கள் (CBSE, ICSE...)",
+    "auth_fav_heading": "உங்களுக்குப் பிடித்த 3 விஷயங்கள்",
+    "auth_goal_label": "என் இலக்கு",
+    "auth_hobby_label": "என் பொழுதுபோக்கு",
+    "auth_fav_label": "எனக்கு மிகவும் பிடித்தது",
+    "auth_password_label": "கடவுச்சொல்",
+    "auth_new_password_label": "புதிய கடவுச்சொல்",
+    "auth_signup_btn": "என் கணக்கை உருவாக்கு",
+    "auth_forgot_line": "கடவுச்சொல் மறந்துவிட்டதா? ஏதேனும் "
+                        "ஒரு பிடித்த விஷயம் உங்களை உள்நுழைய "
+                        "வைக்கும்",
+    "auth_welcome_back": "மீண்டும் வருக",
+    "auth_have_account": "ஏற்கனவே கணக்கு உள்ளதா? உள்நுழையுங்கள்",
+    "auth_new_here": "இங்கு புதியவரா? உங்கள் கணக்கை உருவாக்குங்கள்",
+    "auth_login_btn": "உள்நுழை",
+    "auth_login_fav_link": "கடவுச்சொல் மறந்துவிட்டதா? பிடித்த "
+                           "விஷயத்தால் உள்நுழையுங்கள்",
+    "auth_fav_field_label": "உங்களுக்குப் பிடித்த 3 விஷயங்களில் "
+                            "ஏதேனும் ஒன்று",
+    "auth_fav_login_btn": "உள்நுழைந்து புதிய கடவுச்சொல் "
+                          "அமைக்கவும்",
+    "auth_err_fill_all": "ஒவ்வொரு புலத்தையும் நிரப்புங்கள் — "
+                         "பெயர், வகுப்பு, வாரியம், பிடித்த "
+                         "3 விஷயங்களும் மற்றும் கடவுச்சொல்.",
+    "auth_err_class": "வகுப்பு 6 முதல் 12 வரை இருக்க வேண்டும் "
+                      "— 8 அல்லது Class 8 என எழுதுங்கள்.",
+    "auth_err_password_short": "கடவுச்சொல் குறைந்தது 4 "
+                               "எழுத்துகள் இருக்க வேண்டும் — "
+                               "நினைவில் இருக்கும் ஒன்றைத் "
+                               "தேர்ந்தெடுங்கள்.",
+    "auth_err_name_taken": "இந்தப் பெயர் ஏற்கனவே பதிவு "
+                           "செய்யப்பட்டுள்ளது. Aarav S. போல "
+                           "உங்கள் பெயருடன் ஏதாவது சேர்த்து "
+                           "அதை உங்களுடையதாக்கி மீண்டும் "
+                           "முயற்சிக்கவும்.",
+    "auth_err_login": "பெயர் அல்லது கடவுச்சொல் பொருந்தவில்லை. "
+                      "சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
+    "auth_err_fav": "இது உங்களுக்குப் பிடித்த 3 விஷயங்களில் "
+                    "எதுவும் பொருந்தவில்லை. மற்றொன்றை, "
+                    "எழுதியது போலவே எழுதி முயற்சிக்கவும்.",
+    "auth_err_lockout": "பல முயற்சிகள் ஆகிவிட்டன — சிறிது "
+                        "காத்திருந்து மீண்டும் முயற்சிக்கவும்.",
+    "auth_err_fav_short": "ஒவ்வொரு பிடித்த விஷயமும் குறைந்தது "
+                          "3 எழுத்துகள் இருக்க வேண்டும் — "
+                          "Cricket அல்லது Pizza போல முழு "
+                          "வார்த்தையை எழுதுங்கள்.",
+}
+
+_TE_W10 = {
+    "nav_logout": "లాగ్ అవుట్",
+    "auth_name_label": "మీ పేరు",
+    "auth_name_placeholder": "మీ పేరు రాయండి",
+    "auth_class_label": "తరగతి",
+    "auth_class_placeholder": "మీ తరగతి రాయండి (6 నుండి 12)",
+    "auth_board_label": "బోర్డు",
+    "auth_board_placeholder": "మీ బోర్డు రాయండి (CBSE, ICSE...)",
+    "auth_fav_heading": "మీకు ఇష్టమైన 3 విషయాలు",
+    "auth_goal_label": "నా లక్ష్యం",
+    "auth_hobby_label": "నా అభిరుచి",
+    "auth_fav_label": "నాకు అత్యంత ఇష్టమైనది",
+    "auth_password_label": "పాస్‌వర్డ్",
+    "auth_new_password_label": "కొత్త పాస్‌వర్డ్",
+    "auth_signup_btn": "నా ఖాతాను సృష్టించు",
+    "auth_forgot_line": "పాస్‌వర్డ్ మర్చిపోయారా? ఏదైనా ఒక "
+                        "ఇష్టమైన విషయం మిమ్మల్ని లాగిన్ చేస్తుంది",
+    "auth_welcome_back": "మళ్లీ స్వాగతం",
+    "auth_have_account": "ఇప్పటికే ఖాతా ఉందా? లాగిన్ చేయండి",
+    "auth_new_here": "ఇక్కడ కొత్తవారా? మీ ఖాతాను సృష్టించండి",
+    "auth_login_btn": "లాగిన్",
+    "auth_login_fav_link": "పాస్‌వర్డ్ మర్చిపోయారా? ఇష్టమైన "
+                           "విషయంతో లాగిన్ చేయండి",
+    "auth_fav_field_label": "మీకు ఇష్టమైన 3 విషయాలలో ఏదైనా ఒకటి",
+    "auth_fav_login_btn": "లాగిన్ చేసి కొత్త పాస్‌వర్డ్ పెట్టండి",
+    "auth_err_fill_all": "ప్రతి ఫీల్డ్ నింపండి — పేరు, తరగతి, "
+                         "బోర్డు, ఇష్టమైన 3 విషయాలు మరియు "
+                         "పాస్‌వర్డ్.",
+    "auth_err_class": "తరగతి 6 నుండి 12 మధ్య ఉండాలి — 8 లేదా "
+                      "Class 8 అని రాయండి.",
+    "auth_err_password_short": "పాస్‌వర్డ్ కనీసం 4 అక్షరాలు "
+                               "ఉండాలి — గుర్తుండే దాన్ని "
+                               "ఎంచుకోండి.",
+    "auth_err_name_taken": "ఈ పేరు ఇప్పటికే నమోదైంది. Aarav S. "
+                           "లాగా మీ పేరుకు ఏదైనా జోడించి దాన్ని "
+                           "మీ స్వంతం చేసుకుని మళ్లీ "
+                           "ప్రయత్నించండి.",
+    "auth_err_login": "పేరు లేదా పాస్‌వర్డ్ సరిపోలలేదు. "
+                      "సరిచూసి మళ్లీ ప్రయత్నించండి.",
+    "auth_err_fav": "ఇది మీకు ఇష్టమైన 3 విషయాలలో దేనితోనూ "
+                    "సరిపోలలేదు. మరొకటి, రాసినట్లుగానే రాసి "
+                    "ప్రయత్నించండి.",
+    "auth_err_lockout": "చాలా ప్రయత్నాలు అయ్యాయి — కొంచెం "
+                        "ఆగి మళ్లీ ప్రయత్నించండి.",
+    "auth_err_fav_short": "ప్రతి ఇష్టమైన విషయం కనీసం 3 అక్షరాలు "
+                          "ఉండాలి — Cricket లేదా Pizza లాగా "
+                          "పూర్తి పదం రాయండి.",
+}
+
+STRINGS["en"].update(_EN_W10)
+STRINGS["hi"].update(_HI_W10)
+STRINGS["bn"].update(_BN_W10)
+STRINGS["mr"].update(_MR_W10)
+STRINGS["ta"].update(_TA_W10)
+STRINGS["te"].update(_TE_W10)
+
+# --- Wave 11 additions: multiple chats (Brave-style all-chats view) -------
+# Suraj's approved design (from his own Brave screenshot): the
+# chat top bar loses the name–class pill and gains a plain "+" at
+# the far right; tapping it opens the all-chats view — a chats
+# count chip, a "Search your chats" bar that really filters, the
+# chats as a 2-column grid of preview cards (mini logo + title +
+# ✕ + a preview body), a big blue "+" button bottom-centre for a
+# new chat, and a ⋮ menu holding "Close all chats". Chats belong
+# to the signed-in account (server-side, see chats.py). Every key
+# exists in all 6 languages.
+_EN_W11 = {
+    "chats_heading": "Your chats",
+    "chats_search_placeholder": "Search your chats",
+    "chats_new": "New chat",
+    "chats_new_label": "New chat",
+    "chats_open_label": "All chats",
+    "chats_count_label": "{count} chats",
+    "chats_open_now": "Open now",
+    "chats_answer_snippet": "Ganitra's answer",
+    "chats_no_results": "No chat matches your search.",
+    "chats_none_yet": "No chats yet — tap + to start your first chat!",
+    "chats_close_one_label": "Close this chat",
+    "chats_delete_confirm": "Delete this chat? Its questions and "
+                            "answers will be gone.",
+    "chats_close_all": "Close all chats",
+    "chats_close_all_confirm": "Close ALL your chats? Every chat's "
+                               "questions and answers will be gone.",
+    "chats_menu_label": "More options",
+    "chats_view_label": "Grid or list view",
+    "file_btn": "📎 Choose a file",
+    "js_chats_saved_note": "Chats are saved to your account.",
+}
+
+_HI_W11 = {
+    "chats_heading": "तुम्हारी चैट्स",
+    "chats_search_placeholder": "अपनी चैट खोजो",
+    "chats_new": "नई चैट",
+    "chats_new_label": "नई चैट",
+    "chats_open_label": "सारी चैट्स",
+    "chats_count_label": "{count} चैट्स",
+    "chats_open_now": "अभी खुली है",
+    "chats_answer_snippet": "Ganitra का जवाब",
+    "chats_no_results": "तुम्हारी खोज से कोई चैट नहीं मिली।",
+    "chats_none_yet": "अभी कोई चैट नहीं — + दबाकर अपनी पहली चैट "
+                      "शुरू करो!",
+    "chats_close_one_label": "यह चैट बंद करो",
+    "chats_delete_confirm": "यह चैट हटा दें? इसके सवाल और जवाब "
+                            "चले जाएँगे।",
+    "chats_close_all": "सारी चैट्स बंद करो",
+    "chats_close_all_confirm": "तुम्हारी सारी चैट्स बंद कर दें? "
+                               "हर चैट के सवाल-जवाब चले जाएँगे।",
+    "chats_menu_label": "और विकल्प",
+    "chats_view_label": "ग्रिड या सूची दृश्य",
+    "file_btn": "📎 फ़ाइल चुनो",
+    "js_chats_saved_note": "चैट्स तुम्हारे खाते में सहेजी जाती हैं।",
+}
+
+_BN_W11 = {
+    "chats_heading": "তোমার চ্যাটগুলো",
+    "chats_search_placeholder": "তোমার চ্যাট খোঁজো",
+    "chats_new": "নতুন চ্যাট",
+    "chats_new_label": "নতুন চ্যাট",
+    "chats_open_label": "সব চ্যাট",
+    "chats_count_label": "{count}টি চ্যাট",
+    "chats_open_now": "এখন খোলা আছে",
+    "chats_answer_snippet": "Ganitra-র উত্তর",
+    "chats_no_results": "তোমার খোঁজের সঙ্গে কোনো চ্যাট মেলেনি।",
+    "chats_none_yet": "এখনো কোনো চ্যাট নেই — + চেপে তোমার প্রথম "
+                      "চ্যাট শুরু করো!",
+    "chats_close_one_label": "এই চ্যাটটি বন্ধ করো",
+    "chats_delete_confirm": "এই চ্যাটটি মুছে ফেলবে? এর প্রশ্ন ও "
+                            "উত্তর চলে যাবে।",
+    "chats_close_all": "সব চ্যাট বন্ধ করো",
+    "chats_close_all_confirm": "তোমার সব চ্যাট বন্ধ করবে? প্রতিটি "
+                               "চ্যাটের প্রশ্ন ও উত্তর চলে যাবে।",
+    "chats_menu_label": "আরও বিকল্প",
+    "chats_view_label": "গ্রিড বা তালিকা দৃশ্য",
+    "file_btn": "📎 ফাইল বেছে নাও",
+    "js_chats_saved_note": "চ্যাটগুলো তোমার অ্যাকাউন্টে সংরক্ষিত হয়।",
+}
+
+_MR_W11 = {
+    "chats_heading": "तुमच्या चॅट्स",
+    "chats_search_placeholder": "तुमच्या चॅट्स शोधा",
+    "chats_new": "नवीन चॅट",
+    "chats_new_label": "नवीन चॅट",
+    "chats_open_label": "सर्व चॅट्स",
+    "chats_count_label": "{count} चॅट्स",
+    "chats_open_now": "आता उघडी आहे",
+    "chats_answer_snippet": "Ganitra चे उत्तर",
+    "chats_no_results": "तुमच्या शोधाशी कोणतीही चॅट जुळली नाही.",
+    "chats_none_yet": "अजून एकही चॅट नाही — + दाबून तुमची पहिली "
+                      "चॅट सुरू करा!",
+    "chats_close_one_label": "ही चॅट बंद करा",
+    "chats_delete_confirm": "ही चॅट हटवायची? तिचे प्रश्न आणि "
+                            "उत्तरे जातील.",
+    "chats_close_all": "सर्व चॅट्स बंद करा",
+    "chats_close_all_confirm": "तुमच्या सर्व चॅट्स बंद करायच्या? "
+                               "प्रत्येक चॅटचे प्रश्न-उत्तरे जातील.",
+    "chats_menu_label": "अधिक पर्याय",
+    "chats_view_label": "ग्रिड किंवा यादी दृश्य",
+    "file_btn": "📎 फाइल निवडा",
+    "js_chats_saved_note": "चॅट्स तुमच्या खात्यात जतन होतात.",
+}
+
+_TA_W11 = {
+    "chats_heading": "உங்கள் அரட்டைகள்",
+    "chats_search_placeholder": "உங்கள் அரட்டைகளைத் தேடுங்கள்",
+    "chats_new": "புதிய அரட்டை",
+    "chats_new_label": "புதிய அரட்டை",
+    "chats_open_label": "எல்லா அரட்டைகளும்",
+    "chats_count_label": "{count} அரட்டைகள்",
+    "chats_open_now": "இப்போது திறந்துள்ளது",
+    "chats_answer_snippet": "Ganitra-வின் பதில்",
+    "chats_no_results": "உங்கள் தேடலுடன் எந்த அரட்டையும் "
+                        "பொருந்தவில்லை.",
+    "chats_none_yet": "இன்னும் அரட்டைகள் இல்லை — + ஐத் தட்டி "
+                      "உங்கள் முதல் அரட்டையைத் தொடங்குங்கள்!",
+    "chats_close_one_label": "இந்த அரட்டையை மூடு",
+    "chats_delete_confirm": "இந்த அரட்டையை நீக்கவா? அதன் "
+                            "கேள்விகளும் பதில்களும் போய்விடும்.",
+    "chats_close_all": "எல்லா அரட்டைகளையும் மூடு",
+    "chats_close_all_confirm": "உங்கள் எல்லா அரட்டைகளையும் "
+                               "மூடவா? ஒவ்வொரு அரட்டையின் "
+                               "கேள்விகளும் பதில்களும் போய்விடும்.",
+    "chats_menu_label": "மேலும் விருப்பங்கள்",
+    "chats_view_label": "கட்டம் அல்லது பட்டியல் காட்சி",
+    "file_btn": "📎 கோப்பைத் தேர்ந்தெடு",
+    "js_chats_saved_note": "அரட்டைகள் உங்கள் கணக்கில் "
+                           "சேமிக்கப்படுகின்றன.",
+}
+
+_TE_W11 = {
+    "chats_heading": "మీ చాట్‌లు",
+    "chats_search_placeholder": "మీ చాట్‌లను వెతకండి",
+    "chats_new": "కొత్త చాట్",
+    "chats_new_label": "కొత్త చాట్",
+    "chats_open_label": "అన్ని చాట్‌లు",
+    "chats_count_label": "{count} చాట్‌లు",
+    "chats_open_now": "ఇప్పుడు తెరిచి ఉంది",
+    "chats_answer_snippet": "Ganitra సమాధానం",
+    "chats_no_results": "మీ శోధనకు ఏ చాట్ సరిపోలలేదు.",
+    "chats_none_yet": "ఇంకా చాట్‌లు లేవు — + నొక్కి మీ మొదటి "
+                      "చాట్‌ను ప్రారంభించండి!",
+    "chats_close_one_label": "ఈ చాట్‌ను మూసివేయి",
+    "chats_delete_confirm": "ఈ చాట్‌ను తొలగించాలా? దాని "
+                            "ప్రశ్నలు, సమాధానాలు పోతాయి.",
+    "chats_close_all": "అన్ని చాట్‌లను మూసివేయి",
+    "chats_close_all_confirm": "మీ అన్ని చాట్‌లను మూసివేయాలా? "
+                               "ప్రతి చాట్ ప్రశ్నలు, సమాధానాలు "
+                               "పోతాయి.",
+    "chats_menu_label": "మరిన్ని ఎంపికలు",
+    "chats_view_label": "గ్రిడ్ లేదా జాబితా వీక్షణ",
+    "file_btn": "📎 ఫైల్‌ను ఎంచుకోండి",
+    "js_chats_saved_note": "చాట్‌లు మీ ఖాతాలో సేవ్ అవుతాయి.",
+}
+
+STRINGS["en"].update(_EN_W11)
+STRINGS["hi"].update(_HI_W11)
+STRINGS["bn"].update(_BN_W11)
+STRINGS["mr"].update(_MR_W11)
+STRINGS["ta"].update(_TA_W11)
+STRINGS["te"].update(_TE_W11)
+
+# --- Wave 12 additions: menu-inside package + My Account + methods --------
+# Suraj's approved full-page menu (LinkedIn-style): the profile block
+# links to the new My Account page, where the student can change
+# EVERYTHING (name, class, board, the 3 favourite things, password)
+# and add his own photo. Log out lives ONLY on that page. The menu
+# also carries the real stats lines ("{n} questions solved",
+# "{n} chats") filled from /account/stats.json. The mm_* keys label
+# the Wave-12 multi-method chips on chat bubbles and the answer
+# page. Every key exists in all 6 languages.
+_EN_W12 = {
+    "acct_heading": "My Account",
+    "acct_student_line": "Class {class} Student",
+    "acct_stats_questions": "{count} questions solved",
+    "acct_stats_chats": "{count} chats",
+    "acct_verified_line": "Ganitra Maths student",
+    "acct_questions_word": "questions solved",
+    "acct_chats_word": "chats",
+    "menu_new_here": "New chat",
+    "menu_keep_line": "Keep learning, keep shining",
+    "menu_settings": "Settings",
+    "menu_language": "Language",
+    "menu_copy_style": "Copy Style",
+    "menu_your_chats": "Your chats",
+    "mm_more": "More methods",
+    "mm_more_prefix": "More methods available —",
+    "mm_methods_suffix": "more ways to solve this",
+    "mm_other_heading": "Other methods:",
+    "mm_method_label": "Method",
+    "mm_method_word": "method",
+    "mm_listen": "Listen",
+    "mm_suno": "Listen",
+    "mm_teach_btn": "Teach me",
+    "mm_teacher_mode": "Teacher mode",
+    "mm_solve_btn": "Solve",
+    "mm_solution_label": "Solution",
+    "mm_steps_word": "steps",
+    "field_name": "Name",
+    "field_class": "Class",
+    "field_board": "Board",
+    "field_goal": "My Goal",
+    "field_hobby": "My Hobby",
+    "field_favourite": "My Favourite",
+    "field_password": "Password",
+    "field_old_password": "Old password",
+    "field_new_password": "New password",
+    "acct_edit_btn": "Edit",
+    "acct_save_btn": "Save changes",
+    "acct_change_btn": "Change",
+    "acct_change_photo": "Change photo",
+    "acct_upload_photo": "Upload photo",
+    "acct_remove_photo": "Remove photo",
+    "acct_saved_note": "Saved ✓",
+    "acct_current_password_label": "Current password",
+    "acct_photo_hint": "PNG or JPG, up to 2 MB",
+    "acct_err_required": "Please fill this in.",
+    "acct_err_photo_type": "Please choose a PNG or JPG photo.",
+    "acct_err_photo_size": "That photo is too big — please pick "
+                           "one under 2 MB.",
+    "acct_err_password_wrong": "That password did not match. "
+                               "Please check and try again.",
+    "acct_err_old_password": "Please type your current password "
+                             "first.",
+}
+
+_HI_W12 = {
+    "acct_heading": "मेरा खाता",
+    "acct_student_line": "कक्षा {class} का छात्र",
+    "acct_stats_questions": "{count} सवाल हल किए",
+    "acct_stats_chats": "{count} चैट्स",
+    "acct_verified_line": "Ganitra Maths का छात्र",
+    "acct_questions_word": "सवाल हल किए",
+    "acct_chats_word": "चैट्स",
+    "menu_new_here": "नई चैट",
+    "menu_keep_line": "पढ़ते रहो, चमकते रहो",
+    "menu_settings": "सेटिंग्स",
+    "menu_language": "भाषा",
+    "menu_copy_style": "कॉपी स्टाइल",
+    "menu_your_chats": "तुम्हारी चैट्स",
+    "mm_more": "और तरीक़े",
+    "mm_more_prefix": "और तरीक़े उपलब्ध हैं —",
+    "mm_methods_suffix": "इसे हल करने के और तरीक़े",
+    "mm_other_heading": "दूसरे तरीक़े:",
+    "mm_method_label": "तरीक़ा",
+    "mm_method_word": "तरीक़ा",
+    "mm_listen": "सुनो",
+    "mm_suno": "सुनो",
+    "mm_teach_btn": "मुझे पढ़ाओ",
+    "mm_teacher_mode": "टीचर मोड",
+    "mm_solve_btn": "हल करो",
+    "mm_solution_label": "हल",
+    "mm_steps_word": "कदम",
+    "field_name": "नाम",
+    "field_class": "कक्षा",
+    "field_board": "बोर्ड",
+    "field_goal": "मेरा लक्ष्य",
+    "field_hobby": "मेरा शौक",
+    "field_favourite": "मेरी पसंदीदा चीज़",
+    "field_password": "पासवर्ड",
+    "field_old_password": "पुराना पासवर्ड",
+    "field_new_password": "नया पासवर्ड",
+    "acct_edit_btn": "बदलो",
+    "acct_save_btn": "बदलाव सहेजो",
+    "acct_change_btn": "बदलो",
+    "acct_change_photo": "फ़ोटो बदलो",
+    "acct_upload_photo": "फ़ोटो लगाओ",
+    "acct_remove_photo": "फ़ोटो हटाओ",
+    "acct_saved_note": "सहेजा गया ✓",
+    "acct_current_password_label": "मौजूदा पासवर्ड",
+    "acct_photo_hint": "PNG या JPG, 2 MB तक",
+    "acct_err_required": "कृपया यह भर दो।",
+    "acct_err_photo_type": "कृपया PNG या JPG फ़ोटो चुनो।",
+    "acct_err_photo_size": "यह फ़ोटो बहुत बड़ी है — 2 MB से छोटी "
+                           "फ़ोटो चुनो।",
+    "acct_err_password_wrong": "यह पासवर्ड मेल नहीं खाया। जाँचकर "
+                               "फिर कोशिश करो।",
+    "acct_err_old_password": "पहले अपना मौजूदा पासवर्ड लिखो।",
+}
+
+_BN_W12 = {
+    "acct_heading": "আমার অ্যাকাউন্ট",
+    "acct_student_line": "{class} শ্রেণির ছাত্র",
+    "acct_stats_questions": "{count}টি প্রশ্ন সমাধান হয়েছে",
+    "acct_stats_chats": "{count}টি চ্যাট",
+    "acct_verified_line": "Ganitra Maths-এর ছাত্র",
+    "acct_questions_word": "প্রশ্ন সমাধান হয়েছে",
+    "acct_chats_word": "চ্যাট",
+    "menu_new_here": "নতুন চ্যাট",
+    "menu_keep_line": "শিখতে থাকো, উজ্জ্বল হতে থাকো",
+    "menu_settings": "সেটিংস",
+    "menu_language": "ভাষা",
+    "menu_copy_style": "কপি স্টাইল",
+    "menu_your_chats": "তোমার চ্যাটগুলো",
+    "mm_more": "আরও পদ্ধতি",
+    "mm_more_prefix": "আরও পদ্ধতি আছে —",
+    "mm_methods_suffix": "এটি সমাধানের আরও উপায়",
+    "mm_other_heading": "অন্যান্য পদ্ধতি:",
+    "mm_method_label": "পদ্ধতি",
+    "mm_method_word": "পদ্ধতি",
+    "mm_listen": "শোনো",
+    "mm_suno": "শোনো",
+    "mm_teach_btn": "আমাকে শেখাও",
+    "mm_teacher_mode": "শিক্ষক মোড",
+    "mm_solve_btn": "সমাধান করো",
+    "mm_solution_label": "সমাধান",
+    "mm_steps_word": "ধাপ",
+    "field_name": "নাম",
+    "field_class": "শ্রেণি",
+    "field_board": "বোর্ড",
+    "field_goal": "আমার লক্ষ্য",
+    "field_hobby": "আমার শখ",
+    "field_favourite": "আমার প্রিয় জিনিস",
+    "field_password": "পাসওয়ার্ড",
+    "field_old_password": "পুরোনো পাসওয়ার্ড",
+    "field_new_password": "নতুন পাসওয়ার্ড",
+    "acct_edit_btn": "বদলাও",
+    "acct_save_btn": "পরিবর্তন সংরক্ষণ করো",
+    "acct_change_btn": "বদলাও",
+    "acct_change_photo": "ছবি বদলাও",
+    "acct_upload_photo": "ছবি দাও",
+    "acct_remove_photo": "ছবি সরাও",
+    "acct_saved_note": "সংরক্ষিত হয়েছে ✓",
+    "acct_current_password_label": "বর্তমান পাসওয়ার্ড",
+    "acct_photo_hint": "PNG বা JPG, 2 MB পর্যন্ত",
+    "acct_err_required": "অনুগ্রহ করে এটি পূরণ করো।",
+    "acct_err_photo_type": "অনুগ্রহ করে PNG বা JPG ছবি বেছে নাও।",
+    "acct_err_photo_size": "এই ছবিটি খুব বড় — 2 MB-এর ছোট ছবি "
+                           "বেছে নাও।",
+    "acct_err_password_wrong": "পাসওয়ার্ডটি মেলেনি। যাচাই করে "
+                               "আবার চেষ্টা করো।",
+    "acct_err_old_password": "আগে তোমার বর্তমান পাসওয়ার্ড লেখো।",
+}
+
+_MR_W12 = {
+    "acct_heading": "माझे खाते",
+    "acct_student_line": "इयत्ता {class} चा विद्यार्थी",
+    "acct_stats_questions": "{count} प्रश्न सोडवले",
+    "acct_stats_chats": "{count} चॅट्स",
+    "acct_verified_line": "Ganitra Maths चा विद्यार्थी",
+    "acct_questions_word": "प्रश्न सोडवले",
+    "acct_chats_word": "चॅट्स",
+    "menu_new_here": "नवीन चॅट",
+    "menu_keep_line": "शिकत राहा, चमकत राहा",
+    "menu_settings": "सेटिंग्ज",
+    "menu_language": "भाषा",
+    "menu_copy_style": "कॉपी स्टाइल",
+    "menu_your_chats": "तुमच्या चॅट्स",
+    "mm_more": "आणखी पद्धती",
+    "mm_more_prefix": "आणखी पद्धती उपलब्ध आहेत —",
+    "mm_methods_suffix": "हे सोडवण्याचे आणखी मार्ग",
+    "mm_other_heading": "इतर पद्धती:",
+    "mm_method_label": "पद्धत",
+    "mm_method_word": "पद्धत",
+    "mm_listen": "ऐका",
+    "mm_suno": "ऐका",
+    "mm_teach_btn": "मला शिकवा",
+    "mm_teacher_mode": "शिक्षक मोड",
+    "mm_solve_btn": "सोडवा",
+    "mm_solution_label": "उत्तर",
+    "mm_steps_word": "पायऱ्या",
+    "field_name": "नाव",
+    "field_class": "इयत्ता",
+    "field_board": "बोर्ड",
+    "field_goal": "माझे ध्येय",
+    "field_hobby": "माझा छंद",
+    "field_favourite": "माझी आवडती गोष्ट",
+    "field_password": "पासवर्ड",
+    "field_old_password": "जुना पासवर्ड",
+    "field_new_password": "नवीन पासवर्ड",
+    "acct_edit_btn": "बदला",
+    "acct_save_btn": "बदल जतन करा",
+    "acct_change_btn": "बदला",
+    "acct_change_photo": "फोटो बदला",
+    "acct_upload_photo": "फोटो लावा",
+    "acct_remove_photo": "फोटो काढा",
+    "acct_saved_note": "जतन झाले ✓",
+    "acct_current_password_label": "सध्याचा पासवर्ड",
+    "acct_photo_hint": "PNG किंवा JPG, 2 MB पर्यंत",
+    "acct_err_required": "कृपया हे भरा.",
+    "acct_err_photo_type": "कृपया PNG किंवा JPG फोटो निवडा.",
+    "acct_err_photo_size": "हा फोटो खूप मोठा आहे — 2 MB पेक्षा "
+                           "लहान फोटो निवडा.",
+    "acct_err_password_wrong": "पासवर्ड जुळला नाही. तपासून "
+                               "पुन्हा प्रयत्न करा.",
+    "acct_err_old_password": "आधी तुमचा सध्याचा पासवर्ड लिहा.",
+}
+
+_TA_W12 = {
+    "acct_heading": "என் கணக்கு",
+    "acct_student_line": "{class} ஆம் வகுப்பு மாணவன்",
+    "acct_stats_questions": "{count} கேள்விகள் தீர்க்கப்பட்டன",
+    "acct_stats_chats": "{count} அரட்டைகள்",
+    "acct_verified_line": "Ganitra Maths மாணவன்",
+    "acct_questions_word": "கேள்விகள் தீர்க்கப்பட்டன",
+    "acct_chats_word": "அரட்டைகள்",
+    "menu_new_here": "புதிய அரட்டை",
+    "menu_keep_line": "கற்றுக்கொண்டே இரு, ஒளிர்ந்துகொண்டே இரு",
+    "menu_settings": "அமைப்புகள்",
+    "menu_language": "மொழி",
+    "menu_copy_style": "நகல் பாணி",
+    "menu_your_chats": "உங்கள் அரட்டைகள்",
+    "mm_more": "மேலும் முறைகள்",
+    "mm_more_prefix": "மேலும் முறைகள் உள்ளன —",
+    "mm_methods_suffix": "இதைத் தீர்க்க மேலும் வழிகள்",
+    "mm_other_heading": "பிற முறைகள்:",
+    "mm_method_label": "முறை",
+    "mm_method_word": "முறை",
+    "mm_listen": "கேளுங்கள்",
+    "mm_suno": "கேளுங்கள்",
+    "mm_teach_btn": "எனக்குக் கற்பியுங்கள்",
+    "mm_teacher_mode": "ஆசிரியர் முறை",
+    "mm_solve_btn": "தீர்வு காண்",
+    "mm_solution_label": "தீர்வு",
+    "mm_steps_word": "படிகள்",
+    "field_name": "பெயர்",
+    "field_class": "வகுப்பு",
+    "field_board": "வாரியம்",
+    "field_goal": "என் இலக்கு",
+    "field_hobby": "என் பொழுதுபோக்கு",
+    "field_favourite": "எனக்கு மிகவும் பிடித்தது",
+    "field_password": "கடவுச்சொல்",
+    "field_old_password": "பழைய கடவுச்சொல்",
+    "field_new_password": "புதிய கடவுச்சொல்",
+    "acct_edit_btn": "திருத்து",
+    "acct_save_btn": "மாற்றங்களைச் சேமி",
+    "acct_change_btn": "மாற்று",
+    "acct_change_photo": "புகைப்படத்தை மாற்று",
+    "acct_upload_photo": "புகைப்படம் சேர்",
+    "acct_remove_photo": "புகைப்படத்தை நீக்கு",
+    "acct_saved_note": "சேமிக்கப்பட்டது ✓",
+    "acct_current_password_label": "தற்போதைய கடவுச்சொல்",
+    "acct_photo_hint": "PNG அல்லது JPG, 2 MB வரை",
+    "acct_err_required": "தயவுசெய்து இதை நிரப்புங்கள்.",
+    "acct_err_photo_type": "தயவுசெய்து PNG அல்லது JPG "
+                           "புகைப்படத்தைத் தேர்ந்தெடுங்கள்.",
+    "acct_err_photo_size": "இந்தப் புகைப்படம் மிகப் பெரியது — "
+                           "2 MB க்கும் குறைவான ஒன்றைத் "
+                           "தேர்ந்தெடுங்கள்.",
+    "acct_err_password_wrong": "கடவுச்சொல் பொருந்தவில்லை. "
+                               "சரிபார்த்து மீண்டும் முயற்சிக்கவும்.",
+    "acct_err_old_password": "முதலில் உங்கள் தற்போதைய "
+                             "கடவுச்சொல்லை எழுதுங்கள்.",
+}
+
+_TE_W12 = {
+    "acct_heading": "నా ఖాతా",
+    "acct_student_line": "{class}వ తరగతి విద్యార్థి",
+    "acct_stats_questions": "{count} ప్రశ్నలు పరిష్కరించబడ్డాయి",
+    "acct_stats_chats": "{count} చాట్‌లు",
+    "acct_verified_line": "Ganitra Maths విద్యార్థి",
+    "acct_questions_word": "ప్రశ్నలు పరిష్కరించబడ్డాయి",
+    "acct_chats_word": "చాట్‌లు",
+    "menu_new_here": "కొత్త చాట్",
+    "menu_keep_line": "నేర్చుకుంటూ ఉండండి, మెరుస్తూ ఉండండి",
+    "menu_settings": "సెట్టింగ్‌లు",
+    "menu_language": "భాష",
+    "menu_copy_style": "కాపీ స్టైల్",
+    "menu_your_chats": "మీ చాట్‌లు",
+    "mm_more": "మరిన్ని పద్ధతులు",
+    "mm_more_prefix": "మరిన్ని పద్ధతులు అందుబాటులో ఉన్నాయి —",
+    "mm_methods_suffix": "దీన్ని పరిష్కరించే మరిన్ని మార్గాలు",
+    "mm_other_heading": "ఇతర పద్ధతులు:",
+    "mm_method_label": "పద్ధతి",
+    "mm_method_word": "పద్ధతి",
+    "mm_listen": "వినండి",
+    "mm_suno": "వినండి",
+    "mm_teach_btn": "నాకు నేర్పించండి",
+    "mm_teacher_mode": "టీచర్ మోడ్",
+    "mm_solve_btn": "పరిష్కరించు",
+    "mm_solution_label": "పరిష్కారం",
+    "mm_steps_word": "దశలు",
+    "field_name": "పేరు",
+    "field_class": "తరగతి",
+    "field_board": "బోర్డు",
+    "field_goal": "నా లక్ష్యం",
+    "field_hobby": "నా అభిరుచి",
+    "field_favourite": "నాకు అత్యంత ఇష్టమైనది",
+    "field_password": "పాస్‌వర్డ్",
+    "field_old_password": "పాత పాస్‌వర్డ్",
+    "field_new_password": "కొత్త పాస్‌వర్డ్",
+    "acct_edit_btn": "మార్చు",
+    "acct_save_btn": "మార్పులను సేవ్ చేయి",
+    "acct_change_btn": "మార్చు",
+    "acct_change_photo": "ఫోటో మార్చు",
+    "acct_upload_photo": "ఫోటో పెట్టు",
+    "acct_remove_photo": "ఫోటో తీసెయ్",
+    "acct_saved_note": "సేవ్ అయింది ✓",
+    "acct_current_password_label": "ప్రస్తుత పాస్‌వర్డ్",
+    "acct_photo_hint": "PNG లేదా JPG, 2 MB వరకు",
+    "acct_err_required": "దయచేసి ఇది నింపండి.",
+    "acct_err_photo_type": "దయచేసి PNG లేదా JPG ఫోటోను "
+                           "ఎంచుకోండి.",
+    "acct_err_photo_size": "ఆ ఫోటో చాలా పెద్దది — 2 MB కంటే "
+                           "తక్కువది ఎంచుకోండి.",
+    "acct_err_password_wrong": "పాస్‌వర్డ్ సరిపోలలేదు. సరిచూసి "
+                               "మళ్లీ ప్రయత్నించండి.",
+    "acct_err_old_password": "ముందు మీ ప్రస్తుత పాస్‌వర్డ్ "
+                             "రాయండి.",
+}
+
+STRINGS["en"].update(_EN_W12)
+STRINGS["hi"].update(_HI_W12)
+STRINGS["bn"].update(_BN_W12)
+STRINGS["mr"].update(_MR_W12)
+STRINGS["ta"].update(_TA_W12)
+STRINGS["te"].update(_TE_W12)
+
+
+# ---------------------------------------------------------------------------
+# Wave 12: "Teach me" — short teacher-style concept lines per topic.
+#
+# TEACH[lang][key] is a list of 3-5 short lines: what the question
+# type is really asking, the key idea/formula in words, one line of
+# guidance for the steps above, and a tiny practice line. Lookup
+# mirrors explanation_for: "type:op" -> "type" -> "generic".
+# Full content exists for en + hi; the other four languages fall
+# back to the English lines (same documented fallback style as
+# get_strings merging English underneath).
+# ---------------------------------------------------------------------------
+
+TEACH = {
+    "en": {
+        "algebra:equation": [
+            "An equation is a balance: both sides must stay equal, "
+            "like the two pans of a weighing scale.",
+            "Whatever you do to one side, do the same to the other "
+            "side — that is the whole secret.",
+            "Bring the letter (variable) alone on one side, step by "
+            "step, and the number on the other side is your answer.",
+            "Quick check: put the answer back into the question — "
+            "both sides should come out equal.",
+            "Practice: try solving 3x + 4 = 19 the same way.",
+        ],
+        "algebra": [
+            "Algebra is arithmetic with a letter standing in for a "
+            "number you do not know yet.",
+            "Treat the letter like a hidden number: collect its "
+            "terms together and simplify slowly.",
+            "Work bracket by bracket, and keep every '=' line "
+            "balanced — nothing appears or disappears for free.",
+            "Practice: simplify 2(x + 3) + 4x on your own first.",
+        ],
+        "arithmetic:percentage": [
+            "Percent simply means 'out of 100' — 15% is 15 out of "
+            "every 100.",
+            "To find a percentage of a number, change the percent "
+            "into a fraction (15% = 15/100) and multiply.",
+            "The unitary way also works: find 1% first, then "
+            "multiply by how many percent you need.",
+            "Practice: find 20% of 150 using both ways.",
+        ],
+        "arithmetic": [
+            "Arithmetic questions are solved in a fixed order — "
+            "BODMAS: Brackets, Orders (powers), Division and "
+            "Multiplication, then Addition and Subtraction.",
+            "Do one small step at a time and rewrite the whole line "
+            "after each step; most mistakes come from rushing.",
+            "Equal-priority steps (x and ÷, + and -) are done left "
+            "to right.",
+            "Practice: work out 6 + 2 x 3 - remembering the order!",
+        ],
+        "calculus": [
+            "Calculus studies change: a derivative measures how "
+            "fast something is changing at one exact moment.",
+            "For x^n the rule is friendly: bring the power down and "
+            "reduce the power by 1 (x^3 becomes 3x^2).",
+            "Integration is the reverse journey — it collects "
+            "change back into a total, like area under a curve.",
+            "Practice: differentiate x^4 using the power rule.",
+        ],
+        "trigonometry": [
+            "Trigonometry links the angles of a triangle with the "
+            "lengths of its sides.",
+            "Remember SOH-CAH-TOA: sin = Opposite/Hypotenuse, "
+            "cos = Adjacent/Hypotenuse, tan = Opposite/Adjacent.",
+            "The famous values (0°, 30°, 45°, 60°, 90°) are worth "
+            "learning by heart — exams love them.",
+            "Practice: write sin, cos and tan for a 3-4-5 triangle.",
+        ],
+        "geometry": [
+            "Geometry questions usually hide in one picture and one "
+            "formula — draw the figure first, always.",
+            "Write the formula down (area, perimeter, volume) "
+            "before putting any numbers in.",
+            "Keep the units with the numbers: cm for length, cm² "
+            "for area, cm³ for volume.",
+            "Practice: find the area of a circle with radius 7.",
+        ],
+        "statistics": [
+            "Statistics turns a list of numbers into a story: its "
+            "centre (mean, median, mode) and its spread.",
+            "Mean = total of all values ÷ how many values there "
+            "are. Median is the middle value after sorting.",
+            "For probability: favourable outcomes ÷ total possible "
+            "outcomes — count both carefully.",
+            "Practice: find the mean and median of 2, 5, 5, 8, 10.",
+        ],
+        "generic": [
+            "Every maths question has a pattern — first ask "
+            "yourself: what is given, and what is being asked?",
+            "Solve slowly, one honest step at a time, and write "
+            "each step down; a written step can be checked, a "
+            "rushed one cannot.",
+            "When you get an answer, do a 10-second sense check: "
+            "is it roughly the size you expected?",
+            "Practice: re-solve this same question on paper "
+            "without looking at the steps.",
+        ],
+    },
+    "hi": {
+        "algebra:equation": [
+            "Equation ek tarazu jaisi hoti hai — dono taraf hamesha "
+            "barabar rehna chahiye।",
+            "Jo ek taraf karo, wahi dusri taraf bhi karo — yahi "
+            "poora raaz hai।",
+            "Akshar (variable) ko ek taraf akela karo, kadam-dar-"
+            "kadam; dusri taraf bachi sankhya hi jawaab hai।",
+            "Jaanch: jawaab ko sawaal me wapas rakho — dono taraf "
+            "barabar aana chahiye।",
+            "Abhyaas: 3x + 4 = 19 ko isi tareeke se hal karo।",
+        ],
+        "algebra": [
+            "Algebra me ek akshar us sankhya ki jagah khada hota "
+            "hai jo abhi pata nahi hai।",
+            "Akshar ko chhupi hui sankhya samjho: uske hisse ek "
+            "saath jodo aur dheere-dheere saral karo।",
+            "Koshthak (bracket) ek-ek karke kholo, aur har '=' "
+            "wali line ko santulit rakho।",
+            "Abhyaas: 2(x + 3) + 4x ko khud saral karke dekho।",
+        ],
+        "arithmetic:percentage": [
+            "Percent ka matlab hai 'har 100 me se' — 15% matlab "
+            "har 100 me se 15।",
+            "Kisi sankhya ka percent nikaalne ke liye percent ko "
+            "bhinn (fraction) bana lo (15% = 15/100) aur guna kar "
+            "do।",
+            "Unitary tareeka bhi chalega: pehle 1% nikaalo, phir "
+            "jitne percent chahiye utne se guna kar do।",
+            "Abhyaas: 150 ka 20% dono tareeko se nikaalo।",
+        ],
+        "arithmetic": [
+            "Arithmetic ke sawaal ek tay kram se bante hai — "
+            "BODMAS: pehle koshthak, phir ghaat (powers), phir "
+            "bhaag aur guna, aakhir me jod aur ghata।",
+            "Ek baar me ek chhota kadam lo aur har kadam ke baad "
+            "poori line dobara likho; galti aksar jaldi se hoti "
+            "hai।",
+            "Barabar mahatva wale kadam (x aur ÷, + aur -) baaye "
+            "se daaye kiye jaate hai।",
+            "Abhyaas: 6 + 2 x 3 ko kram yaad rakhkar hal karo!",
+        ],
+        "calculus": [
+            "Calculus badlav ka adhyayan hai: derivative batata "
+            "hai ki koi cheez ek pal me kitni tezi se badal rahi "
+            "hai।",
+            "x^n ke liye niyam aasan hai: ghaat ko neeche le aao "
+            "aur ghaat 1 kam kar do (x^3 banta hai 3x^2)।",
+            "Integration iski ulti yatra hai — badlav ko jodkar "
+            "kul me badalna, jaise vakr ke neeche ka kshetrafal।",
+            "Abhyaas: power rule se x^4 ka derivative nikaalo।",
+        ],
+        "trigonometry": [
+            "Trigonometry tribhuj ke kono ko uski bhujaon ki "
+            "lambai se jodti hai।",
+            "SOH-CAH-TOA yaad rakho: sin = Lamb/Karn, cos = "
+            "Aadhar/Karn, tan = Lamb/Aadhar।",
+            "Khaas maan (0°, 30°, 45°, 60°, 90°) rat lene layak "
+            "hai — pareeksha me aksar aate hai।",
+            "Abhyaas: 3-4-5 wale tribhuj ke liye sin, cos, tan "
+            "likho।",
+        ],
+        "geometry": [
+            "Geometry ke sawaal aksar ek chitra aur ek sutra me "
+            "chhupe hote hai — pehle aakriti banao, hamesha।",
+            "Sankhyaye rakhne se pehle sutra (kshetrafal, parimap, "
+            "aayatan) likh lo।",
+            "Ikaai (unit) sankhya ke saath rakho: lambai cm, "
+            "kshetrafal cm², aayatan cm³।",
+            "Abhyaas: trijya 7 wale vritt ka kshetrafal nikaalo।",
+        ],
+        "statistics": [
+            "Statistics sankhyao ki list ko ek kahani banati hai: "
+            "uska kendra (mean, median, mode) aur uska phailav।",
+            "Mean = saari sankhyao ka yog ÷ kul sankhyaye। "
+            "Median kram me lagi list ka beech wala maan hai।",
+            "Probability ke liye: anukool parinaam ÷ kul sambhav "
+            "parinaam — dono dhyaan se gino।",
+            "Abhyaas: 2, 5, 5, 8, 10 ka mean aur median nikaalo।",
+        ],
+        "generic": [
+            "Har maths sawaal ka ek pattern hota hai — pehle khud "
+            "se poochho: diya kya hai, aur poochha kya gaya hai?",
+            "Dheere, ek-ek imandaar kadam se hal karo aur har "
+            "kadam likho; likha hua kadam jaancha ja sakta hai, "
+            "jaldi wala nahi।",
+            "Jawaab milne par 10-second ki samajh-jaanch karo: "
+            "kya ye lagbhag utna hi bada hai jitna socha tha?",
+            "Abhyaas: isi sawaal ko kadam dekhe bina copy par "
+            "dobara hal karo।",
+        ],
+    },
+}
+
+
+def teach_for(result, lang):
+    """Wave 12 'Teach me': short teacher-style concept lines for a
+    solver result. Lookup mirrors explanation_for ("type:op" ->
+    "type" -> "generic"); languages without their own TEACH table
+    use the English lines. Never raises; always returns a list."""
+    try:
+        result = result or {}
+        rtype = result.get("type", "") or ""
+        rop = result.get("op", "") or ""
+        table = TEACH.get(lang) or TEACH["en"]
+        fallback = TEACH["en"]
+        lines = (table.get(f"{rtype}:{rop}") or table.get(rtype)
+                 or fallback.get(f"{rtype}:{rop}")
+                 or fallback.get(rtype) or fallback["generic"])
+        return list(lines)
+    except Exception:
+        return list(TEACH["en"]["generic"])
+
+
+# ---------------------------------------------------------------------------
+# Wave 13: Classes 0-12 coverage expansion. Method labels for the
+# new Wave-13 methods (plus bank entries for the Wave-12 ids) as
+# STRINGS keys in all 6 languages — app.py already exposes every
+# "mm_" key to the chat JS as js_t. Explanation and advice keys
+# for the new "junior"/"applied" result types are added to ALL
+# six tables because explanation/advice lookups require the key
+# sets to stay identical across languages (verify_wave5 asserts
+# this for ADVICE; the same discipline is kept for EXPLANATIONS).
+# TEACH grows by update for en + hi only (other languages fall
+# back to English lines — documented TEACH behaviour).
+# ---------------------------------------------------------------------------
+
+_EN_W13 = {
+    "mm_label_transposition": "Transposition method",
+    "mm_label_proportion": "Proportion method",
+    "mm_label_yearly_breakup": "Year-by-year method",
+    "mm_label_euclid": "Euclid's division method",
+    "mm_label_hcf_relation": "Using the HCF relation",
+    "mm_label_graph": "Graph method",
+    "mm_label_half_rectangle": "Half of a rectangle method",
+    "mm_label_listing": "Writing out the terms",
+    "mm_label_assumed_mean": "Assumed mean method",
+    "mm_label_factor": "Factorisation method",
+    "mm_label_complete_square": "Completing the square",
+    "mm_label_formula": "Quadratic formula",
+    "mm_label_fraction": "Fraction method",
+    "mm_label_unitary": "Unitary method",
+    "mm_label_bodmas_grouped": "Step-by-step BODMAS",
+}
+
+_HI_W13 = {
+    "mm_label_transposition": "स्थानांतरण विधि (Transposition)",
+    "mm_label_proportion": "समानुपात विधि (Proportion)",
+    "mm_label_yearly_breakup": "वर्ष-दर-वर्ष विधि",
+    "mm_label_euclid": "यूक्लिड विभाजन विधि",
+    "mm_label_hcf_relation": "HCF संबंध से",
+    "mm_label_graph": "ग्राफ़ विधि",
+    "mm_label_half_rectangle": "आयत के आधे वाली विधि",
+    "mm_label_listing": "पद लिखकर निकालना",
+    "mm_label_assumed_mean": "कल्पित माध्य विधि",
+    "mm_label_factor": "गुणनखंड विधि",
+    "mm_label_complete_square": "पूर्ण वर्ग विधि",
+    "mm_label_formula": "द्विघात सूत्र",
+    "mm_label_fraction": "भिन्न विधि",
+    "mm_label_unitary": "ऐकिक विधि (Unitary)",
+    "mm_label_bodmas_grouped": "चरण-दर-चरण BODMAS",
+}
+
+_BN_W13 = {
+    "mm_label_transposition": "পক্ষান্তর পদ্ধতি (Transposition)",
+    "mm_label_proportion": "সমানুপাত পদ্ধতি (Proportion)",
+    "mm_label_yearly_breakup": "বছর-ধরে-বছর পদ্ধতি",
+    "mm_label_euclid": "ইউক্লিডের ভাগ পদ্ধতি",
+    "mm_label_hcf_relation": "HCF সম্পর্ক ব্যবহার করে",
+    "mm_label_graph": "গ্রাফ পদ্ধতি",
+    "mm_label_half_rectangle": "আয়তক্ষেত্রের অর্ধেক পদ্ধতি",
+    "mm_label_listing": "পদগুলো লিখে বের করা",
+    "mm_label_assumed_mean": "অনুমিত গড় পদ্ধতি",
+    "mm_label_factor": "উৎপাদকে বিশ্লেষণ পদ্ধতি",
+    "mm_label_complete_square": "পূর্ণবর্গ পদ্ধতি",
+    "mm_label_formula": "দ্বিঘাত সূত্র",
+    "mm_label_fraction": "ভগ্নাংশ পদ্ধতি",
+    "mm_label_unitary": "ঐকিক পদ্ধতি (Unitary)",
+    "mm_label_bodmas_grouped": "ধাপে ধাপে BODMAS",
+}
+
+_MR_W13 = {
+    "mm_label_transposition": "पक्षांतर पद्धत (Transposition)",
+    "mm_label_proportion": "प्रमाण पद्धत (Proportion)",
+    "mm_label_yearly_breakup": "वर्ष-दर-वर्ष पद्धत",
+    "mm_label_euclid": "युक्लिडची भागाकार पद्धत",
+    "mm_label_hcf_relation": "HCF संबंध वापरून",
+    "mm_label_graph": "आलेख पद्धत",
+    "mm_label_half_rectangle": "आयताच्या निम्म्या भागाची पद्धत",
+    "mm_label_listing": "पदे लिहून काढणे",
+    "mm_label_assumed_mean": "गृहित मध्य पद्धत",
+    "mm_label_factor": "अवयव पद्धत",
+    "mm_label_complete_square": "पूर्ण वर्ग पद्धत",
+    "mm_label_formula": "वर्ग सूत्र",
+    "mm_label_fraction": "अपूर्णांक पद्धत",
+    "mm_label_unitary": "एकक पद्धत (Unitary)",
+    "mm_label_bodmas_grouped": "पायरी-पायरी BODMAS",
+}
+
+_TA_W13 = {
+    "mm_label_transposition": "இடமாற்று முறை (Transposition)",
+    "mm_label_proportion": "விகித முறை (Proportion)",
+    "mm_label_yearly_breakup": "ஆண்டு வாரியான முறை",
+    "mm_label_euclid": "யூக்ளிட் வகுத்தல் முறை",
+    "mm_label_hcf_relation": "HCF தொடர்பைப் பயன்படுத்தி",
+    "mm_label_graph": "வரைபட முறை",
+    "mm_label_half_rectangle": "செவ்வகத்தின் பாதி முறை",
+    "mm_label_listing": "உறுப்புகளை எழுதி காணுதல்",
+    "mm_label_assumed_mean": "ஊக சராசரி முறை",
+    "mm_label_factor": "காரணிப்படுத்தும் முறை",
+    "mm_label_complete_square": "வர்க்கத்தை நிறைவு செய்தல்",
+    "mm_label_formula": "இருபடி சூத்திரம்",
+    "mm_label_fraction": "பின்ன முறை",
+    "mm_label_unitary": "அலகு முறை (Unitary)",
+    "mm_label_bodmas_grouped": "படிப்படியான BODMAS",
+}
+
+_TE_W13 = {
+    "mm_label_transposition": "స్థానమార్పిడి పద్ధతి (Transposition)",
+    "mm_label_proportion": "నిష్పత్తి పద్ధతి (Proportion)",
+    "mm_label_yearly_breakup": "సంవత్సరాల వారీ పద్ధతి",
+    "mm_label_euclid": "యూక్లిడ్ భాగహార పద్ధతి",
+    "mm_label_hcf_relation": "HCF సంబంధం ఉపయోగించి",
+    "mm_label_graph": "గ్రాఫ్ పద్ధతి",
+    "mm_label_half_rectangle": "దీర్ఘచతురస్రంలో సగం పద్ధతి",
+    "mm_label_listing": "పదాలను వ్రాసి కనుగొనడం",
+    "mm_label_assumed_mean": "ఊహించిన సగటు పద్ధతి",
+    "mm_label_factor": "కారణాంక పద్ధతి",
+    "mm_label_complete_square": "వర్గాన్ని పూర్తి చేయడం",
+    "mm_label_formula": "వర్గ సూత్రం",
+    "mm_label_fraction": "భిన్న పద్ధతి",
+    "mm_label_unitary": "ఏకక పద్ధతి (Unitary)",
+    "mm_label_bodmas_grouped": "దశలవారీ BODMAS",
+}
+
+STRINGS["en"].update(_EN_W13)
+STRINGS["hi"].update(_HI_W13)
+STRINGS["bn"].update(_BN_W13)
+STRINGS["mr"].update(_MR_W13)
+STRINGS["ta"].update(_TA_W13)
+STRINGS["te"].update(_TE_W13)
+
+# --- Explanations for the new types (all 6 languages) ---------
+_EXPLAIN_W13 = {
+    "en": {
+        "junior": "Here is the junior maths answer: {answer} — "
+                  "the steps above show the counting and working.",
+        "applied": "Working it out step by step gives {answer} — "
+                   "see the steps above.",
+        "algebra:discriminant": "The discriminant of the quadratic "
+                                "is {answer} — the steps above show "
+                                "b^2 - 4ac being worked out.",
+        "algebra:nature_of_roots": "Looking at the discriminant, "
+                                   "the roots are: {answer} — see "
+                                   "the steps above.",
+    },
+    "hi": {
+        "junior": "छोटी कक्षाओं के गणित का उत्तर है: {answer} — "
+                  "गिनती और काम ऊपर के चरणों में दिखाया गया है।",
+        "applied": "चरण-दर-चरण हल करने पर मिलता है {answer} — "
+                   "ऊपर के चरण देखें।",
+        "algebra:discriminant": "द्विघात समीकरण का विविक्तकर "
+                                "(discriminant) {answer} है — ऊपर "
+                                "b^2 - 4ac का काम दिखाया गया है।",
+        "algebra:nature_of_roots": "विविक्तकर को देखकर, मूल हैं: "
+                                   "{answer} — ऊपर के चरण देखें।",
+    },
+    "bn": {
+        "junior": "ছোটোদের গণিতের উত্তর হলো: {answer} — গণনা ও "
+                  "কাজ উপরের ধাপগুলোতে দেখানো হয়েছে।",
+        "applied": "ধাপে ধাপে করলে পাওয়া যায় {answer} — উপরের "
+                   "ধাপগুলো দেখুন।",
+        "algebra:discriminant": "দ্বিঘাত সমীকরণের নিশ্চায়ক "
+                                "(discriminant) হলো {answer} — "
+                                "উপরে b^2 - 4ac-এর কাজ দেখানো "
+                                "হয়েছে।",
+        "algebra:nature_of_roots": "নিশ্চায়ক দেখে, মূলগুলো হলো: "
+                                   "{answer} — উপরের ধাপগুলো "
+                                   "দেখুন।",
+    },
+    "mr": {
+        "junior": "लहान वर्गांच्या गणिताचे उत्तर आहे: {answer} — "
+                  "मोजणी आणि काम वरील पायऱ्यांमध्ये दाखवले आहे।",
+        "applied": "पायरी-पायरीने केल्यावर मिळते {answer} — वरील "
+                   "पायऱ्या पहा।",
+        "algebra:discriminant": "वर्ग समीकरणाचा विवेचक "
+                                "(discriminant) {answer} आहे — "
+                                "वर b^2 - 4ac चे काम दाखवले आहे।",
+        "algebra:nature_of_roots": "विवेचक पाहता, मुळे आहेत: "
+                                   "{answer} — वरील पायऱ्या पहा।",
+    },
+    "ta": {
+        "junior": "சிறுவர் கணித விடை: {answer} — எண்ணுதலும் "
+                  "செயல்முறையும் மேலே உள்ள படிகளில் "
+                  "காட்டப்பட்டுள்ளது।",
+        "applied": "படிப்படியாகச் செய்தால் கிடைப்பது {answer} — "
+                   "மேலே உள்ள படிகளைப் பாருங்கள்।",
+        "algebra:discriminant": "இருபடிச் சமன்பாட்டின் பகுத்தறி "
+                                "(discriminant) {answer} — மேலே "
+                                "b^2 - 4ac கணக்கு "
+                                "காட்டப்பட்டுள்ளது।",
+        "algebra:nature_of_roots": "பகுத்தறியைப் பார்த்தால், "
+                                   "மூலங்கள்: {answer} — மேலே "
+                                   "உள்ள படிகளைப் பாருங்கள்।",
+    },
+    "te": {
+        "junior": "చిన్న తరగతుల గణిత జవాబు: {answer} — లెక్కింపు "
+                  "మరియు పని పై దశలలో చూపబడింది।",
+        "applied": "దశలవారీగా చేస్తే వచ్చేది {answer} — పై "
+                   "దశలను చూడండి।",
+        "algebra:discriminant": "వర్గ సమీకరణం యొక్క వివక్షత "
+                                "(discriminant) {answer} — పైన "
+                                "b^2 - 4ac పని చూపబడింది।",
+        "algebra:nature_of_roots": "వివక్షతను చూస్తే, మూలాలు: "
+                                   "{answer} — పై దశలను చూడండి।",
+    },
+}
+for _code, _extra in _EXPLAIN_W13.items():
+    EXPLANATIONS[_code].update(_extra)
+
+# --- Advice for the new types (all 6 languages) ---------------
+_ADVICE_W13 = {
+    "en": {
+        "junior": "For little learners: count slowly, use your "
+                  "fingers or draw the objects — a picture makes "
+                  "every story sum easy.",
+        "applied": "Applied sums always start from what one unit "
+                   "is worth — find the value of 1 first, then "
+                   "scale up.",
+        "word_problem": "Read the story twice: once for the "
+                        "story, once to underline the numbers and "
+                        "what is being asked.",
+    },
+    "hi": {
+        "junior": "छोटे छात्रों के लिए: धीरे-धीरे गिनो, उंगलियों "
+                  "का उपयोग करो या वस्तुएँ बनाकर देखो — तस्वीर से "
+                  "हर कहानी वाला सवाल आसान हो जाता है।",
+        "applied": "ऐसे सवाल हमेशा एक इकाई के मान से शुरू होते "
+                   "हैं — पहले 1 का मान निकालो, फिर बढ़ाओ।",
+        "word_problem": "कहानी को दो बार पढ़ो: एक बार कहानी के "
+                        "लिए, दूसरी बार संख्याओं और पूछी गई बात "
+                        "को रेखांकित करने के लिए।",
+    },
+    "bn": {
+        "junior": "ছোটো শিক্ষার্থীদের জন্য: ধীরে ধীরে গুনো, "
+                  "আঙুল ব্যবহার করো বা জিনিসগুলো এঁকে দেখো — "
+                  "ছবি আঁকলে প্রতিটি গল্পের অঙ্ক সহজ হয়ে যায়।",
+        "applied": "এমন অঙ্ক সবসময় এক এককের মান থেকে শুরু হয় — "
+                   "আগে 1-এর মান বের করো, তারপর বাড়াও।",
+        "word_problem": "গল্পটি দুবার পড়ো: একবার গল্পের জন্য, "
+                        "আরেকবার সংখ্যা ও যা জানতে চাওয়া হয়েছে "
+                        "তা দাগ দেওয়ার জন্য।",
+    },
+    "mr": {
+        "junior": "लहान विद्यार्थ्यांसाठी: हळूहळू मोजा, बोटे वापरा "
+                  "किंवा वस्तू काढून पहा — चित्रामुळे प्रत्येक "
+                  "गोष्टीचे गणित सोपे होते।",
+        "applied": "असे गणित नेहमी एका एककाच्या मूल्यापासून "
+                   "सुरू होते — आधी 1 चे मूल्य काढा, मग वाढवा।",
+        "word_problem": "गोष्ट दोनदा वाचा: एकदा गोष्टीसाठी, "
+                        "दुसऱ्यांदा संख्या आणि विचारलेली गोष्ट "
+                        "अधोरेखित करण्यासाठी।",
+    },
+    "ta": {
+        "junior": "சிறு மாணவர்களுக்கு: மெதுவாக எண்ணுங்கள், "
+                  "விரல்களைப் பயன்படுத்துங்கள் அல்லது "
+                  "பொருட்களை வரைந்து பாருங்கள் — படம் ஒவ்வொரு "
+                  "கதைக் கணக்கையும் எளிதாக்கும்।",
+        "applied": "இத்தகைய கணக்குகள் எப்போதும் ஒரு அலகின் "
+                   "மதிப்பிலிருந்து தொடங்கும் — முதலில் 1-இன் "
+                   "மதிப்பைக் கண்டுபிடியுங்கள், பின் பெருக்குங்கள்।",
+        "word_problem": "கதையை இருமுறை படியுங்கள்: ஒருமுறை "
+                        "கதைக்காக, மறுமுறை எண்களையும் "
+                        "கேட்கப்பட்டதையும் அடிக்கோடிடுவதற்காக।",
+    },
+    "te": {
+        "junior": "చిన్న విద్యార్థుల కోసం: నెమ్మదిగా లెక్కించండి, "
+                  "వేళ్లను ఉపయోగించండి లేదా వస్తువులను గీయండి — "
+                  "చిత్రం ప్రతి కథా లెక్కను సులభం చేస్తుంది।",
+        "applied": "ఇలాంటి లెక్కలు ఎల్లప్పుడూ ఒక యూనిట్ "
+                   "విలువతో మొదలవుతాయి — ముందు 1 విలువను "
+                   "కనుగొనండి, తర్వాత పెంచండి।",
+        "word_problem": "కథను రెండుసార్లు చదవండి: ఒకసారి "
+                        "కథ కోసం, మరోసారి సంఖ్యలను మరియు "
+                        "అడిగినదానిని గుర్తించడానికి।",
+    },
+}
+for _code, _extra in _ADVICE_W13.items():
+    ADVICE[_code].update(_extra)
+
+# --- Teach me for the biggest new types (en + hi) -------------
+TEACH["en"].update({
+    "junior": [
+        "Junior maths is about real things: mangoes, pencils, "
+        "rupees and clocks — always picture the objects.",
+        "Adding means putting together, taking away means "
+        "subtracting; the story tells you which to do.",
+        "For groups ('5 boxes, 6 in each'), multiply; for "
+        "sharing equally, divide.",
+        "Practice: make up your own story for 12 - 5 and solve "
+        "it.",
+    ],
+    "applied": [
+        "Applied maths is one idea in many costumes: find what "
+        "ONE unit is worth, then scale to what is asked.",
+        "Ratio compares parts of a whole — divide both sides "
+        "by the same number to simplify.",
+        "Write the formula first (interest, profit, speed), "
+        "then put the numbers in.",
+        "Practice: if 4 notebooks cost Rs 80, what do 7 cost?",
+    ],
+    "applied:ratio": [
+        "A ratio compares two amounts the way a recipe compares "
+        "ingredients — 2:3 means 2 parts to 3 parts.",
+        "Simplify a ratio by dividing both sides by their HCF, "
+        "just like simplifying a fraction.",
+        "To share in a ratio, add the parts, find one part's "
+        "value, then multiply back.",
+        "Practice: simplify the ratio 18:24.",
+    ],
+    "word_problem:simple_interest": [
+        "Simple interest is the rent money paid for using "
+        "someone else's money — it grows by the same amount "
+        "every year.",
+        "SI = P x R x T / 100: Principal (the money kept), "
+        "Rate (% per year), Time (in years).",
+        "Months must become years first: 6 months = 1/2 year.",
+        "Practice: find the simple interest on Rs 2000 at 5% "
+        "for 2 years.",
+    ],
+    "sequences": [
+        "A sequence is a pattern of numbers — your job is to "
+        "find the rule the pattern is following.",
+        "In an AP the same number is added each time (the "
+        "common difference d); in a GP the same number is "
+        "multiplied each time (the ratio r).",
+        "nth term: AP uses a + (n-1)d; GP uses a x r^(n-1) — "
+        "count the jumps, not the terms.",
+        "Practice: write the 6th term of 5, 9, 13, ...",
+    ],
+    "geometry:distance": [
+        "The distance between two points is the straight line "
+        "joining them — the hypotenuse of a right triangle.",
+        "The legs of the triangle are the gaps in x and in y; "
+        "Pythagoras does the rest.",
+        "Distance = sqrt((x2-x1)^2 + (y2-y1)^2). Squaring makes "
+        "the direction (plus or minus) not matter.",
+        "Practice: find the distance between (0, 0) and "
+        "(6, 8).",
+    ],
+    "number_theory": [
+        "HCF is the biggest number that divides both numbers; "
+        "LCM is the smallest number both numbers divide into.",
+        "Prime factorisation is the master key: HCF takes the "
+        "LOWEST powers of common primes, LCM the HIGHEST of "
+        "all.",
+        "Euclid's trick also works: keep dividing and taking "
+        "remainders until the remainder is 0.",
+        "Practice: find the HCF and LCM of 18 and 30.",
+    ],
+})
+TEACH["hi"].update({
+    "junior": [
+        "छोटी कक्षाओं का गणित असली चीज़ों के बारे में है: आम, "
+        "पेंसिल, रुपये और घड़ी — हमेशा वस्तुओं की कल्पना करो।",
+        "जोड़ना मतलब एक साथ रखना, निकालना मतलब घटाना; कहानी "
+        "बताती है कि क्या करना है।",
+        "समूहों के लिए ('5 डिब्बे, हर एक में 6') गुणा करो; "
+        "बराबर बाँटने के लिए भाग दो।",
+        "अभ्यास: 12 - 5 के लिए अपनी कहानी बनाओ और हल करो।",
+    ],
+    "applied": [
+        "व्यावहारिक गणित एक ही विचार है कई रूपों में: एक इकाई "
+        "का मान निकालो, फिर जितना पूछा गया है उतना बढ़ाओ।",
+        "अनुपात पूरे के हिस्सों की तुलना करता है — सरल करने के "
+        "लिए दोनों पक्षों को एक ही संख्या से भाग दो।",
+        "पहले सूत्र लिखो (ब्याज, लाभ, गति), फिर संख्याएँ रखो।",
+        "अभ्यास: 4 कॉपियों की कीमत Rs 80 है, तो 7 की कितनी "
+        "होगी?",
+    ],
+    "applied:ratio": [
+        "अनुपात दो मात्राओं की तुलना करता है, जैसे किसी "
+        "व्यंजन में सामग्री — 2:3 मतलब 2 हिस्से और 3 हिस्से।",
+        "अनुपात को सरल करने के लिए दोनों पक्षों को उनके HCF "
+        "से भाग दो, बिल्कुल भिन्न की तरह।",
+        "अनुपात में बाँटने के लिए हिस्से जोड़ो, एक हिस्से का "
+        "मान निकालो, फिर वापस गुणा करो।",
+        "अभ्यास: अनुपात 18:24 को सरल करो।",
+    ],
+    "word_problem:simple_interest": [
+        "साधारण ब्याज दूसरे के पैसे के उपयोग का किराया है — "
+        "यह हर वर्ष एक ही मात्रा में बढ़ता है।",
+        "SI = P x R x T / 100: मूलधन (रखी गई रकम), दर "
+        "(% प्रति वर्ष), समय (वर्षों में)।",
+        "महीने पहले वर्षों में बदलने होते हैं: 6 महीने = "
+        "1/2 वर्ष।",
+        "अभ्यास: Rs 2000 पर 5% की दर से 2 वर्ष का साधारण "
+        "ब्याज निकालो।",
+    ],
+    "sequences": [
+        "अनुक्रम संख्याओं का एक पैटर्न है — तुम्हारा काम वह "
+        "नियम ढूँढना है जिसका पैटर्न पालन कर रहा है।",
+        "AP में हर बार एक ही संख्या जुड़ती है (सार्व अंतर d); "
+        "GP में हर बार एक ही संख्या से गुणा होता है (अनुपात "
+        "r)।",
+        "nवाँ पद: AP में a + (n-1)d; GP में a x r^(n-1) — "
+        "छलाँगें गिनो, पद नहीं।",
+        "अभ्यास: 5, 9, 13, ... का 6ठा पद लिखो।",
+    ],
+    "geometry:distance": [
+        "दो बिंदुओं के बीच की दूरी उन्हें जोड़ने वाली सीधी "
+        "रेखा है — एक समकोण त्रिभुज का कर्ण।",
+        "त्रिभुज की भुजाएँ x और y के अंतर हैं; बाकी काम "
+        "पाइथागोरस करता है।",
+        "दूरी = sqrt((x2-x1)^2 + (y2-y1)^2)। वर्ग करने से "
+        "दिशा (धन या ऋण) का फर्क नहीं पड़ता।",
+        "अभ्यास: (0, 0) और (6, 8) के बीच की दूरी निकालो।",
+    ],
+    "number_theory": [
+        "HCF वह सबसे बड़ी संख्या है जो दोनों संख्याओं को "
+        "भाग देती है; LCM वह सबसे छोटी संख्या है जिसमें दोनों "
+        "समाती हैं।",
+        "अभाज्य गुणनखंड ही मास्टर चाबी है: HCF में उभयनिष्ठ "
+        "अभाज्यों की सबसे छोटी घात, LCM में सभी की सबसे बड़ी "
+        "घात लेते हैं।",
+        "यूक्लिड की तरकीब भी चलती है: भाग देते रहो और शेषफल "
+        "लेते रहो जब तक शेषफल 0 न हो जाए।",
+        "अभ्यास: 18 और 30 का HCF और LCM निकालो।",
+    ],
+})
+
+
+# --- Wave 16 additions: Previous Papers (Suraj, 10 Nov 2026) -------------
+# Real previous years' papers + chapter-wise pattern analysis +
+# "Apna Paper Banao" practice-paper generator. en + hi are complete;
+# bn/mr/ta/te fall back to English via get_strings(), like the other
+# partially translated features.
+_EN_W16 = {
+    "menu_papers": "📄 Previous Papers",
+    "papers_heading": "Previous Papers 📄",
+    "papers_intro": "Real board exam papers from previous years, "
+                    "with the chapter of every question marked. "
+                    "Read them, see the pattern, then make your own "
+                    "practice paper.",
+    "papers_analysis_btn": "📊 See the pattern (analysis)",
+    "papers_generate_btn": "📝 Apna Paper Banao — make a practice paper",
+    "papers_class_heading": "Class {n} papers",
+    "papers_source_label": "Source",
+    "papers_view_btn": "View paper →",
+    "papers_questions_word": "questions",
+    "papers_marks_word": "marks",
+    "papers_section_word": "Section",
+    "papers_chapter_word": "Chapter",
+    "papers_back": "← Previous Papers",
+    "papers_analysis_heading": "Paper Pattern Analysis 📊",
+    "papers_analysis_intro": "This analysis is counted only from "
+                             "the papers actually collected below "
+                             "— nothing is guessed.",
+    "papers_coverage_line": "Counted from {papers} real paper(s) · "
+                            "years: {years} · {questions} questions · "
+                            "{marks} marks in total",
+    "papers_weightage_heading": "Chapter-wise marks weightage",
+    "papers_chapter_col": "Chapter",
+    "papers_marks_col": "Marks",
+    "papers_share_col": "Share",
+    "papers_focus_heading": "Expected focus — practise these first",
+    "papers_repeat_heading": "Most questions asked from",
+    "papers_generate_heading": "Apna Paper Banao 📝",
+    "papers_generate_intro": "Ganitra builds a fresh 80-mark "
+                             "practice paper in the current CBSE "
+                             "pattern (Sections A–E), using the "
+                             "chapter weightage from the real papers "
+                             "above. Real previous-paper questions "
+                             "are reused where available; the rest "
+                             "are new practice questions and are "
+                             "always marked as such.",
+    "papers_choose_class": "Choose your class",
+    "papers_make_btn": "Make my practice paper →",
+    "papers_gen_title": "Ganitra Practice Paper — Class {n} Maths",
+    "papers_gen_sub": "80 marks · Sections A–E · built from the "
+                      "pattern of {papers} real paper(s)",
+    "papers_real_tag": "Real paper question · {origin}",
+    "papers_practice_tag": "Practice question",
+    "papers_answer_key_heading": "Answer Key",
+    "papers_print_btn": "🖨 Print / Save as PDF",
+    "papers_again_btn": "↻ Make another paper",
+    "papers_answer_label": "Answer",
+    "papers_from_source": "From the source paper above",
+}
+
+_HI_W16 = {
+    "menu_papers": "📄 पिछले पेपर",
+    "papers_heading": "पिछले पेपर 📄",
+    "papers_intro": "पिछले वर्षों के असली बोर्ड परीक्षा पेपर, हर "
+                    "प्रश्न के अध्याय के साथ। इन्हें पढ़िए, पैटर्न "
+                    "देखिए, फिर अपना अभ्यास पेपर बनाइए।",
+    "papers_analysis_btn": "📊 पैटर्न देखिए (विश्लेषण)",
+    "papers_generate_btn": "📝 अपना पेपर बनाओ — अभ्यास पेपर बनाइए",
+    "papers_class_heading": "कक्षा {n} के पेपर",
+    "papers_source_label": "स्रोत",
+    "papers_view_btn": "पेपर देखिए →",
+    "papers_questions_word": "प्रश्न",
+    "papers_marks_word": "अंक",
+    "papers_section_word": "खंड",
+    "papers_chapter_word": "अध्याय",
+    "papers_back": "← पिछले पेपर",
+    "papers_analysis_heading": "पेपर पैटर्न विश्लेषण 📊",
+    "papers_analysis_intro": "यह विश्लेषण केवल नीचे इकट्ठा किए गए "
+                             "असली पेपरों से गिना गया है — कुछ भी "
+                             "अनुमान नहीं है।",
+    "papers_coverage_line": "{papers} असली पेपरों से गिना गया · "
+                            "वर्ष: {years} · {questions} प्रश्न · "
+                            "कुल {marks} अंक",
+    "papers_weightage_heading": "अध्याय अनुसार अंक-वज़न",
+    "papers_chapter_col": "अध्याय",
+    "papers_marks_col": "अंक",
+    "papers_share_col": "हिस्सा",
+    "papers_focus_heading": "संभावित फोकस — पहले इनका अभ्यास कीजिए",
+    "papers_repeat_heading": "सबसे ज़्यादा प्रश्न इनसे आए",
+    "papers_generate_heading": "अपना पेपर बनाओ 📝",
+    "papers_generate_intro": "Ganitra वर्तमान CBSE पैटर्न (खंड "
+                             "A–E) में नया 80 अंकों का अभ्यास पेपर "
+                             "बनाता है, ऊपर के असली पेपरों के "
+                             "अध्याय-वज़न का उपयोग करके। जहाँ उपलब्ध "
+                             "हैं वहाँ असली पिछले पेपर के प्रश्न लिए "
+                             "जाते हैं; बाकी नए अभ्यास प्रश्न होते "
+                             "हैं और हमेशा ऐसे ही चिह्नित रहते हैं।",
+    "papers_choose_class": "अपनी कक्षा चुनिए",
+    "papers_make_btn": "मेरा अभ्यास पेपर बनाइए →",
+    "papers_gen_title": "Ganitra अभ्यास पेपर — कक्षा {n} गणित",
+    "papers_gen_sub": "80 अंक · खंड A–E · {papers} असली पेपरों के "
+                      "पैटर्न से बनाया गया",
+    "papers_real_tag": "असली पेपर का प्रश्न · {origin}",
+    "papers_practice_tag": "अभ्यास प्रश्न",
+    "papers_answer_key_heading": "उत्तर कुंजी",
+    "papers_print_btn": "🖨 प्रिंट / PDF सहेजिए",
+    "papers_again_btn": "↻ दूसरा पेपर बनाइए",
+    "papers_answer_label": "उत्तर",
+    "papers_from_source": "ऊपर के स्रोत पेपर से",
+}
+
+STRINGS["en"].update(_EN_W16)
+STRINGS["hi"].update(_HI_W16)
+
+_BN_W16 = {
+    "menu_papers": "📄 আগের বছরের পেপার",
+    "papers_heading": "আগের বছরের পেপার 📄",
+    "papers_intro": "আগের বছরের আসল বোর্ড পরীক্ষার পেপার, প্রতিটি "
+                    "প্রশ্নের অধ্যায় চিহ্নিত করে। পড়ুন, প্যাটার্ন "
+                    "দেখুন, তারপর নিজের অনুশীলন পেপার বানান।",
+    "papers_analysis_btn": "📊 প্যাটার্ন দেখুন (বিশ্লেষণ)",
+    "papers_generate_btn": "📝 নিজের পেপার বানান — অনুশীলন পেপার",
+    "papers_class_heading": "শ্রেণি {n}-এর পেপার",
+    "papers_source_label": "উৎস",
+    "papers_view_btn": "পেপার দেখুন →",
+    "papers_questions_word": "প্রশ্ন",
+    "papers_marks_word": "নম্বর",
+    "papers_section_word": "বিভাগ",
+    "papers_chapter_word": "অধ্যায়",
+    "papers_back": "← আগের পেপার",
+    "papers_analysis_heading": "পেপার প্যাটার্ন বিশ্লেষণ 📊",
+    "papers_analysis_intro": "এই বিশ্লেষণ শুধু নিচে সংগ্রহ করা আসল "
+                             "পেপারগুলো থেকেই গণনা করা — কিছুই "
+                             "অনুমান করা হয়নি।",
+    "papers_coverage_line": "{papers}টি আসল পেপার থেকে গণনা · বছর: "
+                            "{years} · {questions}টি প্রশ্ন · মোট "
+                            "{marks} নম্বর",
+    "papers_weightage_heading": "অধ্যায় অনুযায়ী নম্বরের ওজন",
+    "papers_chapter_col": "অধ্যায়",
+    "papers_marks_col": "নম্বর",
+    "papers_share_col": "অংশ",
+    "papers_focus_heading": "সম্ভাব্য ফোকাস — আগে এগুলো অনুশীলন করুন",
+    "papers_repeat_heading": "সবচেয়ে বেশি প্রশ্ন এসেছে",
+    "papers_generate_heading": "নিজের পেপার বানান 📝",
+    "papers_generate_intro": "Ganitra বর্তমান CBSE প্যাটার্নে "
+                             "(বিভাগ A–E) নতুন 80 নম্বরের অনুশীলন "
+                             "পেপার বানায়, উপরের আসল পেপারগুলোর "
+                             "অধ্যায়-ওজন ব্যবহার করে। যেখানে পাওয়া "
+                             "যায় সেখানে আসল আগের পেপারের প্রশ্ন "
+                             "পুনরায় ব্যবহার করা হয়; বাকিগুলো নতুন "
+                             "অনুশীলন প্রশ্ন এবং সবসময় সেভাবেই "
+                             "চিহ্নিত থাকে।",
+    "papers_choose_class": "আপনার শ্রেণি বেছে নিন",
+    "papers_make_btn": "আমার অনুশীলন পেপার বানান →",
+    "papers_gen_title": "Ganitra অনুশীলন পেপার — শ্রেণি {n} গণিত",
+    "papers_gen_sub": "80 নম্বর · বিভাগ A–E · {papers}টি আসল "
+                      "পেপারের প্যাটার্ন থেকে তৈরি",
+    "papers_real_tag": "আসল পেপারের প্রশ্ন · {origin}",
+    "papers_practice_tag": "অনুশীলন প্রশ্ন",
+    "papers_answer_key_heading": "উত্তর সূচি",
+    "papers_print_btn": "🖨 প্রিন্ট / PDF সংরক্ষণ করুন",
+    "papers_again_btn": "↻ আরেকটি পেপার বানান",
+    "papers_answer_label": "উত্তর",
+    "papers_from_source": "উপরের উৎস পেপার থেকে",
+}
+
+_MR_W16 = {
+    "menu_papers": "📄 मागील पेपर",
+    "papers_heading": "मागील पेपर 📄",
+    "papers_intro": "मागील वर्षांचे खरे बोर्ड पेपर, प्रत्येक "
+                    "प्रश्नाचा प्रकरणासह. वाचा, पॅटर्न पहा, मग "
+                    "स्वतःचा सराव पेपर बनवा.",
+    "papers_analysis_btn": "📊 पॅटर्न पहा (विश्लेषण)",
+    "papers_generate_btn": "📝 आपला पेपर बनवा — सराव पेपर",
+    "papers_class_heading": "इयत्ता {n} चे पेपर",
+    "papers_source_label": "स्रोत",
+    "papers_view_btn": "पेपर पहा →",
+    "papers_questions_word": "प्रश्न",
+    "papers_marks_word": "गुण",
+    "papers_section_word": "विभाग",
+    "papers_chapter_word": "प्रकरण",
+    "papers_back": "← मागील पेपर",
+    "papers_analysis_heading": "पेपर पॅटर्न विश्लेषण 📊",
+    "papers_analysis_intro": "हे विश्लेषण फक्त खाली गोळा केलेल्या "
+                             "खऱ्या पेपरवरूनच मोजले आहे — काहीही "
+                             "अंदाजे नाही.",
+    "papers_coverage_line": "{papers} खऱ्या पेपरवरून मोजले · वर्षे: "
+                            "{years} · {questions} प्रश्न · एकूण "
+                            "{marks} गुण",
+    "papers_weightage_heading": "प्रकरणानुसार गुणांचे वजन",
+    "papers_chapter_col": "प्रकरण",
+    "papers_marks_col": "गुण",
+    "papers_share_col": "वाटा",
+    "papers_focus_heading": "संभाव्य लक्ष — आधी यांचा सराव करा",
+    "papers_repeat_heading": "सर्वाधिक प्रश्न यांमधून आले",
+    "papers_generate_heading": "आपला पेपर बनवा 📝",
+    "papers_generate_intro": "Ganitra सध्याच्या CBSE पॅटर्नमध्ये "
+                             "(विभाग A–E) नवीन 80 गुणांचा सराव पेपर "
+                             "बनवते, वरील खऱ्या पेपरच्या "
+                             "प्रकरण-वजनाचा वापर करून. जिथे उपलब्ध "
+                             "आहेत तिथे खरे मागील पेपरचे प्रश्न "
+                             "पुन्हा वापरले जातात; बाकी नवीन सराव "
+                             "प्रश्न असतात आणि नेहमी तसेच चिन्हांकित "
+                             "असतात.",
+    "papers_choose_class": "तुमची इयत्ता निवडा",
+    "papers_make_btn": "माझा सराव पेपर बनवा →",
+    "papers_gen_title": "Ganitra सराव पेपर — इयत्ता {n} गणित",
+    "papers_gen_sub": "80 गुण · विभाग A–E · {papers} खऱ्या पेपरच्या "
+                      "पॅटर्नवरून बनवले",
+    "papers_real_tag": "खऱ्या पेपरचा प्रश्न · {origin}",
+    "papers_practice_tag": "सराव प्रश्न",
+    "papers_answer_key_heading": "उत्तरतालिका",
+    "papers_print_btn": "🖨 प्रिंट / PDF जतन करा",
+    "papers_again_btn": "↻ दुसरा पेपर बनवा",
+    "papers_answer_label": "उत्तर",
+    "papers_from_source": "वरील स्रोत पेपरमधून",
+}
+
+_TA_W16 = {
+    "menu_papers": "📄 முந்தைய தாள்கள்",
+    "papers_heading": "முந்தைய தாள்கள் 📄",
+    "papers_intro": "முந்தைய ஆண்டுகளின் உண்மையான போர்டு தேர்வுத் "
+                    "தாள்கள், ஒவ்வொரு கேள்வியின் அத்தியாயமும் "
+                    "குறிக்கப்பட்டு. படியுங்கள், முறையைப் பாருங்கள், "
+                    "பிறகு உங்கள் பயிற்சித் தாளை உருவாக்குங்கள்.",
+    "papers_analysis_btn": "📊 முறையைப் பாருங்கள் (பகுப்பாய்வு)",
+    "papers_generate_btn": "📝 உங்கள் தாளை உருவாக்குங்கள் — பயிற்சித் தாள்",
+    "papers_class_heading": "வகுப்பு {n} தாள்கள்",
+    "papers_source_label": "மூலம்",
+    "papers_view_btn": "தாளைப் பாருங்கள் →",
+    "papers_questions_word": "கேள்விகள்",
+    "papers_marks_word": "மதிப்பெண்கள்",
+    "papers_section_word": "பிரிவு",
+    "papers_chapter_word": "அத்தியாயம்",
+    "papers_back": "← முந்தைய தாள்கள்",
+    "papers_analysis_heading": "தாள் முறை பகுப்பாய்வு 📊",
+    "papers_analysis_intro": "இந்தப் பகுப்பாய்வு கீழே சேகரிக்கப்பட்ட "
+                             "உண்மையான தாள்களிலிருந்து மட்டுமே "
+                             "கணக்கிடப்பட்டது — எதுவும் ஊகிக்கப்படவில்லை.",
+    "papers_coverage_line": "{papers} உண்மையான தாள்களிலிருந்து "
+                            "கணக்கிடப்பட்டது · ஆண்டுகள்: {years} · "
+                            "{questions} கேள்விகள் · மொத்தம் {marks} "
+                            "மதிப்பெண்கள்",
+    "papers_weightage_heading": "அத்தியாய வாரியான மதிப்பெண் எடை",
+    "papers_chapter_col": "அத்தியாயம்",
+    "papers_marks_col": "மதிப்பெண்கள்",
+    "papers_share_col": "பங்கு",
+    "papers_focus_heading": "எதிர்பார்க்கப்படும் கவனம் — முதலில் இவற்றைப் பயிற்சி செய்யுங்கள்",
+    "papers_repeat_heading": "அதிக கேள்விகள் வந்தவை",
+    "papers_generate_heading": "உங்கள் தாளை உருவாக்குங்கள் 📝",
+    "papers_generate_intro": "Ganitra தற்போதைய CBSE முறையில் "
+                             "(பிரிவுகள் A–E) புதிய 80 மதிப்பெண் "
+                             "பயிற்சித் தாளை உருவாக்குகிறது, மேலே "
+                             "உள்ள உண்மையான தாள்களின் அத்தியாய "
+                             "எடையைப் பயன்படுத்தி. கிடைக்கும் இடங்களில் "
+                             "உண்மையான முந்தைய தாள் கேள்விகள் மீண்டும் "
+                             "பயன்படுத்தப்படும்; மற்றவை புதிய பயிற்சிக் "
+                             "கேள்விகள், எப்போதும் அப்படியே "
+                             "குறிக்கப்படும்.",
+    "papers_choose_class": "உங்கள் வகுப்பைத் தேர்ந்தெடுங்கள்",
+    "papers_make_btn": "என் பயிற்சித் தாளை உருவாக்குங்கள் →",
+    "papers_gen_title": "Ganitra பயிற்சித் தாள் — வகுப்பு {n} கணிதம்",
+    "papers_gen_sub": "80 மதிப்பெண்கள் · பிரிவுகள் A–E · {papers} "
+                      "உண்மையான தாள்களின் முறையிலிருந்து உருவாக்கப்பட்டது",
+    "papers_real_tag": "உண்மையான தாள் கேள்வி · {origin}",
+    "papers_practice_tag": "பயிற்சிக் கேள்வி",
+    "papers_answer_key_heading": "விடைக் குறிப்பு",
+    "papers_print_btn": "🖨 அச்சிடு / PDF ஆகச் சேமி",
+    "papers_again_btn": "↻ மற்றொரு தாளை உருவாக்குங்கள்",
+    "papers_answer_label": "விடை",
+    "papers_from_source": "மேலே உள்ள மூலத் தாளிலிருந்து",
+}
+
+_TE_W16 = {
+    "menu_papers": "📄 గత పేపర్లు",
+    "papers_heading": "గత పేపర్లు 📄",
+    "papers_intro": "గత సంవత్సరాల నిజమైన బోర్డు పరీక్ష పేపర్లు, "
+                    "ప్రతి ప్రశ్న యొక్క అధ్యాయం గుర్తించబడి. "
+                    "చదవండి, నమూనా చూడండి, ఆపై మీ సాధన పేపర్‌ను "
+                    "తయారు చేయండి.",
+    "papers_analysis_btn": "📊 నమూనా చూడండి (విశ్లేషణ)",
+    "papers_generate_btn": "📝 మీ పేపర్ తయారు చేయండి — సాధన పేపర్",
+    "papers_class_heading": "తరగతి {n} పేపర్లు",
+    "papers_source_label": "మూలం",
+    "papers_view_btn": "పేపర్ చూడండి →",
+    "papers_questions_word": "ప్రశ్నలు",
+    "papers_marks_word": "మార్కులు",
+    "papers_section_word": "విభాగం",
+    "papers_chapter_word": "అధ్యాయం",
+    "papers_back": "← గత పేపర్లు",
+    "papers_analysis_heading": "పేపర్ నమూనా విశ్లేషణ 📊",
+    "papers_analysis_intro": "ఈ విశ్లేషణ క్రింద సేకరించిన నిజమైన "
+                             "పేపర్ల నుండి మాత్రమే లెక్కించబడింది — "
+                             "ఏదీ ఊహించబడలేదు.",
+    "papers_coverage_line": "{papers} నిజమైన పేపర్ల నుండి "
+                            "లెక్కించబడింది · సంవత్సరాలు: {years} · "
+                            "{questions} ప్రశ్నలు · మొత్తం {marks} "
+                            "మార్కులు",
+    "papers_weightage_heading": "అధ్యాయాల వారీ మార్కుల బరువు",
+    "papers_chapter_col": "అధ్యాయం",
+    "papers_marks_col": "మార్కులు",
+    "papers_share_col": "వాటా",
+    "papers_focus_heading": "ఆశించిన దృష్టి — ముందు వీటిని సాధన చేయండి",
+    "papers_repeat_heading": "అత్యధిక ప్రశ్నలు వచ్చినవి",
+    "papers_generate_heading": "మీ పేపర్ తయారు చేయండి 📝",
+    "papers_generate_intro": "Ganitra ప్రస్తుత CBSE నమూనాలో "
+                             "(విభాగాలు A–E) కొత్త 80 మార్కుల సాధన "
+                             "పేపర్‌ను తయారు చేస్తుంది, పైన ఉన్న "
+                             "నిజమైన పేపర్ల అధ్యాయ బరువును "
+                             "ఉపయోగించి. లభించే చోట నిజమైన గత పేపర్ "
+                             "ప్రశ్నలు మళ్లీ ఉపయోగించబడతాయి; "
+                             "మిగిలినవి కొత్త సాధన ప్రశ్నలు, "
+                             "ఎల్లప్పుడూ అలాగే గుర్తించబడతాయి.",
+    "papers_choose_class": "మీ తరగతిని ఎంచుకోండి",
+    "papers_make_btn": "నా సాధన పేపర్ తయారు చేయండి →",
+    "papers_gen_title": "Ganitra సాధన పేపర్ — తరగతి {n} గణితం",
+    "papers_gen_sub": "80 మార్కులు · విభాగాలు A–E · {papers} "
+                      "నిజమైన పేపర్ల నమూనా నుండి తయారు చేయబడింది",
+    "papers_real_tag": "నిజమైన పేపర్ ప్రశ్న · {origin}",
+    "papers_practice_tag": "సాధన ప్రశ్న",
+    "papers_answer_key_heading": "జవాబు కీ",
+    "papers_print_btn": "🖨 ప్రింట్ / PDF గా సేవ్ చేయండి",
+    "papers_again_btn": "↻ మరో పేపర్ తయారు చేయండి",
+    "papers_answer_label": "జవాబు",
+    "papers_from_source": "పైన ఉన్న మూల పేపర్ నుండి",
+}
+
+STRINGS["bn"].update(_BN_W16)
+STRINGS["mr"].update(_MR_W16)
+STRINGS["ta"].update(_TA_W16)
+STRINGS["te"].update(_TE_W16)
+
+# --- Wave 18 additions: comfort buttons under each chat answer -----------
+# The 📋 Copy and 🔁 "explain more simply" text buttons in the chat
+# (Suraj, 10 Nov 2026: "Muse or ChatGPT ki tarah comfortable hona
+# chahiye"). Every key exists in all 6 languages, like every wave
+# before. mm_* keys already reach the chat JS via js_t in app.py.
+_EN_W18 = {
+    "mm_copy_btn": "Copy",
+    "mm_copied": "Copied ✓",
+    "mm_simple_btn": "Explain more simply",
+}
+_HI_W18 = {
+    "mm_copy_btn": "कॉपी करो",
+    "mm_copied": "कॉपी हो गया ✓",
+    "mm_simple_btn": "दूसरी तरह समझाओ",
+}
+_BN_W18 = {
+    "mm_copy_btn": "কপি করুন",
+    "mm_copied": "কপি হয়েছে ✓",
+    "mm_simple_btn": "অন্যভাবে বোঝাও",
+}
+_MR_W18 = {
+    "mm_copy_btn": "कॉपी करा",
+    "mm_copied": "कॉपी झाले ✓",
+    "mm_simple_btn": "दुसऱ्या प्रकारे समजावा",
+}
+_TA_W18 = {
+    "mm_copy_btn": "நகலெடு",
+    "mm_copied": "நகலெடுக்கப்பட்டது ✓",
+    "mm_simple_btn": "வேறு விதமாக விளக்கு",
+}
+_TE_W18 = {
+    "mm_copy_btn": "కాపీ చేయండి",
+    "mm_copied": "కాపీ అయింది ✓",
+    "mm_simple_btn": "మరో విధంగా వివరించండి",
+}
+
+STRINGS["en"].update(_EN_W18)
+STRINGS["hi"].update(_HI_W18)
+STRINGS["bn"].update(_BN_W18)
+STRINGS["mr"].update(_MR_W18)
+STRINGS["ta"].update(_TA_W18)
+STRINGS["te"].update(_TE_W18)

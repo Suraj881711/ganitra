@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block body_class %}account-page{% endblock %}
+{% block main_class %}account-main{% endblock %}
+{% block header %}
+  {# Wave 12: My Account keeps the chat pages' slim bar — brand,
+     language switch, and the same full-page menu as the chat
+     page (which itself has NO Log out: logging out lives at the
+     bottom of THIS page, Suraj's rule). #}
+  <header class="chat-header">
+    <a class="chat-brand" href="/"><img class="brand-mark"
+      src="{{ url_for('static', filename='logo-mark-t.png') }}"
+      alt="" aria-hidden="true" /> Ganitra</a>
+    <div class="header-tools">
+      <label class="lang-switch"><span class="lang-label-text">{{ t.lang_label }}</span>
+        <select id="lang-select" aria-label="{{ t.lang_label }}"
+                onchange="if (this.value) window.location.href = '/set-lang/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search);">
+          {% for code, name in lang_options %}
+            <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <details class="nav-menu">
+        <summary class="nav-menu-btn" aria-label="{{ t.menu_label }}"
+                 title="{{ t.menu_label }}">☰</summary>
+        <nav class="nav-dropdown menu-panel">
+          <div class="menu-panel-inner">
+            <div class="menu-panel-top">
+              <span class="menu-panel-title">{{ t.menu_label }}</span>
+              <button type="button" class="menu-close"
+                      aria-label="{{ t.menu_label }}"
+                      onclick="this.closest('details').removeAttribute('open')">✕</button>
+            </div>
+            {# Same full-page menu markup as the chat page. #}
+            <a class="menu-profile" href="/account">
+              {% if has_photo %}
+                <img class="menu-photo"
+                     src="/account/photo/file"
+                     alt="" aria-hidden="true" />
+              {% else %}
+                <img class="menu-photo"
+                     src="{{ url_for('static', filename='logo-mark-t.png') }}"
+                     alt="" aria-hidden="true" />
+              {% endif %}
+              <span class="menu-profile-text">
+                <span class="menu-name">{{ account.name }} <span class="menu-verified" aria-hidden="true">✓</span></span>
+                <span class="menu-line">{{ t.acct_student_line }}</span>
+                <span class="menu-line">{{ account.board_text }} {{ t.field_board }}</span>
+                <span class="menu-line menu-line-dim">{{ t.acct_verified_line }}</span>
+              </span>
+            </a>
+            <div class="menu-stats">
+              <p class="menu-stat-line"><span class="menu-stat-num" id="menu-stat-questions">–</span> <span class="menu-stat-word">{{ t.acct_questions_word }}</span></p>
+              <p class="menu-stat-line"><span class="menu-stat-num" id="menu-stat-chats">–</span> <span class="menu-stat-word">{{ t.acct_chats_word }}</span></p>
+            </div>
+            <div class="menu-items">
+              <a href="/chats">{{ t.menu_your_chats }}</a>
+              <a href="/board">{{ t.nav_board }}</a>
+              <a href="/papers">{{ t.menu_papers }}</a>
+              <a href="/practice">{{ t.nav_practice }}</a>
+              <a href="/topics">{{ t.nav_topics }}</a>
+              <a href="/mistakes">{{ t.nav_mistakes }}</a>
+              <a href="/solution/print?style=hand">{{ t.menu_copy_style }}</a>
+              <a href="/parent-report">{{ t.nav_parents }}</a>
+              <details class="menu-lang">
+                <summary class="menu-lang-summary">{{ t.menu_language }}</summary>
+                <div class="menu-lang-row">
+                  {% for code, name in lang_options %}
+                    <a class="menu-lang-link" href="/set-lang/{{ code }}?next=/account">{{ name }}</a>
+                  {% endfor %}
+                </div>
+              </details>
+            </div>
+            <a class="menu-settings-row" href="/account">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"/></svg>
+              <span>{{ t.menu_settings }}</span>
+            </a>
+            <div class="menu-gold-strip">{{ t.menu_keep_line }}</div>
+          </div>
+        </nav>
+      </details>
+    </div>
+  </header>
+{% endblock %}
+{% block footer %}{% endblock %}
+{% block content %}
+  {# Wave 12: My Account — Suraj's approved SIMPLE LIST design.
+     Photo row on top, then one settings list where every row can
+     be edited in place. The 3 favourite things are write-only
+     secrets: their current values are NEVER shown (only a box to
+     type a new one). Password change asks for the current
+     password. Log out sits at the very bottom, nowhere else. #}
+  <div class="acct-wrap">
+    <a class="back" href="/">← {{ t.nav_solve }}</a>
+    <h2 class="acct-heading">{{ t.acct_heading }}</h2>
+
+    {% if error %}
+      <p class="auth-error" role="alert">{{ error }}</p>
+    {% endif %}
+    {% if saved %}
+      <p class="acct-saved" role="status">{{ t.acct_saved_note }}</p>
+    {% endif %}
+
+    <div class="acct-photo-row">
+      {% if has_photo %}
+        <img class="acct-photo" src="/account/photo/file"
+             alt="" aria-hidden="true" />
+      {% else %}
+        <img class="acct-photo"
+             src="{{ url_for('static', filename='logo-mark-t.png') }}"
+             alt="" aria-hidden="true" />
+      {% endif %}
+      <div class="acct-photo-text">
+        <p class="acct-photo-name">{{ account.name }}</p>
+        <p class="acct-photo-line">{{ t.acct_student_line }} – {{ account.board_text }}</p>
+        <form method="post" action="/account/photo"
+              enctype="multipart/form-data" class="acct-photo-form">
+          <label class="acct-photo-label">{{ t.acct_change_photo }}
+            <input type="file" name="photo" accept="image/png,image/jpeg"
+                   class="acct-photo-input" />
+          </label>
+          <span class="acct-photo-hint">{{ t.acct_photo_hint }}</span>
+          <button type="submit" class="acct-mini-btn">{{ t.acct_upload_photo }}</button>
+        </form>
+        {% if has_photo %}
+          <form method="post" action="/account/photo/delete"
+                class="acct-photo-form">
+            <button type="submit" class="acct-mini-btn acct-remove-btn">{{ t.acct_remove_photo }}</button>
+          </form>
+        {% endif %}
+      </div>
+    </div>
+
+    <form method="post" action="/account/profile" class="acct-list">
+      <div class="acct-row">
+        <span class="acct-row-label">{{ t.field_name }}</span>
+        <span class="acct-row-edit">
+          <input type="text" name="name" class="acct-input"
+                 value="{{ account.name }}" maxlength="30" required />
+        </span>
+      </div>
+      <div class="acct-row">
+        <span class="acct-row-label">{{ t.field_class }}</span>
+        <span class="acct-row-edit">
+          <input type="text" name="class" class="acct-input"
+                 value="{{ account.class_text }}" required />
+        </span>
+      </div>
+      <div class="acct-row">
+        <span class="acct-row-label">{{ t.field_board }}</span>
+        <span class="acct-row-edit">
+          <input type="text" name="board" class="acct-input"
+                 value="{{ account.board_text }}" required />
+        </span>
+      </div>
+      <div class="acct-row acct-row-action">
+        <button type="submit" class="acct-save-btn">{{ t.acct_save_btn }}</button>
+      </div>
+    </form>
+
+    <div class="acct-list">
+      {% for field, label in (("goal", t.field_goal),
+                              ("hobby", t.field_hobby),
+                              ("favourite", t.field_favourite)) %}
+      <form method="post" action="/account/favourite/{{ field }}"
+            class="acct-row acct-fav-row">
+        <span class="acct-row-label">{{ label }}</span>
+        <span class="acct-row-edit">
+          <input type="text" name="value" class="acct-input"
+                 autocomplete="off" required />
+          <button type="submit" class="acct-edit-btn">{{ t.acct_edit_btn }}</button>
+        </span>
+      </form>
+      {% endfor %}
+
+      <form method="post" action="/account/password"
+            class="acct-row acct-pw-row">
+        <span class="acct-row-label">{{ t.field_password }}</span>
+        <span class="acct-row-edit acct-pw-edit">
+          <input type="password" name="old_password" class="acct-input"
+                 placeholder="{{ t.acct_current_password_label }}"
+                 autocomplete="current-password" />
+          <input type="password" name="new_password" class="acct-input"
+                 placeholder="{{ t.field_new_password }}"
+                 autocomplete="new-password" />
+          <button type="submit" class="acct-edit-btn">{{ t.acct_change_btn }}</button>
+        </span>
+      </form>
+    </div>
+
+    <p class="acct-logout-row">
+      <a class="acct-logout" href="/logout">{{ t.nav_logout }}</a>
+    </p>
+  </div>
+
+  <script>
+    /* Wave 12: menu stats lines, same tiny fetch as the chat
+       page (small duplication is the norm for these headers). */
+    (function () {
+      var qEl = document.getElementById("menu-stat-questions");
+      var cEl = document.getElementById("menu-stat-chats");
+      if (!qEl || !cEl || !window.fetch) return;
+      fetch("/account/stats.json").then(function (r) {
+        return r.json();
+      }).then(function (d) {
+        if (d && d.ok) {
+          qEl.textContent = String(d.questions || 0);
+          cEl.textContent = String(d.chats || 0);
+        }
+      }).catch(function () { /* placeholders stay */ });
+    })();
+  </script>
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+  {# Wave 16: Previous Papers library — REAL board papers only.
+     Every entry names its public source; the honesty note on each
+     paper says exactly what was (and was not) included. #}
+  <div class="card">
+    <h2>{{ t.papers_heading }}</h2>
+    <p class="muted">{{ t.papers_intro }}</p>
+
+    <div class="board-actions">
+      <a class="board-opt" href="/papers/analysis">{{ t.papers_analysis_btn }}</a>
+      <a class="board-opt" href="/papers/generate">{{ t.papers_generate_btn }}</a>
+    </div>
+
+    {% for group in groups %}
+      <h3>{{ t.papers_class_heading.format(n=group.class_num) }}</h3>
+      {% for row in group.papers %}
+        <div class="paper-entry">
+          <p class="paper-entry-title">
+            <strong>{{ row.paper.board }} · {{ row.paper.year }}</strong>
+            — {{ row.paper.set_label }}
+          </p>
+          <p class="muted">
+            {{ row.question_count }} {{ t.papers_questions_word }} ·
+            {{ row.total_marks }} {{ t.papers_marks_word }} ·
+            {{ t.papers_source_label }}:
+            <a href="{{ row.paper.source_url }}" target="_blank"
+               rel="noopener">{{ row.paper.source_name }}</a>
+          </p>
+          <p class="muted">{{ row.paper.note }}</p>
+          <a class="board-opt" href="/papers/{{ row.paper.id }}">{{ t.papers_view_btn }}</a>
+        </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+{% endblock %}

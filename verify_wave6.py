@@ -14,6 +14,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mplconfig")
+# Wave 10 rerun note: account names are unique per DB, so
+# sign-ups below use a per-run random suffix (RUN_ID) — a
+# rerun can never collide with the previous run.
+os.environ["GANITRA_DB_PATH"] = "/tmp/ganitra-verify-wave6.db"  # Wave 10: FORCE a scratch account DB (assignment, not setdefault — a stray env value must not point these checks at a shared/real DB)
+import uuid as _uuid
+RUN_ID = _uuid.uuid4().hex[:8]
 
 from app import create_app  # noqa: E402
 from i18n import STRINGS, SUPPORTED_LANGS  # noqa: E402
@@ -70,54 +76,59 @@ for code in SUPPORTED_LANGS:
           f"missing={sorted(missing)[:5]}")
 
 # --- 2. First-visit card + skip path -----------------------------------------
+# Wave 10 note: the sign-in page IS the first page now, and a
+# signed-in student's name comes from his ACCOUNT — the old
+# first-visit Saathi card no longer renders on the chat page at
+# all (its section id was renamed in Wave 10 precisely so the
+# sync script can't auto-submit it), so the anonymous homepage
+# checks below moved to verify_wave10, which asserts the card
+# form's ABSENCE for signed-in users. What remains verifiable
+# here is the /saathi ENDPOINT contract itself (skip stores no
+# name, save cleans + stores), exercised directly.
 c = app.test_client()
-r = c.get("/")
-body = r.get_data(as_text=True)
-check("first visit shows Saathi card", r.status_code == 200
-      and 'id="saathi-card"' in body
-      and 'action="/saathi"' in body
-      and esc(EN["saathi_card_heading"]) in body)
-check("Saathi localStorage mirror hooks", "ganitra-saathi" in body
-      and "localStorage" in body)
-check("homepage still has chat form", 'id="chat-form"' in body
-      and 'name="question"' in body)
-
 r = c.post("/saathi", data={"action": "skip", "next": "/"},
            follow_redirects=True)
-body = r.get_data(as_text=True)
-check("skip path returns home", r.status_code == 200)
+check("skip path returns (to the gate)", r.status_code == 200)
 with c.session_transaction() as sess:
     check("skip stores no name", sess.get("saathi_skipped") is True
           and not sess.get("saathi_name"))
-check("card hidden after skip", 'id="saathi-card"' not in body)
 r = c.post("/solve", data={"question": "x^2-5x+6=0"})
 check("site fully usable after skip", r.status_code == 200
       and "x = 2, x = 3" in r.get_data(as_text=True))
 
 # --- 3. Save path, personalised greeting, XSS safety --------------------------
+# Wave 10: the personalised greeting now belongs to signed-in
+# students (the account sets the Saathi session at sign-up), so
+# this section signs up instead of posting /saathi. The save
+# endpoint's own cleaning contract is asserted separately below.
 c = app.test_client()
-raw_name = "<img src=x onerror=alert(1)>Aarav"
-r = c.post("/saathi", data={"name": raw_name, "class": "8",
-                            "action": "save", "next": "/"},
+raw_name = "<img src=x onerror=alert(1)>Aarav " + RUN_ID
+r = c.post("/signup", data={"name": raw_name, "class": "8",
+                            "board": "CBSE", "goal": "Doctor",
+                            "hobby": "Cricket", "favourite": "Pizza",
+                            "password": "w6test-pass"},
            follow_redirects=True)
 body = r.get_data(as_text=True)
 with c.session_transaction() as sess:
     check("name cleaned + class stored",
-          sess.get("saathi_name") == "Aarav"
+          sess.get("saathi_name") == "Aarav " + RUN_ID
           and sess.get("saathi_class") == 8,
           f"session={sess.get('saathi_name')!r}/{sess.get('saathi_class')!r}")
 check("personalised greeting on homepage",
-      esc(EN["saathi_welcome_name"].format(name="Aarav")) in body)
+      esc(EN["saathi_welcome_name"].format(name="Aarav " + RUN_ID)) in body)
 check("raw HTML name NOT rendered", raw_name not in body
       and "<img src=x" not in body)
-check("header Saathi pill + edit", 'class="saathi-pill"' in body
-      and "Aarav" in body and "Class 8" in body
-      and 'href="/?saathi=edit#saathi-card"' in body
-      and esc(EN["saathi_edit"]) in body)
-r = c.get("/?saathi=edit")
-check("edit opens the card again", 'id="saathi-card"'
-      in r.get_data(as_text=True))
+# Wave 10: the pill no longer offers Edit for account users (the
+# name comes from the account) — it shows name + class only.
+# Wave 11: the chat top bar drops the name–class pill ENTIRELY
+# (Suraj's approved multi-chat header) — the cleaned name and
+# class still live in the session/greeting (asserted above);
+# this check now pins the pill's ABSENCE on the chat page.
+check("header Saathi pill REMOVED (wave 11)",
+      'class="saathi-pill"' not in body
+      and "saathi=edit" not in body)
 
+# /saathi save cleaning contract (unchanged endpoint behaviour).
 c = app.test_client()
 long_name = "A" * 40
 c.post("/saathi", data={"name": long_name, "class": "99",
@@ -127,13 +138,18 @@ with c.session_transaction() as sess:
     check("invalid class ignored", sess.get("saathi_class") is None)
 
 # Hindi greeting follows the UI language.
+# Wave 10: account names are unique — section 3 already signed
+# "Aarav" up, so this Hindi client uses its own name (before
+# Wave 10 the same name could be re-saved freely via /saathi).
 c = app.test_client()
 c.get("/set-lang/hi")
-c.post("/saathi", data={"name": "Aarav", "class": "8",
-                        "action": "save", "next": "/"})
+c.post("/signup", data={"name": "Aarav Hindi " + RUN_ID, "class": "8",
+                        "board": "CBSE", "goal": "Doctor",
+                        "hobby": "Cricket", "favourite": "Pizza",
+                        "password": "w6test-pass"})
 r = c.get("/")
 check("Hindi personalised greeting",
-      esc(HI["saathi_welcome_name"].format(name="Aarav"))
+      esc(HI["saathi_welcome_name"].format(name="Aarav Hindi " + RUN_ID))
       in r.get_data(as_text=True))
 
 # --- 4. Encouragement: friendly errors + wrong quiz answers -------------------
@@ -142,18 +158,30 @@ c.post("/saathi", data={"name": "Aarav", "class": "8",
                         "action": "save", "next": "/"})
 r = c.post("/solve", data={"question": "asdf qwer zxq"})
 body = r.get_data(as_text=True)
-check("named encouragement on error card",
-      esc(EN["error_encourage_name"].format(name="Aarav")) in body)
+# Wave 18 amendment (Suraj, 10 Nov 2026): gibberish gets the
+# friendly fallback reply instead of the error card, named
+# session or not — so the encouragement line no longer renders
+# here. The Saathi encouragement strings themselves are
+# asserted intact in i18n (the error card remains the answer
+# template's last resort).
+check("named session gibberish -> friendly fallback",
+      esc("didn't look like a maths question") in body
+      and "error-card" not in body)
+check("encouragement strings intact in i18n",
+      "Aarav" in EN["error_encourage_name"].format(name="Aarav")
+      and bool(EN["error_encourage"]))
 r = c.post("/api/solve", json={"question": "asdf qwer zxq"})
 data = r.get_json() or {}
-check("api error encouragement (named)",
-      (data.get("error") or {}).get("encouragement")
-      == EN["error_encourage_name"].format(name="Aarav"))
+check("api gibberish -> fallback reply (Wave 18)",
+      data.get("ok") is True
+      and (data.get("result") or {}).get("fallback_kind")
+      == "gibberish")
 
 c = app.test_client()
 r = c.post("/solve", data={"question": "asdf qwer zxq"})
-check("anonymous encouragement on error card",
-      esc(EN["error_encourage"]) in r.get_data(as_text=True))
+check("anonymous gibberish -> friendly fallback",
+      esc("didn't look like a maths question")
+      in r.get_data(as_text=True))
 
 # Wrong timed-quiz answers -> the never-scolding line (named + anon).
 def run_wrong_quiz(client):
@@ -254,7 +282,15 @@ check("report last test 0 / 5", "0 / 5" in body)
 # --- 7. JS syntax (node --check) --------------------------------------------------
 node = shutil.which("node")
 for page, maker in (
-        ("home-saathi", lambda cl: cl.get("/")),
+        # Wave 10: the chat homepage is login-gated — the maker
+        # signs up a test student so the scripts checked are the
+        # chat page's (incl. the Saathi mirror hooks).
+        ("home-saathi", lambda cl: (cl.post(
+            "/signup", data={"name": "W6 JS Tester " + RUN_ID, "class": "8",
+                             "board": "CBSE", "goal": "Doctor",
+                             "hobby": "Cricket", "favourite": "Pizza",
+                             "password": "w6test-pass"}),
+            cl.get("/"))[1]),
         ("parent-report", lambda cl: cl.get("/parent-report"))):
     cl = app.test_client()
     html = maker(cl).get_data(as_text=True)

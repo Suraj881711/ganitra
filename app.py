@@ -1,12 +1,17 @@
+import os
 import re
+import secrets
+from datetime import timedelta
 
-from flask import (Flask, Response, render_template, request, redirect,
-                   session, url_for, flash)
+from flask import (Flask, Response, jsonify, render_template, request,
+                   redirect, session, url_for, flash)
 from api import api_bp
 from i18n import (LANG_NAMES, SPEECH_LANGS, SUPPORTED_LANGS,
                   advice_for, explanation_for, get_strings,
                   normalise_lang, remark_key_for, result_unsolvable,
-                  solve_failed)
+                  solve_failed, teach_for)
+from solver.methods import alternate_methods
+from speedups import methods_nonblocking
 from solver.practice import (QUIZ_DIFFICULTIES, QUIZ_QUESTION_COUNT,
                              QUIZ_SECONDS_PER_QUESTION, QUIZ_TOPICS,
                              check_quiz_answer, generate_practice,
@@ -15,12 +20,35 @@ from board_data import (BOARD_NAMES, BOARDS, CLASS_NUMBERS,
                         get_chapter, get_chapters)
 from board_quiz import (CLASSIC_QUESTION_COUNT, display_answer,
                         generate_chapter_questions)
+import papers_data
 from solver.router import solve_question
+from fallback import with_fallback
+from langdetect_local import detect_language_confident
+import accounts
+import chats
 
 _HISTORY_LIMIT = 30
 _MISTAKE_LIMIT = 50
 _QUESTION_LIMIT = 500
 _SAATHI_NAME_LIMIT = 30
+# Wave 10: after this many failed login attempts for one name in a
+# session, further attempts get the friendly "try later" message.
+_LOGIN_ATTEMPT_LIMIT = 8
+
+
+def _signin(mode="signup", error=None, form=None, fav_error=False):
+    """Wave 10: render the first-page sign-in (sign-up by default;
+    "login" is the Welcome-back mode). fav_error=True re-opens the
+    favourite-things card (it is hidden until "Forgot password?"
+    is tapped, but a failed favourite login must land back on the
+    open card with its error visible)."""
+    form = form or {}
+    return render_template(
+        "auth.html", mode=mode, error=error, fav_error=fav_error,
+        form_name=form.get("name", ""), form_class=form.get("class", ""),
+        form_board=form.get("board", ""), form_goal=form.get("goal", ""),
+        form_hobby=form.get("hobby", ""),
+        form_favourite=form.get("favourite", ""))
 
 
 def _clean_saathi_name(value):
@@ -114,12 +142,95 @@ def _solution_text(question, result):
     return "\n".join(lines)
 
 
+def _warm_up(app):
+    """Wave 14 (speed): pay the cold-start costs ONCE, here at
+    start-up, so the first real student request feels instant:
+
+    - the heavy imports (sympy via the solver, matplotlib via the
+      plotting module) are forced to load now;
+    - one simple solve + one equation solve run end-to-end (plus
+      the auto-teach methods pass), warming sympy's lazy internals
+      and the router's pattern tables;
+    - the accounts/chats SQLite schema + indexes are created (and
+      WAL enabled) via their init_db().
+
+    Guarded end-to-end: ANY warm-up failure is logged and ignored
+    — a slow start is acceptable, a broken start is not.
+    """
+    try:
+        import solver.plotting  # noqa: F401  (matplotlib import)
+        solve_question("2+2")
+        warm = solve_question("x^2 - 5x + 6 = 0")
+        methods_nonblocking("x^2 - 5x + 6 = 0", warm, budget=10)
+        accounts.init_db()
+        chats.init_db()
+        app.config["GANITRA_WARMED_UP"] = True
+    except Exception:  # warm-up must never break start-up
+        app.logger.exception("Wave 14 warm-up failed (continuing)")
+
+
 def create_app():
     app = Flask(__name__)
-    app.secret_key = "change-this-key"  # for flash messages + session
+    # Wave 17 (security): the session-signing key comes from the
+    # GANITRA_SECRET_KEY environment variable. If it is unset (or
+    # empty), a fresh random key is generated for THIS process —
+    # sessions then die on restart (everyone is logged out), which
+    # is safe but inconvenient; there is NO hardcoded fallback.
+    _secret = os.environ.get("GANITRA_SECRET_KEY", "").strip()
+    if _secret:
+        app.secret_key = _secret
+        app.config["GANITRA_SECRET_FROM_ENV"] = True
+    else:
+        app.secret_key = secrets.token_hex(32)
+        app.config["GANITRA_SECRET_FROM_ENV"] = False
+        app.logger.warning(
+            "GANITRA_SECRET_KEY is not set: generated a random "
+            "session key for this process — all sessions will be "
+            "invalidated on restart. Set GANITRA_SECRET_KEY to a "
+            "long random value in production.")
+    # Wave 17 (security): session-cookie flags. HttpOnly keeps the
+    # cookie away from JS; SameSite=Lax blocks cross-site sending
+    # on POSTs (CSRF defence-in-depth for the form posts). Secure
+    # is opt-in via GANITRA_SECURE_COOKIES=1 so local http testing
+    # keeps working; production (HTTPS) must set it.
+    app.config.update(
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=(
+            os.environ.get("GANITRA_SECURE_COOKIES", "").strip()
+            == "1"),
+        # Only relevant if a session is ever marked permanent;
+        # permanent sessions are not enabled today, so current
+        # cookie lifetime behaviour is unchanged.
+        PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+    )
 
     # Register API blueprint
     app.register_blueprint(api_bp, url_prefix="/api")
+
+    # Wave 14: browser caching for static assets ONLY — the logo,
+    # CSS and graph PNGs (graph files are content-hash named, so
+    # a cached copy can never go stale against new content).
+    # HTML pages and API responses get no such header here.
+    # Wave 17: the same hook also stamps the security headers on
+    # EVERY response (no CSP — see verify_wave17.py header note).
+    @app.after_request
+    def _wave14_static_cache(resp):
+        resp.headers["X-Content-Type-Options"] = "nosniff"
+        resp.headers["X-Frame-Options"] = "SAMEORIGIN"
+        resp.headers["Referrer-Policy"] = "same-origin"
+        # Wave 17b (pen-test F5): HSTS only where HTTPS is the
+        # deal — production sets GANITRA_SECURE_COOKIES=1 (which
+        # is exactly what SESSION_COOKIE_SECURE records); local
+        # http must never see it, or the browser would refuse
+        # http on that host for a year. (CSP stays deliberately
+        # OFF — the pages rely on inline scripts/styles.)
+        if app.config.get("SESSION_COOKIE_SECURE"):
+            resp.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains")
+        if request.path.startswith("/static/"):
+            resp.headers["Cache-Control"] = "public, max-age=86400"
+        return resp
 
     def _record_mistakes(rows, source):
         """Wave 5: save the WRONG rows of a quiz/chapter test into the
@@ -176,6 +287,43 @@ def create_app():
     def _t():
         return get_strings(_lang())
 
+    def _set_account_session(user):
+        """Wave 10: a signed-in account IS the student's identity —
+        the session keeps only the user id + name (secrets never
+        enter the cookie), and the Wave-6 Saathi name/class + the
+        Board Mode board choice are filled from the account so the
+        greeting, Board Mode and personalisation work immediately."""
+        session["user_id"] = user["id"]
+        session["user_name"] = user["name"]
+        session["saathi_name"] = user["name"]
+        session["saathi_class"] = user["class_num"]
+        session["saathi_skipped"] = False
+        session["board"] = user["board"]
+
+    def _failed_logins(name_key):
+        # Wave 17b (pen-test F1): the SERVER-SIDE counter in
+        # accounts.py is authoritative — a running server lock
+        # reports as a full count no matter what this session's
+        # cookie says, so throwing the cookie away no longer
+        # resets anything. The per-session counter below it is
+        # kept as a harmless second signal.
+        if accounts.is_locked(name_key):
+            return _LOGIN_ATTEMPT_LIMIT
+        attempts = session.get("login_attempts") or {}
+        return attempts.get(name_key, 0)
+
+    def _record_failed_login(name_key):
+        attempts = dict(session.get("login_attempts") or {})
+        attempts[name_key] = attempts.get(name_key, 0) + 1
+        session["login_attempts"] = attempts
+        accounts.record_failed_login(name_key)
+
+    def _clear_failed_logins(name_key):
+        attempts = dict(session.get("login_attempts") or {})
+        attempts.pop(name_key, None)
+        session["login_attempts"] = attempts
+        accounts.clear_login_failures(name_key)
+
     @app.context_processor
     def inject_i18n():
         lang = _lang()
@@ -184,6 +332,22 @@ def create_app():
             strings["quiz_intro"] = strings["quiz_intro"].format(
                 count=QUIZ_QUESTION_COUNT,
                 seconds=QUIZ_QUESTION_COUNT * QUIZ_SECONDS_PER_QUESTION)
+        except (KeyError, IndexError, ValueError):
+            pass
+        # Wave 12: the full-page menu's profile block needs the
+        # account's own board text and whether a photo exists.
+        # Both come from the account row (one cheap query when
+        # signed in); anonymous visitors get the empty defaults.
+        _uid = session.get("user_id")
+        _account = accounts.get_user_by_id(_uid) if _uid else None
+        user_board_text = (_account["board_text"] if _account
+                           else BOARD_NAMES.get(
+                               session.get("board", "cbse"), "CBSE"))
+        try:
+            strings["acct_student_line"] = strings[
+                "acct_student_line"].format(
+                    **{"class": _account["class_num"]}
+                ) if _account else strings["acct_student_line"]
         except (KeyError, IndexError, ValueError):
             pass
         saathi_name = _clean_saathi_name(session.get("saathi_name", ""))
@@ -196,14 +360,30 @@ def create_app():
             "speech_lang": SPEECH_LANGS[lang],
             "js_t": {k: v for k, v in strings.items()
                      if k.startswith("js_") or k.startswith("error_")
+                     or k.startswith("chats_")
+                     or k.startswith("mm_")
                      or k in ("chat_waking_note", "flash_too_long",
-                              "dhyaan_today")},
+                              "dhyaan_today", "file_btn",
+                              "chats_new", "voice_btn", "photo_btn",
+                              "solve_btn", "acct_stats_questions",
+                              "acct_stats_chats")},
             "dhyaan_today": strings["dhyaan_today"],
             "voice_label": strings["voice_btn"],
             "saathi_name": saathi_name,
             "saathi_class": saathi_class,
             "saathi_skipped": bool(session.get("saathi_skipped"))
                               and not saathi_name,
+            # Wave 10: a signed-in account replaces the optional
+            # first-visit Saathi card entirely (the name/class come
+            # from the account now). Templates use this to hide the
+            # card/edit affordances; the session fallbacks stay for
+            # anonymous/other-page visits.
+            "user_name": session.get("user_name", ""),
+            # Wave 12: menu profile block + My Account links.
+            "user_board_text": user_board_text,
+            "user_has_photo": bool(_uid and accounts.get_photo(_uid)),
+            "board_display": BOARD_NAMES.get(
+                session.get("board", "cbse"), "CBSE"),
             "saathi_edit": request.args.get("saathi") == "edit",
             "saathi_greeting": _personal_line(
                 strings, "saathi_welcome_name", "chat_welcome",
@@ -257,7 +437,386 @@ def create_app():
 
     @app.get("/")
     def index():
+        # Wave 10: the FIRST page is the sign-in (Suraj ordered:
+        # "pahale login kaa page dena hai"). Anonymous visitors see
+        # the sign-up / Welcome-back page; a signed-in student sees
+        # the chat. The gate applies to / (chat home) ONLY — the
+        # other pages keep their Wave 1-9 behaviour (see README).
+        if not session.get("user_id"):
+            mode = request.args.get("mode", "")
+            if mode != "login":
+                mode = "signup"
+            return _signin(mode)
         return render_template("index.html")
+
+    # ------------------------------------------------------ wave 10 auth
+    @app.post("/signup")
+    def signup():
+        form = {key: request.form.get(key, "")
+                for key in ("name", "class", "board", "goal",
+                            "hobby", "favourite", "password")}
+        strings = _t()
+        # The account display name uses the same cleaning as Mera
+        # Saathi (tags stripped, whitespace collapsed, 30-char cap).
+        name = _clean_saathi_name(form["name"])
+        fields = [name, form["class"], form["board"], form["goal"],
+                  form["hobby"], form["favourite"], form["password"]]
+        if any(not str(v).strip() for v in fields):
+            return _signin("signup", strings["auth_err_fill_all"],
+                           form)
+        class_num = accounts.parse_class(form["class"])
+        if class_num is None:
+            return _signin("signup", strings["auth_err_class"], form)
+        if len(form["password"]) < 4:
+            return _signin("signup",
+                           strings["auth_err_password_short"], form)
+        # Wave 17b (pen-test F1): a favourite thing is a recovery
+        # secret — too-short answers ("om", "ok") are far too easy
+        # to guess, so new favourites need at least 3 letters
+        # (measured after the same normalisation recovery uses).
+        # Existing shorter favourites still WORK at recovery —
+        # the minimum is enforced only when one is set/changed.
+        if any(len(accounts.normalise_answer(form[key])) < 3
+               for key in ("goal", "hobby", "favourite")):
+            return _signin("signup",
+                           strings["auth_err_fav_short"], form)
+        _user_id, problem = accounts.create_user(
+            name, form["class"], form["board"], class_num,
+            form["password"], form["goal"], form["hobby"],
+            form["favourite"])
+        if problem == "exists":
+            return _signin("signup", strings["auth_err_name_taken"],
+                           form)
+        user = accounts.get_user(name)
+        _set_account_session(user)
+        return redirect(url_for("index"))
+
+    @app.post("/login")
+    def login():
+        strings = _t()
+        name = request.form.get("name", "")
+        password = request.form.get("password", "")
+        key = accounts.normalise_name_key(name)
+        if _failed_logins(key) >= _LOGIN_ATTEMPT_LIMIT:
+            return _signin("login", strings["auth_err_lockout"],
+                           {"name": name})
+        user = accounts.get_user(name)
+        if user is None or not accounts.verify_password(user, password):
+            # One friendly error for both cases — never a hint
+            # about which part (name vs password) was wrong.
+            _record_failed_login(key)
+            if _failed_logins(key) >= _LOGIN_ATTEMPT_LIMIT:
+                return _signin("login", strings["auth_err_lockout"],
+                               {"name": name})
+            return _signin("login", strings["auth_err_login"],
+                           {"name": name})
+        _clear_failed_logins(key)
+        _set_account_session(user)
+        return redirect(url_for("index"))
+
+    @app.post("/login-favourite")
+    def login_favourite():
+        """Forgot-password login, Suraj's design: name + ANY ONE
+        of the 3 favourite things (matching sign-up) logs the
+        student in AND sets a new password right there."""
+        strings = _t()
+        name = request.form.get("name", "")
+        typed = request.form.get("favourite", "")
+        new_password = request.form.get("new_password", "")
+        key = accounts.normalise_name_key(name)
+        if _failed_logins(key) >= _LOGIN_ATTEMPT_LIMIT:
+            return _signin("login", strings["auth_err_lockout"],
+                           {"name": name}, fav_error=True)
+        user = accounts.get_user(name)
+        if user is None or not accounts.verify_favourite(user, typed):
+            _record_failed_login(key)
+            if _failed_logins(key) >= _LOGIN_ATTEMPT_LIMIT:
+                return _signin("login",
+                               strings["auth_err_lockout"],
+                               {"name": name}, fav_error=True)
+            return _signin("login", strings["auth_err_fav"],
+                           {"name": name}, fav_error=True)
+        if len(new_password) < 4:
+            return _signin("login",
+                           strings["auth_err_password_short"],
+                           {"name": name}, fav_error=True)
+        accounts.update_password(user["id"], new_password)
+        _clear_failed_logins(key)
+        user = accounts.get_user(name)
+        _set_account_session(user)
+        return redirect(url_for("index"))
+
+    @app.get("/logout")
+    def logout():
+        for key in ("user_id", "user_name", "saathi_name",
+                    "saathi_class"):
+            session.pop(key, None)
+        session["saathi_skipped"] = False
+        return redirect(url_for("index"))
+
+    # --------------------------------------------------- wave 12 account
+    # My Account (Wave 12): everything about the account can be
+    # changed later — name, class, board, the 3 favourite things,
+    # the password, plus the student's own photo. Favourites are
+    # write-only: the page never shows their current values (they
+    # are stored as hashes and cannot be shown anyway). Log out
+    # lives at the bottom of THIS page only. Every route needs the
+    # login session; anonymous visitors go back to the sign-in
+    # gate, exactly like /chats.
+    _PHOTO_MAX_BYTES = 2 * 1024 * 1024
+
+    def _account_user():
+        uid = session.get("user_id")
+        return accounts.get_user_by_id(uid) if uid else None
+
+    def _account_page(user, error=None):
+        return render_template(
+            "account.html", account=user, error=error,
+            has_photo=bool(accounts.get_photo(user["id"])),
+            saved=request.args.get("saved") == "1" and not error)
+
+    def _photo_kind(data):
+        """'png' / 'jpeg' by MAGIC BYTES (never by the file name),
+        or None — uploads are only ever these two formats."""
+        if data[:8] == b"\x89PNG\r\n\x1a\n":
+            return "png"
+        if data[:3] == b"\xff\xd8\xff":
+            return "jpeg"
+        return None
+
+    def _photo_end(data, kind):
+        """Offset just past the image's own terminator — the end
+        of the PNG IEND chunk, or just past the JPEG EOI marker
+        (FF D9) — or None when the stream is malformed / has no
+        terminator. Wave 17b (pen-test F3): an upload whose bytes
+        CONTINUE past this offset is a polyglot (e.g. a script
+        appended after the image) and is refused outright, not
+        stored. (JPEG uses the LAST FF D9: an EXIF thumbnail is a
+        whole JPEG embedded before the main image's own EOI.)"""
+        if kind == "png":
+            pos = 8  # signature (already verified by _photo_kind)
+            while pos + 8 <= len(data):
+                length = int.from_bytes(data[pos:pos + 4], "big")
+                ctype = data[pos + 4:pos + 8]
+                end = pos + 8 + length + 4  # header+payload+CRC
+                if end > len(data):
+                    return None
+                if ctype == b"IEND":
+                    return end
+                pos = end
+            return None
+        idx = data.rfind(b"\xff\xd9")
+        return idx + 2 if idx >= 0 else None
+
+    @app.get("/account")
+    def account_page():
+        user = _account_user()
+        if not user:
+            return redirect(url_for("index"))
+        return _account_page(user)
+
+    @app.post("/account/profile")
+    def account_profile():
+        user = _account_user()
+        if not user:
+            return redirect(url_for("index"))
+        strings = _t()
+        name = _clean_saathi_name(request.form.get("name", ""))
+        class_text = request.form.get("class", "").strip()
+        board_text = request.form.get("board", "").strip()
+        if not name or not class_text or not board_text:
+            return _account_page(user, strings["acct_err_required"])
+        class_num = accounts.parse_class(class_text)
+        if class_num is None:
+            return _account_page(user, strings["auth_err_class"])
+        if name != user["name"]:
+            if accounts.rename_user(user["id"], name) == "exists":
+                return _account_page(
+                    user, strings["auth_err_name_taken"])
+        accounts.update_profile(user["id"], class_text, class_num,
+                                board_text)
+        fresh = accounts.get_user_by_id(user["id"])
+        _set_account_session(fresh)
+        return redirect(url_for("account_page", saved=1))
+
+    @app.post("/account/favourite/<field>")
+    def account_favourite(field):
+        user = _account_user()
+        if not user:
+            return redirect(url_for("index"))
+        if field not in ("goal", "hobby", "favourite"):
+            return redirect(url_for("account_page"))
+        value = request.form.get("value", "").strip()
+        if not value:
+            return _account_page(user, _t()["acct_err_required"])
+        # Wave 17b: same 3-letter minimum as sign-up (see signup).
+        if len(accounts.normalise_answer(value)) < 3:
+            return _account_page(user,
+                                 _t()["auth_err_fav_short"])
+        accounts.update_favourites(user["id"], field, value)
+        return redirect(url_for("account_page", saved=1))
+
+    @app.post("/account/password")
+    def account_password():
+        user = _account_user()
+        if not user:
+            return redirect(url_for("index"))
+        strings = _t()
+        old = request.form.get("old_password", "")
+        new = request.form.get("new_password", "")
+        if not old:
+            return _account_page(user,
+                                 strings["acct_err_old_password"])
+        if not accounts.verify_password(user, old):
+            return _account_page(
+                user, strings["acct_err_password_wrong"])
+        if len(new) < 4:
+            return _account_page(
+                user, strings["auth_err_password_short"])
+        accounts.update_password(user["id"], new)
+        return redirect(url_for("account_page", saved=1))
+
+    @app.post("/account/photo")
+    def account_photo_upload():
+        user = _account_user()
+        if not user:
+            return redirect(url_for("index"))
+        strings = _t()
+        upload = request.files.get("photo")
+        if upload is None or not upload.filename:
+            return _account_page(user, strings["acct_err_required"])
+        data = upload.read()
+        ctype = (upload.content_type or "").lower()
+        kind = _photo_kind(data)
+        if kind is None or ctype not in (
+                "image/png", "image/jpeg", "image/jpg"):
+            return _account_page(user,
+                                 strings["acct_err_photo_type"])
+        # Wave 17b (pen-test F3): nothing may live after the
+        # image's own end — trailing bytes mean a polyglot file.
+        if _photo_end(data, kind) != len(data):
+            return _account_page(user,
+                                 strings["acct_err_photo_type"])
+        if len(data) > _PHOTO_MAX_BYTES:
+            return _account_page(user,
+                                 strings["acct_err_photo_size"])
+        accounts.set_photo(user["id"], data)
+        return redirect(url_for("account_page", saved=1))
+
+    @app.post("/account/photo/delete")
+    def account_photo_delete():
+        user = _account_user()
+        if not user:
+            return redirect(url_for("index"))
+        accounts.delete_photo(user["id"])
+        return redirect(url_for("account_page", saved=1))
+
+    @app.get("/account/photo/file")
+    def account_photo_file():
+        user = _account_user()
+        if not user:
+            return redirect(url_for("index"))
+        data = accounts.get_photo(user["id"])
+        if not data:
+            return ("", 404)
+        kind = _photo_kind(data) or "png"
+        resp = Response(data, mimetype=f"image/{kind}")
+        resp.headers["Cache-Control"] = "private"
+        return resp
+
+    @app.get("/account/stats.json")
+    def account_stats():
+        user = _account_user()
+        if not user:
+            return jsonify({"ok": False,
+                            "error": "login-required"}), 401
+        return jsonify({
+            "ok": True,
+            "questions": accounts.questions_count(user["id"]),
+            "chats": accounts.chats_count(user["id"]),
+        })
+
+    # ------------------------------------------------------ wave 11 chats
+    # Multi-chat (Brave-style tabs): chats belong to the signed-in
+    # ACCOUNT and live server-side in the accounts SQLite file
+    # (chats.py). Every endpoint requires the login session and
+    # only ever touches the caller's own chats. Anonymous callers
+    # get the sign-in gate (a redirect for the view, 401 JSON for
+    # the API) — chats are account data, never public.
+    def _chat_uid():
+        return session.get("user_id")
+
+    @app.get("/chats")
+    def chats_view():
+        if not _chat_uid():
+            return redirect(url_for("index"))
+        return render_template("chats.html")
+
+    @app.get("/api/chats")
+    def api_chats_list():
+        uid = _chat_uid()
+        if not uid:
+            return jsonify({"ok": False, "error": "login-required"}), 401
+        return jsonify({"ok": True, "chats": chats.list_chats(uid)})
+
+    @app.post("/api/chats")
+    def api_chats_create():
+        uid = _chat_uid()
+        if not uid:
+            return jsonify({"ok": False, "error": "login-required"}), 401
+        return jsonify({"ok": True, "chat": chats.create_chat(uid)}), 201
+
+    @app.get("/api/chats/<int:chat_id>")
+    def api_chats_get(chat_id):
+        uid = _chat_uid()
+        if not uid:
+            return jsonify({"ok": False, "error": "login-required"}), 401
+        chat = chats.get_chat(uid, chat_id)
+        if chat is None:
+            return jsonify({"ok": False, "error": "not-found"}), 404
+        return jsonify({"ok": True, "chat": chat})
+
+    @app.put("/api/chats/<int:chat_id>")
+    def api_chats_save(chat_id):
+        uid = _chat_uid()
+        if not uid:
+            return jsonify({"ok": False, "error": "login-required"}), 401
+        # Wave 17b (pen-test F2 pattern): a non-object JSON body
+        # or a non-list "messages" is a client error (400) with
+        # the friendly JSON shape — never a 500. A missing/null
+        # messages field keeps the old behaviour (save_chat
+        # refuses it -> 404 not-found).
+        data = request.get_json(silent=True)
+        if data is None:
+            data = {}
+        if not isinstance(data, dict):
+            return jsonify({"ok": False,
+                            "error": "bad-request"}), 400
+        messages = data.get("messages")
+        if messages is not None and not isinstance(messages, list):
+            return jsonify({"ok": False,
+                            "error": "bad-request"}), 400
+        chat = chats.save_chat(uid, chat_id, messages)
+        if chat is None:
+            return jsonify({"ok": False, "error": "not-found"}), 404
+        return jsonify({"ok": True, "chat": chat})
+
+    @app.delete("/api/chats/<int:chat_id>")
+    def api_chats_delete(chat_id):
+        uid = _chat_uid()
+        if not uid:
+            return jsonify({"ok": False, "error": "login-required"}), 401
+        if not chats.delete_chat(uid, chat_id):
+            return jsonify({"ok": False, "error": "not-found"}), 404
+        return jsonify({"ok": True})
+
+    @app.delete("/api/chats")
+    def api_chats_delete_all():
+        uid = _chat_uid()
+        if not uid:
+            return jsonify({"ok": False, "error": "login-required"}), 401
+        removed = chats.delete_all_chats(uid)
+        return jsonify({"ok": True, "deleted": removed})
 
     @app.get("/topics")
     def topics():
@@ -275,6 +834,13 @@ def create_app():
         if len(question) > _QUESTION_LIMIT:
             flash(_t()["flash_too_long"])
             return redirect(url_for("index"))
+        # Wave 9: auto language — the same rule as the chat API: a
+        # solidly detected different language becomes the session
+        # language BEFORE the answer page renders, so the whole
+        # page (headings, explanation, advice) uses the new one.
+        detected, solid = detect_language_confident(question)
+        if solid and detected != _lang():
+            session["lang"] = detected
         result = solve_question(question)
         # Wave 5b: on failure, gently re-ask once with a hint; the
         # second result decides what the student sees.
@@ -282,6 +848,12 @@ def create_app():
             retry = solve_question(_ask_again(question))
             if not solve_failed(question, retry):
                 result = retry
+        # Wave 18: no dead-end — failures, letter-soup "answers"
+        # and soft non-answers become honest fallback answers
+        # (salvage / concept / similar example / friendly guide),
+        # so the error card below is now only a last resort that
+        # the fallback itself could not cover.
+        result = with_fallback(question, result)
         failed = solve_failed(question, result)
         session["last_question"] = question
         session["last_result"] = result
@@ -295,6 +867,13 @@ def create_app():
                                                                  _lang())),
                                advice=(None if failed
                                        else advice_for(result, _lang())),
+                               # Wave 14: same non-blocking
+                               # auto-teach budget as /api/solve.
+                               methods=([] if failed
+                                        else methods_nonblocking(
+                                            question, result)),
+                               teach=([] if failed
+                                      else teach_for(result, _lang())),
                                unsolvable=failed)
 
     @app.post("/photo-solve")
@@ -317,6 +896,8 @@ def create_app():
             retry = solve_question(_ask_again(question))
             if not solve_failed(question, retry):
                 result = retry
+        # Wave 18: same no-dead-end fallback as /solve.
+        result = with_fallback(question, result)
         failed = solve_failed(question, result)
         session["last_question"] = question
         session["last_result"] = result
@@ -330,6 +911,13 @@ def create_app():
                                                                  _lang())),
                                advice=(None if failed
                                        else advice_for(result, _lang())),
+                               # Wave 14: same non-blocking
+                               # auto-teach budget as /api/solve.
+                               methods=([] if failed
+                                        else methods_nonblocking(
+                                            question, result)),
+                               teach=([] if failed
+                                      else teach_for(result, _lang())),
                                unsolvable=failed)
 
     @app.get("/download")
@@ -612,6 +1200,119 @@ def create_app():
             copycheck=copycheck,
         )
 
+    # ------------------------------------------------- wave 16 papers
+    # Previous Papers (Suraj's idea, 10 Nov 2026): a small library
+    # of REAL previous board papers (papers_data.py — every entry
+    # carries its public source name + URL; nothing is invented),
+    # a pattern analysis computed from that library, and the
+    # "Apna Paper Banao" generator (real questions reused where
+    # the library has them, generated questions always labelled
+    # "practice question"). All pages are account pages like
+    # /chats: anonymous visitors are sent back to the sign-in
+    # gate at /.
+    def _papers_signed_in():
+        return bool(session.get("user_id"))
+
+    @app.get("/papers")
+    def papers_home():
+        if not _papers_signed_in():
+            return redirect(url_for("index"))
+        groups = []
+        for class_num in papers_data.CLASSES_WITH_PAPERS:
+            rows = []
+            for paper in papers_data.papers_for_class(class_num):
+                rows.append({
+                    "paper": paper,
+                    "question_count": len(paper["questions"]),
+                    "total_marks": papers_data.paper_total_marks(
+                        paper),
+                })
+            groups.append({"class_num": class_num, "papers": rows})
+        return render_template("papers.html", groups=groups)
+
+    @app.get("/papers/<paper_id>")
+    def papers_view(paper_id):
+        if not _papers_signed_in():
+            return redirect(url_for("index"))
+        paper = papers_data.get_paper(paper_id)
+        if paper is None:
+            return redirect(url_for("papers_home"))
+        sections = []
+        for section in papers_data.PAPER_STRUCTURE:
+            qs = [q for q in paper["questions"]
+                  if q["section"] == section]
+            if qs:
+                sections.append({
+                    "section": section,
+                    "title": papers_data.SECTION_TITLES[section],
+                    "questions": qs,
+                })
+        chapters = {q["chapter"]: papers_data.chapter_title(
+            paper["class_num"], q["chapter"])
+            for q in paper["questions"]}
+        return render_template(
+            "paper_view.html", paper=paper, sections=sections,
+            chapters=chapters,
+            total_marks=papers_data.paper_total_marks(paper))
+
+    @app.get("/papers/analysis")
+    def papers_analysis():
+        if not _papers_signed_in():
+            return redirect(url_for("index"))
+        analyses = [papers_data.analysis_for_class(class_num)
+                    for class_num
+                    in papers_data.CLASSES_WITH_PAPERS]
+        return render_template("papers_analysis.html",
+                               analyses=analyses)
+
+    @app.get("/papers/generate")
+    def papers_generate():
+        if not _papers_signed_in():
+            return redirect(url_for("index"))
+        return render_template(
+            "papers_generate.html", paper=None,
+            classes=papers_data.CLASSES_WITH_PAPERS)
+
+    @app.post("/papers/generate")
+    def papers_generate_post():
+        if not _papers_signed_in():
+            return redirect(url_for("index"))
+        try:
+            class_num = int(request.form.get("class_num", ""))
+        except ValueError:
+            class_num = -1
+        if class_num not in papers_data.CLASSES_WITH_PAPERS:
+            return redirect(url_for("papers_generate"))
+        # Only the seed + class ride in the session cookie (the
+        # full paper is far too big for a cookie); the generator
+        # is deterministic for a seed, so the print view rebuilds
+        # the identical paper from this reference.
+        import random as _random
+        seed = _random.SystemRandom().randint(0, 10 ** 9)
+        paper = papers_data.generate_practice_paper(
+            class_num, seed=seed)
+        session["practice_paper_ref"] = {"class_num": class_num,
+                                          "seed": seed}
+        return render_template(
+            "papers_generate.html", paper=paper,
+            classes=papers_data.CLASSES_WITH_PAPERS)
+
+    @app.get("/papers/print")
+    def papers_print():
+        """Print/PDF-friendly view of the last generated practice
+        paper (same standalone-serif approach as /solution/print:
+        the browser's Print -> Save as PDF makes the PDF)."""
+        if not _papers_signed_in():
+            return redirect(url_for("index"))
+        ref = session.get("practice_paper_ref") or {}
+        paper = None
+        if ref.get("class_num") in papers_data.CLASSES_WITH_PAPERS:
+            paper = papers_data.generate_practice_paper(
+                ref["class_num"], seed=ref.get("seed"))
+        if not paper:
+            return redirect(url_for("papers_generate"))
+        return render_template("papers_print.html", paper=paper)
+
     # -------------------------------------------------- mistake notebook
     @app.get("/mistakes")
     def mistakes():
@@ -659,6 +1360,9 @@ def create_app():
     def mistakes_clear():
         session.pop("mistakes", None)
         return redirect(url_for("mistakes"))
+
+    # Wave 14: warm the solver + DB before the first request.
+    _warm_up(app)
 
     return app
 

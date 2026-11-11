@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+  {# Wave 16: one real previous paper — questions grouped by
+     section, each with its NCERT chapter + marks. #}
+  <div class="card">
+    <a class="back" href="/papers">{{ t.papers_back }}</a>
+    <h2>{{ paper.board }} · {{ t.board_class_word }} {{ paper.class_num }} · {{ paper.year }}</h2>
+    <p class="muted">{{ paper.set_label }} · {{ paper.questions | length }} {{ t.papers_questions_word }} · {{ total_marks }} {{ t.papers_marks_word }}</p>
+    <p class="muted">{{ t.papers_source_label }}:
+      <a href="{{ paper.source_url }}" target="_blank"
+         rel="noopener">{{ paper.source_name }}</a></p>
+    <p class="muted">{{ paper.note }}</p>
+
+    {% for sec in sections %}
+      <h3>{{ sec.title }}</h3>
+      {% for q in sec.questions %}
+        <div class="paper-q">
+          <p><strong>Q{{ q.number }}.</strong> {{ q.text }}</p>
+          <p class="q-meta">
+            <span class="q-chip">{{ t.papers_chapter_word }}: {{ chapters[q.chapter] }}</span>
+            <span class="q-chip">{{ q.marks }} {{ t.papers_marks_word }}</span>
+          </p>
+        </div>
+      {% endfor %}
+    {% endfor %}
+
+    <a class="back" href="/papers">{{ t.papers_back }}</a>
+  </div>
+{% endblock %}

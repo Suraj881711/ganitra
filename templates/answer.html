@@ -202,6 +202,33 @@
       </script>
     {% endif %}
 
+    {% if methods %}
+      {# Wave 12: the same multi-method idea as the chat — the
+         first method above was the primary; these are the other
+         honest ways, each in its own collapsible block. #}
+      <div class="methods-block">
+        <h2>{{ t.mm_more }}</h2>
+        <p class="methods-note">{{ t.mm_more_prefix }} {{ methods|length }} {{ t.mm_methods_suffix }}</p>
+        {% for m in methods %}
+          <details class="method-detail">
+            <summary>{{ t.mm_method_label }} {{ loop.index + 1 }} - {{ m.label }}</summary>
+            <ol class="steps method-steps">
+              {% for step in m.steps %}<li>{{ step }}</li>{% endfor %}
+            </ol>
+          </details>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if teach %}
+      <div class="teach-block">
+        <h2>👩‍🏫 {{ t.mm_teach_btn }}</h2>
+        <ul class="teach-lines">
+          {% for line in teach %}<li>{{ line }}</li>{% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
     <a class="back" href="/download">{{ t.download_link }}</a>
     <a class="back" href="/solution/print" target="_blank" rel="noopener">{{ t.pdf_link }}</a>
     <a class="back" href="/">{{ t.ask_another }}</a>
