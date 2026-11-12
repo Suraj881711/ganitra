@@ -58,11 +58,3 @@
         <a href="/mistakes">{{ t.nav_mistakes }}</a>
         <a href="/solution/print?style=hand">{{ t.menu_copy_style }}</a>
         <a href="/parent-report">{{ t.nav_parents }}</a>
-        <details class="menu-lang">
-          <summary class="menu-lang-summary">{{ t.menu_language }}</summary>
-          <div class="menu-lang-row">
-            {% for code, name in lang_options %}
-              <a class="menu-lang-link" href="/set-lang/{{ code }}?next={{ request.path }}">{{ name }}</a>
-            {% endfor %}
-          </div>
-        </details>

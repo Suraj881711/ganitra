@@ -11,14 +11,6 @@
       src="{{ url_for('static', filename='logo-mark-t.png') }}"
       alt="" aria-hidden="true" /> Ganitra</a>
     <div class="header-tools">
-      <label class="lang-switch"><span class="lang-label-text">{{ t.lang_label }}</span>
-        <select id="lang-select" aria-label="{{ t.lang_label }}"
-                onchange="if (this.value) window.location.href = '/set-lang/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search);">
-          {% for code, name in lang_options %}
-            <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ name }}</option>
-          {% endfor %}
-        </select>
-      </label>
       {% include "_menu.html" %}
             </div>
             <a class="menu-settings-row" href="/account">

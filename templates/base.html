@@ -58,14 +58,6 @@
         <span class="dhyaan-pill" id="dhyaan-pill"
           title="{{ t.dhyaan_label }}"><span class="dhyaan-label" aria-hidden="true">{{ t.dhyaan_label }}</span>
           <span id="dhyaan-text"></span></span>
-        <label class="lang-switch"><span class="lang-label-text">{{ t.lang_label }}</span>
-          <select id="lang-select" aria-label="{{ t.lang_label }}"
-                  onchange="if (this.value) window.location.href = '/set-lang/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search);">
-            {% for code, name in lang_options %}
-              <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ name }}</option>
-            {% endfor %}
-          </select>
-        </label>
         {% include "_menu.html" %}
         <a class="chats-plus" id="chats-open" href="/chats"
            aria-label="{{ t.chats_open_label }}"
