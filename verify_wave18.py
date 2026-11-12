@@ -320,8 +320,15 @@ check("teacher narration layer wired (chat)",
       and "narrateSolution(result.steps" in index_src)
 check("wave 22 smaller action icons (css)",
       "Wave 22" in css_src
-      and ".act-btn svg { width: 17px; height: 17px; }" in css_src
-      and "width: 34px; height: 34px" in css_src)
+      # Wave 24 final word (Suraj, 13 Nov 2026, Muse-row
+      # screenshot): the answer-row buttons are BORDERLESS
+      # outline glyphs (18px since the 13 Nov design change)
+      # — no background, no border.
+      # Supersedes Wave 22's 34px circle and Wave 24's first
+      # 36px boxed pass.
+      and ".act-btn svg { width: 18px; height: 18px; }" in css_src
+      and "background: transparent; border: none;"
+      " box-shadow: none;" in css_src)
 
 import json as _json  # noqa: E402
 import shutil as _shutil  # noqa: E402
