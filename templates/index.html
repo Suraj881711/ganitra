@@ -54,13 +54,22 @@
               id="scene-logo"
               src="{{ url_for('static', filename='logo-full-t.png') }}"
               alt="Ganitra" /></div>
+            {# Wave 25: width/height attributes pin the actors
+               to their stage sizes even if the stylesheet has
+               not loaded (or a stale cached copy is served) —
+               the sprites are 1600px files and rendered at
+               natural size when the Wave-23 CSS went missing.
+               The CSS still governs whenever it is present. #}
             <img class="scene-actor scene-eagle" id="scene-eagle"
+              width="92" height="92"
               src="{{ url_for('static', filename='scene-eagle.webp') }}"
               alt="" aria-hidden="true" />
             <img class="scene-actor scene-tiger" id="scene-tiger"
+              width="104" height="104"
               src="{{ url_for('static', filename='scene-tiger.webp') }}"
               alt="" aria-hidden="true" />
             <img class="scene-actor scene-boy" id="scene-boy"
+              width="96" height="96"
               src="{{ url_for('static', filename='scene-boy.webp') }}"
               alt="" aria-hidden="true" />
             {# Scene C: the boy's stick — a plain CSS shape he
@@ -182,6 +191,7 @@
         steps: {{ t.steps_heading | tojson }},
         explanation: {{ t.explanation_heading | tojson }},
         adviceHeading: {{ t.advice_heading | tojson }},
+        answerHeading: {{ t.answer_heading | tojson }},
         listen: {{ t.listen_btn | tojson }},
         stopListen: {{ t.listen_stop_btn | tojson }},
         handwriting: {{ t.handwriting_btn | tojson }},
@@ -765,6 +775,8 @@
           if (!node || node.querySelector(".boy-writer")) return;
           var boy = document.createElement("img");
           boy.className = "boy-writer in-typing on";
+          boy.width = 54;   /* Wave 25: attribute-level size */
+          boy.height = 54;  /* (see showBoyWriter's note).    */
           boy.src = "/static/scene-boy.webp";
           boy.alt = "";
           boy.setAttribute("aria-hidden", "true");
@@ -902,6 +914,25 @@
           question = data.question || data._q || "";
         }
         var result = data.result || {};
+        /* Wave 25: the steps THIS bubble shows, speaks and
+           copies. Some solvers append a final step that only
+           restates the answer ("Solution: x = 2") — on screen
+           that made the answer appear twice (once as a step,
+           once as the answer line), which the live check
+           flagged. Drop that one trailing restatement here,
+           once, so the list, the narration queues and the
+           copied text all agree; the plain answer line at
+           the end of the card carries it. The payload itself
+           (and saved chats) keep the solver's own steps. */
+        var displaySteps = (result.steps || []).slice();
+        if (displaySteps.length && result.answer) {
+          var _lastStep = displaySteps[displaySteps.length - 1]
+            .replace(/^\s*(solution|answer)\s*:\s*/i, "").trim();
+          if (_lastStep
+              && _lastStep === String(result.answer).trim()) {
+            displaySteps.pop();
+          }
+        }
         var div = document.createElement("div");
         div.className = "bubble bot";
 
@@ -933,10 +964,19 @@
 
         var ans = document.createElement("p");
         ans.className = "answer-big";
-        if (result.latex) {
+        /* Wave 25: the line is the localised answer label +
+           the answer TEXT ("Answer: x = 2"). result.latex is
+           NOT the answer — for an equation it is the equation
+           itself ("2 x + 3 = 7"), so the old latex-first
+           branch put the question's own equation where the
+           answer belonged and the live check found no answer
+           line at all. The latex form survives only as a
+           last resort for a payload with no answer text. */
+        if (result.answer) {
+          ans.textContent = (CHAT.answerHeading || "Answer")
+            + ": " + result.answer;
+        } else if (result.latex) {
           ans.textContent = "\\(" + result.latex + "\\)";
-        } else {
-          ans.textContent = result.answer || "";
         }
         /* Wave 24, final word (Suraj, 13 Nov 2026 ~00:16
            IST): NO box around the answer — "ans itna
@@ -1013,8 +1053,12 @@
           var lines = [];
           if (question) lines.push(question);
           if (result.answer) lines.push(result.answer);
-          (result.steps || []).forEach(function (s, i) {
-            lines.push((i + 1) + ". " + s);
+          /* Wave 25: the copied steps are the same plain
+             lines the card shows — no "1." numbering
+             (Suraj: numbers ka koi matlab nahi) and no
+             duplicated answer step. */
+          displaySteps.forEach(function (s) {
+            lines.push(s);
           });
           var text = lines.join("\n");
           function done() {
@@ -1056,7 +1100,7 @@
           var parts = [];
           parts.push({ text: speakable(question, UI_CODE),
                        lang: SPEECH_LANG });
-          parts = parts.concat(narrateSolution(result.steps,
+          parts = parts.concat(narrateSolution(displaySteps,
             result.answer, UI_CODE, SPEECH_LANG));
           if (data.advice) {
             parts.push({ text: speakable(data.advice, UI_CODE),
@@ -1114,6 +1158,12 @@
           if (!boyWriter) {
             boyWriter = document.createElement("img");
             boyWriter.className = "boy-writer at-board";
+            /* Wave 25: attribute-level size too — the sprite
+               is a 1600px file; if the stylesheet is missing
+               or stale he must still not blow up to full
+               card width. CSS governs when present. */
+            boyWriter.width = 82;
+            boyWriter.height = 82;
             boyWriter.src = "/static/scene-boy.webp";
             boyWriter.alt = "";
             boyWriter.setAttribute("aria-hidden", "true");
@@ -1210,7 +1260,7 @@
              + the step itself, and the warm closing line
              (which reveals the answer). Each queue item
              carries the board index it reveals in .step. */
-          var queue = narrateSolution(result.steps, result.answer,
+          var queue = narrateSolution(displaySteps, result.answer,
                                       UI_CODE, SPEECH_LANG);
           var idx = 0;
 
@@ -1219,16 +1269,40 @@
             if (!part || !part.text) { done(); return; }
             if ("speechSynthesis" in window) {
               var advanced = false;
+              var startedAt = Date.now();
               function adv() {
                 if (advanced) return;
                 advanced = true;
                 done();
               }
+              /* Wave 25: a part must stay on the board for a
+                 minimum beat (~1s) before the board advances.
+                 Some speech engines fire onend instantly (no
+                 voices installed, headless browsers, a few
+                 Android builds) — without this floor the
+                 whole queue burned through in a blink and
+                 Teach looked as if it never revealed
+                 anything: every step was simply already
+                 there when anyone looked. Real teacher
+                 speech runs far longer than the floor, so
+                 the spoken pace on a student's phone is
+                 unchanged; only the instant-engine case is
+                 paced. The safety timer below still calls
+                 adv() directly, so a dropped utterance can
+                 never stall the board. */
+              function advTimed() {
+                var wait = 1000 - (Date.now() - startedAt);
+                if (wait > 0) {
+                  st.timer = window.setTimeout(adv, wait);
+                } else {
+                  adv();
+                }
+              }
               var u = new SpeechSynthesisUtterance(part.text);
               u.lang = part.lang;
               tuneUtterance(u, part.lang);
-              u.onend = adv;
-              u.onerror = adv;
+              u.onend = advTimed;
+              u.onerror = advTimed;
               // Safety net: if neither event ever fires (some
               // browsers drop an utterance silently), a generous
               // timer still advances the board — it never stalls.
@@ -1236,7 +1310,7 @@
                 Math.max(5000, part.text.length * 240));
               try {
                 window.speechSynthesis.speak(u);
-              } catch (e) { adv(); }
+              } catch (e) { advTimed(); }
             } else {
               st.timer = window.setTimeout(done,
                 Math.min(9000,
@@ -1285,7 +1359,7 @@
           }
           next();
         }
-        if ((result.steps && result.steps.length) || result.answer) {
+        if (displaySteps.length || result.answer) {
           teachBtn = document.createElement("button");
           teachBtn.type = "button";
           teachBtn.className = "method-chip act-btn teach-btn";
@@ -1404,7 +1478,7 @@
           graphImg = img;
         }
 
-        if (result.steps && result.steps.length) {
+        if (displaySteps.length) {
           var tools = document.createElement("div");
           tools.className = "steps-tools";
           var ol = document.createElement("ol");
@@ -1415,7 +1489,7 @@
              order, one under another. */
           ol.className = "steps notebook"
             + (hwOn() ? " handwriting-on" : "");
-          result.steps.forEach(function (step) {
+          displaySteps.forEach(function (step) {
             var li = document.createElement("li");
             li.textContent = step;
             ol.appendChild(li);
