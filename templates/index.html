@@ -844,6 +844,10 @@
         host.appendChild(title);
         var ol = document.createElement("ol");
         ol.className = "steps method-steps";
+        /* Wave 26: pinned inline too (the CSS rule in
+           style.css is the primary styling) — step numbers
+           must never reappear through a stale stylesheet. */
+        ol.style.listStyleType = "none";
         (method.steps || []).forEach(function (step) {
           var li = document.createElement("li");
           li.textContent = step;
@@ -1489,6 +1493,15 @@
              order, one under another. */
           ol.className = "steps notebook"
             + (hwOn() ? " handwriting-on" : "");
+          /* Wave 26: the no-numbering rule is ALSO pinned
+             inline on the list itself. The stylesheet rule
+             (ol.steps { list-style: none }) is the primary
+             styling, but Waves 23-25 proved a stylesheet
+             can fail to arrive (a day-long HTTP cache on
+             the static host); the numbers are the one thing
+             Suraj banned outright, so they are now
+             impossible even with no stylesheet at all. */
+          ol.style.listStyleType = "none";
           displaySteps.forEach(function (step) {
             var li = document.createElement("li");
             li.textContent = step;
