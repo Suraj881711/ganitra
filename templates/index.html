@@ -172,6 +172,7 @@
         moreMethods: {{ t.mm_more | tojson }},
         otherHeading: {{ t.mm_other_heading | tojson }},
         methodLabel: {{ t.mm_method_label | tojson }},
+        methodFailed: {{ t.mm_method_failed | tojson }},
         solveBtn: {{ t.mm_solve_btn | tojson }},
         teachBtn: {{ t.mm_teach_btn | tojson }},
         teacherMode: {{ t.mm_teacher_mode | tojson }},
@@ -388,16 +389,34 @@
         s = s.replace(/π/g, " " + w.pi + " ");
         return s.replace(/\s+/g, " ").trim();
       }
-      function makeListenButton(parts) {
+      /* opts.icon: an SVG string — the button then shows ONLY
+         the icon (Wave 21: the answer-row buttons are signs, not
+         words) and the Listen/Stop words live in aria-label +
+         title and a screen-reader-only span. Without opts the
+         classic text button is built (method blocks keep their
+         text Listen button). */
+      function makeListenButton(parts, opts) {
+        opts = opts || {};
         var btn = document.createElement("button");
         btn.type = "button";
         btn.className = "listen-btn";
-        btn.textContent = CHAT.listen;
+        var labelSpan = null;
+        if (opts.icon) {
+          btn.innerHTML = opts.icon;
+          labelSpan = document.createElement("span");
+          labelSpan.className = "sr-only";
+          btn.appendChild(labelSpan);
+        }
         var speaking = false;
         var speakId = 0;
         function paint() {
-          btn.textContent = speaking ? CHAT.stopListen : CHAT.listen;
+          var label = speaking ? CHAT.stopListen : CHAT.listen;
+          if (labelSpan) labelSpan.textContent = label;
+          else btn.textContent = label;
+          btn.setAttribute("aria-label", label);
+          btn.title = label;
         }
+        paint();
         btn.addEventListener("click", function () {
           if (speaking) {
             speakId += 1;
@@ -495,19 +514,37 @@
       }
 
       /* ---------- Wave 12: More methods + Teach me chips ------
-         Small side chips under each answer: [+ More methods (N)]
-         [🔊 Listen] [👩‍🏫 Teach me]. The methods and teach lines
-         ride inside the solve response itself, so a reopened
-         account chat re-renders the very same chips. Opening a
-         method calls /api/solve-method for its stored steps and
-         appends a sub-block inside the bubble. */
-      function renderMethodInto(host, method) {
+         (Historical: this wave introduced the per-answer chips,
+         the methods/teach payload riding in the solve response
+         and the /api/solve-method contract. Wave 21 reshaped
+         the row — see addAnswerBubble: four sign-only buttons,
+         full-row method tap targets, Teach as a playback.) */
+
+      /* Wave 21: only ONE Teach playback runs at a time across
+         the whole thread; starting one stops the previous. */
+      var activeTeachStop = null;
+
+      function scrollIntoViewSafe(el) {
+        try {
+          if (el && el.scrollIntoView) {
+            el.scrollIntoView({ block: "nearest" });
+          }
+        } catch (e) { /* older browsers: stay put */ }
+      }
+
+      function renderMethodInto(host, method, btn) {
         if (host.dataset.rendered) {
           host.hidden = !host.hidden;
+          if (btn) {
+            btn.setAttribute("aria-expanded",
+                             host.hidden ? "false" : "true");
+          }
+          if (!host.hidden) scrollIntoViewSafe(host);
           return;
         }
         host.dataset.rendered = "1";
         host.hidden = false;
+        if (btn) btn.setAttribute("aria-expanded", "true");
         var title = document.createElement("p");
         title.className = "method-title";
         title.textContent = method.label || "";
@@ -530,14 +567,29 @@
             host.appendChild(lb);
           }
         }
+        scrollIntoViewSafe(host);
       }
 
-      function openMethod(host, question, method) {
+      /* Wave 21: a method that cannot load must SAY so (and stay
+         retryable) — the old code failed silently, so a tap on a
+         method could look completely dead. */
+      function showMethodFailed(host, btn) {
+        host.hidden = false;
+        if (btn) btn.setAttribute("aria-expanded", "true");
+        host.innerHTML = "";
+        var p = document.createElement("p");
+        p.className = "method-error";
+        p.textContent = CHAT.methodFailed;
+        host.appendChild(p);
+        scrollIntoViewSafe(host);
+      }
+
+      function openMethod(host, question, method, btn) {
         // The stored response already carries the steps; the
         // endpoint is the contract fallback if a replayed record
         // somehow lacks them.
         if (method.steps && method.steps.length) {
-          renderMethodInto(host, method);
+          renderMethodInto(host, method, btn);
           scrollLog();
           return;
         }
@@ -550,10 +602,12 @@
         }).then(function (r) { return r.json(); })
           .then(function (d) {
             if (d && d.ok && d.method) {
-              renderMethodInto(host, d.method);
+              renderMethodInto(host, d.method, btn);
               scrollLog();
+            } else {
+              showMethodFailed(host, btn);
             }
-          }).catch(function () { /* stay closed-quiet */ });
+          }).catch(function () { showMethodFailed(host, btn); });
       }
 
       function addAnswerBubble(question, data) {
@@ -603,11 +657,74 @@
           div.appendChild(card);
         }
 
-        /* Wave 12: the actions row — small gold chips. The main
-           Listen button moves INTO this row (class .listen-chip
-           makes it match the other chips). */
+        var stepsOl = null;
+        var stepsDet = null;
+        /* Wave 21 (Suraj, 12 Nov 2026): the actions row under an
+           answer is EXACTLY four sign-only buttons — Copy, Listen,
+           Teach, More Methods, in that order — and nothing else.
+           ("bs sign banana hai, pura likha hua nhi": the words
+           live only in aria-label / title.) Teach is the new
+           step-video playback: the voice speaks the solution
+           while each step is written on the board in sync, and
+           the final answer is revealed at the end. The old
+           Teach-lines panel and the Explain-more-simply button
+           are gone; the features behind them stay in the menu /
+           answer page. */
+        var ICON_COPY = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>';
+        var ICON_CHECK = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+        var ICON_LISTEN = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>';
+        var ICON_PLAY = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>';
+        var ICON_STOP = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" fill="currentColor" stroke="none"/></svg>';
+        var ICON_METHODS = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>';
+
         var actions = document.createElement("div");
         actions.className = "answer-actions";
+
+        /* -- 1. Copy (question + answer + steps as plain text) -- */
+        var copyBtn = document.createElement("button");
+        copyBtn.type = "button";
+        copyBtn.className = "method-chip act-btn util-btn";
+        copyBtn.dataset.action = "copy";
+        copyBtn.innerHTML = ICON_COPY;
+        copyBtn.setAttribute("aria-label", CHAT.copyBtn);
+        copyBtn.title = CHAT.copyBtn;
+        copyBtn.addEventListener("click", function () {
+          var lines = [];
+          if (question) lines.push(question);
+          if (result.answer) lines.push(result.answer);
+          (result.steps || []).forEach(function (s, i) {
+            lines.push((i + 1) + ". " + s);
+          });
+          var text = lines.join("\n");
+          function done() {
+            copyBtn.innerHTML = ICON_CHECK;
+            copyBtn.classList.add("copied");
+            copyBtn.setAttribute("aria-label", CHAT.copied);
+            copyBtn.title = CHAT.copied;
+            window.setTimeout(function () {
+              copyBtn.innerHTML = ICON_COPY;
+              copyBtn.classList.remove("copied");
+              copyBtn.setAttribute("aria-label", CHAT.copyBtn);
+              copyBtn.title = CHAT.copyBtn;
+            }, 1500);
+          }
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done, done);
+          } else {
+            var ta = document.createElement("textarea");
+            ta.value = text;
+            ta.style.position = "fixed";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand("copy"); } catch (e) {}
+            ta.remove();
+            done();
+          }
+        });
+        actions.appendChild(copyBtn);
+
+        /* -- 2. Listen (the existing step audio, icon-only) -- */
         var listenBtn = null;
         if ("speechSynthesis" in window) {
           var parts = [];
@@ -627,19 +744,202 @@
           }
           parts = parts.filter(function (p) { return p.text; });
           if (parts.length) {
-            listenBtn = makeListenButton(parts);
-            listenBtn.classList.add("listen-chip");
+            listenBtn = makeListenButton(parts,
+                                         { icon: ICON_LISTEN });
+            listenBtn.classList.add("listen-chip", "act-btn");
+            listenBtn.dataset.action = "listen";
           }
         }
+        if (listenBtn) actions.appendChild(listenBtn);
 
+        /* -- 3. Teach: the step-video playback --
+           The steps list itself is the board: at playback start
+           every step is blanked (teach-wait) and the answer is
+           dimmed; each step is revealed (teach-now, highlighted
+           and scrolled into view) at the moment its audio starts,
+           and stays readable (teach-done) behind the next one.
+           The voice chains step to step via the utterance's
+           onend; if this device has no speech synthesis, a timer
+           paced by each step's length drives the same reveal, so
+           the video effect still works silently. Tapping Teach
+           again (the button shows a stop sign while playing)
+           stops everything and restores the normal full view. */
+        var teachBtn = null;
+        var teachState = null;
+        function stopTeachPlayback() {
+          if (!teachState) return;
+          var st = teachState;
+          teachState = null;
+          st.dead = true;
+          if (st.timer) window.clearTimeout(st.timer);
+          if ("speechSynthesis" in window) {
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+          }
+          if (st.lis) {
+            st.lis.forEach(function (li) {
+              li.classList.remove("teach-wait", "teach-now",
+                                  "teach-done");
+            });
+          }
+          if (st.ol) st.ol.classList.remove("teach-playing");
+          ans.classList.remove("teach-wait", "teach-now");
+          if (st.det && !st.wasOpen) st.det.open = false;
+          if (teachBtn) {
+            teachBtn.innerHTML = ICON_PLAY;
+            teachBtn.classList.remove("teaching");
+          }
+          if (activeTeachStop === stopTeachPlayback) {
+            activeTeachStop = null;
+          }
+        }
+        function startTeachPlayback() {
+          if (activeTeachStop
+              && activeTeachStop !== stopTeachPlayback) {
+            activeTeachStop();
+          }
+          if ("speechSynthesis" in window) {
+            try { window.speechSynthesis.cancel(); } catch (e) {}
+          }
+          var lis = stepsOl
+            ? Array.prototype.slice.call(stepsOl.children) : [];
+          var st = {
+            dead: false, timer: null, ol: stepsOl, lis: lis,
+            det: stepsDet, wasOpen: stepsDet ? stepsDet.open : true
+          };
+          teachState = st;
+          activeTeachStop = stopTeachPlayback;
+          if (stepsDet) stepsDet.open = true;
+          if (stepsOl) {
+            stepsOl.classList.add("teach-playing");
+            lis.forEach(function (li) {
+              li.classList.add("teach-wait");
+            });
+          }
+          if (result.answer) ans.classList.add("teach-wait");
+          teachBtn.innerHTML = ICON_STOP;
+          teachBtn.classList.add("teaching");
+
+          var stepParts = (result.steps || []).map(function (s) {
+            return { text: speakable(s, "en"), lang: "en-IN" };
+          }).filter(function (p) { return p.text; });
+          var idx = 0;
+
+          function speakPart(part, done) {
+            if (st.dead) return;
+            if (!part || !part.text) { done(); return; }
+            if ("speechSynthesis" in window) {
+              var advanced = false;
+              function adv() {
+                if (advanced) return;
+                advanced = true;
+                done();
+              }
+              var u = new SpeechSynthesisUtterance(part.text);
+              u.lang = part.lang;
+              u.onend = adv;
+              u.onerror = adv;
+              // Safety net: if neither event ever fires (some
+              // browsers drop an utterance silently), a generous
+              // timer still advances the board — it never stalls.
+              st.timer = window.setTimeout(adv,
+                Math.max(5000, part.text.length * 240));
+              try {
+                window.speechSynthesis.speak(u);
+              } catch (e) { adv(); }
+            } else {
+              st.timer = window.setTimeout(done,
+                Math.min(9000,
+                  Math.max(1800, part.text.length * 65)));
+            }
+          }
+
+          function revealStep(i) {
+            lis.forEach(function (li, j) {
+              if (j < i) {
+                li.classList.remove("teach-wait", "teach-now");
+                li.classList.add("teach-done");
+              }
+            });
+            var li = lis[i];
+            if (li) {
+              li.classList.remove("teach-wait");
+              li.classList.add("teach-now");
+              scrollIntoViewSafe(li);
+            }
+          }
+
+          function revealAnswer() {
+            lis.forEach(function (li) {
+              li.classList.remove("teach-wait", "teach-now");
+              li.classList.add("teach-done");
+            });
+            ans.classList.remove("teach-wait");
+            ans.classList.add("teach-now");
+            scrollIntoViewSafe(ans);
+          }
+
+          function next() {
+            if (st.dead) return;
+            if (idx < stepParts.length) {
+              var part = stepParts[idx];
+              revealStep(idx);
+              idx += 1;
+              speakPart(part, next);
+              return;
+            }
+            if (idx === stepParts.length) {
+              idx += 1;
+              revealAnswer();
+              if (result.answer) {
+                speakPart({
+                  text: speakable(result.answer, UI_CODE),
+                  lang: SPEECH_LANG
+                }, next);
+              } else {
+                next();
+              }
+              return;
+            }
+            // All spoken + shown: hold a beat, then hand back
+            // the normal full answer view.
+            st.timer = window.setTimeout(stopTeachPlayback, 1000);
+          }
+          next();
+        }
+        if ((result.steps && result.steps.length) || result.answer) {
+          teachBtn = document.createElement("button");
+          teachBtn.type = "button";
+          teachBtn.className = "method-chip act-btn teach-btn";
+          teachBtn.dataset.action = "teach";
+          teachBtn.setAttribute("data-role", "teach");
+          teachBtn.innerHTML = ICON_PLAY;
+          teachBtn.setAttribute("aria-label", CHAT.teachBtn);
+          teachBtn.title = CHAT.teachBtn;
+          teachBtn.addEventListener("click", function () {
+            if (teachState) stopTeachPlayback();
+            else startTeachPlayback();
+          });
+          actions.appendChild(teachBtn);
+        }
+
+        /* -- 4. More Methods --
+           Wave 21: each method choice is ONE full-row button —
+           the whole row is the tap target (the old row was a
+           plain-text label plus a small side pill, so tapping
+           the method's name — most of the row — did nothing). */
         var methods = data.methods || [];
         var methodsPanel = null;
         if (methods.length) {
           var chip = document.createElement("button");
           chip.type = "button";
-          chip.className = "method-chip";
-          chip.textContent = "+ " + CHAT.moreMethods
+          chip.className = "method-chip act-btn";
+          chip.dataset.action = "methods";
+          chip.innerHTML = ICON_METHODS;
+          var chipLabel = CHAT.moreMethods
             + " (" + methods.length + ")";
+          chip.setAttribute("aria-label", chipLabel);
+          chip.title = chipLabel;
+          chip.setAttribute("aria-expanded", "false");
           methodsPanel = document.createElement("div");
           methodsPanel.className = "methods-panel";
           methodsPanel.hidden = true;
@@ -648,138 +948,43 @@
           mh.textContent = CHAT.otherHeading;
           methodsPanel.appendChild(mh);
           methods.forEach(function (m, idx) {
-            var row = document.createElement("div");
-            row.className = "method-row";
+            var rowBtn = document.createElement("button");
+            rowBtn.type = "button";
+            rowBtn.className = "method-row-btn";
+            rowBtn.setAttribute("aria-expanded", "false");
             var lbl = document.createElement("span");
             lbl.className = "method-name";
             lbl.textContent = CHAT.methodLabel + " "
               + (idx + 2) + " - " + (m.label || "");
-            var sb = document.createElement("button");
-            sb.type = "button";
-            sb.className = "method-solve-btn";
-            sb.textContent = CHAT.solveBtn + " ›";
+            var go = document.createElement("span");
+            go.className = "method-go";
+            go.setAttribute("aria-hidden", "true");
+            go.textContent = "›";
+            rowBtn.appendChild(lbl);
+            rowBtn.appendChild(go);
             var host = document.createElement("div");
             host.className = "method-body";
             host.hidden = true;
-            sb.addEventListener("click", function () {
-              openMethod(host, question, m);
+            rowBtn.addEventListener("click", function () {
+              openMethod(host, question, m, rowBtn);
             });
-            row.appendChild(lbl);
-            row.appendChild(sb);
-            methodsPanel.appendChild(row);
+            methodsPanel.appendChild(rowBtn);
             methodsPanel.appendChild(host);
           });
           chip.addEventListener("click", function () {
             methodsPanel.hidden = !methodsPanel.hidden;
+            chip.setAttribute("aria-expanded",
+              methodsPanel.hidden ? "false" : "true");
+            if (!methodsPanel.hidden) {
+              scrollIntoViewSafe(methodsPanel);
+            }
             scrollLog();
           });
           actions.appendChild(chip);
         }
-        if (listenBtn) actions.appendChild(listenBtn);
-
-        var teach = data.teach || [];
-        var teachPanel = null;
-        if (teach.length) {
-          var tchip = document.createElement("button");
-          tchip.type = "button";
-          tchip.className = "method-chip";
-          tchip.setAttribute("data-role", "teach");
-          tchip.textContent = "👩‍🏫 " + CHAT.teachBtn;
-          teachPanel = document.createElement("div");
-          teachPanel.className = "teach-panel";
-          teachPanel.hidden = true;
-          var th = document.createElement("p");
-          th.className = "methods-heading";
-          th.textContent = CHAT.teacherMode;
-          teachPanel.appendChild(th);
-          var tul = document.createElement("ul");
-          tul.className = "teach-lines";
-          teach.forEach(function (line) {
-            var li = document.createElement("li");
-            li.textContent = line;
-            tul.appendChild(li);
-          });
-          teachPanel.appendChild(tul);
-          if ("speechSynthesis" in window) {
-            var tparts = teach.map(function (line) {
-              return { text: String(line), lang: SPEECH_LANG };
-            });
-            var tlb = makeListenButton(tparts);
-            tlb.classList.add("method-listen");
-            teachPanel.appendChild(tlb);
-          }
-          tchip.addEventListener("click", function () {
-            teachPanel.hidden = !teachPanel.hidden;
-            scrollLog();
-          });
-          actions.appendChild(tchip);
-        }
-
-        /* Wave 18 comfort: 📋 Copy + 🔁 Explain-more-simply
-           under EVERY answer (real, fallback, replayed). Copy
-           puts the question + answer + steps on the clipboard
-           as plain text. "Explain more simply" opens this
-           bubble's Teach-me panel (the existing teacher-mode
-           machinery); when a bubble has no teach lines, it
-           re-asks the question with "samjhao" so the concept /
-           fallback layer answers it more simply, and the new
-           bubble's teach panel auto-opens. */
-        var copyBtn = document.createElement("button");
-        copyBtn.type = "button";
-        copyBtn.className = "method-chip util-btn";
-        copyBtn.textContent = "📋 " + CHAT.copyBtn;
-        copyBtn.addEventListener("click", function () {
-          var lines = [];
-          if (question) lines.push(question);
-          if (result.answer) lines.push(result.answer);
-          (result.steps || []).forEach(function (s, i) {
-            lines.push((i + 1) + ". " + s);
-          });
-          var text = lines.join("\n");
-          function done() {
-            copyBtn.textContent = CHAT.copied;
-            window.setTimeout(function () {
-              copyBtn.textContent = "📋 " + CHAT.copyBtn;
-            }, 1500);
-          }
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(text).then(done,
-                                                     done);
-          } else {
-            var ta = document.createElement("textarea");
-            ta.value = text;
-            ta.style.position = "fixed";
-            ta.style.opacity = "0";
-            document.body.appendChild(ta);
-            ta.select();
-            try { document.execCommand("copy"); } catch (e) {}
-            ta.remove();
-            done();
-          }
-        });
-        actions.appendChild(copyBtn);
-
-        var simpleBtn = document.createElement("button");
-        simpleBtn.type = "button";
-        simpleBtn.className = "method-chip util-btn";
-        simpleBtn.textContent = "🔁 " + CHAT.simpleBtn;
-        simpleBtn.addEventListener("click", function () {
-          if (teachPanel) {
-            teachPanel.hidden = false;
-            scrollLog();
-            return;
-          }
-          if (!question || solving) return;
-          window.__w18OpenTeach = true;
-          box.value = "samjhao " + question;
-          box.dispatchEvent(new Event("input"));
-          form.requestSubmit();
-        });
-        actions.appendChild(simpleBtn);
 
         if (actions.children.length) div.appendChild(actions);
         if (methodsPanel) div.appendChild(methodsPanel);
-        if (teachPanel) div.appendChild(teachPanel);
 
         if (result.image) {
           var img = document.createElement("img");
@@ -793,6 +998,7 @@
           var tools = document.createElement("div");
           tools.className = "steps-tools";
           var ol = document.createElement("ol");
+          stepsOl = ol;
           ol.className = "steps notebook"
             + (hwOn() ? " handwriting-on" : "");
           result.steps.forEach(function (step) {
@@ -809,6 +1015,7 @@
           plink.textContent = CHAT.printCopy;
           tools.appendChild(plink);
           var det = document.createElement("details");
+          stepsDet = det;
           var sum = document.createElement("summary");
           sum.textContent = CHAT.steps;
           det.appendChild(sum);
@@ -1057,17 +1264,6 @@
           if (data && data.ok) {
             addAnswerBubble(question, data);
             dhyaanSolved();
-            // Wave 18: a "🔁 Explain more simply" re-ask lands
-            // here — open the fresh bubble's Teach-me panel so
-            // the simpler explanation is what the student sees.
-            if (window.__w18OpenTeach) {
-              window.__w18OpenTeach = false;
-              var tchips = log.querySelectorAll(
-                '[data-role="teach"]');
-              if (tchips.length) {
-                tchips[tchips.length - 1].click();
-              }
-            }
           } else if (data && data.unsolvable) {
             addErrorBubble(question, data.error);
           } else if (data && data.message) {
