@@ -76,9 +76,11 @@ def test_real_payload_shape():
 # --- Bug 3's root: the service worker ------------------------
 
 def test_service_worker_never_freezes_code_again():
-    assert 'GANITRA_CACHE = "ganitra-static-v2"' in SW
+    assert 'GANITRA_CACHE = "ganitra-static-v3"' in SW
+    assert "ganitra-static-v2" not in SW
     assert "ganitra-static-v1" not in SW
     assert r"/\.(css|js)$/" in SW          # code: network-first
+    assert 'cache: "no-cache"' in SW       # Wave 26: + revalidation
     assert "return hit || refresh;" in SW  # media: stale-while-revalidate
 
 
