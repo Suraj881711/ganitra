@@ -1466,3 +1466,28 @@ body.chat-page .bubble .steps li { margin: 11px 0; line-height: 1.75; }
                                 rgba(90, 130, 200, .28) 36px);
   }
 }
+
+/* ================= Wave 22: smaller, subtler icons ============
+   Suraj (12 Nov 2026, ~23:04 IST): "icon chote karo" — the
+   per-answer action signs (Copy / Listen / Teach / More
+   Methods) shrink to a compact ~34px circle with a 17px
+   glyph: small and understated, like Muse's action icons.
+   An invisible ::after halo keeps the real tap area ~44px,
+   so the small look costs nothing in tappability. The
+   composer glyphs (attach / mic / camera / send) are
+   trimmed a touch too; their buttons stay 40px. */
+.answer-actions .act-btn {
+  width: 34px; height: 34px; min-height: 34px;
+  position: relative;
+}
+.answer-actions .act-btn svg { width: 17px; height: 17px; }
+.answer-actions .act-btn::after {
+  content: ""; position: absolute; inset: -5px;
+  border-radius: 999px;
+}
+body.chat-page .chat-bar .composer-btn svg {
+  width: 20px; height: 20px;
+}
+body.chat-page .chat-bar .send-btn svg {
+  width: 19px; height: 19px;
+}
