@@ -45,7 +45,9 @@ def test_narration_layer_wired_in_both_templates():
         assert "u.rate = 0.95" in src
         assert "u.pitch = 1.0" in src
     # Chat: bubble Listen + Teach + method Listen all narrate.
-    assert "narrateSolution(result.steps" in INDEX
+    # (Wave 25: the bubble feeds its displaySteps — the solver
+    # steps minus a trailing answer restatement.)
+    assert "narrateSolution(displaySteps" in INDEX
     assert "narrateSolution(method.steps" in INDEX
     # Classic page: buildQueue narrates from the raw SPEAK data.
     assert "narrateSolution(SPEAK.steps" in ANSWER

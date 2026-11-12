@@ -230,7 +230,7 @@ def test_boy_writer_hooks():
     assert "if (boyBroken || !stepsDet) return;" in INDEX
     # Teach start/stop wiring.
     t0 = INDEX.index("function startTeachPlayback")
-    t1 = INDEX.index("if ((result.steps", t0)
+    t1 = INDEX.index("if (displaySteps.length", t0)
     assert "showBoyWriter();" in INDEX[t0:t1]
     stop = INDEX[INDEX.index("function stopTeachPlayback"):t0]
     assert "scheduleBoyWriterHide();" in stop

@@ -128,7 +128,9 @@ def test_advice_on_demand_static():
 
 def test_teach_and_boy_hooks_survive():
     assert "function startTeachPlayback()" in INDEX
-    assert "narrateSolution(result.steps" in INDEX
+    # Wave 25: narration is fed the bubble's displaySteps
+    # (the solver steps minus a trailing answer restatement).
+    assert "narrateSolution(displaySteps" in INDEX
     assert "showBoyWriter();" in INDEX
     assert "scheduleBoyWriterHide();" in INDEX
     assert "if (boyBroken || !stepsDet) return;" in INDEX
@@ -175,8 +177,8 @@ def test_no_step_numbering_css():
     # native markers are switched off on every steps list.
     assert "w24step" not in CSS
     assert "ol.steps.seq" not in CSS
-    assert "ol.steps, #steps-list, .method-steps" \
-        " { list-style: none; }" in CSS
+    assert "ol.steps, #steps-list, .method-steps" in CSS
+    assert "list-style-type: none" in CSS
 
 
 def test_action_buttons_borderless_css():
@@ -469,6 +471,10 @@ PAYLOADS = {
         "ok": True, "question": "Solve x^2 - 5x + 6 = 0",
         "result": {"type": "Algebra", "op": "quadratic",
                    "answer": "x = 2, x = 3",
+                   # Wave 25: mirror the REAL algebra payload —
+                   # it carries a `latex` field holding the
+                   # EQUATION (the old fixture omitted it).
+                   "latex": "x^2 - 5x + 6 = 0",
                    "steps": [
                        "Write in standard form: x^2 - 5x + 6 = 0, "
                        "so a = 1, b = -5, c = 6",
@@ -553,9 +559,11 @@ def test_jsdom_answer_sequence(client, tmp_path):
     assert s1["detOpen"] is True
     assert "seq" not in s1["olClasses"]
     assert s1["listStyle"] == "none"
-    assert s1["stepTexts"] == PAYLOADS["s1"]["result"]["steps"]
+    # Wave 25: the trailing "Solution: ..." restatement is
+    # dropped from the shown steps; the answer line holds it.
+    assert s1["stepTexts"] == PAYLOADS["s1"]["result"]["steps"][:-1]
     # The answer is a PLAIN line holding ONLY the answer.
-    assert s1["answerText"] == "x = 2, x = 3"
+    assert s1["answerText"] == "Answer: x = 2, x = 3"
     assert s1["answerHasStepText"] is False
     assert s1["answerHasAdvice"] is False
     assert s1["boxInBubble"] is False
