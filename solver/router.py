@@ -54,24 +54,42 @@ def normalize_hinglish(question: str) -> str:
     if m:
         return f"{m.group(1)} * {m.group(2)}"
 
-    # Divide: "20 ko 4 se bhaag (do)", "20 bhaag 4"
+    # Divide: "20 ko 4 se bhaag (do)", "20 bhaag 4",
+    # "20 aur 4 ka bhaag" (noun form — same gap as "ka jod", below)
     m = re.search(r"(\d+(?:\.\d+)?)\s+ko\s+(\d+(?:\.\d+)?)\s+se\s+bhaag",
                   ql) or \
-        re.search(r"(\d+(?:\.\d+)?)\s+bhaag\s+(\d+(?:\.\d+)?)", ql)
+        re.search(r"(\d+(?:\.\d+)?)\s+bhaag\s+(\d+(?:\.\d+)?)", ql) or \
+        re.search(r"(\d+(?:\.\d+)?)\s+aur\s+(\d+(?:\.\d+)?)\s+ka\s+bhaag\b",
+                  ql)
     if m:
         return f"{m.group(1)} / {m.group(2)}"
 
-    # Subtract: "20 mein se 7 ghatana/ghatavo"
+    # Subtract: "20 mein se 7 ghatana/ghatavo",
+    # "27 aur 15 ka ghata/ghatav" (noun form — same gap as "ka jod")
     m = re.search(
-        r"(\d+(?:\.\d+)?)\s+mein?\s+se\s+(\d+(?:\.\d+)?)\s+ghatana", ql)
+        r"(\d+(?:\.\d+)?)\s+mein?\s+se\s+(\d+(?:\.\d+)?)\s+ghatana", ql) \
+        or re.search(r"(\d+(?:\.\d+)?)\s+aur\s+(\d+(?:\.\d+)?)\s+ka\s+"
+                     r"(?:ghata|ghatav|ghataav)\b", ql)
     if m:
         return f"{m.group(1)} - {m.group(2)}"
 
-    # Add: "5 aur 3 ko jodo", "5 mein 3 jodo", "5 jodo 3"
+    # Add: "5 aur 3 ko jodo", "5 mein 3 jodo", "5 jodo 3",
+    # "15 aur 27 ka jod (kitna hoga/hai)", "15 aur 27 (ko) jodkar /
+    # jod ke batao", "15 aur 27 jodo". The noun form "ka jod" was
+    # missing (live bug, 12 Nov 2026): the question fell through to
+    # the SymPy expression parser, which read "jod" as the variables
+    # j*o*d next to 15*27 and answered "405*d*j*o" instead of 42.
     m = re.search(r"(\d+(?:\.\d+)?)\s+aur\s+(\d+(?:\.\d+)?)\s+ko\s+jodo",
                   ql) or \
         re.search(r"(\d+(?:\.\d+)?)\s+mein\s+(\d+(?:\.\d+)?)\s+jodo", ql) \
-        or re.search(r"(\d+(?:\.\d+)?)\s+jodo\s+(\d+(?:\.\d+)?)", ql)
+        or re.search(r"(\d+(?:\.\d+)?)\s+jodo\s+(\d+(?:\.\d+)?)", ql) \
+        or re.search(r"(\d+(?:\.\d+)?)\s+aur\s+(\d+(?:\.\d+)?)\s+ka\s+jod\b",
+                     ql) or \
+        re.search(r"(\d+(?:\.\d+)?)\s+aur\s+(\d+(?:\.\d+)?)\s+"
+                  r"(?:ko\s+)?jodkar\b", ql) or \
+        re.search(r"(\d+(?:\.\d+)?)\s+aur\s+(\d+(?:\.\d+)?)\s+"
+                  r"(?:ko\s+)?jod\s+ke\b", ql) or \
+        re.search(r"(\d+(?:\.\d+)?)\s+aur\s+(\d+(?:\.\d+)?)\s+jodo\b", ql)
     if m:
         return f"{m.group(1)} + {m.group(2)}"
 
