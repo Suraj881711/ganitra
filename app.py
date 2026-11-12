@@ -199,14 +199,41 @@ def create_app():
         SESSION_COOKIE_SECURE=(
             os.environ.get("GANITRA_SECURE_COOKIES", "").strip()
             == "1"),
-        # Only relevant if a session is ever marked permanent;
-        # permanent sessions are not enabled today, so current
-        # cookie lifetime behaviour is unchanged.
+        # Wave 20 (Suraj, 12 Nov 2026): sign-in sessions ARE marked
+        # permanent (see _set_account_session), so this lifetime is
+        # the real cookie lifetime — log in once, stay logged in
+        # for 30 days, ChatGPT-style.
         PERMANENT_SESSION_LIFETIME=timedelta(days=30),
     )
 
     # Register API blueprint
     app.register_blueprint(api_bp, url_prefix="/api")
+
+    # Wave 19 (PWA basics): manifest + service worker are served
+    # from the site root so the service worker's scope covers the
+    # whole app (a worker under /static/ could only control
+    # /static/). Files themselves live in static/ and are the
+    # frozen assets — the manifest references the existing logo
+    # files exactly as they are.
+    @app.route("/manifest.webmanifest")
+    def ganitra_manifest():
+        resp = app.send_static_file("manifest.webmanifest")
+        resp.headers["Content-Type"] = "application/manifest+json"
+        return resp
+
+    @app.route("/sw.js")
+    def ganitra_service_worker():
+        resp = app.send_static_file("sw.js")
+        resp.headers["Content-Type"] = "application/javascript"
+        resp.headers["Service-Worker-Allowed"] = "/"
+        return resp
+
+    # iOS home-screen icon: serves the frozen logo-mark file
+    # byte-for-byte under the conventional name (the file itself
+    # is never modified or redrawn).
+    @app.route("/apple-touch-icon.png")
+    def ganitra_apple_touch_icon():
+        return app.send_static_file("logo-mark.png")
 
     # Wave 14: browser caching for static assets ONLY — the logo,
     # CSS and graph PNGs (graph files are content-hash named, so
@@ -292,7 +319,20 @@ def create_app():
         the session keeps only the user id + name (secrets never
         enter the cookie), and the Wave-6 Saathi name/class + the
         Board Mode board choice are filled from the account so the
-        greeting, Board Mode and personalisation work immediately."""
+        greeting, Board Mode and personalisation work immediately.
+
+        Wave 20 (Suraj, 12 Nov 2026): the session is marked
+        PERMANENT — Flask then sends the cookie with a 30-day
+        Expires/Max-Age (PERMANENT_SESSION_LIFETIME), so the
+        student logs in ONCE and stays logged in across browser
+        restarts, like ChatGPT. Without this flag the cookie died
+        with the browser session and students had to sign in again
+        every time. Every sign-in path (sign-up, password login,
+        favourite login) goes through this helper, and the profile
+        refresh re-asserts it, so all of them get the long cookie.
+        The Wave-17/17b cookie flags (HttpOnly, SameSite=Lax,
+        Secure opt-in) and the server-side lockout are unchanged."""
+        session.permanent = True
         session["user_id"] = user["id"]
         session["user_name"] = user["name"]
         session["saathi_name"] = user["name"]

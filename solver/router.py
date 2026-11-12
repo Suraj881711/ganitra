@@ -6,6 +6,7 @@ Every result is a dict with at least: type, answer, steps.
 import re
 
 from .algebra import solve_algebra
+from .answer_cache import get_cached, put_cached
 from .applied import solve_applied
 from .arithmetic import solve_arithmetic
 from .calculus import solve_calculus
@@ -78,6 +79,32 @@ def normalize_hinglish(question: str) -> str:
     t = re.sub(r"\s+ka\s+maan\b.*$", "", ql).strip()
     t = re.sub(r"\s+(kitna\s+hoga|batao|nikalo|karo|kar\s+do)\s*$", "", t)
     return t.strip()
+
+
+# --------------------------------------------------------------------------
+# Wave 20 (Suraj, 12 Nov 2026): science-scope guard. Ganitra is
+# MATHS-ONLY, but a Physics question ("refractive index ... speed
+# of light ... 2 x 10^8 m/s") used to be force-fit into a junior
+# maths intent / salvage fragment and answered with nonsense.
+# These are SCIENCE-SPECIFIC signals — bare "speed" is NOT one
+# (speed-distance-time sums are real maths), and neither is bare
+# "current" or "element" (maths uses both legitimately). The
+# router uses this to refuse the weak junior intent for such
+# questions, and fallback.py uses it to answer honestly instead
+# of salvaging a fake "maths part".
+# --------------------------------------------------------------------------
+_SCIENCE_RE = re.compile(
+    r"(refractive|speed\s+of\s+light|ray\s+of\s+light|light\s+ray|"
+    r"photosynthesis|velocity|acceleration|\bforce\b|newtons?\b|"
+    r"voltage|ampere|electric\s+current|resistance|ohms?\b|"
+    r"chemical|atom|atomic|molecule|electron|proton|neutron|"
+    r"friction|momentum|gravity|gravitational|wavelength|"
+    r"circuit|capacitor|kinetic\s+energy|potential\s+energy)",
+    re.I)
+
+
+def has_science_signal(question: str) -> bool:
+    return bool(_SCIENCE_RE.search(str(question or "")))
 
 
 # --------------------------------------------------------------------------
@@ -311,6 +338,18 @@ _TOPICS = (
 
 
 def solve_question(question: str):
+    """Cached entry point (Kami audit 2c-1): repeat questions are
+    served from the in-memory answer cache at zero CPU cost; the
+    first ask, and anything uncacheable, runs the solver below."""
+    cached = get_cached(question)
+    if cached is not None:
+        return cached
+    result = _solve_question_uncached(question)
+    put_cached(question, result)
+    return result
+
+
+def _solve_question_uncached(question: str):
     original = question
     translated = normalize_hinglish(question)
     was_translated = translated.strip().lower() != question.strip().lower()
@@ -331,6 +370,15 @@ def solve_question(question: str):
             return out
 
     intent = route_intent(working)
+
+    # Wave 20 science guard: a science question whose ONLY match
+    # is a weak junior phrase must never be force-solved by the
+    # Classes 0-5 solver. Downgrade to arithmetic (which honestly
+    # fails), so the app layer's Wave-18/20 fallback can give the
+    # kind "this is Science, Ganitra is for Maths" reply instead
+    # of a made-up junior answer.
+    if intent == "junior" and has_science_signal(working):
+        intent = "arithmetic"
 
     if intent == "units":
         out = solve_units(working)
@@ -403,4 +451,5 @@ def solve_question(question: str):
     return {"type": intent, "answer": str(result), "steps": []}
 
 
-__all__ = ["solve_question", "route_intent", "normalize_hinglish"]
+__all__ = ["solve_question", "route_intent", "normalize_hinglish",
+           "has_science_signal"]

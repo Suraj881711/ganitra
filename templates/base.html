@@ -6,6 +6,14 @@
     <title>Ganitra — {{ t.tagline }}</title>
     <link rel="icon" type="image/png"
           href="{{ url_for('static', filename='favicon.png') }}" />
+    <link rel="manifest" href="{{ url_for('ganitra_manifest') }}" />
+    <meta name="theme-color" content="#2f7d6e" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Ganitra" />
+    <link rel="apple-touch-icon"
+          href="{{ url_for('ganitra_apple_touch_icon') }}" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;600;700&family=Kalam:wght@400;700&family=Caveat:wght@500;700&display=swap"
@@ -33,23 +41,24 @@
   </head>
   <body class="{% block body_class %}{% endblock %}">
     {% block header %}
-    <header>
-      <h1><a href="/">Ganitra</a></h1>
-      <nav>
-        <a href="/">{{ t.nav_solve }}</a>
-        <a href="/practice">{{ t.nav_practice }}</a>
-        <a href="/board">{{ t.nav_board }}</a>
-        <a href="/mistakes">{{ t.nav_mistakes }}</a>
-        <a href="/history">{{ t.nav_history }}</a>
-        <a href="/parent-report">{{ t.nav_parents }}</a>
-        {% if saathi_name %}
-          <span class="saathi-pill">🧒 {{ saathi_name }}{% if saathi_class %} · {{ t.saathi_class_word }} {{ saathi_class }}{% endif %}
-            <a href="/?saathi=edit#saathi-card">{{ t.saathi_edit }}</a></span>
-        {% endif %}
+    {# Wave 20 (Suraj, 12 Nov 2026): EVERY page now carries the
+       same slim chat top bar with the ☰ full-page menu. Before
+       this, only the chat / chats / account pages had the menu;
+       pages extending base.html (Board, Papers, Topics,
+       Mistakes, History, Practice, answers...) showed an old
+       link header with no menu at all \u2014 "menu wala system nhi
+       dikh rha". The menu markup is shared (templates/_menu.html);
+       its profile/stats/settings parts render only when signed
+       in, exactly as on the chat page. #}
+    <header class="chat-header">
+      <a class="chat-brand" href="/"><img class="brand-mark"
+        src="{{ url_for('static', filename='logo-mark-t.png') }}"
+        alt="" aria-hidden="true" /> Ganitra</a>
+      <div class="header-tools">
         <span class="dhyaan-pill" id="dhyaan-pill"
-          title="{{ t.dhyaan_label }}"><span aria-hidden="true">{{ t.dhyaan_label }}</span>
+          title="{{ t.dhyaan_label }}"><span class="dhyaan-label" aria-hidden="true">{{ t.dhyaan_label }}</span>
           <span id="dhyaan-text"></span></span>
-        <label class="lang-switch">{{ t.lang_label }}
+        <label class="lang-switch"><span class="lang-label-text">{{ t.lang_label }}</span>
           <select id="lang-select" aria-label="{{ t.lang_label }}"
                   onchange="if (this.value) window.location.href = '/set-lang/' + this.value + '?next=' + encodeURIComponent(window.location.pathname + window.location.search);">
             {% for code, name in lang_options %}
@@ -57,7 +66,11 @@
             {% endfor %}
           </select>
         </label>
-      </nav>
+        {% include "_menu.html" %}
+        <a class="chats-plus" id="chats-open" href="/chats"
+           aria-label="{{ t.chats_open_label }}"
+           title="{{ t.chats_open_label }}">+</a>
+      </div>
     </header>
     {% endblock %}
     <main class="{% block main_class %}{% endblock %}">
@@ -135,6 +148,34 @@
           if (document.hidden) stop(); else start();
         });
       })();
+      /* Wave 20: fill the shared menu's stats lines with the
+         signed-in student's real counts — the same tiny fetch
+         the chat page runs (the menu now lives in base.html, so
+         every page needs it; the chat/chats/account pages keep
+         their own copies too, harmless). Silent when signed out
+         or offline — the lines keep their placeholder dash. */
+      (function () {
+        var qEl = document.getElementById("menu-stat-questions");
+        var cEl = document.getElementById("menu-stat-chats");
+        if (!qEl || !cEl || !window.fetch) return;
+        fetch("/account/stats.json").then(function (r) {
+          return r.json();
+        }).then(function (d) {
+          if (d && d.ok) {
+            qEl.textContent = String(d.questions || 0);
+            cEl.textContent = String(d.chats || 0);
+          }
+        }).catch(function () { /* placeholders stay */ });
+      })();
+      /* Wave 19 (PWA basics): register the service worker at root
+         scope so Chrome can offer "Install app" / Add to Home
+         screen. Failure is silent — the site works without it. */
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("/sw.js")
+            .catch(function () {});
+        });
+      }
     </script>
   </body>
 </html>

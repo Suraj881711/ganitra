@@ -44,7 +44,7 @@ import re
 
 from concepts import find_concept
 from i18n import solve_failed
-from solver.router import solve_question
+from solver.router import has_science_signal, solve_question
 
 # ---------------------------------------------------------------------------
 # Detectors for "the solver did not really answer"
@@ -259,6 +259,94 @@ def _nonmaths_result(hindi):
 
 
 # ---------------------------------------------------------------------------
+# Layer 0c (Wave 20, Suraj 12 Nov 2026): SCIENCE questions. A
+# Physics/Chemistry/Biology question must get an honest
+# "Ganitra is for Maths" reply plus the concept's formula as
+# GUIDANCE — never a force-solved fake answer. (The reported
+# case: a refractive-index question was salvaged into the
+# fragment "2 x 10" from "2 x 10^8" and answered by the junior
+# times-pair solver.) This layer runs only when the solver did
+# NOT really answer, so genuine maths that merely mentions a
+# science word (a calculus velocity problem the solver solves
+# properly) is never disturbed.
+# ---------------------------------------------------------------------------
+
+def _science_result(question, hindi):
+    q = str(question or "").lower()
+    if "refractive" in q or "speed of light" in q \
+            or "ray of light" in q or "light ray" in q:
+        topic, steps = "optics", [
+            "Formula (guidance): refractive index of B with "
+            "respect to A, n = (speed of light in A) ÷ "
+            "(speed of light in B).",
+            "So speed in B = (speed in A) ÷ n — put your values "
+            "into this formula and the Physics answer follows.",
+        ]
+        if hindi:
+            topic_line = ("Ye Physics (Prakash / Optics) ka sawal "
+                          "hai — Ganitra sirf Maths ke sawal hal "
+                          "karta hai, isliye main iska nakli hal "
+                          "nahi dunga. 😊")
+        else:
+            topic_line = ("This is a Physics (Light / Optics) "
+                          "question — Ganitra only solves Maths, "
+                          "so I won't fake an answer for it. 😊")
+    elif any(w in q for w in ("velocity", "acceleration", "force",
+                              "newton", "momentum", "friction",
+                              "gravity", "kinetic energy",
+                              "potential energy")):
+        topic, steps = "motion", [
+            "Useful formulas (guidance): speed v = distance ÷ "
+            "time; acceleration a = (v − u) ÷ t; force F = "
+            "mass × acceleration.",
+        ]
+        topic_line = ("This is a Physics (Motion / Force) "
+                      "question — Ganitra only solves Maths, "
+                      "so I won't fake an answer for it. 😊")
+        if hindi:
+            topic_line = ("Ye Physics (Gati / Bal) ka sawal hai "
+                          "— Ganitra sirf Maths ke sawal hal "
+                          "karta hai, isliye main iska nakli hal "
+                          "nahi dunga. 😊")
+    elif any(w in q for w in ("voltage", "ampere", "resistance",
+                              "ohm", "electric current", "circuit",
+                              "capacitor")):
+        topic, steps = "electricity", [
+            "Useful formula (guidance): Ohm's law — V = I × R "
+            "(voltage = current × resistance).",
+        ]
+        topic_line = ("This is a Physics (Electricity) question "
+                      "— Ganitra only solves Maths, so I won't "
+                      "fake an answer for it. 😊")
+        if hindi:
+            topic_line = ("Ye Physics (Bijli / Electricity) ka "
+                          "sawal hai — Ganitra sirf Maths ke sawal "
+                          "hal karta hai, isliye main iska nakli "
+                          "hal nahi dunga. 😊")
+    else:
+        topic, steps = "general", []
+        topic_line = ("This is a Science question — Ganitra "
+                      "only solves Maths, so I won't fake an "
+                      "answer for it. 😊")
+        if hindi:
+            topic_line = ("Ye Science ka sawal hai — Ganitra "
+                          "sirf Maths ke sawal hal karta hai, "
+                          "isliye main iska nakli hal nahi "
+                          "dunga. 😊")
+    if hindi:
+        steps = steps + [
+            "Maths ka koi sawal ho to bhejo — jaise 'train ki "
+            "speed' wala sum ya 'x^2 - 5x + 6 = 0' — main "
+            "step-by-step hal dunga."]
+    else:
+        steps = steps + [
+            "Send me any Maths question — like a train "
+            "speed–distance sum or 'x^2 - 5x + 6 = 0' — and "
+            "I'll solve it step by step."]
+    return _friendly_result("science", topic_line, steps, hindi)
+
+
+# ---------------------------------------------------------------------------
 # Layer 1: salvage — strip the chatter, solve the maths inside
 # ---------------------------------------------------------------------------
 
@@ -351,12 +439,21 @@ def _candidates(question):
         for m in re.finditer(
                 r"(\d+(?:\.\d+)?(?:\s*[-+\*/x×]\s*"
                 r"\d+(?:\.\d+)?)+)", q):
+            # Wave 20: a chain that runs straight into a "^" is
+            # scientific notation, not a multiplication sum —
+            # "2 x 10^8" must never be salvaged as "2 x 10".
+            if q[m.end():].lstrip().startswith("^"):
+                continue
             add(m.group(1))
     add(_strip_filler(q))
     return out
 
 
 def _salvage(question, hindi):
+    # Wave 20: never salvage a science question — its numbers
+    # are not a maths sum hiding in the text (see Layer 0c).
+    if has_science_signal(question):
+        return None
     for cand in _candidates(question):
         if cand.strip().lower() == str(question).strip().lower():
             continue  # identical to the original: already failed
@@ -625,6 +722,13 @@ def with_fallback(question, result):
 
     if _is_real(question, result):
         return result
+
+    # Wave 20, Layer 0c: a SCIENCE question the solver could not
+    # really answer gets the honest maths-only reply + formula
+    # guidance — BEFORE salvage, which would otherwise carve a
+    # fake "maths part" out of it (the refractive-index case).
+    if has_science_signal(question):
+        return _science_result(question, hindi)
 
     # The solver did not really answer. Work the layers.
     salvaged = _salvage(question, hindi)

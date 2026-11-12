@@ -1271,3 +1271,103 @@ body.account-page main.account-main {
 }
 .answer-actions .util-btn:hover { border-color: #c9a24b; }
 .answer-actions .util-btn:active { transform: scale(.97); }
+
+/* ------------------------------------------------------------------ */
+/* Wave 20 (Suraj, 12 Nov 2026): three fixes from his phone test.
+   (a) The top bar must never crowd out the ☰ button: on his
+       ~360px Brave screen the brand + "Today" pill + language
+       dropdown filled the bar and the menu button was pushed
+       off-screen. The bar now shrinks gracefully — brand text
+       truncates, the tools row may shrink, the ☰ and + never do —
+       and on small screens the ☰ moves to the FAR LEFT (his
+       approved mockup position), the Today pill hides (its
+       numbers also live inside the menu) and the language select
+       goes compact. On very narrow screens only the logo mark
+       shows, not the wordmark.
+   (b) The sign-in / sign-up page fits ONE phone screen without
+       scrolling: slightly smaller logo, fonts, paddings and gaps
+       on small screens only (desktop keeps the roomy look). */
+
+.chat-brand {
+  flex: 0 1 auto; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis;
+}
+.header-tools { flex: 1 1 auto; min-width: 0; justify-content: flex-end; }
+.header-tools .nav-menu,
+.header-tools .chats-plus { flex: none; }
+.header-tools .lang-switch { min-width: 0; }
+.header-tools .lang-switch select { max-width: 160px; }
+
+@media (max-width: 560px) {
+  /* ☰ pinned to the far left of the bar, always visible: the
+     details element is lifted out of the tools row (its open
+     panel is position:fixed, so this cannot disturb it) and
+     the bar reserves its space. :has() scopes this to bars
+     that actually carry a menu (the sign-in bar has none). */
+  .chat-header:has(.nav-menu) { position: relative; padding-left: 58px; }
+  .chat-header:has(.nav-menu) .nav-menu {
+    position: absolute; left: 7px; top: 50%;
+    transform: translateY(-50%); margin: 0;
+  }
+}
+@media (max-width: 480px) {
+  /* The Today stats pill yields its space to the menu; the
+     same numbers are one tap away inside the menu itself. */
+  .header-tools .dhyaan-pill { display: none; }
+  .header-tools .lang-switch select {
+    max-width: 108px; min-height: 38px; padding: .25rem .35rem;
+    font-size: .85rem;
+  }
+  .nav-menu-btn { width: 42px; height: 42px; }
+}
+@media (max-width: 380px) {
+  /* Mark only — the "Ganitra" wordmark no longer fits beside
+     the tools; the logo mark alone carries the brand. */
+  .chat-brand { font-size: 0; }
+  .chat-brand .brand-mark { height: 30px; margin-right: 0; }
+}
+
+/* --- Sign-in / sign-up: one screen, no scroll (phones) --- */
+@media (max-width: 560px) {
+  .auth-wrap { padding: 4px 12px 20px; }
+  .auth-logo { padding: 10px 8px 2px; }
+  .auth-logo-img { max-width: 168px; }
+  .auth-card { margin-top: 8px; }
+  .auth-heading { font-size: 22px; margin: 6px 0 10px; }
+  .auth-field { font-size: 14.5px; margin-bottom: 10px; }
+  .auth-input {
+    min-height: 44px; padding: 9px 12px; margin-top: 5px;
+    font-size: 16px; border-radius: 12px;
+  }
+  .auth-fav-card {
+    padding: 12px 14px 2px; margin-bottom: 12px; border-radius: 16px;
+  }
+  .auth-fav-heading { font-size: 16.5px; margin-bottom: 8px; }
+  .auth-fav-line { gap: 8px; margin-bottom: 9px; font-size: 15px; }
+  .auth-line-input { padding: 5px 4px; font-size: 16px; }
+  .auth-fav-card .auth-pw-field { margin-bottom: 10px; }
+  .auth-submit { min-height: 48px; font-size: 16.5px; }
+  .auth-forgot-line { margin-top: 9px; font-size: 13.5px; }
+  .auth-switch { margin-top: 10px; font-size: 15px; }
+  .auth-error { padding: 9px 12px; margin: 10px 0 2px; }
+  .auth-fav-login { margin-top: 12px; }
+}
+/* Short phones (~640px tall and under): one more gentle squeeze
+   so the full sign-up form — logo, 3 fields, favourites card,
+   password, button — still fits without scrolling. */
+@media (max-width: 560px) and (max-height: 720px) {
+  .auth-wrap { padding-top: 2px; padding-bottom: 12px; }
+  .auth-logo { padding-top: 2px; padding-bottom: 0; }
+  .auth-logo-img { max-width: 112px; }
+  .auth-card { margin-top: 2px; }
+  .auth-field { font-size: 14px; margin-bottom: 6px; }
+  .auth-input { min-height: 38px; padding: 7px 11px; margin-top: 4px; }
+  .auth-fav-card { padding: 8px 12px 0; margin-bottom: 8px; }
+  .auth-fav-heading { font-size: 15.5px; margin-bottom: 4px; }
+  .auth-fav-line { margin-bottom: 5px; }
+  .auth-line-input { padding: 2px 4px; }
+  .auth-fav-card .auth-pw-field { margin-bottom: 8px; }
+  .auth-submit { min-height: 42px; }
+  .auth-forgot-line { margin-top: 6px; }
+  .auth-switch { margin-top: 8px; }
+}

@@ -1,0 +1,68 @@
+{# Wave 20: the ONE shared full-page menu. Earlier this
+   markup was copy-pasted into the chat, chats and
+   account pages only, so every other page (Board,
+   Papers, Topics, Mistakes, History...) had NO menu
+   at all. Now base.html carries it too, and the
+   three original pages include this same file, so
+   there is exactly one menu everywhere. Items and
+   their order are Suraj's approved Wave-12 list —
+   do not reorder. #}
+<details class="nav-menu">
+  <summary class="nav-menu-btn" aria-label="{{ t.menu_label }}"
+           title="{{ t.menu_label }}">☰</summary>
+  {# Wave 12: Suraj's approved FULL-PAGE menu (LinkedIn
+     style) — an overlay panel, not a small dropdown. The
+     profile block (photo + name + class/board lines) links
+     to My Account; below it the real stats lines, then the
+     bold item list, Language as an expanding row, a Settings
+     row, and the gold strip. Log out is NOT here — it lives
+     only inside My Account (Suraj's rule). #}
+  <nav class="nav-dropdown menu-panel">
+    <div class="menu-panel-inner">
+      <div class="menu-panel-top">
+        <span class="menu-panel-title">{{ t.menu_label }}</span>
+        <button type="button" class="menu-close"
+                aria-label="{{ t.menu_label }}"
+                onclick="this.closest('details').removeAttribute('open')">✕</button>
+      </div>
+      {# nav-dropdown is the menu nav's class (above). #}
+      {% if user_name %}
+      <a class="menu-profile" href="/account">
+        {% if user_has_photo %}
+          <img class="menu-photo"
+               src="/account/photo/file"
+               alt="" aria-hidden="true" />
+        {% else %}
+          <img class="menu-photo"
+               src="{{ url_for('static', filename='logo-mark-t.png') }}"
+               alt="" aria-hidden="true" />
+        {% endif %}
+        <span class="menu-profile-text">
+          <span class="menu-name">{{ user_name }} <span class="menu-verified" aria-hidden="true">✓</span></span>
+          <span class="menu-line">{{ t.acct_student_line }}</span>
+          <span class="menu-line">{{ user_board_text }} {{ t.field_board }}</span>
+          <span class="menu-line menu-line-dim">{{ t.acct_verified_line }}</span>
+        </span>
+      </a>
+      <div class="menu-stats">
+        <p class="menu-stat-line"><span class="menu-stat-num" id="menu-stat-questions">–</span> <span class="menu-stat-word">{{ t.acct_questions_word }}</span></p>
+        <p class="menu-stat-line"><span class="menu-stat-num" id="menu-stat-chats">–</span> <span class="menu-stat-word">{{ t.acct_chats_word }}</span></p>
+      </div>
+      {% endif %}
+      <div class="menu-items">
+        <a href="/chats">{{ t.menu_your_chats }}</a>
+        <a href="/board">{{ t.nav_board }}</a>
+        <a href="/papers">{{ t.menu_papers }}</a>
+        <a href="/practice">{{ t.nav_practice }}</a>
+        <a href="/topics">{{ t.nav_topics }}</a>
+        <a href="/mistakes">{{ t.nav_mistakes }}</a>
+        <a href="/solution/print?style=hand">{{ t.menu_copy_style }}</a>
+        <a href="/parent-report">{{ t.nav_parents }}</a>
+        <details class="menu-lang">
+          <summary class="menu-lang-summary">{{ t.menu_language }}</summary>
+          <div class="menu-lang-row">
+            {% for code, name in lang_options %}
+              <a class="menu-lang-link" href="/set-lang/{{ code }}?next={{ request.path }}">{{ name }}</a>
+            {% endfor %}
+          </div>
+        </details>

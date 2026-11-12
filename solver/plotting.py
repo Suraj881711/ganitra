@@ -5,7 +5,11 @@ Supports one function, two functions together ("plot x^2 and x+1"), and
 area under the curve between the integral's bounds.
 """
 import hashlib
+import json
+import os
 import re
+import sqlite3
+import time
 from pathlib import Path
 
 import matplotlib
@@ -18,6 +22,116 @@ import sympy as sp  # noqa: E402
 from .expression_parser import fmt, parse_expression  # noqa: E402
 
 _GRAPHS_DIR = Path(__file__).resolve().parent.parent / "static" / "graphs"
+
+# K9 (Kami audit, 12 Nov 2026): graph PNGs used to pile up forever in
+# static/graphs/ — on PythonAnywhere's 512 MB disk that is the one
+# slow leak. Filenames are content-hash deterministic, so asking for
+# the same function twice reuses one file; only *distinct* functions
+# add files. cleanup_old_graphs() deletes files older than 7 days
+# that no saved chat still references (a bot turn stores the full
+# solve payload, including "image": "graphs/plot_....png", inside
+# chats.messages_json). It runs at most once a day, triggered from
+# solve_plot()/solve_plot_area(), and never raises — a failed
+# cleanup must never break a student's solve.
+_CLEANUP_MARKER = (Path(__file__).resolve().parent.parent
+                   / ".graphs_last_cleanup")
+_CLEANUP_INTERVAL_SECONDS = 24 * 3600
+_CLEANUP_MAX_AGE_DAYS = 7
+_GRAPH_NAME_RE = re.compile(r"graphs/(plot_[A-Za-z0-9_.\-]+\.png)")
+
+
+def _db_path(db_path=None):
+    """Account DB path: explicit arg, else GANITRA_DB_PATH, else the
+    ganitra_users.db beside this project (same rule as accounts.py)."""
+    if db_path:
+        return Path(db_path)
+    env = os.environ.get("GANITRA_DB_PATH", "").strip()
+    if env:
+        return Path(env)
+    return Path(__file__).resolve().parent.parent / "ganitra_users.db"
+
+
+def referenced_graph_files(db_path=None):
+    """Graph filenames still used by a saved chat, or None when the
+    DB cannot be read — in that case the caller must delete nothing,
+    because an unreferenced-looking file may still belong to a chat."""
+    path = _db_path(db_path)
+    if not path.is_file():
+        return None
+    try:
+        con = sqlite3.connect(f"file:{path}?mode=ro", uri=True,
+                              timeout=5)
+        try:
+            rows = con.execute(
+                "SELECT messages_json FROM chats").fetchall()
+        finally:
+            con.close()
+    except Exception:
+        return None
+    found = set()
+    for (blob,) in rows:
+        if not blob:
+            continue
+        found.update(_GRAPH_NAME_RE.findall(blob))
+    return found
+
+
+def cleanup_old_graphs(max_age_days=_CLEANUP_MAX_AGE_DAYS,
+                       dry_run=False, db_path=None):
+    """Delete unreferenced graph PNGs older than ``max_age_days``.
+
+    Returns {"deleted": [...], "kept_referenced": n, "kept_fresh": n,
+    "skipped_no_db": bool, "errors": [...]}. Never raises.
+    """
+    result = {"deleted": [], "kept_referenced": 0, "kept_fresh": 0,
+              "skipped_no_db": False, "errors": []}
+    try:
+        referenced = referenced_graph_files(db_path)
+    except Exception as exc:  # pragma: no cover - defensive
+        result["errors"].append(f"db scan: {exc}")
+        return result
+    if referenced is None:
+        result["skipped_no_db"] = True
+        return result
+    if not _GRAPHS_DIR.is_dir():
+        return result
+    cutoff = time.time() - max_age_days * 86400
+    for fpath in sorted(_GRAPHS_DIR.glob("plot_*.png")):
+        try:
+            if fpath.name in referenced:
+                result["kept_referenced"] += 1
+                continue
+            if fpath.stat().st_mtime >= cutoff:
+                result["kept_fresh"] += 1
+                continue
+            if not dry_run:
+                fpath.unlink()
+            result["deleted"].append(fpath.name)
+        except Exception as exc:
+            result["errors"].append(f"{fpath.name}: {exc}")
+    return result
+
+
+def _maybe_cleanup_graphs():
+    """Run the daily graph cleanup at most once per 24 hours.
+
+    Best-effort only: any failure is swallowed, so plotting never
+    breaks because of housekeeping. The marker lives in the project
+    root (outside static/, so it is never web-served)."""
+    try:
+        last = float(_CLEANUP_MARKER.read_text().strip() or 0)
+    except Exception:
+        last = 0
+    if time.time() - last < _CLEANUP_INTERVAL_SECONDS:
+        return
+    try:
+        _CLEANUP_MARKER.write_text(str(int(time.time())))
+    except Exception:
+        return
+    try:
+        cleanup_old_graphs()
+    except Exception:
+        pass
 
 
 def extract_function(question: str) -> str:
@@ -64,6 +178,7 @@ def _eval_on_grid(expr, var, xs):
 
 
 def solve_plot(question: str):
+    _maybe_cleanup_graphs()
     expr_text = extract_function(question)
     parts = _split_functions(expr_text)
     if len(parts) > 2:  # keep at most two curves
@@ -129,6 +244,7 @@ def solve_plot(question: str):
 def solve_plot_area(expr, var, a, b):
     """Graph of y = expr with the area under the curve shaded from a to
     b — used when a definite-integral question also asks for a graph."""
+    _maybe_cleanup_graphs()
     xs = np.linspace(float(a) - 2, float(b) + 2, 600)
     ys = _eval_on_grid(expr, var, xs)
     seg_x = np.linspace(float(a), float(b), 300)

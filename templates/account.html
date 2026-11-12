@@ -19,56 +19,7 @@
           {% endfor %}
         </select>
       </label>
-      <details class="nav-menu">
-        <summary class="nav-menu-btn" aria-label="{{ t.menu_label }}"
-                 title="{{ t.menu_label }}">☰</summary>
-        <nav class="nav-dropdown menu-panel">
-          <div class="menu-panel-inner">
-            <div class="menu-panel-top">
-              <span class="menu-panel-title">{{ t.menu_label }}</span>
-              <button type="button" class="menu-close"
-                      aria-label="{{ t.menu_label }}"
-                      onclick="this.closest('details').removeAttribute('open')">✕</button>
-            </div>
-            {# Same full-page menu markup as the chat page. #}
-            <a class="menu-profile" href="/account">
-              {% if has_photo %}
-                <img class="menu-photo"
-                     src="/account/photo/file"
-                     alt="" aria-hidden="true" />
-              {% else %}
-                <img class="menu-photo"
-                     src="{{ url_for('static', filename='logo-mark-t.png') }}"
-                     alt="" aria-hidden="true" />
-              {% endif %}
-              <span class="menu-profile-text">
-                <span class="menu-name">{{ account.name }} <span class="menu-verified" aria-hidden="true">✓</span></span>
-                <span class="menu-line">{{ t.acct_student_line }}</span>
-                <span class="menu-line">{{ account.board_text }} {{ t.field_board }}</span>
-                <span class="menu-line menu-line-dim">{{ t.acct_verified_line }}</span>
-              </span>
-            </a>
-            <div class="menu-stats">
-              <p class="menu-stat-line"><span class="menu-stat-num" id="menu-stat-questions">–</span> <span class="menu-stat-word">{{ t.acct_questions_word }}</span></p>
-              <p class="menu-stat-line"><span class="menu-stat-num" id="menu-stat-chats">–</span> <span class="menu-stat-word">{{ t.acct_chats_word }}</span></p>
-            </div>
-            <div class="menu-items">
-              <a href="/chats">{{ t.menu_your_chats }}</a>
-              <a href="/board">{{ t.nav_board }}</a>
-              <a href="/papers">{{ t.menu_papers }}</a>
-              <a href="/practice">{{ t.nav_practice }}</a>
-              <a href="/topics">{{ t.nav_topics }}</a>
-              <a href="/mistakes">{{ t.nav_mistakes }}</a>
-              <a href="/solution/print?style=hand">{{ t.menu_copy_style }}</a>
-              <a href="/parent-report">{{ t.nav_parents }}</a>
-              <details class="menu-lang">
-                <summary class="menu-lang-summary">{{ t.menu_language }}</summary>
-                <div class="menu-lang-row">
-                  {% for code, name in lang_options %}
-                    <a class="menu-lang-link" href="/set-lang/{{ code }}?next=/account">{{ name }}</a>
-                  {% endfor %}
-                </div>
-              </details>
+      {% include "_menu.html" %}
             </div>
             <a class="menu-settings-row" href="/account">
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M18.5 5.5l-2.1 2.1M7.6 16.4l-2.1 2.1"/></svg>
