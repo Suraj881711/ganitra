@@ -36,17 +36,65 @@
       <p class="muted">{{ t.understood_as }} <code>{{ result.interpreted_as }}</code></p>
     {% endif %}
 
-    <h2>{{ t.answer_heading }} <span class="badge">{{ result.type }}{% if result.op %} · {{ result.op }}{% endif %}</span></h2>
-    <p class="answer-big">
-      {% if result.latex %}\[ {{ result.latex }} \]{% else %}{{ result.answer }}{% endif %}
-    </p>
-    {% if result.latex and result.answer %}<p class="muted">{{ result.answer }}</p>{% endif %}
-
+    {# Wave 24: ONE reading sequence, same as the chat —
+       steps first, then the final-answer box, then the
+       Teacher's Advice, then the other methods. #}
     {% if explanation %}
       <h2>{{ t.explanation_heading }}</h2>
       <p class="explain">{{ explanation }}</p>
     {% endif %}
 
+    {% if result.steps %}
+      <h2>{{ t.steps_heading }}</h2>
+      <div class="steps-tools">
+        <button type="button" class="hw-toggle" id="hw-toggle"
+          aria-pressed="true">{{ t.handwriting_btn }}</button>
+        <a class="back" href="/solution/print?style=hand" target="_blank"
+          rel="noopener">{{ t.print_copy_link }}</a>
+      </div>
+      <ol class="steps notebook handwriting-on" id="steps-list">
+        {% for step in result.steps %}<li>{{ step }}</li>{% endfor %}
+      </ol>
+      <script>
+        (function () {
+          var KEY = "ganitra-handwriting";
+          var btn = document.getElementById("hw-toggle");
+          var list = document.getElementById("steps-list");
+          if (!btn || !list) return;
+          function paint(on) {
+            list.classList.toggle("handwriting-on", on);
+            btn.setAttribute("aria-pressed", on ? "true" : "false");
+            btn.classList.toggle("hw-off", !on);
+          }
+          var on = true;
+          try {
+            var saved = window.localStorage.getItem(KEY);
+            if (saved === "off") on = false;
+          } catch (e) { /* private mode: default stays ON */ }
+          paint(on);
+          btn.addEventListener("click", function () {
+            on = !list.classList.contains("handwriting-on");
+            paint(on);
+            try {
+              window.localStorage.setItem(KEY, on ? "on" : "off");
+            } catch (e) { /* ignore */ }
+          });
+        })();
+      </script>
+    {% endif %}
+
+    {% if result.image %}
+      <img class="graph" src="{{ url_for('static', filename=result.image) }}"
+           alt="Graph of the function" />
+    {% endif %}
+
+    <h2>{{ t.answer_heading }} <span class="badge">{{ result.type }}{% if result.op %} · {{ result.op }}{% endif %}</span></h2>
+    <div class="final-answer">
+      <p class="answer-big">
+        {% if result.latex %}\[ {{ result.latex }} \]{% else %}{{ result.answer }}{% endif %}
+      </p>
+      {% if result.latex and result.answer %}<p class="muted">{{ result.answer }}</p>{% endif %}
+    </div>
     {% if advice %}
       <div class="advice-card">
         <h3>{{ t.advice_heading }}</h3>
@@ -359,50 +407,6 @@
               }
               window.speechSynthesis.speak(u);
             });
-          });
-        })();
-      </script>
-    {% endif %}
-
-    {% if result.image %}
-      <img class="graph" src="{{ url_for('static', filename=result.image) }}"
-           alt="Graph of the function" />
-    {% endif %}
-
-    {% if result.steps %}
-      <h2>{{ t.steps_heading }}</h2>
-      <div class="steps-tools">
-        <button type="button" class="hw-toggle" id="hw-toggle"
-          aria-pressed="true">{{ t.handwriting_btn }}</button>
-        <a class="back" href="/solution/print?style=hand" target="_blank"
-          rel="noopener">{{ t.print_copy_link }}</a>
-      </div>
-      <ol class="steps notebook handwriting-on" id="steps-list">
-        {% for step in result.steps %}<li>{{ step }}</li>{% endfor %}
-      </ol>
-      <script>
-        (function () {
-          var KEY = "ganitra-handwriting";
-          var btn = document.getElementById("hw-toggle");
-          var list = document.getElementById("steps-list");
-          if (!btn || !list) return;
-          function paint(on) {
-            list.classList.toggle("handwriting-on", on);
-            btn.setAttribute("aria-pressed", on ? "true" : "false");
-            btn.classList.toggle("hw-off", !on);
-          }
-          var on = true;
-          try {
-            var saved = window.localStorage.getItem(KEY);
-            if (saved === "off") on = false;
-          } catch (e) { /* private mode: default stays ON */ }
-          paint(on);
-          btn.addEventListener("click", function () {
-            on = !list.classList.contains("handwriting-on");
-            paint(on);
-            try {
-              window.localStorage.setItem(KEY, on ? "on" : "off");
-            } catch (e) { /* ignore */ }
           });
         })();
       </script>

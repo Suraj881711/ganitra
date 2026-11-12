@@ -42,9 +42,32 @@
     <div class="chat-scroll" id="chat-scroll">
       <div class="chat-log" id="chat-log" aria-live="polite">
         <div class="chat-empty" id="chat-empty">
-          <div class="empty-logo"><img class="empty-logo-img"
-            src="{{ url_for('static', filename='logo-full-t.png') }}"
-            alt="Ganitra" /></div>
+          {# Wave 23: Logo Jungle — the empty-state logo area is a
+             little stage where jungle friends come to play with
+             the logo (director script at the end of this page +
+             the Wave-23 section of style.css). The frozen logo
+             artwork is never edited; scenes only move its <img>
+             with CSS transforms. Wordless on purpose — no new
+             user-visible strings, so nothing to translate. #}
+          <div class="scene-stage" id="scene-stage">
+            <div class="empty-logo"><img class="empty-logo-img"
+              id="scene-logo"
+              src="{{ url_for('static', filename='logo-full-t.png') }}"
+              alt="Ganitra" /></div>
+            <img class="scene-actor scene-eagle" id="scene-eagle"
+              src="{{ url_for('static', filename='scene-eagle.webp') }}"
+              alt="" aria-hidden="true" />
+            <img class="scene-actor scene-tiger" id="scene-tiger"
+              src="{{ url_for('static', filename='scene-tiger.webp') }}"
+              alt="" aria-hidden="true" />
+            <img class="scene-actor scene-boy" id="scene-boy"
+              src="{{ url_for('static', filename='scene-boy.webp') }}"
+              alt="" aria-hidden="true" />
+            {# Scene C: the boy's stick — a plain CSS shape he
+               carries while chasing the tiger, then throws away. #}
+            <span class="scene-stick" id="scene-stick"
+              aria-hidden="true"></span>
+          </div>
           {% if saathi_name %}
             <h2 class="empty-greeting">{{ saathi_greeting }}</h2>
             {# Wave 11: Suraj removed the "Type it, speak it..."
@@ -730,6 +753,30 @@
         return div;
       }
 
+      /* Wave 23 (Part 2): while Ganitra thinks, the jungle boy
+         sits beside the typing line "writing" the answer — the
+         same writing rock as at the Teach board. He rides INSIDE
+         the typing bubble, so he vanishes with it the moment the
+         answer lands (the submit handler removes the node).
+         Pure decoration: wordless, pointer-free, and any failure
+         (e.g. the sprite 404s) just leaves the plain indicator. */
+      function addTypingBoy(node) {
+        try {
+          if (!node || node.querySelector(".boy-writer")) return;
+          var boy = document.createElement("img");
+          boy.className = "boy-writer in-typing on";
+          boy.src = "/static/scene-boy.webp";
+          boy.alt = "";
+          boy.setAttribute("aria-hidden", "true");
+          boy.addEventListener("error", function () {
+            boy.classList.remove("on");
+            node.classList.remove("boy-host");
+          });
+          node.classList.add("boy-host");
+          node.appendChild(boy);
+        } catch (e) { /* decoration only — never break typing */ }
+      }
+
       function addTyping() {
         // Wave 7: clone the server-rendered typing template (it
         // carries the localised "Ganitra is thinking…" line). Falls
@@ -738,10 +785,13 @@
         if (tpl && tpl.content && tpl.content.firstElementChild) {
           var node = tpl.content.firstElementChild.cloneNode(true);
           log.appendChild(node);
+          addTypingBoy(node);
           scrollLog();
           return node;
         }
-        return addBubble("bot typing", CHAT.solving);
+        var fb = addBubble("bot typing", CHAT.solving);
+        addTypingBoy(fb);
+        return fb;
       }
 
       /* ---------- Wave 12: More methods + Teach me chips ------
@@ -855,12 +905,31 @@
         var div = document.createElement("div");
         div.className = "bubble bot";
 
+        /* Wave 24 (Suraj, 12 Nov 2026, ~23:44 IST): the answer
+           used to be assembled in scrambled order — final answer
+           first, Teacher's Advice before the steps, the action
+           buttons in the middle, and the steps themselves last,
+           hidden inside a collapsed <details> ("pura kachra ki
+           tarah lagta hai, sequence mai nahi lagta"). Every
+           section is still BUILT exactly as before (all Wave
+           21/22/23 hooks untouched), but nothing is appended
+           while building: the pieces are collected here and put
+           into the DOM in ONE reading sequence at the end —
+           badge → explanation → steps → graph → plain answer
+           line (all inside the bordered card), then the icon
+           row BELOW/OUTSIDE the card, Teacher's Advice
+           (hidden until its bulb sign is tapped), the
+           more-methods panel and the full-solution link. */
+        var explEl = null;
+        var adviceEl = null;
+        var graphImg = null;
+        var stepsSection = null;
+
         var badge = document.createElement("span");
         badge.className = "badge";
         badge.textContent = result.type
           ? result.type + (result.op ? " · " + result.op : "")
           : "Ganitra";
-        div.appendChild(badge);
 
         var ans = document.createElement("p");
         ans.className = "answer-big";
@@ -869,13 +938,18 @@
         } else {
           ans.textContent = result.answer || "";
         }
-        div.appendChild(ans);
+        /* Wave 24, final word (Suraj, 13 Nov 2026 ~00:16
+           IST): NO box around the answer — "ans itna
+           highlight nahi karna, bas normal hona chahiye".
+           `ans` stays a plain bold line, appended as the
+           last line of the solve inside the card. Teach
+           still drives it (teach-wait / teach-now). */
 
         if (data.explanation) {
           var expl = document.createElement("p");
           expl.className = "explain";
           expl.textContent = data.explanation;
-          div.appendChild(expl);
+          explEl = expl;
         }
 
         if (data.advice) {
@@ -887,7 +961,11 @@
           ap.textContent = data.advice;
           card.appendChild(ah);
           card.appendChild(ap);
-          div.appendChild(card);
+          /* Wave 24 design change: the card starts HIDDEN —
+             it is on-demand now (bulb sign in the icon row),
+             never shown automatically. */
+          card.hidden = true;
+          adviceEl = card;
         }
 
         var stepsOl = null;
@@ -908,7 +986,17 @@
         var ICON_LISTEN = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>';
         var ICON_PLAY = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/></svg>';
         var ICON_STOP = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" fill="currentColor" stroke="none"/></svg>';
-        var ICON_METHODS = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 01-9 9"/></svg>';
+        /* Wave 24 (spec change, Suraj 13 Nov ~00:00 IST, from a
+           screenshot of Muse's own answer row): More Methods
+           is literally the "•••" ellipsis — three dots, like
+           Muse's — not a branch icon. Same borderless outline
+           row as the other three signs. */
+        var ICON_METHODS = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+        /* Wave 24 design change (Suraj, 13 Nov 2026 ~00:08
+           IST): the FIFTH sign — a lightbulb outline in the
+           same thin style — opens the Teacher's Advice on
+           demand (see the advice button below). */
+        var ICON_ADVICE = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>';
 
         var actions = document.createElement("div");
         actions.className = "answer-actions";
@@ -1002,6 +1090,61 @@
            stops everything and restores the normal full view. */
         var teachBtn = null;
         var teachState = null;
+
+        /* Wave 23 (Part 2): the jungle boy "writes" the steps at
+           the board while Teach plays — he sits in a narrow rail
+           at the board's right edge (the .boy-host padding keeps
+           step text clear of him), rocks gently like a hand
+           writing, stays still once playback stops, and slips
+           away ~1s after Teach ends or is stopped. If this
+           answer has no steps board, or the sprite fails to
+           load, there is simply no boy. Wordless decoration. */
+        var boyWriter = null;
+        var boyHideTimer = null;
+        var boyRailTimer = null;
+        var boyBroken = false;
+        function showBoyWriter() {
+          if (boyBroken || !stepsDet) return;
+          if (boyHideTimer) {
+            window.clearTimeout(boyHideTimer); boyHideTimer = null;
+          }
+          if (boyRailTimer) {
+            window.clearTimeout(boyRailTimer); boyRailTimer = null;
+          }
+          if (!boyWriter) {
+            boyWriter = document.createElement("img");
+            boyWriter.className = "boy-writer at-board";
+            boyWriter.src = "/static/scene-boy.webp";
+            boyWriter.alt = "";
+            boyWriter.setAttribute("aria-hidden", "true");
+            boyWriter.addEventListener("error", function () {
+              boyBroken = true;
+              hideBoyWriter();
+            });
+            stepsDet.appendChild(boyWriter);
+          }
+          stepsDet.classList.add("boy-host");
+          void boyWriter.offsetWidth;  // restart the fade-in cleanly
+          boyWriter.classList.add("on");
+        }
+        function hideBoyWriter() {
+          if (boyHideTimer) {
+            window.clearTimeout(boyHideTimer); boyHideTimer = null;
+          }
+          if (boyWriter) boyWriter.classList.remove("on");
+          if (stepsDet && !boyRailTimer) {
+            var det = stepsDet;
+            boyRailTimer = window.setTimeout(function () {
+              boyRailTimer = null;
+              det.classList.remove("boy-host");
+            }, 450);
+          }
+        }
+        function scheduleBoyWriterHide() {
+          if (boyHideTimer) window.clearTimeout(boyHideTimer);
+          boyHideTimer = window.setTimeout(hideBoyWriter, 1000);
+        }
+
         function stopTeachPlayback() {
           if (!teachState) return;
           var st = teachState;
@@ -1027,6 +1170,9 @@
           if (activeTeachStop === stopTeachPlayback) {
             activeTeachStop = null;
           }
+          // Wave 23: the boy stops writing and slips away ~1s
+          // after the playback ends (natural end or tap-stop).
+          scheduleBoyWriterHide();
         }
         function startTeachPlayback() {
           if (activeTeachStop
@@ -1054,6 +1200,9 @@
           if (result.answer) ans.classList.add("teach-wait");
           teachBtn.innerHTML = ICON_STOP;
           teachBtn.classList.add("teaching");
+          // Wave 23: the jungle boy takes his place at the board
+          // and writes along with the playback.
+          showBoyWriter();
 
           /* Wave 22: the Teach voice track is the teacher
              narration queue — opening, then per step a
@@ -1152,7 +1301,37 @@
           actions.appendChild(teachBtn);
         }
 
-        /* -- 4. More Methods --
+        /* -- 4. Teacher's Advice (on-demand) --
+           Wave 24 design change (Suraj, 13 Nov 2026 ~00:08
+           IST): "teacher advise apne man se kyu deni, uske
+           liye icon diya hai naa" — the advice is NOT shown
+           automatically any more. This bulb sign toggles the
+           (hidden) advice card open directly below the icon
+           row; a second tap closes it. The advice data is
+           unchanged, and Listen / Teach narration still speak
+           it exactly as before. */
+        if (adviceEl) {
+          var adviceBtn = document.createElement("button");
+          adviceBtn.type = "button";
+          adviceBtn.className = "method-chip act-btn";
+          adviceBtn.dataset.action = "advice";
+          adviceBtn.innerHTML = ICON_ADVICE;
+          adviceBtn.setAttribute("aria-label", CHAT.adviceHeading);
+          adviceBtn.title = CHAT.adviceHeading;
+          adviceBtn.setAttribute("aria-expanded", "false");
+          adviceBtn.addEventListener("click", function () {
+            adviceEl.hidden = !adviceEl.hidden;
+            adviceBtn.setAttribute("aria-expanded",
+              adviceEl.hidden ? "false" : "true");
+            if (!adviceEl.hidden) {
+              scrollIntoViewSafe(adviceEl);
+            }
+            scrollLog();
+          });
+          actions.appendChild(adviceBtn);
+        }
+
+        /* -- 5. More Methods --
            Wave 21: each method choice is ONE full-row button —
            the whole row is the tap target (the old row was a
            plain-text label plus a small side pill, so tapping
@@ -1213,15 +1392,16 @@
           actions.appendChild(chip);
         }
 
-        if (actions.children.length) div.appendChild(actions);
-        if (methodsPanel) div.appendChild(methodsPanel);
-
+        /* Wave 24: the actions row and the two toggle panels
+           (advice, methods) are appended in the final assembly
+           below — OUTSIDE the card, in the wrap beneath it —
+           not here in the middle of the answer. */
         if (result.image) {
           var img = document.createElement("img");
           img.className = "graph";
           img.src = "/static/" + result.image;
           img.alt = "Graph";
-          div.appendChild(img);
+          graphImg = img;
         }
 
         if (result.steps && result.steps.length) {
@@ -1229,6 +1409,10 @@
           tools.className = "steps-tools";
           var ol = document.createElement("ol");
           stepsOl = ol;
+          /* Wave 24, final word (Suraj, 13 Nov 2026 ~00:11
+             IST): NO numbering on the steps — no badges, no
+             markers; the solution lines simply flow in
+             order, one under another. */
           ol.className = "steps notebook"
             + (hwOn() ? " handwriting-on" : "");
           result.steps.forEach(function (step) {
@@ -1246,12 +1430,19 @@
           tools.appendChild(plink);
           var det = document.createElement("details");
           stepsDet = det;
+          /* Wave 24: the steps are the FIRST thing in the
+             reading sequence, so the section starts OPEN —
+             the working is visible in order, not buried in a
+             collapsed box at the bottom. Teach still opens it
+             on play and (via wasOpen) now leaves it open. */
+          det.className = "steps-section";
+          det.open = true;
           var sum = document.createElement("summary");
           sum.textContent = CHAT.steps;
           det.appendChild(sum);
           det.appendChild(tools);
           det.appendChild(ol);
-          div.appendChild(det);
+          stepsSection = det;
         }
 
         var full = document.createElement("form");
@@ -1267,9 +1458,31 @@
         btn.textContent = CHAT.fullSolution;
         full.appendChild(hidden);
         full.appendChild(btn);
-        div.appendChild(full);
 
-        log.appendChild(div);
+        /* Wave 24: THE reading sequence — the only place the
+           pieces enter the DOM, in exactly this order. The
+           CARD (the bubble) holds ONLY the solve: badge →
+           explanation → steps → graph → the plain answer
+           line. Everything else lives OUTSIDE the card, in
+           the wrap directly beneath it (Suraj, 13 Nov 2026
+           ~00:15 IST: "uske neeche karna hai"): the icon row
+           first, then the on-demand panels (Teacher's
+           Advice — hidden until its bulb sign is tapped —
+           and more-methods), then the full-solution link. */
+        div.appendChild(badge);
+        if (explEl) div.appendChild(explEl);
+        if (stepsSection) div.appendChild(stepsSection);
+        if (graphImg) div.appendChild(graphImg);
+        div.appendChild(ans);
+        var wrap = document.createElement("div");
+        wrap.className = "answer-wrap";
+        wrap.appendChild(div);
+        if (actions.children.length) wrap.appendChild(actions);
+        if (adviceEl) wrap.appendChild(adviceEl);
+        if (methodsPanel) wrap.appendChild(methodsPanel);
+        wrap.appendChild(full);
+
+        log.appendChild(wrap);
         scrollLog();
         if (window.MathJax && window.MathJax.typesetPromise) {
           window.MathJax.typesetPromise([div]).catch(function () {});
@@ -1721,6 +1934,159 @@
                  class: classInput ? classInput.value : "" });
         }
       });
+    })();
+  </script>
+
+  <script>
+    /* ---------- Wave 23: Logo Jungle scene director ----------
+       Suraj (12 Nov 2026, ~23:21-23:25 IST): "jaise Muse beech
+       beech mai activity karta hai... kabhi eagle aake logo par
+       baith jaaye, kabhi sher chalke side se aaye, logo ko dhakka
+       deke bahar le jaaye, toh Mowgli jaisa ladka logo ko wapas
+       leke aaye." On the EMPTY chat screen only, little wordless
+       scenes play around the hero logo: the eagle perches on it;
+       the tiger cub nudges it off-stage and the jungle boy
+       brings it back. The frozen logo artwork is never touched
+       — scenes only add CSS classes; keyframes in style.css do
+       the moving (transforms on the <img>, nothing else).
+       Restraint: the schedule is deliberately UNPREDICTABLE
+       (Suraj: "ye saari cheeje alag-alag time honi chahiye har
+       baar") — the first scene lands at a random ~5-15s, later
+       gaps are a random ~25-75s, and the scene order is shuffled
+       with no scene repeating back-to-back. Tapping the stage
+       still plays a scene instantly. Scenes stop for good once
+       the student starts typing or chatting, pause while the
+       tab is hidden, never run under prefers-reduced-motion,
+       and silently disable themselves if any sprite fails to
+       load. Fully defensive: any missing element means no
+       scenes. */
+    (function () {
+      /* SCENE-LOGIC-BEGIN */
+      var SCENE_ORDER = ["eagle", "tiger", "chase"];
+      var SCENE_MS = { eagle: 5400, tiger: 8600, chase: 11200 };
+      function _rand(rand) {
+        return (typeof rand === "number" && rand >= 0 && rand < 1)
+          ? rand : Math.random();
+      }
+      // Random pick from the scene order, never repeating the
+      // scene that played last (prev may be null at the start).
+      function pickSceneName(prev, rand) {
+        var pool = SCENE_ORDER.filter(function (n) {
+          return n !== prev;
+        });
+        return pool[Math.floor(_rand(rand) * pool.length)];
+      }
+      // Gap between scenes: a random ~25-75s, drawn fresh
+      // every time so visits never settle into a rhythm.
+      function sceneDelayMs(rand) {
+        return 25000 + Math.floor(_rand(rand) * 50000);
+      }
+      // The first scene after the empty chat loads: ~5-15s.
+      function firstSceneDelayMs(rand) {
+        return 5000 + Math.floor(_rand(rand) * 10000);
+      }
+      /* SCENE-LOGIC-END */
+
+      var stage = document.getElementById("scene-stage");
+      if (!stage) return;
+      var reduced = false;
+      try {
+        reduced = window.matchMedia(
+          "(prefers-reduced-motion: reduce)").matches;
+      } catch (e) { /* no matchMedia: scenes stay on */ }
+      if (reduced) return;
+
+      var stopped = false;
+      var playing = false;
+      var lastScene = null;
+      var timer = null;
+      var playTimer = null;
+
+      function emptyAlive() {
+        return !!document.getElementById("chat-empty")
+          && !!document.getElementById("scene-stage");
+      }
+      function chatStarted() {
+        var log = document.getElementById("chat-log");
+        return !!(log && log.querySelector(".bubble"));
+      }
+      function resetStage() {
+        stage.classList.remove("playing-eagle", "playing-tiger",
+                               "playing-chase");
+        playing = false;
+      }
+      function clearTimers() {
+        if (timer) { window.clearTimeout(timer); timer = null; }
+        if (playTimer) {
+          window.clearTimeout(playTimer); playTimer = null;
+        }
+      }
+      function stopScenes() {
+        stopped = true;
+        clearTimers();
+        resetStage();
+      }
+      function schedule(first) {
+        if (stopped) return;
+        if (timer) window.clearTimeout(timer);
+        timer = window.setTimeout(playNext,
+          first ? firstSceneDelayMs() : sceneDelayMs());
+      }
+      function playNext() {
+        timer = null;
+        if (stopped || playing) return;
+        if (!emptyAlive() || chatStarted()) { stopScenes(); return; }
+        if (document.hidden) { schedule(); return; }
+        var name = pickSceneName(lastScene);
+        lastScene = name;
+        playing = true;
+        stage.classList.add("playing-" + name);
+        playTimer = window.setTimeout(function () {
+          playTimer = null;
+          stage.classList.remove("playing-" + name);
+          playing = false;
+          schedule();
+        }, SCENE_MS[name] + 250);
+      }
+
+      // Any sprite failing to load disables the scenes silently.
+      ["scene-eagle", "scene-tiger", "scene-boy"].forEach(
+        function (id) {
+          var img = document.getElementById(id);
+          if (!img) { stopScenes(); return; }
+          img.addEventListener("error", stopScenes);
+          if (img.complete && img.naturalWidth === 0) stopScenes();
+        });
+      if (stopped) return;
+
+      // Tap the stage: play the next scene right away.
+      stage.addEventListener("click", function () {
+        if (stopped || playing || document.hidden) return;
+        if (!emptyAlive() || chatStarted()) { stopScenes(); return; }
+        if (timer) { window.clearTimeout(timer); timer = null; }
+        playNext();
+      });
+
+      // The student starts working: scenes stop (the empty state
+      // is about to be replaced by the thread anyway).
+      var q = document.getElementById("q");
+      if (q) q.addEventListener("input", stopScenes);
+
+      // Hidden tab: freeze everything; resume the quiet schedule
+      // when the student comes back (if the stage is still his).
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) {
+          if (timer) { window.clearTimeout(timer); timer = null; }
+          if (playTimer) {
+            window.clearTimeout(playTimer); playTimer = null;
+          }
+          resetStage();
+        } else if (!stopped && !playing && emptyAlive()) {
+          schedule();
+        }
+      });
+
+      schedule(true);
     })();
   </script>
 {% endblock %}
