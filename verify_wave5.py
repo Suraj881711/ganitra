@@ -338,6 +338,9 @@ check("suno stop hooks", "speechSynthesis.cancel" in body
       and "SpeechSynthesisUtterance" in body
       and "buildQueue" in body and "STOP_LABEL" in body
       and "Stop" in body)
+check("teacher narration wired on answer page (wave 22)",
+      "narrateSolution" in body and "narrateSolution(SPEAK.steps" in body
+      and "tuneUtterance" in body and "u.rate = 0.95" in body)
 _node = shutil.which("node")
 if _node:
     _scripts = [s for s in re.findall(r"<script>(.*?)</script>", body,

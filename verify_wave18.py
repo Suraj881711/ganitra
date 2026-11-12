@@ -306,6 +306,94 @@ for key in ("mm_copy_btn", "mm_copied", "mm_simple_btn"):
     check(f"i18n {key} in all 6 languages",
           all(key in STRINGS[code] for code in STRINGS))
 
+# --- Wave 22: teacher voice + smaller icons -----------------------------------
+# Suraj (12 Nov 2026): the spoken track must feel like a TEACHER,
+# not an AI reading the page — narrateSolution() wraps the steps
+# in spoken teacher lines (opening, per-step signposts, a warm
+# closing carrying the answer) and tuneUtterance() picks a
+# natural voice at a calm pace. The written payload never
+# changes. "icon chote karo": the action icons shrink too.
+check("teacher narration layer wired (chat)",
+      "narrateSolution" in index_src and "var TEACHER" in index_src
+      and "pickVoice" in index_src and "tuneUtterance" in index_src
+      and "u.rate = 0.95" in index_src
+      and "narrateSolution(result.steps" in index_src)
+check("wave 22 smaller action icons (css)",
+      "Wave 22" in css_src
+      and ".act-btn svg { width: 17px; height: 17px; }" in css_src
+      and "width: 34px; height: 34px" in css_src)
+
+import json as _json  # noqa: E402
+import shutil as _shutil  # noqa: E402
+import subprocess as _subprocess  # noqa: E402
+
+_node = _shutil.which("node")
+if _node:
+    _start = index_src.index("var WORDS = {")
+    _end = index_src.index("function makeListenButton")
+    _driver = "global.window = {};\n" + index_src[_start:_end] + r"""
+var stepsQuad = ["Write in standard form: 1·x^2 + -5·x + 6 = 0, so a = 1, b = -5, c = 6",
+  "Discriminant D = b^2 - 4ac = (-5)^2 - 4·1·6 = 1",
+  "D > 0, so there are two distinct real roots.",
+  "Quadratic formula: x = (-b ± sqrt(D)) / (2a) = (5 ± sqrt(1)) / 2",
+  "Solution: x = 2, x = 3"];
+var snapshot = JSON.stringify(stepsQuad);
+var en = narrateSolution(stepsQuad, "x = 2, x = 3", "en", "en-IN");
+var hi = narrateSolution(["Evaluate: 42 = 42"], "42", "hi", "hi-IN");
+console.log(JSON.stringify({
+  en_texts: en.map(function (p) { return p.text; }),
+  en_langs: en.map(function (p) { return p.lang; }),
+  en_steps: en.map(function (p) { return p.step; }),
+  bodies: en.filter(function (p, idx) { return idx > 0 && idx % 2 === 0; })
+    .map(function (p) { return p.text; }),
+  expected_bodies: stepsQuad.map(function (s) { return speakable(s, "en"); }),
+  unchanged: JSON.stringify(stepsQuad) === snapshot,
+  hi_texts: hi.map(function (p) { return p.text; }),
+  hi_langs: hi.map(function (p) { return p.lang; })
+}));
+"""
+    _p = "/tmp/w22-narrate.js"
+    open(_p, "w", encoding="utf-8").write(_driver)
+    _r = _subprocess.run([_node, _p], capture_output=True, text=True)
+    try:
+        _out = _json.loads(_r.stdout.strip().splitlines()[-1])
+    except Exception:
+        _out = {}
+    _quad = ["Write in standard form: 1·x^2 + -5·x + 6 = 0, so a = 1, b = -5, c = 6",
+             "Discriminant D = b^2 - 4ac = (-5)^2 - 4·1·6 = 1",
+             "D > 0, so there are two distinct real roots.",
+             "Quadratic formula: x = (-b ± sqrt(D)) / (2a) = (5 ± sqrt(1)) / 2",
+             "Solution: x = 2, x = 3"]
+    check("narration shape (open + signpost/step pairs + close)",
+          _out.get("en_steps") == [-1, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, -2],
+          f"steps={_out.get('en_steps')}")
+    check("narration differs from the raw written text",
+          bool(_out) and _out["en_texts"][0] not in _quad
+          and _out["en_texts"][-1] != "x = 2, x = 3"
+          and _out["en_texts"][1] not in _quad)
+    check("spoken step bodies = old speakable output (maths exact)",
+          _out.get("bodies") == _out.get("expected_bodies")
+          and bool(_out.get("bodies")))
+    check("narration keeps the steps' key numbers",
+          "-5" in " ".join(_out.get("en_texts", []))
+          and "x equals 2, x equals 3" in (_out.get("en_texts") or [""])[-1])
+    _signposts = [_out["en_texts"][i] for i in (1, 3, 5, 7, 9)] \
+        if _out.get("en_texts") else []
+    check("signposts rotate (no copy-paste repetition)",
+          len(set(_signposts)) == 5, f"signposts={_signposts}")
+    check("builder never mutates the written steps",
+          _out.get("unchanged") is True)
+    check("hindi narration in hindi, answer woven into the close",
+          bool(_out.get("hi_texts"))
+          and any("ऀ" <= ch <= "ॿ"
+                  for ch in _out["hi_texts"][0])
+          and "42" in _out["hi_texts"][-1]
+          and _out.get("hi_langs") == ["hi-IN", "hi-IN", "en-IN", "hi-IN"],
+          f"hi={_out.get('hi_texts')}")
+else:
+    check("teacher narration behaviour (node)", True,
+          "node unavailable — skipped")
+
 # --- Frozen logos ----------------------------------------------------------------
 for name, want in (("logo-full.png",
                     "8ffea6f4e42d3d3b1bd8552e26579c4c"),
