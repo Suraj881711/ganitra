@@ -129,7 +129,7 @@ check("menu has NO history link (wave 12)",
       'href="/history"' not in _dd)
 check("compact dhyaan pill in bar", 'id="dhyaan-pill"' in body
       and 'id="dhyaan-text"' in body)
-check("language switch in bar", 'id="lang-select"' in body)
+check("NO language switch in bar (wave 20)", 'id="lang-select"' not in body)
 
 # --- 4. Composer fixed at the bottom -------------------------------------------
 check("composer wrap + form", 'class="composer-wrap"' in body

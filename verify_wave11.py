@@ -137,7 +137,9 @@ check('"+" control at the top bar', 'id="chats-open"' in body
 plus_at = body.index('id="chats-open"')
 check('"+" sits after the menu (far right)',
       body.index('class="nav-menu"') < plus_at
-      and body.index('id="lang-select"') < plus_at)
+      # Wave 20: the header language switcher (lang-select) was
+      # removed — Suraj's auto-language rule; assert its absence.
+      and 'id="lang-select"' not in body)
 check('"+" is a plain sign (no circle class)',
       "chats-plus-circle" not in body
       and "plus-circle" not in body)

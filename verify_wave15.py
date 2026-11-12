@@ -15,7 +15,9 @@ Checks:
    expected item, in the approved order: Your chats, Board
    Mode, Previous Papers (added by Wave 16, Suraj 10 Nov 2026),
    Practice Test, Topics, Mistake Notebook, Copy Style,
-   Parent Report, Language, Settings (+ the gold keep-line).
+   Parent Report, Settings (+ the gold keep-line). NO Language
+   row: removed 12 Nov 2026 on Suraj's instruction — answers
+   auto-match the language the question is typed in.
 3. NO logout anywhere in the menu segment; /account DOES
    contain the logout link (exactly the Wave-12 rule).
 4. style.css carries the Wave-15 polish: the menu keyframes,
@@ -86,12 +88,12 @@ _dd = home[home.index('class="nav-dropdown'):] \
 ITEM_KEYS = ["menu_your_chats", "nav_board", "menu_papers",
              "nav_practice",
              "nav_topics", "nav_mistakes", "menu_copy_style",
-             "nav_parents", "menu_language", "menu_settings"]
+             "nav_parents", "menu_settings"]
 positions = []
 for key in ITEM_KEYS:
     label = esc(EN[key])
     positions.append(_dd.find(label))
-check("menu: all 10 items present",
+check("menu: all 9 items present",
       all(p >= 0 for p in positions),
       f"missing={[k for k, p in zip(ITEM_KEYS, positions) if p < 0]}")
 check("menu: items in approved order",
@@ -105,8 +107,8 @@ check("menu: profile block + stats ids intact",
       'class="menu-profile"' in _dd
       and 'id="menu-stat-questions"' in _dd
       and 'id="menu-stat-chats"' in _dd)
-check("menu: language row expands to 6 links",
-      _dd.count('class="menu-lang-link"') == 6,
+check("menu: NO language row (Suraj's auto-language rule, 12 Nov 2026)",
+      _dd.count('class="menu-lang-link"') == 0,
       f"links={_dd.count('class=' + chr(34) + 'menu-lang-link' + chr(34))}")
 
 # --- 3. Logout placement (Wave-12 rule, re-asserted) ---------------------------

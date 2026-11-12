@@ -92,10 +92,11 @@ check("sign-in teal button + forgot hint",
       esc(EN["auth_signup_btn"]) in body
       and esc(EN["auth_forgot_line"]) in body)
 check("sign-in has NO option chips/selects for class/board",
-      # The ONLY <select> on the page is the site language
-      # switcher (lang-select, as on every page); class and
-      # board are plain text inputs and there are no chips.
-      body.count("<select") == 1 and 'id="lang-select"' in body
+      # Wave 20: the site language switcher (lang-select) was
+      # removed from every page — Suraj's auto-language rule —
+      # so the sign-in page now has NO <select> at all; class
+      # and board are plain text inputs and there are no chips.
+      body.count("<select") == 0 and 'id="lang-select"' not in body
       and 'class="chip"' not in body
       and 'class="chips"' not in body)
 check("sign-in has NO chat form", 'id="chat-form"' not in body

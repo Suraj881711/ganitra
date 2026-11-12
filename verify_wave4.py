@@ -64,7 +64,7 @@ check("en hero string",
 check("en tagline", STRINGS["en"]["tagline"] in body)
 check("en solve button", STRINGS["en"]["solve_btn"] in body)
 check("en speech lang", f'"{SPEECH_LANGS["en"]}"' in body)
-check("lang switcher", 'id="lang-select"' in body
+check("NO manual lang switcher (wave 20)", 'id="lang-select"' not in body
       and "/set-lang/" in body)
 check("en greeting (named, wave 10)",
       STRINGS["en"]["saathi_welcome_name"].format(name="W4 Tester " + RUN_ID)

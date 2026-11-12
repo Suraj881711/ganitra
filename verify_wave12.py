@@ -289,8 +289,8 @@ for href in ("/chats", "/board", "/practice", "/topics",
              "/mistakes", "/parent-report", "/account"):
     check(f"menu item {href}", f'href="{href}"' in _dd)
 check("menu: Copy Style item", "/solution/print?style=hand" in _dd)
-check("menu: language row with 6 links",
-      _dd.count("/set-lang/") >= 6)
+check("menu: NO language row (Suraj's auto-language rule, 12 Nov 2026)",
+      _dd.count("/set-lang/") == 0)
 check("menu: Settings row", esc(EN["menu_settings"]) in _dd
       and 'href="/account"' in _dd)
 check("menu: gold strip line",
