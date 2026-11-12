@@ -270,8 +270,8 @@ details summary { cursor: pointer; color: var(--accent); }
 }
 .advice-card h3 { margin: 0 0 6px; font-size: 17px; color: #7a5a10; }
 .advice-card p { margin: 0; line-height: 1.65; }
-.bubble .advice-card { margin: 12px 0 4px; padding: 13px 15px; }
-.bubble .advice-card h3 { font-size: 15.5px; }
+.answer-wrap .advice-card { margin: 12px 0 4px; padding: 13px 15px; }
+.answer-wrap .advice-card h3 { font-size: 15.5px; }
 .listen-btn {
   margin-top: 12px; min-height: 44px; padding: 10px 20px;
   background: #fff; color: #7a5a10; border: 1.5px solid #e3d9c2;
@@ -1440,7 +1440,7 @@ body.chat-page .bubble { line-height: 1.7; }
 body.chat-page .bubble.bot { padding: 20px 22px; }
 body.chat-page .bubble .answer-big { margin: 10px 0 12px; }
 body.chat-page .bubble .explain { margin: 12px 0; padding: .85rem 1rem; }
-body.chat-page .bubble .advice-card { margin: 14px 0 6px; padding: 15px 17px; }
+body.chat-page .answer-wrap .advice-card { margin: 10px 0 6px; padding: 15px 17px; }
 body.chat-page .bubble .steps li { margin: 11px 0; line-height: 1.75; }
 .methods-panel { padding: 14px 16px; }
 .method-steps li { margin: 8px 0; line-height: 1.7; }
@@ -1470,24 +1470,467 @@ body.chat-page .bubble .steps li { margin: 11px 0; line-height: 1.75; }
 /* ================= Wave 22: smaller, subtler icons ============
    Suraj (12 Nov 2026, ~23:04 IST): "icon chote karo" — the
    per-answer action signs (Copy / Listen / Teach / More
-   Methods) shrink to a compact ~34px circle with a 17px
-   glyph: small and understated, like Muse's action icons.
-   An invisible ::after halo keeps the real tap area ~44px,
-   so the small look costs nothing in tappability. The
+   Methods) shrink to a compact circle with a small glyph:
+   small and understated, like Muse's action icons. The
    composer glyphs (attach / mic / camera / send) are
-   trimmed a touch too; their buttons stay 40px. */
-.answer-actions .act-btn {
-  width: 34px; height: 34px; min-height: 34px;
-  position: relative;
-}
-.answer-actions .act-btn svg { width: 17px; height: 17px; }
-.answer-actions .act-btn::after {
-  content: ""; position: absolute; inset: -5px;
-  border-radius: 999px;
-}
+   trimmed a touch too; their buttons stay 40px.
+   Wave 24 has the FINAL word on this row (Suraj, 13 Nov
+   2026 ~00:00 IST, Muse-row screenshot: "aise use karana
+   hai"): NO boxes at all — borderless outline glyphs, no
+   background, no border, muted ink, equal tap size via
+   padding. The button geometry lives in the Wave 24 block
+   at the end of this file; only the glyph size lives here. */
+.answer-actions .act-btn svg { width: 18px; height: 18px; }
 body.chat-page .chat-bar .composer-btn svg {
   width: 20px; height: 20px;
 }
 body.chat-page .chat-bar .send-btn svg {
   width: 19px; height: 19px;
 }
+
+/* ================= Wave 23: Logo Jungle + boy writer ==========
+   Suraj (12 Nov 2026, ~23:21-23:25 IST): little jungle scenes
+   around the logo on the empty chat screen — "kabhi eagle aake
+   logo par baith jaaye, kabhi sher chalke side se aaye, logo ko
+   dhakka deke bahar le jaaye, toh Mowgli jaisa ladka logo ko
+   wapas leke aaye" — and when the student starts working, the
+   boy stands at the board and "writes" (Teach playback + the
+   thinking indicator). The choreography lives in the keyframes
+   below; the Wave-23 director script in index.html only adds
+   .playing-eagle / .playing-tiger to the stage at the right
+   moments. HARD RULE kept: the frozen logo artwork files are
+   never edited — scenes animate the <img> element with CSS
+   transforms only, and when no scene plays the logo sits
+   exactly as approved (no idle motion). The actors' cream
+   sprite backgrounds blend with the page's warm cream, and
+   rounded corners + a soft shadow give them a sticker look. */
+
+/* --- The stage: the hero logo area of the empty state. ------ */
+.scene-stage {
+  --logo-half: 170px;  /* half the hero logo's width (340px) */
+  /* Scene C geometry: how far right the tiger drags the logo,
+     and where the boy stops his chase / gives the hug. */
+  --chase-x: 100px;
+  --boy-stop: calc(-50% + var(--chase-x) - var(--logo-half) - 120px);
+  --boy-hug: calc(-50% + var(--chase-x) - var(--logo-half) - 30px);
+  position: relative; overflow: hidden;
+  height: clamp(198px, 54vw, 250px);
+  max-width: 560px; margin: 0 auto;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.scene-stage .empty-logo {
+  position: absolute; left: 50%; bottom: 6px;
+  width: min(340px, 70vw);
+  transform: translateX(-50%);
+}
+@media (max-width: 560px) {
+  .scene-stage {
+    --logo-half: 35vw;  /* logo is 70vw wide here */
+    --chase-x: 44px;
+    --boy-stop: calc(-50% - 78px);
+    --boy-hug: calc(-50% - 78px);
+  }
+}
+
+/* --- The actors (hidden until their scene plays). ----------- */
+.scene-actor {
+  position: absolute; object-fit: cover;
+  border-radius: 22%;
+  box-shadow: 0 10px 24px rgba(101, 84, 40, .18);
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
+.scene-eagle {
+  width: 92px; height: 92px; z-index: 3;
+  left: 50%; bottom: 66%; margin-left: -46px;
+}
+.scene-tiger {
+  width: 104px; height: 104px; z-index: 2;
+  left: 50%; bottom: 4px;
+}
+.scene-boy {
+  width: 96px; height: 96px; z-index: 2;
+  left: 50%; bottom: 4px;
+}
+
+/* --- Scene A: the eagle visits (5.4s). Glides in from the
+   top-left, perches ON the logo with a gentle bob (~2.7s),
+   then flies up and away to the right. ------------------------ */
+.scene-stage.playing-eagle .scene-eagle {
+  visibility: visible; animation: eagle-visit 5.4s ease-in-out forwards;
+}
+@keyframes eagle-visit {
+  0%   { opacity: 0; transform: translate(-44vw, -125%) rotate(-6deg); }
+  16%  { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  30%  { transform: translate(0, -4px); }
+  44%  { transform: translate(0, 0); }
+  58%  { transform: translate(0, -4px); }
+  72%  { opacity: 1; transform: translate(0, 0); }
+  100% { opacity: 0; transform: translate(36vw, -135%) rotate(5deg); }
+}
+
+/* --- Scene B: tiger & rescue (8.6s, three synced tracks).
+   The tiger cub walks in from the left (its sprite faces
+   right), pauses at the logo, lunges — the logo wobbles, then
+   rolls off the right edge. The tiger trots off after it.
+   A beat later the jungle boy (sprite flipped to face left)
+   runs in from the right with the logo rolling back ahead of
+   him; it settles exactly at centre, he hops once, and runs
+   off left. Net end state: the stage exactly as it started. -- */
+.scene-stage.playing-tiger .scene-tiger {
+  visibility: visible; animation: tiger-visit 8.6s linear forwards;
+}
+@keyframes tiger-visit {
+  0%   { opacity: 0;
+         transform: translateX(calc(-50% - var(--logo-half) - 210px)) translateY(0); }
+  3%   { opacity: 1; }
+  7%   { transform: translateX(calc(-50% - var(--logo-half) - 140px)) translateY(-4px); }
+  12%  { transform: translateX(calc(-50% - var(--logo-half) - 75px)) translateY(0); }
+  17%  { transform: translateX(calc(-50% - var(--logo-half) - 20px)) translateY(-4px); }
+  21%  { transform: translateX(calc(-50% - var(--logo-half) + 10px)) translateY(0); }
+  25%  { transform: translateX(calc(-50% - var(--logo-half) + 24px)) translateY(0); }
+  29%  { transform: translateX(calc(-50% - var(--logo-half) + 10px)) translateY(0); }
+  42%  { transform: translateX(calc(-50% - var(--logo-half) + 10px)) translateY(-3px); }
+  57%  { opacity: 1;
+         transform: translateX(calc(-50% + var(--logo-half) + 230px)) translateY(0); }
+  60%  { opacity: 0;
+         transform: translateX(calc(-50% + var(--logo-half) + 230px)) translateY(0); }
+  100% { opacity: 0;
+         transform: translateX(calc(-50% + var(--logo-half) + 230px)) translateY(0); }
+}
+.scene-stage.playing-tiger .empty-logo-img {
+  animation: logo-rolled 8.6s linear forwards;
+}
+@keyframes logo-rolled {
+  0%, 23% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  26%  { transform: translate(3px, 0) rotate(3.5deg); }
+  30%  { transform: translate(-3px, 0) rotate(-3deg); }
+  34%  { transform: translate(0, 0) rotate(0deg); }
+  46%  { transform: translate(64vw, 0) rotate(330deg); opacity: 1; }
+  49%  { transform: translate(64vw, 0) rotate(330deg); opacity: 0; }
+  62%  { transform: translate(58vw, 0) rotate(-320deg); opacity: 0; }
+  65%  { transform: translate(52vw, 0) rotate(-290deg); opacity: 1; }
+  79%  { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+  83%  { transform: translate(0, -6px) rotate(0deg); }
+  87%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
+}
+.scene-stage.playing-tiger .scene-boy {
+  visibility: visible; animation: boy-rescue 8.6s linear forwards;
+}
+@keyframes boy-rescue {
+  0%, 62% { opacity: 0;
+            transform: translateX(calc(-50% + var(--logo-half) + 240px)) translateY(0) scaleX(-1); }
+  65%  { opacity: 1;
+         transform: translateX(calc(-50% + var(--logo-half) + 185px)) translateY(-5px) scaleX(-1); }
+  71%  { transform: translateX(calc(-50% + var(--logo-half) + 110px)) translateY(0) scaleX(-1); }
+  76%  { transform: translateX(calc(-50% + var(--logo-half) + 46px)) translateY(-5px) scaleX(-1); }
+  80%  { transform: translateX(calc(-50% + var(--logo-half) + 40px)) translateY(0) scaleX(-1); }
+  84%  { transform: translateX(calc(-50% + var(--logo-half) + 40px)) translateY(-12px) scaleX(-1); }
+  88%  { transform: translateX(calc(-50% + var(--logo-half) + 40px)) translateY(0) scaleX(-1); }
+  94%  { opacity: 1;
+         transform: translateX(calc(-50% - var(--logo-half) - 150px)) translateY(-4px) scaleX(-1); }
+  99%, 100% { opacity: 0;
+              transform: translateX(calc(-50% - var(--logo-half) - 250px)) translateY(0) scaleX(-1); }
+}
+
+/* --- Scene C: Chase & Rescue (11.2s, four synced tracks).
+   The tiger runs in from the left, grabs the logo and drags it
+   toward the right edge; the boy (stick in hand) chases them
+   from the left; the tiger drops the logo and flees right; the
+   boy throws the stick away, hugs the logo, carries it back to
+   centre, pats it, and runs off left. The tiger sprite faces
+   right already, so no flip is needed anywhere in this scene.
+   Beat map (of 11.2s): grab+drag 0-34% · boy chase 14-44% ·
+   drop + tiger flees 46-58% · stick throw 59-70% · hug
+   72-79% · carry home 79-88% · pat 88-92% · boy exits 92-100%. */
+.scene-stage.playing-chase .scene-tiger {
+  visibility: visible; animation: chase-tiger 11.2s linear forwards;
+}
+@keyframes chase-tiger {
+  0%   { opacity: 0;
+         transform: translateX(calc(-50% - var(--logo-half) - 210px)) translateY(0); }
+  3%   { opacity: 1; }
+  6%   { transform: translateX(calc(-50% - var(--logo-half) - 120px)) translateY(-4px); }
+  9%   { transform: translateX(calc(-50% - var(--logo-half) - 55px)) translateY(0); }
+  12%  { transform: translateX(calc(-50% - var(--logo-half) - 26px)) translateY(-3px); }
+  20%  { transform: translateX(calc(-50% - var(--logo-half) + 30px)) translateY(0); }
+  27%  { transform: translateX(calc(-50% - var(--logo-half) + 75px)) translateY(-3px); }
+  34%  { transform: translateX(calc(-50% + var(--chase-x) - var(--logo-half) - 26px)) translateY(0); }
+  40%  { transform: translateX(calc(-50% + var(--chase-x) - var(--logo-half) - 24px)) translateY(0); }
+  44%  { transform: translateX(calc(-50% + var(--chase-x) - var(--logo-half) - 28px)) translateY(0); }
+  46%  { transform: translateX(calc(-50% + var(--chase-x) - var(--logo-half) - 26px)) translateY(0); }
+  57%  { opacity: 1;
+         transform: translateX(calc(-50% + var(--logo-half) + 300px)) translateY(-3px); }
+  59%, 100% { opacity: 0;
+              transform: translateX(calc(-50% + var(--logo-half) + 300px)) translateY(0); }
+}
+.scene-stage.playing-chase .empty-logo-img {
+  animation: chase-logo 11.2s linear forwards;
+}
+@keyframes chase-logo {
+  0%, 12% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  20%  { transform: translate(calc(var(--chase-x) * .45), -3px) rotate(2deg) scale(1); }
+  27%  { transform: translate(calc(var(--chase-x) * .75), 0) rotate(3deg) scale(1); }
+  34%, 45% { transform: translate(var(--chase-x), 0) rotate(3deg) scale(1); }
+  48%  { transform: translate(var(--chase-x), -8px) rotate(0deg) scale(1); }
+  52%, 71% { transform: translate(var(--chase-x), 0) rotate(0deg) scale(1); }
+  75%  { transform: translate(var(--chase-x), 0) rotate(0deg) scale(1.06); }
+  79%  { transform: translate(var(--chase-x), 0) rotate(0deg) scale(1); }
+  88%  { transform: translate(0, 0) rotate(0deg) scale(1); }
+  90%  { transform: translate(0, -4px) rotate(0deg) scale(1); }
+  92%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+}
+.scene-stage.playing-chase .scene-boy {
+  visibility: visible; z-index: 3;
+  animation: chase-boy 11.2s linear forwards;
+}
+@keyframes chase-boy {
+  0%, 13% { opacity: 0;
+            transform: translateX(calc(-50% - var(--logo-half) - 300px)) translateY(0); }
+  16%  { opacity: 1;
+         transform: translateX(calc(-50% - var(--logo-half) - 215px)) translateY(-5px); }
+  23%  { transform: translateX(calc(-50% - var(--logo-half) - 110px)) translateY(0); }
+  30%  { transform: translateX(calc(var(--boy-stop) + 70px)) translateY(-5px); }
+  37%  { transform: translateX(calc(var(--boy-stop) + 25px)) translateY(0); }
+  44%, 58% { transform: translateX(var(--boy-stop)) translateY(0); }
+  51%  { transform: translateX(var(--boy-stop)) translateY(-3px); }
+  66%  { transform: translateX(calc((var(--boy-stop) + var(--boy-hug)) * .5)) translateY(-4px); }
+  72%, 79% { transform: translateX(var(--boy-hug)) translateY(0); }
+  75%  { transform: translateX(var(--boy-hug)) translateY(-6px); }
+  88%  { transform: translateX(calc(-50% - var(--logo-half) - 30px)) translateY(0); }
+  90%  { transform: translateX(calc(-50% - var(--logo-half) - 30px)) translateY(-4px); }
+  92%  { transform: translateX(calc(-50% - var(--logo-half) - 30px)) translateY(0); }
+  97%  { opacity: 1;
+         transform: translateX(calc(-50% - var(--logo-half) - 190px)) translateY(-4px); }
+  100% { opacity: 0;
+         transform: translateX(calc(-50% - var(--logo-half) - 320px)) translateY(0); }
+}
+/* The boy's stick: rides at his hand through the chase, then
+   arcs up and off-stage when he throws it away (~59-70%). */
+.scene-stick {
+  position: absolute; left: 50%; bottom: 56px; z-index: 4;
+  width: 36px; height: 7px; border-radius: 4px;
+  background: linear-gradient(180deg, #a4713a, #7c4f22);
+  box-shadow: 0 3px 6px rgba(101, 84, 40, .25);
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
+.scene-stage.playing-chase .scene-stick {
+  visibility: visible; animation: stick-arc 11.2s linear forwards;
+}
+@keyframes stick-arc {
+  0%, 14% { opacity: 0;
+            transform: translateX(calc(var(--boy-stop) - 240px)) translateY(0) rotate(28deg); }
+  17%  { opacity: 1;
+         transform: translateX(calc(var(--boy-stop) - 165px)) translateY(-3px) rotate(28deg); }
+  30%  { transform: translateX(calc(var(--boy-stop) + 52px)) translateY(0) rotate(28deg); }
+  44%, 58% { transform: translateX(calc(var(--boy-stop) - 18px)) translateY(0) rotate(28deg); }
+  63%  { opacity: 1;
+         transform: translateX(calc(var(--boy-stop) + 8px)) translateY(-34px) rotate(120deg); }
+  70%  { opacity: 1;
+         transform: translateX(calc(var(--boy-stop) + 122px)) translateY(-118px) rotate(330deg); }
+  74%, 100% { opacity: 0;
+              transform: translateX(calc(var(--boy-stop) + 150px)) translateY(-130px) rotate(380deg); }
+}
+
+/* --- Part 2: the boy writer. One sprite, two posts: at the
+   Teach board (in a reserved right rail of the steps details,
+   so he never covers step text) and beside the thinking line.
+   .on = present + writing rock; removing .on fades/slides him
+   away. Under reduced motion he simply stands still. --------- */
+.boy-writer {
+  position: absolute; object-fit: cover;
+  width: 82px; height: 82px;
+  border-radius: 22%;
+  box-shadow: 0 10px 22px rgba(101, 84, 40, .20);
+  pointer-events: none; z-index: 4;
+  opacity: 0; visibility: hidden; transform: translateX(12px);
+  transition: opacity .35s ease, transform .35s ease,
+              visibility 0s linear .35s;
+}
+.boy-writer.on {
+  opacity: 1; visibility: visible; transform: translateX(0);
+  transition: opacity .3s ease, transform .3s ease;
+  animation: boy-write .5s ease-in-out infinite;
+}
+@keyframes boy-write {
+  0%, 100% { transform: rotate(-2.5deg) translateY(0); }
+  50%      { transform: rotate(2deg) translateY(2.5px); }
+}
+.boy-writer.at-board { right: 2px; top: 30px; }
+.bubble details.boy-host { position: relative; }
+.bubble details.boy-host > ol.steps { padding-right: 62px; }
+.boy-writer.in-typing {
+  width: 54px; height: 54px; right: 10px; top: 50%; margin-top: -27px;
+}
+.bubble.typing.boy-host { position: relative; padding-right: 80px; }
+
+/* Reduced motion: no scenes at all (the director script also
+   refuses to run), and the writer boy stands still. */
+@media (prefers-reduced-motion: reduce) {
+  .scene-actor { display: none !important; }
+  .scene-stage .empty-logo-img { animation: none !important; }
+  .boy-writer { animation: none !important; }
+}
+
+/* ================= Wave 24: the answer SEQUENCE ==============
+   Suraj (12 Nov 2026, ~23:44 IST): after a question, the answer
+   "pura kachra ki tarah lagta hai, sequence mai nahi lagta
+   bilkul bhi" — it read as a mess, in no order at all. The
+   DOM assembly now follows ONE reading sequence in both
+   renderers (chat addAnswerBubble + the /solve answer page):
+     steps (plain lines, NO numbering) → plain answer line —
+     all inside the one bordered CARD; the icon row sits
+     BELOW/OUTSIDE the card, then the on-demand panels.
+   This block carries the presentation for that sequence:
+   the plain answer line, the unnumbered steps, the
+   steps section frame, and the borderless action
+   row. Nothing here touches the frozen logos, the scene
+   stage or the boy-writer rail (padding-right lives in the
+   Wave 23 block and still applies inside the steps section).
+
+   SPEC CHANGE (Suraj, 13 Nov 2026 ~00:00 IST, screenshot of
+   Muse's own answer row: "aise use karana hai"): the action
+   row is BORDERLESS — plain outline glyphs, no background,
+   no border, no labels; More Methods is the "•••" ellipsis.
+   This overrides the boxed-square buttons this wave first
+   shipped (and Wave 22's circles before them).
+   FONT SCALE (same night, corrected once — "bahut jyada
+   hai"): chat text goes noticeably smaller — body/steps
+   14px, handwriting steps 15px, question/composer 14px,
+   final answer 15.5px, section headings 13px — with airy
+   line-height (1.65) so it never feels stuffed.
+   DESIGN CHANGE (Suraj, 13 Nov 2026 ~00:08 IST): Teacher's
+   Advice leaves the default flow — the visible sequence is
+   steps → plain answer line (inside the card) → icon row
+   below the card; the advice card sits HIDDEN below the
+   row and opens from a FIFTH sign (a lightbulb outline)
+   in the row. Glyphs shrink once more,
+   20 -> 18px ("woh bhi or chote"). The five signs CLUSTER
+   tight (Suraj, ~00:10 IST: "icon ki distance kam kar,
+   bilkul paas mai rakhana hai sabko sath mai"): 2px row
+   gap + 2px side padding puts the glyphs ~6px apart edge
+   to edge, one left-aligned cluster under the answer box —
+   never spread across the row.
+   CARD + PLAIN ANSWER (Suraj, 13 Nov 2026 ~00:15-00:16
+   IST, final word): the whole solve + answer live inside
+   the ONE bordered card (the bubble) — and the answer is
+   NOT highlighted: no tinted box, no border, just a plain
+   bold line at the end of the solving lines ("ans itna
+   highlight nahi karna, bas normal hona chahiye"). The
+   icon row renders BELOW the card, OUTSIDE it ("uske
+   neeche karna hai"), left-aligned with the card's edge.
+   The in-between "big hero answer box" instruction
+   (~00:12 IST) is superseded — no inner box at all. (The
+   /solve answer PAGE keeps its .final-answer box: the
+   printable document view, outside this chat flow.) */
+
+/* One answer = one wrap: the bordered card (the bubble) on
+   top holding ONLY the solve, the icon row + on-demand
+   panels beneath it, OUTSIDE the card. */
+.answer-wrap { min-width: 0; }
+
+/* The final-answer box: brand teal edge + a soft teal/gold
+   tint, holding ONLY the final answer. /solve answer PAGE
+   only — the chat answer is a plain line, no box. */
+.final-answer {
+  background: linear-gradient(120deg, rgba(47, 125, 110, .10),
+              rgba(212, 175, 55, .13));
+  border: 1.5px solid #cfe0d2;
+  border-left: 4px solid var(--accent);
+  border-radius: 14px;
+  width: 100%; box-sizing: border-box;
+  padding: 18px 16px;
+  margin: 14px 0 2px;
+  min-width: 0;
+}
+.final-answer .answer-big { margin: 0; }
+.final-answer .muted { margin: 4px 0 0; }
+.final-answer mjx-container {
+  max-width: 100%; overflow-x: auto; overflow-y: hidden;
+}
+
+/* The steps section (chat): a calm frame under its summary
+   heading; the summary reads as the section title now that
+   the section starts open in the sequence. */
+.bubble details.steps-section { margin-top: 10px; }
+.bubble details.steps-section > summary {
+  font-weight: 700; color: var(--accent);
+}
+
+/* NO step numbering (Suraj, 13 Nov 2026 ~00:11 IST: "step
+   aise dena ka koi matlab nahi hai, bs solve kar — 1,2,3
+   likhne ki jarurat nahi hai"): the number badges this wave
+   first shipped are GONE, and the native <ol> markers are
+   off too — the solution lines simply flow one after
+   another in order, clean left-aligned lines inside the
+   notebook. Applies to the chat steps, the answer page's
+   list (#steps-list) and the method lists in the panel. */
+ol.steps, #steps-list, .method-steps { list-style: none; }
+.method-steps { padding-left: 0; margin-left: 0; }
+
+/* The action row sits OUTSIDE the card, directly beneath
+   it (Suraj, 13 Nov 2026 ~00:15 IST) — a BORDERLESS
+   Muse-style cluster: outline glyphs only, no background,
+   no border, no labels; muted ink that warms on hover /
+   active states (colour only, never a box). Every button's
+   tap size is equal by construction: the same padding
+   around the same 18px glyph, whatever classes the Waves
+   12/18 chip rules also put on the element. */
+body.chat-page .answer-actions {
+  padding-top: 2px; margin-top: 6px;
+  justify-content: flex-start; gap: 2px;
+}
+.answer-actions .act-btn {
+  flex: 0 0 auto; width: auto; height: auto;
+  min-width: 0; min-height: 0; padding: 10px 2px;
+  background: transparent; border: none; box-shadow: none;
+  border-radius: 8px; color: var(--muted);
+  display: inline-flex; align-items: center;
+  justify-content: center;
+  line-height: 0; cursor: pointer;
+}
+.answer-actions .act-btn:hover {
+  color: var(--text); background: transparent;
+}
+.answer-actions .act-btn.copied { color: var(--accent); }
+.answer-actions .act-btn[aria-expanded="true"] {
+  color: var(--accent);
+}
+/* The on-demand advice card honours its hidden state even
+   though .advice-card sets its own box styling. */
+.answer-wrap .advice-card[hidden] { display: none; }
+.answer-actions .teach-btn.teaching {
+  background: transparent; color: var(--accent);
+  border: none;
+}
+
+/* Font scale (chat only): noticeably smaller text, airy
+   line-height. Before -> after: bubble body 16.5 -> 14,
+   steps (print) inherit 14, steps (handwriting) 17.5 -> 15,
+   composer 17 -> 14, final answer 23 -> 15.5, section
+   headings -> 13 (small-caps style). The /solve answer PAGE
+   keeps its document sizes; this is the chat Suraj reads. */
+body.chat-page .bubble { font-size: 14px; line-height: 1.65; }
+body.chat-page .bubble .steps li { line-height: 1.65; }
+body.chat-page .bubble ol.steps.notebook.handwriting-on li {
+  font-size: 15px; line-height: 1.8;
+}
+body.chat-page .chat-bar textarea {
+  font-size: 14px; line-height: 1.55;
+}
+body.chat-page .bubble .answer-big {
+  font-size: 15.5px; line-height: 1.5; margin: 12px 0 0;
+}
+body.chat-page .bubble details.steps-section > summary {
+  font-size: 13px; letter-spacing: .04em;
+  text-transform: uppercase;
+}
+body.chat-page .answer-wrap .advice-card h3 {
+  font-size: 13px; letter-spacing: .03em;
+  text-transform: uppercase;
+}
+body.chat-page .answer-wrap .methods-heading {
+  font-size: 13px; letter-spacing: .03em;
+  text-transform: uppercase;
+}
+body.chat-page .answer-wrap .method-row-btn { font-size: 14px; }
+body.chat-page .bubble .error-heading { font-size: 15px; }
