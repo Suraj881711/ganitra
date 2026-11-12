@@ -317,7 +317,7 @@ check("teacher narration layer wired (chat)",
       "narrateSolution" in index_src and "var TEACHER" in index_src
       and "pickVoice" in index_src and "tuneUtterance" in index_src
       and "u.rate = 0.95" in index_src
-      and "narrateSolution(result.steps" in index_src)
+      and "narrateSolution(displaySteps" in index_src)
 check("wave 22 smaller action icons (css)",
       "Wave 22" in css_src
       # Wave 24 final word (Suraj, 13 Nov 2026, Muse-row

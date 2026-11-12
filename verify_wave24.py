@@ -169,8 +169,8 @@ check("NO step numbering anywhere (badges removed)",
       "w24step" not in CSS
       and "counter(w24step)" not in CSS
       and "ol.steps.seq" not in CSS
-      and "ol.steps, #steps-list, .method-steps"
-      " { list-style: none; }" in CSS)
+      and "ol.steps, #steps-list, .method-steps" in CSS
+      and "list-style-type: none" in CSS)
 check("action row BORDERLESS, Muse-style (spec change)",
       "background: transparent; border: none;"
       " box-shadow: none;" in CSS
@@ -453,6 +453,12 @@ PAYLOADS = {
         "ok": True, "question": "Solve x^2 - 5x + 6 = 0",
         "result": {"type": "Algebra", "op": "quadratic",
                    "answer": "x = 2, x = 3",
+                   # Wave 25: the REAL algebra payload also
+                   # carries a `latex` field — for an equation
+                   # it holds the EQUATION, not the answer (the
+                   # old fixture omitted it, which hid the
+                   # latex-first answer-line bug).
+                   "latex": "x^2 - 5x + 6 = 0",
                    "steps": [
                        "Write in standard form: x^2 - 5x + 6 = 0, "
                        "so a = 1, b = -5, c = 6",
@@ -547,12 +553,16 @@ if _node and _cands:
               f"first={s1.get('firstChildClass')} "
               f"open={s1.get('detOpen')} ol={s1.get('olClasses')} "
               f"list={s1.get('listStyle')}")
-        check("jsdom: steps in ascending payload order",
-              s1.get("stepTexts")
-              == PAYLOADS["s1"]["result"]["steps"],
+        # Wave 25: the trailing step that only restates the
+        # answer ("Solution: x = 2, x = 3") is dropped from
+        # the shown list — the answer line carries it.
+        _want_steps = PAYLOADS["s1"]["result"]["steps"][:-1]
+        check("jsdom: steps in ascending payload order "
+              "(answer restatement dropped)",
+              s1.get("stepTexts") == _want_steps,
               f"steps={s1.get('stepTexts')}")
         check("jsdom: answer line holds ONLY the final answer",
-              s1.get("answerText") == "x = 2, x = 3"
+              s1.get("answerText") == "Answer: x = 2, x = 3"
               and s1.get("answerHasStepText") is False
               and s1.get("answerHasAdvice") is False,
               f"answer={s1.get('answerText')!r}")

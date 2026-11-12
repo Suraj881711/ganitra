@@ -150,7 +150,7 @@ check("boy writer functions present",
 check("boy writer needs the steps board",
       "if (boyBroken || !stepsDet) return;" in _idx)
 _teach0 = _idx.index("function startTeachPlayback")
-_teach1 = _idx.index("if ((result.steps", _teach0)
+_teach1 = _idx.index("if (displaySteps.length", _teach0)
 check("Teach start shows the boy writer",
       "showBoyWriter();" in _idx[_teach0:_teach1])
 _stop = _idx[_idx.index("function stopTeachPlayback"): _teach0]
