@@ -65,8 +65,13 @@ def test_teacher_templates_have_no_numbers_of_their_own():
 
 def test_action_icons_shrunk_wave22():
     assert "Wave 22" in CSS
-    assert ".act-btn svg { width: 17px; height: 17px; }" in CSS
-    assert "width: 34px; height: 34px" in CSS
+    # Wave 24 final word (Suraj, 13 Nov 2026, Muse-row
+    # screenshot): borderless outline glyphs at 18px (20px
+    # until the same-night design change) — no
+    # background, no border (supersedes 34px -> 36px boxes).
+    assert ".act-btn svg { width: 18px; height: 18px; }" in CSS
+    assert "background: transparent; border: none;" \
+        " box-shadow: none;" in CSS
     # Composer glyphs trimmed slightly (buttons stay 40px).
     assert ".chat-bar .composer-btn svg" in CSS
 
