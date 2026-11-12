@@ -102,20 +102,225 @@
             s = s.replace(/π/g, " " + w.pi + " ");
             return s.replace(/\s+/g, " ").trim();
           }
+
+          /* ---------- Teacher voice (Wave 22) ----------
+             Same layer as the chat page: the written steps
+             never change, but what is SPOKEN is rebuilt as a
+             teacher's narration — a warm opening, a short
+             signpost before each step, the step itself
+             (speakable-cleaned, every number untouched), and
+             a warm closing line carrying the final answer.
+             Templates are deterministic, rotate by position,
+             and contain no numbers of their own. */
+          var TEACHER = {
+            en: {
+              open: ["Let's solve this together, nice and slowly.",
+                     "Come, let's work through this question step by step.",
+                     "Let's take this one slowly, one step at a time."],
+              first: ["First, look at this.",
+                      "We begin here.",
+                      "First step — watch carefully."],
+              mid: ["Now, the next step.",
+                    "Good — moving on.",
+                    "Now watch this part.",
+                    "Next, we do this."],
+              last: ["And now the last step.",
+                     "Finally, this.",
+                     "One last step now."],
+              close: ["So our answer is {ans}. Well done!",
+                      "And that gives us the answer: {ans}. See — not so hard!",
+                      "So finally, the answer is {ans}. I hope it is clear now."]
+            },
+            hi: {
+              open: ["चलो, इस सवाल को आराम से, step by step समझते हैं।",
+                     "आओ, इस सवाल को धीरे-धीरे हल करते हैं।",
+                     "चलो शुरू करते हैं — घबराना बिल्कुल नहीं है।"],
+              first: ["पहले ये देखो।",
+                      "शुरुआत यहाँ से करते हैं।",
+                      "पहला step ध्यान से देखना।"],
+              mid: ["अब अगला step।",
+                    "बहुत बढ़िया — अब आगे बढ़ते हैं।",
+                    "अब ये वाला हिस्सा देखो।",
+                    "अगला step ये है।"],
+              last: ["और अब आखिरी step।",
+                     "बस, आखिरी step बचा है।",
+                     "अंत में ये करो।"],
+              close: ["तो हमारा जवाब है — {ans}। समझ आया ना?",
+                      "तो finally, answer है {ans}। देखा, कितना आसान था!",
+                      "तो हमारा final जवाब है {ans}। बहुत बढ़िया!"]
+            },
+            bn: {
+              open: ["চলো, এই অঙ্কটা ধীরে ধীরে, step by step বুঝে নিই।",
+                     "এসো, এই প্রশ্নটা শান্তভাবে সমাধান করি।",
+                     "চলো শুরু করি — ভয় পাওয়ার কিছু নেই।"],
+              first: ["প্রথমে এটা দেখো।",
+                      "শুরুটা এখান থেকে।",
+                      "প্রথম step-টা মন দিয়ে দেখো।"],
+              mid: ["এবার পরের step।",
+                    "খুব ভালো — এবার এগিয়ে যাই।",
+                    "এবার এই অংশটা দেখো।",
+                    "পরের step-টা হলো এটা।"],
+              last: ["এবার শেষ step।",
+                     "ব্যস, শেষ step বাকি।",
+                     "শেষে এটা করো।"],
+              close: ["তাহলে আমাদের উত্তর হলো — {ans}। বুঝতে পেরেছো তো?",
+                      "তাহলে finally, উত্তর {ans}। দেখলে, কত সহজ!",
+                      "তাহলে আমাদের final উত্তর {ans}। খুব ভালো!"]
+            },
+            mr: {
+              open: ["चला, हा प्रश्न शांतपणे, step by step समजून घेऊ।",
+                     "या, हा प्रश्न हळूहळू सोडवू।",
+                     "चला सुरू करू — घाबरायचं काहीच कारण नाही।"],
+              first: ["आधी हे पहा।",
+                      "सुरुवात इथून करू।",
+                      "पहिली step लक्ष देऊन पहा।"],
+              mid: ["आता पुढची step।",
+                    "छान — आता पुढे जाऊ।",
+                    "आता हा भाग पहा।",
+                    "पुढची step ही आहे।"],
+              last: ["आणि आता शेवटची step।",
+                     "बस, शेवटची step उरली।",
+                     "शेवटी हे करा।"],
+              close: ["तर आपलं उत्तर आहे — {ans}। समजलं ना?",
+                      "तर finally, उत्तर {ans}। बघितलं, किती सोपं होतं!",
+                      "तर आपलं final उत्तर {ans}। खूप छान!"]
+            },
+            ta: {
+              open: ["வாருங்கள், இந்தக் கணக்கை அமைதியாக step by step புரிந்துகொள்வோம்.",
+                     "வாங்க, இந்தக் கேள்வியை மெதுவாக தீர்ப்போம்.",
+                     "தொடங்கலாம் — பயப்பட ஒன்றுமில்லை."],
+              first: ["முதலில் இதைப் பாருங்கள்.",
+                      "இங்கிருந்து தொடங்குவோம்.",
+                      "முதல் step-ஐ கவனமாகப் பாருங்கள்."],
+              mid: ["இப்போது அடுத்த step.",
+                    "ரொம்ப நல்லது — இப்போது முன்னேறுவோம்.",
+                    "இப்போது இந்தப் பகுதியைப் பாருங்கள்.",
+                    "அடுத்த step இதுதான்."],
+              last: ["இப்போது கடைசி step.",
+                     "அவ்வளவுதான், கடைசி step மீதமுள்ளது.",
+                     "இறுதியில் இதைச் செய்யுங்கள்."],
+              close: ["ஆகவே நமது விடை — {ans}. புரிந்ததா?",
+                      "ஆகவே finally, விடை {ans}. பார்த்தீர்களா, எவ்வளவு எளிது!",
+                      "ஆகவே நமது final விடை {ans}. மிகவும் நல்லது!"]
+            },
+            te: {
+              open: ["రండి, ఈ లెక్కను ప్రశాంతంగా, step by step అర్థం చేసుకుందాం.",
+                     "రండి, ఈ ప్రశ్నను నెమ్మదిగా పరిష్కరిద్దాం.",
+                     "ప్రారంభిద్దాం — భయపడాల్సినదేమీ లేదు."],
+              first: ["ముందు ఇది చూడండి.",
+                      "ఇక్కడి నుంచి ప్రారంభిద్దాం.",
+                      "మొదటి step జాగ్రత్తగా చూడండి."],
+              mid: ["ఇప్పుడు తదుపరి step.",
+                    "చాలా బాగుంది — ఇప్పుడు ముందుకు వెళ్దాం.",
+                    "ఇప్పుడు ఈ భాగం చూడండి.",
+                    "తదుపరి step ఇదే."],
+              last: ["ఇప్పుడు చివరి step.",
+                     "అంతే, చివరి step మిగిలింది.",
+                     "చివరగా ఇది చేయండి."],
+              close: ["కాబట్టి మన సమాధానం — {ans}. అర్థమైందా?",
+                      "కాబట్టి finally, సమాధానం {ans}. చూశారా, ఎంత సులభమో!",
+                      "కాబట్టి మన final సమాధానం {ans}. చాలా బాగుంది!"]
+            }
+          };
+          function pickLine(arr, seed) {
+            return arr[((seed % arr.length) + arr.length) % arr.length];
+          }
+          /* Build the spoken queue for one solution (same
+             contract as the chat page). Pure: inputs are
+             never modified. */
+          function narrateSolution(steps, answer, code, speechLang) {
+            var T = TEACHER[code] || TEACHER.en;
+            var raw = steps || [];
+            var parts = [];
+            var n = raw.length;
+            if (n) {
+              parts.push({ text: pickLine(T.open, n),
+                           lang: speechLang, step: -1 });
+              raw.forEach(function (s, i) {
+                var key = i === 0 ? "first"
+                  : (i === n - 1 ? "last" : "mid");
+                parts.push({ text: pickLine(T[key], i + n),
+                             lang: speechLang, step: i });
+                parts.push({ text: speakable(s, "en"),
+                             lang: "en-IN", step: i });
+              });
+            }
+            if (answer) {
+              parts.push({
+                text: pickLine(T.close, n).replace("{ans}",
+                  speakable(answer, code)),
+                lang: speechLang, step: -2 });
+            }
+            return parts;
+          }
+
+          /* Natural voice + teacher pace: prefer Google /
+             Microsoft natural voices for the part's language,
+             speak at rate 0.95; default voice as fallback. */
+          var _voiceCache = null;
+          function refreshVoices() {
+            try {
+              _voiceCache = window.speechSynthesis.getVoices();
+            } catch (e) { /* keep whatever cache we have */ }
+          }
+          refreshVoices();
+          try {
+            window.speechSynthesis.addEventListener(
+              "voiceschanged", refreshVoices);
+          } catch (e) { /* older browsers: one-shot cache */ }
+          function pickVoice(lang) {
+            if (!lang) return null;
+            if (!_voiceCache || !_voiceCache.length) refreshVoices();
+            var vs = _voiceCache || [];
+            var want = String(lang).toLowerCase().replace("_", "-");
+            var base = want.split("-")[0];
+            var best = null;
+            var bestScore = 0;
+            vs.forEach(function (v) {
+              var vl = String(v.lang || "").toLowerCase()
+                .replace("_", "-");
+              var name = String(v.name || "").toLowerCase();
+              var score = 0;
+              if (vl === want) score += 40;
+              else if (vl === base || vl.indexOf(base + "-") === 0) {
+                score += 25;
+              } else return;
+              if (name.indexOf("google") >= 0) score += 20;
+              if (name.indexOf("microsoft") >= 0) score += 15;
+              if (name.indexOf("natural") >= 0
+                  || name.indexOf("neural") >= 0) score += 15;
+              if (name.indexOf("premium") >= 0
+                  || name.indexOf("enhanced") >= 0) score += 8;
+              if (score > bestScore) {
+                bestScore = score;
+                best = v;
+              }
+            });
+            return best;
+          }
+          function tuneUtterance(u, lang) {
+            var v = pickVoice(lang);
+            if (v) {
+              u.voice = v;
+              if (v.lang) u.lang = v.lang;
+            }
+            u.rate = 0.95;
+            u.pitch = 1.0;
+            return u;
+          }
+
           function buildQueue() {
             var parts = [];
             if (SPEAK.question) {
               parts.push({ text: speakable(SPEAK.question, UI_CODE),
                            lang: UI_LANG });
             }
-            (SPEAK.steps || []).forEach(function (step) {
-              parts.push({ text: speakable(step, "en"),
-                           lang: "en-IN" });
-            });
-            if (SPEAK.answer) {
-              parts.push({ text: speakable(SPEAK.answer, UI_CODE),
-                           lang: UI_LANG });
-            }
+            /* Wave 22: the solution is narrated by the
+               teacher layer (opening, signposts, steps, warm
+               closing with the answer); the SPEAK payload
+               itself stays the raw written solution. */
+            parts = parts.concat(narrateSolution(SPEAK.steps,
+              SPEAK.answer, UI_CODE, UI_LANG));
             if (SPEAK.advice) {
               parts.push({ text: speakable(SPEAK.advice, UI_CODE),
                            lang: UI_LANG });
@@ -143,6 +348,7 @@
             parts.forEach(function (p, idx) {
               var u = new SpeechSynthesisUtterance(p.text);
               u.lang = p.lang;
+              tuneUtterance(u, p.lang);
               if (idx === parts.length - 1) {
                 u.onend = u.onerror = function () {
                   if (id === speakId) {
