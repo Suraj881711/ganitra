@@ -287,10 +287,19 @@ check("scroll respects a scrolled-up user (stick-to-bottom)",
 check("copy button wired (clipboard + fallback)",
       "mm_copy_btn" in index_src and "clipboard.writeText"
       in index_src and "execCommand" in index_src)
-check("explain-simply button wired to teach machinery",
-      "mm_simple_btn" in index_src
+check("teach playback wired (step-video: voice + synced board)",
+      "startTeachPlayback" in index_src
       and 'setAttribute("data-role", "teach")' in index_src
-      and "__w18OpenTeach" in index_src)
+      and "teach-playing" in css_src
+      and "teach-wait" in index_src and "teach-now" in index_src)
+check("answer actions = exactly 4 sign-only buttons",
+      all(tok in index_src for tok in (
+          'dataset.action = "copy"', 'dataset.action = "listen"',
+          'dataset.action = "teach"', 'dataset.action = "methods"'))
+      and "🔁" not in index_src and "👩‍🏫" not in index_src)
+check("method rows are full-width tap targets (wave 21)",
+      "method-row-btn" in index_src and "method-row-btn" in css_src
+      and "showMethodFailed" in index_src)
 check("Wave-18 CSS block appended",
       "Wave 18 comfort" in css_src and ".util-btn" in css_src)
 for key in ("mm_copy_btn", "mm_copied", "mm_simple_btn"):
