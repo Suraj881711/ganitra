@@ -144,3 +144,33 @@ def test_hinglish():
     assert ans("20 ko 4 se bhaag do")["numeric"] == pytest.approx(5.0)
     assert ans("240 ka 15 pratishat")["numeric"] == pytest.approx(36.0)
     assert ans("sin 30 ka maan")["value"] == pytest.approx(0.5)
+
+
+def test_hinglish_ka_jod_family():
+    # Regression (live bug, 12 Nov 2026): "15 aur 27 ka jod kitna
+    # hoga?" had NO normalisation pattern, fell through to SymPy and
+    # was answered as 405*d*j*o ("jod" read as variables j*o*d).
+    # The whole natural noun/imperative addition family must work.
+    add_cases = [
+        "15 aur 27 ka jod kitna hoga?",
+        "15 aur 27 ka jod",
+        "15 aur 27 ka jod kitna hai",
+        "15 aur 27 ko jodkar batao",
+        "15 aur 27 ko jod ke batao",
+        "15 aur 27 jodkar batao",
+        "15 aur 27 jodo",
+    ]
+    for q in add_cases:
+        r = ans(q)
+        assert r["numeric"] == pytest.approx(42.0), q
+        assert r["steps"], q
+    # Same one-pattern gap in the sibling operations' noun forms:
+    # "ka ghata/ghatav" (subtract) and "ka bhaag" (divide) were
+    # missing too; "ka guna" (multiply) already worked.
+    assert ans("27 aur 15 ka ghata kitna hoga?")["numeric"] == \
+        pytest.approx(12.0)
+    assert ans("27 aur 15 ka ghatav")["numeric"] == pytest.approx(12.0)
+    assert ans("20 aur 4 ka bhaag kitna hoga?")["numeric"] == \
+        pytest.approx(5.0)
+    assert ans("15 aur 27 ka guna kitna hoga?")["numeric"] == \
+        pytest.approx(405.0)
