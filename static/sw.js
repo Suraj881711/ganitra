@@ -21,8 +21,23 @@
      always be fresh.
    The cache name is versioned: bumping it makes the
    activate handler below purge every older cache, which
-   is what frees browsers stuck on the Wave-19 copy. */
-var GANITRA_CACHE = "ganitra-static-v2";
+   is what frees browsers stuck on the Wave-19 copy.
+   Wave 26: v2's "network-first" still did not reach the
+   network — PythonAnywhere serves /static/ with
+   "Cache-Control: public, max-age=86400", and a plain
+   fetch(req) inside the worker is answered by the
+   browser's HTTP cache while that copy counts as fresh
+   (up to a day), so Waves 23-25's stylesheet fixes stayed
+   invisible on returning browsers (numbered steps, gold
+   strip, unstyled sprites, no Teach blanking) while the
+   HTML — which carries no max-age — arrived fresh. Two
+   closures: the pages now link the stylesheet with a
+   version query (?v=26 in base.html — a cache key no
+   browser has ever seen), and below, code fetches are
+   made with cache: "no-cache" so the worker REVALIDATES
+   with the server (cheap 304 via ETag when unchanged)
+   instead of trusting HTTP-cache freshness ever again. */
+var GANITRA_CACHE = "ganitra-static-v3";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();
@@ -56,12 +71,17 @@ self.addEventListener("fetch", function (event) {
 
   if (url.pathname.indexOf("/static/") === 0) {
     if (/\.(css|js)$/.test(url.pathname)) {
-      // Code (stylesheets, scripts): network-first, so a
-      // new deploy reaches every returning browser on its
-      // next visit instead of whenever a cache happens to
-      // expire — under cache-first it never did.
+      // Code (stylesheets, scripts): network-first WITH
+      // revalidation (Wave 26) — a plain fetch(req) can be
+      // answered by the browser's HTTP cache while its
+      // copy is inside the server's max-age (PA sends a
+      // day for /static/), which silently froze the CSS
+      // again under this worker's v2. cache: "no-cache"
+      // forces a check with the server on every load; the
+      // ETag keeps an unchanged file a cheap 304, and the
+      // worker cache below remains the offline fallback.
       event.respondWith(
-        fetch(req).then(function (resp) {
+        fetch(req, { cache: "no-cache" }).then(function (resp) {
           return cacheCopy(req, resp);
         }).catch(function () {
           return caches.match(req);
