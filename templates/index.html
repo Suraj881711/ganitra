@@ -4,13 +4,21 @@
 {% block head_extra %}
   {# Wave 27 (speed): preload the three Logo Jungle sprites so
      the first scene — now 2-4s after every load — never has
-     to wait on a download. #}
+     to wait on a download.
+     Wave 28: the sprite URLs are VERSIONED (?v=28, like the
+     stylesheet) — PythonAnywhere serves /static/ with a
+     day-long max-age and the worker serves media
+     stale-while-revalidate, so the unversioned Wave 27 URLs
+     could replay the OLD card-backed sprites from a returning
+     browser's cache for up to a day (seen live: the old eagle
+     in its tan card on a fresh deploy). BUMP the sprite
+     version on every wave that ships sprite changes. #}
   <link rel="preload" as="image"
-        href="{{ url_for('static', filename='scene-eagle.webp') }}" />
+        href="{{ url_for('static', filename='scene-eagle.webp', v='28') }}" />
   <link rel="preload" as="image"
-        href="{{ url_for('static', filename='scene-tiger.webp') }}" />
+        href="{{ url_for('static', filename='scene-tiger.webp', v='28') }}" />
   <link rel="preload" as="image"
-        href="{{ url_for('static', filename='scene-boy.webp') }}" />
+        href="{{ url_for('static', filename='scene-boy.webp', v='28') }}" />
 {% endblock %}
 {% block header %}
   {# Wave 7: slim chat top bar — brand, Saathi pill, compact Dhyaan
@@ -73,15 +81,15 @@
                they stand on the page as real characters. #}
             <img class="scene-actor scene-eagle" id="scene-eagle"
               width="92" height="92"
-              src="{{ url_for('static', filename='scene-eagle.webp') }}"
+              src="{{ url_for('static', filename='scene-eagle.webp', v='28') }}"
               alt="" aria-hidden="true" />
             <img class="scene-actor scene-tiger" id="scene-tiger"
               width="104" height="104"
-              src="{{ url_for('static', filename='scene-tiger.webp') }}"
+              src="{{ url_for('static', filename='scene-tiger.webp', v='28') }}"
               alt="" aria-hidden="true" />
             <img class="scene-actor scene-boy" id="scene-boy"
               width="96" height="96"
-              src="{{ url_for('static', filename='scene-boy.webp') }}"
+              src="{{ url_for('static', filename='scene-boy.webp', v='28') }}"
               alt="" aria-hidden="true" />
             {# Scene C: the boy's stick — a plain CSS shape he
                carries while chasing the tiger, then throws away. #}
@@ -194,10 +202,23 @@
 
     <form id="photo-form" method="post" action="/photo-solve" hidden>
       <input type="hidden" name="question" id="photo-question" />
+      {# Wave 28: where the question text came from — "photo"
+         (a real photo, OCR'd), "file" (clean text extracted
+         from a file) or "file-ocr" (a scanned file page, OCR'd)
+         — so the answer page can say फ़ाइल when it was a file
+         and warn about OCR only when OCR actually ran. #}
+      <input type="hidden" name="source" id="photo-source"
+             value="photo" />
     </form>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  {# Wave 28: defer — this third-party script used to sit here
+     WITHOUT defer/async, so the parser blocked on the CDN
+     before running ANY first-party init below (chat, scene
+     director, everything). OCR is only invoked on a file pick,
+     long after parsing; defer keeps the guarantee that page
+     init never waits on a CDN. #}
+  <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
     (function () {
       var L = {{ js_t | tojson }};
@@ -797,7 +818,7 @@
           boy.className = "boy-writer in-typing on";
           boy.width = 54;   /* Wave 25: attribute-level size */
           boy.height = 54;  /* (see showBoyWriter's note).    */
-          boy.src = "/static/scene-boy.webp";
+          boy.src = "/static/scene-boy.webp?v=28";  /* Wave 28: versioned sprite URL */
           boy.alt = "";
           boy.setAttribute("aria-hidden", "true");
           boy.addEventListener("error", function () {
@@ -1188,7 +1209,7 @@
                card width. CSS governs when present. */
             boyWriter.width = 82;
             boyWriter.height = 82;
-            boyWriter.src = "/static/scene-boy.webp";
+            boyWriter.src = "/static/scene-boy.webp?v=28";  /* Wave 28: versioned sprite URL */
             boyWriter.alt = "";
             boyWriter.setAttribute("aria-hidden", "true");
             boyWriter.addEventListener("error", function () {
@@ -1915,14 +1936,21 @@
       }
       var photoForm = document.getElementById("photo-form");
       var photoQuestion = document.getElementById("photo-question");
-      function sendQuestionText(text) {
+      var photoSource = document.getElementById("photo-source");
+      /* Wave 28: the source rides along so the answer page
+         words its header for what actually happened — a real
+         photo ("photo"), clean text out of a file ("file"),
+         or a scanned file page that still needed OCR
+         ("file-ocr"). */
+      function sendQuestionText(text, source) {
         text = (text || "").trim();
         if (!text) { say(L.js_photo_not_found); return; }
         photoQuestion.value = text;
+        if (photoSource) photoSource.value = source || "photo";
         say(L.js_photo_sending);
         photoForm.submit();
       }
-      function ocrBlob(blob) {
+      function ocrBlob(blob, source) {
         if (typeof window.Tesseract === "undefined") {
           say(L.js_photo_unavailable);
           return;
@@ -1931,7 +1959,8 @@
         window.Tesseract.recognize(blob, "eng")
           .then(function (res) {
             sendQuestionText(
-              (res && res.data && res.data.text) || "");
+              (res && res.data && res.data.text) || "",
+              source || "photo");
           })
           .catch(function () { say(L.js_photo_error); });
       }
@@ -1947,13 +1976,17 @@
           .then(function (r) { return r.json(); })
           .then(function (d) {
             if (d && d.kind === "text") {
-              sendQuestionText(d.text);
+              /* Clean extraction (text layer / .docx / .txt):
+                 no OCR ever ran — the answer page must say
+                 फ़ाइल and must NOT carry the OCR warning. */
+              sendQuestionText(d.text, "file");
             } else if (d && d.kind === "image" && d.image) {
               /* Scanned PDF: its first page came back as an
-                 image — OCR it exactly like a photo. */
+                 image — OCR it exactly like a photo (the file
+                 heading, but the OCR warning still applies). */
               window.fetch("data:image/png;base64," + d.image)
                 .then(function (r) { return r.blob(); })
-                .then(ocrBlob)
+                .then(function (blob) { ocrBlob(blob, "file-ocr"); })
                 .catch(function () { say(L.js_photo_error); });
             } else if (d && d.code === "unsupported") {
               say(L.js_file_unsupported);
@@ -2110,10 +2143,36 @@
        twice in a row within a visit. Tapping the stage
        still plays a scene instantly. Scenes stop for good once
        the student starts typing or chatting, pause while the
-       tab is hidden, never run under prefers-reduced-motion,
-       and silently disable themselves if any sprite fails to
-       load. Fully defensive: any missing element means no
-       scenes. */
+       tab is hidden, never run under prefers-reduced-motion.
+       Fully defensive: any missing element means no scenes.
+       Wave 28 (the Wave 27 LIVE failure — scenes never played
+       on the real site although every unit test was green):
+       three structural holes are closed.
+       (1) THE HIDDEN-TAB DEMOTION: playNext fired while the
+       tab was hidden (a background-opened tab, an automated
+       checker, a phone waking up) and re-armed with the long
+       25-75s gap — the owed first scene silently slipped from
+       "2-4s after load" to "maybe in a minute", and becoming
+       visible also re-armed only the long gap. Now the first
+       scene is OWED until one actually plays in front of the
+       student (firstPending): a hidden fire re-arms with the
+       SAME short delay, and visibilitychange / pageshow
+       re-arm short while the debt stands.
+       (2) THE SPRITE KILL-SWITCH: at parse time the director
+       probed img.complete && naturalWidth === 0 and wired
+       every sprite's error event to stopScenes() — a single
+       sprite that had failed (or merely looked failed) by
+       parse time silenced ALL scenes for the whole session.
+       Now a failed sprite only marks itself broken (error
+       event, plus a post-load probe once load has settled
+       the question) and just its own scenes leave the
+       rotation (scenePlayable / SCENE_SPRITES above).
+       (3) The parser-blocking third-party Tesseract <script>
+       sat mid-body ahead of every first-party init script,
+       this director included — a slow or hung CDN postponed
+       all of it. It carries defer now (OCR is only ever
+       invoked on a student's file pick, long after parsing).
+       */
     (function () {
       /* SCENE-LOGIC-BEGIN */
       var SCENE_ORDER = ["eagle", "tiger", "chase"];
@@ -2125,12 +2184,33 @@
         return (typeof rand === "number" && rand >= 0 && rand < 1)
           ? rand : Math.random();
       }
+      /* Wave 28: which sprites each scene needs. A sprite
+         that failed to load removes ONLY its own scenes from
+         the rotation (the DOM side keeps the broken map) —
+         one dead sprite can never again silence the whole
+         jungle (the Wave 27 live failure). */
+      var SCENE_SPRITES = {
+        eagle: ["eagle"],
+        tiger: ["tiger", "boy"],
+        chase: ["tiger", "boy"]
+      };
+      function scenePlayable(name, broken) {
+        if (!broken) return true;
+        var needs = SCENE_SPRITES[name] || [];
+        for (var i = 0; i < needs.length; i++) {
+          if (broken[needs[i]]) return false;
+        }
+        return true;
+      }
       // Random pick from the scene order, never repeating the
-      // scene that played last (prev may be null at the start).
-      function pickSceneName(prev, rand) {
+      // scene that played last (prev may be null at the start)
+      // and never picking a scene whose sprite is broken.
+      // Returns null when nothing playable remains.
+      function pickSceneName(prev, rand, broken) {
         var pool = SCENE_ORDER.filter(function (n) {
-          return n !== prev;
+          return n !== prev && scenePlayable(n, broken);
         });
+        if (!pool.length) return null;
         return pool[Math.floor(_rand(rand) * pool.length)];
       }
       // Gap between scenes: a random ~25-75s, drawn fresh
@@ -2157,9 +2237,18 @@
 
       var stopped = false;
       var playing = false;
+      /* Wave 28: the first scene stays OWED until one has
+         actually played in front of the student — a timer
+         that fires into a hidden tab does not pay the debt. */
+      var firstPending = true;
       var lastScene = null;
       var timer = null;
       var playTimer = null;
+      /* Wave 28: sprites that failed to load, by short name
+         ("eagle" / "tiger" / "boy"). Only their own scenes
+         leave the rotation — see scenePlayable above. */
+      var broken = {};
+      function markBroken(shortName) { broken[shortName] = true; }
 
       function emptyAlive() {
         return !!document.getElementById("chat-empty")
@@ -2195,9 +2284,18 @@
         timer = null;
         if (stopped || playing) return;
         if (!emptyAlive() || chatStarted()) { stopScenes(); return; }
-        if (document.hidden) { schedule(); return; }
-        var name = pickSceneName(lastScene);
+        if (document.hidden) {
+          /* Wave 28: re-arm with the SAME urgency the scene
+             already had — the owed first scene keeps its 2-4s
+             delay instead of being demoted to the 25-75s gap
+             cycle (the Wave 27 live failure). */
+          schedule(firstPending);
+          return;
+        }
+        var name = pickSceneName(lastScene, null, broken);
+        if (!name) { stopScenes(); return; }
         lastScene = name;
+        firstPending = false;
         playing = true;
         stage.classList.add("playing-" + name);
         playTimer = window.setTimeout(function () {
@@ -2208,15 +2306,34 @@
         }, SCENE_MS[name] + 250);
       }
 
-      // Any sprite failing to load disables the scenes silently.
-      ["scene-eagle", "scene-tiger", "scene-boy"].forEach(
-        function (id) {
-          var img = document.getElementById(id);
-          if (!img) { stopScenes(); return; }
-          img.addEventListener("error", stopScenes);
-          if (img.complete && img.naturalWidth === 0) stopScenes();
+      // A sprite failing to load removes only its OWN scenes
+      // (Wave 28 — the old wiring stopped every scene, and the
+      // old parse-time naturalWidth probe could condemn a
+      // healthy sprite that merely hadn't finished loading;
+      // at parse time "still loading" and "failed" can look
+      // identical, so there is deliberately NO probe here).
+      [["scene-eagle", "eagle"], ["scene-tiger", "tiger"],
+       ["scene-boy", "boy"]].forEach(function (pair) {
+        var img = document.getElementById(pair[0]);
+        if (!img) { markBroken(pair[1]); return; }
+        img.addEventListener("error", function () {
+          markBroken(pair[1]);
         });
-      if (stopped) return;
+      });
+      // The honest moment to judge a sprite is window load:
+      // by then a load has either produced pixels or failed
+      // for good. A sprite with no pixels at load is broken;
+      // mark it (its scenes leave the rotation) — the others
+      // play on regardless.
+      window.addEventListener("load", function () {
+        [["scene-eagle", "eagle"], ["scene-tiger", "tiger"],
+         ["scene-boy", "boy"]].forEach(function (pair) {
+          var img = document.getElementById(pair[0]);
+          if (img && img.complete && img.naturalWidth === 0) {
+            markBroken(pair[1]);
+          }
+        });
+      });
 
       // Tap the stage: play the next scene right away.
       stage.addEventListener("click", function () {
@@ -2231,8 +2348,11 @@
       var q = document.getElementById("q");
       if (q) q.addEventListener("input", stopScenes);
 
-      // Hidden tab: freeze everything; resume the quiet schedule
-      // when the student comes back (if the stage is still his).
+      // Hidden tab: freeze everything; when the student comes
+      // back, resume — with the SHORT delay while the first
+      // scene is still owed (Wave 28: the old code re-armed
+      // the 25-75s gap here too, so a background-opened page
+      // could sit sceneless for a minute after being viewed).
       document.addEventListener("visibilitychange", function () {
         if (document.hidden) {
           if (timer) { window.clearTimeout(timer); timer = null; }
@@ -2241,7 +2361,17 @@
           }
           resetStage();
         } else if (!stopped && !playing && emptyAlive()) {
-          schedule();
+          schedule(firstPending);
+        }
+      });
+
+      // Back/forward-cache restore: scripts do not re-run, so
+      // re-arm explicitly — again, short while the first scene
+      // is still owed (Wave 28).
+      window.addEventListener("pageshow", function (ev) {
+        if (ev && ev.persisted && !stopped && !playing
+            && emptyAlive()) {
+          schedule(firstPending);
         }
       });
 

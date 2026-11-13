@@ -3,8 +3,21 @@
   <div class="card">
     {% if photo_text is defined %}
       <div class="photo-box">
-        <h2>{{ t.photo_heading }}</h2>
-        <p>{{ t.photo_text }}</p>
+        {# Wave 28: word the box for the text's real source
+           (see /photo-solve): a file's clean text says फ़ाइल
+           and carries NO OCR warning; a scanned file page says
+           फ़ाइल but keeps the warning (OCR did run); a photo
+           is exactly as before. #}
+        {% if source == "file" %}
+          <h2>{{ t.file_heading }}</h2>
+          <p>{{ t.file_text }}</p>
+        {% elif source == "file-ocr" %}
+          <h2>{{ t.file_heading }}</h2>
+          <p>{{ t.file_ocr_text }}</p>
+        {% else %}
+          <h2>{{ t.photo_heading }}</h2>
+          <p>{{ t.photo_text }}</p>
+        {% endif %}
         <form method="post" action="/solve">
           <textarea name="question" rows="2"
             aria-label="Photo se padha gaya sawaal">{{ photo_text }}</textarea>
