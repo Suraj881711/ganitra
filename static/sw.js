@@ -32,12 +32,15 @@
    strip, unstyled sprites, no Teach blanking) while the
    HTML — which carries no max-age — arrived fresh. Two
    closures: the pages now link the stylesheet with a
-   version query (?v=26 in base.html — a cache key no
+   version query (?v=27 in base.html — a cache key no
    browser has ever seen), and below, code fetches are
    made with cache: "no-cache" so the worker REVALIDATES
    with the server (cheap 304 via ETag when unchanged)
-   instead of trusting HTTP-cache freshness ever again. */
-var GANITRA_CACHE = "ganitra-static-v3";
+   instead of trusting HTTP-cache freshness ever again.
+   Wave 27: cache name bumped to v4 (v3 purged on
+   activate) alongside the ?v=27 stylesheet, so the new
+   sprites/CSS land on the next load everywhere. */
+var GANITRA_CACHE = "ganitra-static-v4";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();

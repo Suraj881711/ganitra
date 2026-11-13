@@ -616,12 +616,15 @@ body.chat-page .saathi-card h2 { font-size: 19px; }
 }
 body.chat-page .chat-form { max-width: 800px; margin: 0 auto; }
 body.chat-page .chat-bar {
-  display: flex; align-items: flex-end; gap: 6px;
-  margin-top: 0; border-radius: 26px;
+  display: flex; align-items: flex-end; gap: 2px;
+  margin-top: 0; border-radius: 28px;
   /* Wave 12 (Suraj): the chatbox width matches the answer
      cards above it. Wave 21: padding 5px -> 10px — the slim
-     bar felt cramped to type in; comfort wins. */
-  padding: 10px;
+     bar felt cramped to type in; comfort wins. Wave 27:
+     roomier still (12px 14px), a larger radius and a tight
+     2px icon cluster — the Claude/ChatGPT comfort feel,
+     in the site's own warm design language. */
+  padding: 12px 14px;
   box-shadow: 0 14px 34px rgba(101, 84, 40, .14);
 }
 body.chat-page .chat-bar textarea {
@@ -630,24 +633,29 @@ body.chat-page .chat-bar textarea {
 }
 body.chat-page .chat-bar-tools {
   display: flex; flex-direction: row; flex: none;
-  gap: 6px; align-items: center; margin-top: 0;
+  gap: 2px; align-items: center; margin-top: 0;
 }
 .composer-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  /* Wave 12: slimmer bar — the icon buttons shrink with it. */
-  width: 40px; height: 40px; min-height: 40px; margin: 0; padding: 0;
+  /* Wave 12: slimmer bar — the icon buttons shrink with it.
+     Wave 27: a touch smaller again (40 -> 36px visual); the
+     Wave-27 block at the end of this file adds an invisible
+     halo so the tap target stays a comfortable ~40px. */
+  width: 36px; height: 36px; min-height: 36px; margin: 0; padding: 0;
   border-radius: 999px; border: none; background: transparent;
   font-size: 19px; cursor: pointer; color: var(--text);
 }
 .composer-btn:hover { background: #f6ead0; }
 .send-btn {
   display: inline-flex; align-items: center; justify-content: center;
-  width: 40px; height: 40px; min-height: 40px; margin: 0; padding: 0;
+  width: 36px; height: 36px; min-height: 36px; margin: 0; padding: 0;
   border-radius: 999px; border: none; cursor: pointer;
-  background: var(--accent); color: #fff; font-size: 17px;
-  box-shadow: 0 8px 18px rgba(47, 125, 110, .28);
+  /* Wave 27 (Suraj): NO highlight — the send sign is a plain
+     icon like the others, no filled accent circle, no shadow. */
+  background: transparent; color: var(--text); font-size: 17px;
+  box-shadow: none;
 }
-.send-btn:hover { filter: brightness(1.07); }
+.send-btn:hover { background: #f6ead0; }
 body.chat-page .tool-note {
   display: block; text-align: center; margin-top: 6px; min-height: 0;
 }
@@ -790,7 +798,10 @@ body.auth-page main.auth-main {
 /* Composer icons: one clean line style (SVG), site teal. */
 body.chat-page .icon-btn { color: var(--accent); }
 body.chat-page .icon-btn svg { display: block; }
-body.chat-page .send-btn.icon-btn { color: #fff; }
+/* Wave 27: the send sign used to be forced white on its
+   accent disc (color: #fff). The disc is gone, so it takes
+   the same accent colour as every other composer icon. */
+body.chat-page .send-btn.icon-btn { color: var(--accent); }
 .composer-btn.mic-live { background: #fbe9bb; color: #7a5a10; }
 
 /* Composer placement (Wave 11, Suraj's approved layout): in the
@@ -1487,11 +1498,13 @@ body.chat-page .bubble .steps li { margin: 11px 0; line-height: 1.75; }
    padding. The button geometry lives in the Wave 24 block
    at the end of this file; only the glyph size lives here. */
 .answer-actions .act-btn svg { width: 18px; height: 18px; }
+/* Wave 27: composer glyphs shrink once more (20/19 -> 17px)
+   and all four signs now share one size. */
 body.chat-page .chat-bar .composer-btn svg {
-  width: 20px; height: 20px;
+  width: 17px; height: 17px;
 }
 body.chat-page .chat-bar .send-btn svg {
-  width: 19px; height: 19px;
+  width: 17px; height: 17px;
 }
 
 /* ================= Wave 23: Logo Jungle + boy writer ==========
@@ -1507,9 +1520,11 @@ body.chat-page .chat-bar .send-btn svg {
    moments. HARD RULE kept: the frozen logo artwork files are
    never edited — scenes animate the <img> element with CSS
    transforms only, and when no scene plays the logo sits
-   exactly as approved (no idle motion). The actors' cream
-   sprite backgrounds blend with the page's warm cream, and
-   rounded corners + a soft shadow give them a sticker look. */
+   exactly as approved (no idle motion). Wave 27: the
+   sprites' baked-in cream background is GONE (transparent
+   WebP now) and so is the sticker card — no rounded-corner
+   clipping, no box shadow; each character stands directly
+   on the page like a real animated character. */
 
 /* --- The stage: the hero logo area of the empty state. ------ */
 .scene-stage {
@@ -1540,9 +1555,9 @@ body.chat-page .chat-bar .send-btn svg {
 
 /* --- The actors (hidden until their scene plays). ----------- */
 .scene-actor {
-  position: absolute; object-fit: cover;
-  border-radius: 22%;
-  box-shadow: 0 10px 24px rgba(101, 84, 40, .18);
+  position: absolute; object-fit: contain;
+  /* Wave 27: NO photo-card treatment — transparent sprite,
+     no border-radius clip, no box shadow. */
   opacity: 0; visibility: hidden; pointer-events: none;
 }
 .scene-eagle {
@@ -1558,11 +1573,11 @@ body.chat-page .chat-bar .send-btn svg {
   left: 50%; bottom: 4px;
 }
 
-/* --- Scene A: the eagle visits (5.4s). Glides in from the
+/* --- Scene A: the eagle visits (4.4s, Wave 27: quickened from 5.4s). Glides in from the
    top-left, perches ON the logo with a gentle bob (~2.7s),
    then flies up and away to the right. ------------------------ */
 .scene-stage.playing-eagle .scene-eagle {
-  visibility: visible; animation: eagle-visit 5.4s ease-in-out forwards;
+  visibility: visible; animation: eagle-visit 4.4s ease-in-out forwards;
 }
 @keyframes eagle-visit {
   0%   { opacity: 0; transform: translate(-44vw, -125%) rotate(-6deg); }
@@ -1574,7 +1589,7 @@ body.chat-page .chat-bar .send-btn svg {
   100% { opacity: 0; transform: translate(36vw, -135%) rotate(5deg); }
 }
 
-/* --- Scene B: tiger & rescue (8.6s, three synced tracks).
+/* --- Scene B: tiger & rescue (6.9s, three synced tracks; Wave 27: quickened from 8.6s).
    The tiger cub walks in from the left (its sprite faces
    right), pauses at the logo, lunges — the logo wobbles, then
    rolls off the right edge. The tiger trots off after it.
@@ -1583,7 +1598,7 @@ body.chat-page .chat-bar .send-btn svg {
    him; it settles exactly at centre, he hops once, and runs
    off left. Net end state: the stage exactly as it started. -- */
 .scene-stage.playing-tiger .scene-tiger {
-  visibility: visible; animation: tiger-visit 8.6s linear forwards;
+  visibility: visible; animation: tiger-visit 6.9s linear forwards;
 }
 @keyframes tiger-visit {
   0%   { opacity: 0;
@@ -1604,7 +1619,7 @@ body.chat-page .chat-bar .send-btn svg {
          transform: translateX(calc(-50% + var(--logo-half) + 230px)) translateY(0); }
 }
 .scene-stage.playing-tiger .empty-logo-img {
-  animation: logo-rolled 8.6s linear forwards;
+  animation: logo-rolled 6.9s linear forwards;
 }
 @keyframes logo-rolled {
   0%, 23% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
@@ -1620,7 +1635,7 @@ body.chat-page .chat-bar .send-btn svg {
   87%, 100% { transform: translate(0, 0) rotate(0deg); opacity: 1; }
 }
 .scene-stage.playing-tiger .scene-boy {
-  visibility: visible; animation: boy-rescue 8.6s linear forwards;
+  visibility: visible; animation: boy-rescue 6.9s linear forwards;
 }
 @keyframes boy-rescue {
   0%, 62% { opacity: 0;
@@ -1638,18 +1653,18 @@ body.chat-page .chat-bar .send-btn svg {
               transform: translateX(calc(-50% - var(--logo-half) - 250px)) translateY(0) scaleX(-1); }
 }
 
-/* --- Scene C: Chase & Rescue (11.2s, four synced tracks).
+/* --- Scene C: Chase & Rescue (9.0s, four synced tracks; Wave 27: quickened from 11.2s).
    The tiger runs in from the left, grabs the logo and drags it
    toward the right edge; the boy (stick in hand) chases them
    from the left; the tiger drops the logo and flees right; the
    boy throws the stick away, hugs the logo, carries it back to
    centre, pats it, and runs off left. The tiger sprite faces
    right already, so no flip is needed anywhere in this scene.
-   Beat map (of 11.2s): grab+drag 0-34% · boy chase 14-44% ·
+   Beat map (of 9.0s): grab+drag 0-34% · boy chase 14-44% ·
    drop + tiger flees 46-58% · stick throw 59-70% · hug
    72-79% · carry home 79-88% · pat 88-92% · boy exits 92-100%. */
 .scene-stage.playing-chase .scene-tiger {
-  visibility: visible; animation: chase-tiger 11.2s linear forwards;
+  visibility: visible; animation: chase-tiger 9.0s linear forwards;
 }
 @keyframes chase-tiger {
   0%   { opacity: 0;
@@ -1670,7 +1685,7 @@ body.chat-page .chat-bar .send-btn svg {
               transform: translateX(calc(-50% + var(--logo-half) + 300px)) translateY(0); }
 }
 .scene-stage.playing-chase .empty-logo-img {
-  animation: chase-logo 11.2s linear forwards;
+  animation: chase-logo 9.0s linear forwards;
 }
 @keyframes chase-logo {
   0%, 12% { transform: translate(0, 0) rotate(0deg) scale(1); }
@@ -1687,7 +1702,7 @@ body.chat-page .chat-bar .send-btn svg {
 }
 .scene-stage.playing-chase .scene-boy {
   visibility: visible; z-index: 3;
-  animation: chase-boy 11.2s linear forwards;
+  animation: chase-boy 9.0s linear forwards;
 }
 @keyframes chase-boy {
   0%, 13% { opacity: 0;
@@ -1720,7 +1735,7 @@ body.chat-page .chat-bar .send-btn svg {
   opacity: 0; visibility: hidden; pointer-events: none;
 }
 .scene-stage.playing-chase .scene-stick {
-  visibility: visible; animation: stick-arc 11.2s linear forwards;
+  visibility: visible; animation: stick-arc 9.0s linear forwards;
 }
 @keyframes stick-arc {
   0%, 14% { opacity: 0;
@@ -1743,10 +1758,10 @@ body.chat-page .chat-bar .send-btn svg {
    .on = present + writing rock; removing .on fades/slides him
    away. Under reduced motion he simply stands still. --------- */
 .boy-writer {
-  position: absolute; object-fit: cover;
+  position: absolute; object-fit: contain;
   width: 82px; height: 82px;
-  border-radius: 22%;
-  box-shadow: 0 10px 22px rgba(101, 84, 40, .20);
+  /* Wave 27: same de-carding as the scene actors — the boy
+     is a transparent character now, not a photo card. */
   pointer-events: none; z-index: 4;
   opacity: 0; visibility: hidden; transform: translateX(12px);
   transition: opacity .35s ease, transform .35s ease,
@@ -1804,6 +1819,8 @@ body.chat-page .chat-bar .send-btn svg {
    14px, handwriting steps 15px, question/composer 14px,
    final answer 15.5px, section headings 13px — with airy
    line-height (1.65) so it never feels stuffed.
+   (Wave 27 takes it one notch smaller still — see the
+   font-scale block below.)
    DESIGN CHANGE (Suraj, 13 Nov 2026 ~00:08 IST): Teacher's
    Advice leaves the default flow — the visible sequence is
    steps → plain answer line (inside the card) → icon row
@@ -1916,31 +1933,36 @@ body.chat-page .answer-actions {
    steps (print) inherit 14, steps (handwriting) 17.5 -> 15,
    composer 17 -> 14, final answer 23 -> 15.5, section
    headings -> 13 (small-caps style). The /solve answer PAGE
-   keeps its document sizes; this is the chat Suraj reads. */
-body.chat-page .bubble { font-size: 14px; line-height: 1.65; }
+   keeps its document sizes; this is the chat Suraj reads.
+   Wave 27 (Suraj, 13 Nov 2026, third time asking): one more
+   notch down — body/steps 14 -> 13, handwriting steps
+   15 -> 14, composer 14 -> 13.5, final answer 15.5 -> 14.5,
+   section headings 13 -> 12. Line-height stays 1.65 so the
+   smaller text still breathes. */
+body.chat-page .bubble { font-size: 13px; line-height: 1.65; }
 body.chat-page .bubble .steps li { line-height: 1.65; }
 body.chat-page .bubble ol.steps.notebook.handwriting-on li {
-  font-size: 15px; line-height: 1.8;
+  font-size: 14px; line-height: 1.8;
 }
 body.chat-page .chat-bar textarea {
-  font-size: 14px; line-height: 1.55;
+  font-size: 13.5px; line-height: 1.55;
 }
 body.chat-page .bubble .answer-big {
-  font-size: 15.5px; line-height: 1.5; margin: 12px 0 0;
+  font-size: 14.5px; line-height: 1.5; margin: 12px 0 0;
 }
 body.chat-page .bubble details.steps-section > summary {
-  font-size: 13px; letter-spacing: .04em;
+  font-size: 12px; letter-spacing: .04em;
   text-transform: uppercase;
 }
 body.chat-page .answer-wrap .advice-card h3 {
-  font-size: 13px; letter-spacing: .03em;
+  font-size: 12px; letter-spacing: .03em;
   text-transform: uppercase;
 }
 body.chat-page .answer-wrap .methods-heading {
-  font-size: 13px; letter-spacing: .03em;
+  font-size: 12px; letter-spacing: .03em;
   text-transform: uppercase;
 }
-body.chat-page .answer-wrap .method-row-btn { font-size: 14px; }
+body.chat-page .answer-wrap .method-row-btn { font-size: 13px; }
 body.chat-page .bubble .error-heading { font-size: 15px; }
 
 /* ================= Wave 25: plain summary, sure delivery ====
@@ -1958,4 +1980,39 @@ body.chat-page .bubble .error-heading { font-size: 15px; }
 body.chat-page .bubble .explain {
   background: transparent; border-left: none;
   padding-left: 0; padding-right: 0;
+}
+
+/* ================= Wave 27: plain box, real characters,
+   comfort composer ==========================================
+   Suraj's phone test (13 Nov 2026) brought five fixes:
+   (1) the composer held a pre-written example question in
+   its placeholder — GONE in index.html; the box is plain.
+   (2) The scene characters read as PHOTOS in cards — their
+   baked-in cream background is removed (transparent
+   384px WebP sprites) and the Wave-23 sticker styling
+   (border-radius clip + box shadow) is lifted in place
+   above, so they stand on the page like real characters.
+   (3) A scene now plays on EVERY load: the director's
+   first gap is ~2-4s (index.html), then the usual random
+   25-75s rotation with no back-to-back repeats.
+   (4) Speed: the sprites shrank 1600px/~180KB each to
+   384px/a few KB, are preloaded from the page head, and
+   the scene keyframes run ~20% quicker (durations edited
+   in the Wave-23 block to match SCENE_MS).
+   (5) The composer gets the comfort treatment: roomier
+   padding + a 28px radius (edited in place above), the
+   four signs smaller (36px, 17px glyphs) in a tight 2px
+   cluster, the send sign PLAIN like the others (its accent
+   disc is removed in place above) — and here, an invisible
+   halo keeps every sign's tap target at ~40px even though
+   the visible button is 36px. The textarea already
+   auto-grows to 160px (index.html) and the bar already
+   bottom-aligns its icons (align-items: flex-end), so a
+   grown box keeps the signs comfortably at the baseline. */
+body.chat-page .chat-bar .composer-btn,
+body.chat-page .chat-bar .send-btn { position: relative; }
+body.chat-page .chat-bar .composer-btn::after,
+body.chat-page .chat-bar .send-btn::after {
+  content: ""; position: absolute; inset: -2px;
+  border-radius: 999px;
 }
