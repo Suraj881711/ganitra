@@ -81,7 +81,7 @@ def test_stage_markup_served_on_empty_chat(client):
 def test_scene_sprites_exist_and_are_served(client):
     for actor in ("eagle", "tiger", "boy"):
         f = ROOT / "static" / f"scene-{actor}.webp"
-        assert f.exists() and f.stat().st_size > 50_000
+        assert f.exists() and 10_000 < f.stat().st_size < 40_000  # wave 27: 384px transparent sprites
         r = client.get(f"/static/scene-{actor}.webp")
         assert r.status_code == 200
         assert r.content_type.startswith("image/")
@@ -124,25 +124,25 @@ def test_scene_css_tracks_and_reduced_motion():
     assert "@media (prefers-reduced-motion: reduce)" in w23
     assert ".scene-actor { display: none" in w23
     # Scene durations in the CSS match the director's SCENE_MS.
-    assert "eagle-visit 5.4s" in CSS
-    assert "tiger-visit 8.6s" in CSS
-    assert "logo-rolled 8.6s" in CSS
-    assert "boy-rescue 8.6s" in CSS
+    assert "eagle-visit 4.4s" in CSS
+    assert "tiger-visit 6.9s" in CSS
+    assert "logo-rolled 6.9s" in CSS
+    assert "boy-rescue 6.9s" in CSS
 
 
 def test_scene_c_chase_and_rescue():
     # The stick prop is in the stage markup.
     assert 'id="scene-stick"' in INDEX
     assert 'class="scene-stick"' in INDEX
-    # All four Scene C tracks exist at the shared 11.2s duration.
+    # All four Scene C tracks exist at the shared 9.0s duration (wave 27).
     for needle in ("@keyframes chase-tiger", "@keyframes chase-logo",
                    "@keyframes chase-boy", "@keyframes stick-arc",
                    ".scene-stick", "--chase-x", ".playing-chase"):
         assert needle in CSS
-    assert "chase-tiger 11.2s" in CSS
-    assert "chase-logo 11.2s" in CSS
-    assert "chase-boy 11.2s" in CSS
-    assert "stick-arc 11.2s" in CSS
+    assert "chase-tiger 9.0s" in CSS
+    assert "chase-logo 9.0s" in CSS
+    assert "chase-boy 9.0s" in CSS
+    assert "stick-arc 9.0s" in CSS
     # The hug: the logo's chase track carries the squeeze pulse.
     chase_logo = CSS[CSS.index("@keyframes chase-logo"):]
     chase_logo = chase_logo[:chase_logo.index("\n}")]
@@ -193,7 +193,7 @@ out.first_max = firstSceneDelayMs(0.999999);
 var ok2 = true;
 for (var j = 0; j < 2000; j++) {
   var f = firstSceneDelayMs();
-  if (f < 5000 || f >= 15000) ok2 = false;
+  if (f < 2000 || f >= 4000) ok2 = false;
 }
 out.first_range_ok = ok2;
 console.log(JSON.stringify(out));
@@ -203,7 +203,7 @@ console.log(JSON.stringify(out));
     r = subprocess.run([node, str(p)], capture_output=True, text=True)
     out = json.loads(r.stdout.strip().splitlines()[-1])
     assert out["order"] == ["eagle", "tiger", "chase"]
-    assert out["ms"] == [5400, 8600, 11200]
+    assert out["ms"] == [4400, 6900, 9000]
     # No back-to-back repeat, ever, and every other scene is
     # reachable from any previous scene (a real shuffle).
     assert out["repeats"] == 0
@@ -217,8 +217,8 @@ console.log(JSON.stringify(out));
     assert out["delay_min"] == 25000
     assert out["delay_max"] == 74999
     assert out["delay_range_ok"] is True
-    assert out["first_min"] == 5000
-    assert out["first_max"] == 14999
+    assert out["first_min"] == 2000
+    assert out["first_max"] == 3999
     assert out["first_range_ok"] is True
 
 

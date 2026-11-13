@@ -40,7 +40,8 @@ karna, bas normal hona chahiye"). An in-between "big hero
 answer box" instruction (~00:12 IST) was superseded.
 FONT SCALE (same night, corrected — "bahut jyada hai"):
 chat body/steps 14px, handwriting steps 15px, question/
-composer 14px, final answer 15.5px, section headings 13px,
+composer 14px, final answer 15.5px, section headings 13px
+(wave 27: 13 / 14 / 13.5 / 14.5 / 12),
 line-height ~1.65.
 """
 import json
@@ -162,11 +163,11 @@ def test_final_answer_box_css():
     assert "rgba(47, 125, 110, .10)" in CSS  # brand teal tint
     assert ".final-answer .answer-big { margin: 0; }" in CSS
     # The CHAT answer line is plain: no background, no
-    # border — just the 15.5px bold line inside the card.
+    # border — just the 14.5px bold line inside the card.
     fa = CSS[CSS.rindex("body.chat-page .bubble .answer-big {"):]
     fa = fa[:fa.index("}")]
     assert "background" not in fa and "border" not in fa
-    assert "font-size: 15.5px" in fa
+    assert "font-size: 14.5px" in fa
     # The wrap exists and the row hugs the card from outside.
     assert ".answer-wrap { min-width: 0; }" in CSS
     assert "padding-top: 2px; margin-top: 6px;" in CSS
@@ -209,12 +210,12 @@ def test_methods_glyph_is_ellipsis():
 
 def test_chat_font_scale_css():
     # Corrected sizes (Suraj: "bahut jyada hai").
-    assert "body.chat-page .bubble { font-size: 14px;" \
+    assert "body.chat-page .bubble { font-size: 13px;" \
         " line-height: 1.65; }" in CSS
-    assert "font-size: 14px; line-height: 1.55;" in CSS
-    assert "font-size: 15.5px; line-height: 1.5;" in CSS
-    assert "font-size: 15px; line-height: 1.8;" in CSS
-    assert "font-size: 13px; letter-spacing: .04em;" in CSS
+    assert "font-size: 13.5px; line-height: 1.55;" in CSS
+    assert "font-size: 14.5px; line-height: 1.5;" in CSS
+    assert "font-size: 14px; line-height: 1.8;" in CSS
+    assert "font-size: 12px; letter-spacing: .04em;" in CSS
     assert "text-transform: uppercase;" in CSS
 
 
@@ -590,12 +591,12 @@ def test_jsdom_answer_sequence(client, tmp_path):
         or "2px" in (s1["rowStyle"]["gap"] or "")
     assert s1["methodsDots"] == 3
     # Font scale: corrected sizes, computed live.
-    step_want = "15px" if "handwriting-on" in s1["olClasses"] \
-        else "14px"
+    step_want = "14px" if "handwriting-on" in s1["olClasses"] \
+        else "13px"
     assert s1["fonts"]["step"] == step_want
-    assert s1["fonts"]["answer"] == "15.5px"
-    assert s1["fonts"]["summary"] == "13px"
-    assert s1["fonts"]["composer"] == "14px"
+    assert s1["fonts"]["answer"] == "14.5px"
+    assert s1["fonts"]["summary"] == "12px"
+    assert s1["fonts"]["composer"] == "13.5px"
     # Teach playback + the boy writer ride the reordered board.
     assert s1["teachPlaying"] is True
     assert s1["boyAtBoard"] is True
