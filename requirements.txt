@@ -3,3 +3,4 @@ sympy>=1.12
 matplotlib>=3.8
 numpy>=1.26
 pytest>=8.0.0
+pypdf>=4.2

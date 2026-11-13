@@ -1,6 +1,13 @@
+import base64
+import io
 import os
 import re
 import secrets
+import shutil
+import subprocess
+import tempfile
+import zipfile
+import xml.etree.ElementTree as ET
 from datetime import timedelta
 
 from flask import (Flask, Response, jsonify, render_template, request,
@@ -915,6 +922,161 @@ def create_app():
                                teach=([] if failed
                                       else teach_for(result, _lang())),
                                unsolvable=failed)
+
+    # ------------------------------------------------- wave 27 files
+    # Any-file upload (Wave 27): the chat's attach picker now
+    # offers EVERY file type (Suraj: "koi si bhi file ho, all
+    # file ko select karane kaa option hona chahiye"). Images
+    # keep the browser-side Tesseract flow; everything else is
+    # posted here. The type is decided by MAGIC BYTES, never
+    # by the file name (the Wave 17 rule), executables are
+    # never touched or run, and nothing is stored — bytes are
+    # handled in memory (poppler gets a throwaway temp dir)
+    # and dropped. Replies the chat script understands:
+    #   {"kind": "text", "text": ...}        -> solve it
+    #   {"kind": "image", "image": <base64>} -> a scanned PDF's
+    #        first page; the browser OCRs it like a photo
+    #   {"ok": false, "code": ...}           -> the script
+    #        answers with the honest friendly line in the
+    #        student's language — never a dead end, never a
+    #        fake solve.
+    _FILE_MAX_BYTES = 2 * 1024 * 1024  # same cap as the photo
+    _FILE_TEXT_LIMIT = 6000
+
+    def _pdf_text(data):
+        """A PDF's text layer via pypdf; None when pypdf is
+        unavailable or the file does not parse. An empty
+        string means it parsed but carries no text (a scan)."""
+        try:
+            from pypdf import PdfReader
+        except Exception:
+            return None
+        try:
+            reader = PdfReader(io.BytesIO(data))
+            parts = []
+            for page in reader.pages[:50]:
+                parts.append(page.extract_text() or "")
+            return "\n".join(parts).strip()
+        except Exception:
+            return None
+
+    def _pdf_first_page_png(data):
+        """A PDF's first page rendered to PNG bytes by poppler
+        (pdftoppm), or None when poppler is missing or the
+        render fails."""
+        exe = shutil.which("pdftoppm")
+        if not exe:
+            return None
+        try:
+            with tempfile.TemporaryDirectory() as tmp:
+                src = os.path.join(tmp, "in.pdf")
+                with open(src, "wb") as fh:
+                    fh.write(data)
+                subprocess.run(
+                    [exe, "-png", "-f", "1", "-l", "1", "-r", "150",
+                     src, os.path.join(tmp, "page")],
+                    check=True, timeout=30,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL)
+                out = os.path.join(tmp, "page-1.png")
+                if not os.path.exists(out):
+                    return None
+                with open(out, "rb") as fh:
+                    return fh.read()
+        except Exception:
+            return None
+
+    def _docx_text(data):
+        """A .docx's text via zipfile + XML (no new dependency);
+        None when the bytes are not a real Word document (any
+        other zip — a .zip of photos, an .xlsx — lands here
+        too and is refused). Zip-bomb guards: the entry count
+        and document.xml's size are both capped."""
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as zf:
+                if len(zf.namelist()) > 200:
+                    return None
+                info = zf.getinfo("word/document.xml")
+                if info.file_size > 5 * 1024 * 1024:
+                    return None
+                xml_bytes = zf.read("word/document.xml")
+            root = ET.fromstring(xml_bytes)
+        except Exception:
+            return None
+        w_ns = "{http://schemas.openxmlformats.org/" \
+               "wordprocessingml/2006/main}"
+        paras = []
+        for para in root.iter(w_ns + "p"):
+            runs = [node.text or ""
+                    for node in para.iter(w_ns + "t")]
+            if runs:
+                paras.append("".join(runs))
+        return "\n".join(paras).strip()
+
+    def _plain_text(data):
+        """A .txt file's contents; None when the bytes are not
+        readable text (undecodable, NULs, mostly control
+        characters) — binaries never pass as text."""
+        try:
+            text = data.decode("utf-8-sig")
+        except Exception:
+            return None
+        if "\x00" in text:
+            return None
+        if text:
+            printable = sum(1 for ch in text
+                            if ch.isprintable() or ch in "\n\r\t")
+            if printable / len(text) < 0.95:
+                return None
+        return text.strip()
+
+    @app.post("/file-extract")
+    def file_extract():
+        upload = request.files.get("file")
+        if upload is None:
+            return jsonify({"ok": False, "code": "no_file"}), 400
+        data = upload.stream.read(_FILE_MAX_BYTES + 1)
+        if len(data) > _FILE_MAX_BYTES:
+            return jsonify({"ok": False, "code": "too_large"})
+        if data[:5] == b"%PDF-":
+            text = _pdf_text(data)
+            if text:
+                return jsonify({"kind": "text",
+                                "text": text[:_FILE_TEXT_LIMIT]})
+            if text == "":
+                png = _pdf_first_page_png(data)
+                if png:
+                    return jsonify({
+                        "kind": "image",
+                        "image": base64.b64encode(png)
+                        .decode("ascii")})
+            return jsonify({"ok": False, "code": "empty"})
+        if data[:2] == b"PK":
+            text = _docx_text(data)
+            if text:
+                return jsonify({"kind": "text",
+                                "text": text[:_FILE_TEXT_LIMIT]})
+            if text == "":
+                return jsonify({"ok": False, "code": "empty"})
+            return jsonify({"ok": False, "code": "unsupported"})
+        if _photo_kind(data) or data[:4] == b"GIF8" or \
+                data[:2] == b"BM" or \
+                (data[:4] == b"RIFF" and data[8:12] == b"WEBP") or \
+                (data[4:8] == b"ftyp" and data[8:12] in
+                 (b"heic", b"heix", b"mif1", b"msf1")):
+            # An image that reached the server anyway (the
+            # browser normally OCRs these itself) — hand it
+            # back for the same OCR flow.
+            return jsonify({"kind": "image",
+                            "image": base64.b64encode(data)
+                            .decode("ascii")})
+        text = _plain_text(data)
+        if text:
+            return jsonify({"kind": "text",
+                            "text": text[:_FILE_TEXT_LIMIT]})
+        if text == "":
+            return jsonify({"ok": False, "code": "empty"})
+        return jsonify({"ok": False, "code": "unsupported"})
 
     @app.post("/photo-solve")
     def photo_solve():

@@ -87,7 +87,7 @@ for _actor in ("eagle", "tiger", "boy"):
           and f"scene-{_actor}.webp" in body)
     _f = ROOT / "static" / f"scene-{_actor}.webp"
     check(f"scene asset on disk ({_actor})",
-          _f.exists() and _f.stat().st_size > 50_000,
+          _f.exists() and 10_000 < _f.stat().st_size < 40_000,
           f"bytes={_f.stat().st_size if _f.exists() else 0}")
     _r = client.get(f"/static/scene-{_actor}.webp")
     check(f"scene asset over HTTP ({_actor})",
@@ -211,7 +211,7 @@ out.first_max = firstSceneDelayMs(0.999999);
 var ok2 = true;
 for (var j = 0; j < 2000; j++) {
   var f = firstSceneDelayMs();
-  if (f < 5000 || f >= 15000) ok2 = false;
+  if (f < 2000 || f >= 4000) ok2 = false;
 }
 out.first_range_ok = ok2;
 console.log(JSON.stringify(out));
@@ -249,12 +249,12 @@ console.log(JSON.stringify(out));
           and _out.get("delay_range_ok") is True,
           f"min={_out.get('delay_min')} max={_out.get('delay_max')}")
     check("first scene randomised within 5-15s",
-          _out.get("first_min") == 5000
-          and _out.get("first_max") == 14999
+          _out.get("first_min") == 2000
+          and _out.get("first_max") == 3999
           and _out.get("first_range_ok") is True,
           f"min={_out.get('first_min')} max={_out.get('first_max')}")
     check("scene durations match the CSS tracks",
-          _out.get("ms") == [5400, 8600, 11200],
+          _out.get("ms") == [4400, 6900, 9000],
           f"ms={_out.get('ms')}")
 else:
     check("scene logic behaviour (node)", True,

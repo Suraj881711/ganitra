@@ -116,7 +116,7 @@ check("real payload has a plain-language explanation",
 
 # --- 1. The service worker can never freeze the CSS again ---
 check("service worker cache is versioned v3 (v1/v2 purged)",
-      'GANITRA_CACHE = "ganitra-static-v3"' in SW
+      'GANITRA_CACHE = "ganitra-static-v4"' in SW
       and "ganitra-static-v2" not in SW
       and "ganitra-static-v1" not in SW)
 check("service worker: CSS/JS are network-first",

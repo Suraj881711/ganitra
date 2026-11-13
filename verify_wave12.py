@@ -21,7 +21,7 @@ Contract (Suraj's approved designs, 10 Nov 2026):
   ("methods") and the classic answer page, with "Teach me"
   concept lines ("teach") beside them. POST /api/solve-method
   re-serves one method by id.
-- Sizes/look: composer padding 10px (wave 21 comfort; was the
+- Sizes/look: composer padding 12px 14px (wave 27 comfort; was
   wave-12 slim 5px), small gold method
   chips (13px), PLAIN white sign-in boxes, and TRANSPARENT logo
   variants (logo-full-t.png / logo-mark-t.png) on the pages —
@@ -377,8 +377,8 @@ check("classic page: teach lines present",
 
 # --- 14. Chips / sizes / plain boxes (CSS) ------------------------------------------------------
 bar = re.search(r"body\.chat-page \.chat-bar \{([^}]*)\}", CSS)
-check("composer bar comfortable (padding 10px, wave 21)",
-      bar is not None and "padding: 10px" in bar.group(1))
+check("composer bar comfortable (padding 12px 14px, wave 27)",
+      bar is not None and "padding: 12px 14px" in bar.group(1))
 chip = re.search(r"\.method-chip \{([^}]*)\}", CSS)
 check("method chips are small (13px)",
       chip is not None and "font-size: 13px" in chip.group(1))

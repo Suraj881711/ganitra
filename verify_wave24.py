@@ -53,6 +53,7 @@ the first ~2px cut was not enough): chat text noticeably
 smaller — body/steps 14px, handwriting steps 15px,
 question/composer 14px, final answer 15.5px, section
 headings 13px (small-caps style), line-height ~1.65.
+Wave 27 takes one more notch: 13 / 14 / 13.5 / 14.5 / 12.
 
 Run:  python verify_wave24.py
 """
@@ -162,7 +163,7 @@ _fa = CSS[CSS.rindex("body.chat-page .bubble .answer-big {"):]
 _fa = _fa[:_fa.index("}")]
 check("chat answer line UNSTYLED (no tint/border) + wrap",
       "background" not in _fa and "border" not in _fa
-      and "font-size: 15.5px" in _fa
+      and "font-size: 14.5px" in _fa
       and ".answer-wrap { min-width: 0; }" in CSS
       and "padding-top: 2px; margin-top: 6px;" in CSS)
 check("NO step numbering anywhere (badges removed)",
@@ -184,14 +185,14 @@ check("more-methods glyph is the three-dot ellipsis",
       'cx="5" cy="12" r="2"' in INDEX
       and 'cx="12" cy="12" r="2"' in INDEX
       and 'cx="19" cy="12" r="2"' in INDEX)
-check("chat font scale (corrected sizes, Suraj 13 Nov)",
-      "body.chat-page .bubble { font-size: 14px;"
+check("chat font scale (wave 27 sizes, Suraj 13 Nov)",
+      "body.chat-page .bubble { font-size: 13px;"
       " line-height: 1.65; }" in CSS
       and "body.chat-page .chat-bar textarea {" in CSS
-      and "font-size: 14px; line-height: 1.55;" in CSS
-      and "font-size: 15.5px; line-height: 1.5;" in CSS
-      and "font-size: 15px; line-height: 1.8;" in CSS
-      and "font-size: 13px; letter-spacing: .04em;" in CSS)
+      and "font-size: 13.5px; line-height: 1.55;" in CSS
+      and "font-size: 14.5px; line-height: 1.5;" in CSS
+      and "font-size: 14px; line-height: 1.8;" in CSS
+      and "font-size: 12px; letter-spacing: .04em;" in CSS)
 check("boy-writer rail untouched by the reorder",
       ".bubble details.boy-host > ol.steps {"
       " padding-right: 62px; }" in CSS)
@@ -604,13 +605,13 @@ if _node and _cands:
               s1.get("methodsDots") == 3,
               f"dots={s1.get('methodsDots')}")
         _f = s1.get("fonts") or {}
-        _step_want = "15px" if "handwriting-on" in (
-            s1.get("olClasses") or "") else "14px"
-        check("jsdom: chat font scale (corrected sizes)",
+        _step_want = "14px" if "handwriting-on" in (
+            s1.get("olClasses") or "") else "13px"
+        check("jsdom: chat font scale (wave 27 sizes)",
               _f.get("step") == _step_want
-              and _f.get("answer") == "15.5px"
-              and _f.get("summary") == "13px"
-              and _f.get("composer") == "14px",
+              and _f.get("answer") == "14.5px"
+              and _f.get("summary") == "12px"
+              and _f.get("composer") == "13.5px",
               f"fonts={_f} step_want={_step_want}")
         check("jsdom: Teach + boy-writer still work in order",
               s1.get("teachPlaying") is True

@@ -63,7 +63,14 @@ check("mic button", 'id="mic-btn"' in body)
 check("voice API guarded", "SpeechRecognition" in body
       and "webkitSpeechRecognition" in body)
 check("photo input", 'id="photo-input"' in body
-      and 'accept="image/*"' in body)
+      # Wave 27: the accept restriction is GONE on purpose —
+      # the picker must offer every file type (Suraj: "koi si
+      # bhi file ho"); /file-extract sorts out what is
+      # readable. The input element itself must carry no
+      # accept attribute.
+      and "accept=" not in body[
+          body.index('id="photo-input"') - 30:
+          body.index('id="photo-input"') + 40])
 check("tesseract CDN", "cdn.jsdelivr.net/npm/tesseract.js" in body)
 check("photo form route", 'action="/photo-solve"' in body)
 

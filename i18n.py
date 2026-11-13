@@ -168,6 +168,9 @@ _EN = {
                           "clear, straight photo again, or type the "
                           "question.",
     "js_photo_sending": "Question found — sending…",
+    "js_file_reading": "Reading the file… ⏳",
+    "js_file_unsupported": "I can't read this file type yet — please send a photo, a PDF, a Word (.docx) or a text (.txt) file.",
+    "js_file_too_large": "That file is too big — please send a file under 2 MB.",
     "js_photo_error": "There was a problem reading the photo — please "
                       "try again or type the question.",
 }
@@ -297,6 +300,9 @@ _HI = {
     "js_photo_not_found": "फ़ोटो में प्रश्न नहीं मिल पाया — साफ़, सीधी "
                           "फ़ोटो फिर भेजिए, या प्रश्न लिख दीजिए।",
     "js_photo_sending": "प्रश्न मिल गया — भेजा जा रहा है…",
+    "js_file_reading": "File padh raha hoon… ⏳",
+    "js_file_unsupported": "Ye file type main abhi nahi padh sakta — photo, PDF, Word (.docx) ya text (.txt) file bhejo.",
+    "js_file_too_large": "Ye file bahut badi hai — 2 MB se chhoti file bhejo.",
     "js_photo_error": "फ़ोटो पढ़ने में समस्या आई — फिर प्रयास कीजिए या "
                       "प्रश्न लिख दीजिए।",
 }
@@ -429,6 +435,9 @@ _BN = {
     "js_photo_not_found": "ছবিতে প্রশ্ন পাওয়া যায়নি — পরিষ্কার, সোজা "
                           "ছবি আবার পাঠান, বা প্রশ্নটি লিখে দিন।",
     "js_photo_sending": "প্রশ্ন পাওয়া গেছে — পাঠানো হচ্ছে…",
+    "js_file_reading": "ফাইল পড়ছি… ⏳",
+    "js_file_unsupported": "এই ধরনের ফাইল আমি এখনো পড়তে পারি না — ছবি, PDF, Word (.docx) বা text (.txt) ফাইল পাঠাও।",
+    "js_file_too_large": "ফাইলটা খুব বড় — 2 MB-এর ছোট ফাইল পাঠাও।",
     "js_photo_error": "ছবি পড়তে সমস্যা হয়েছে — আবার চেষ্টা করুন বা "
                       "প্রশ্নটি লিখে দিন।",
 }
@@ -559,6 +568,9 @@ _MR = {
     "js_photo_not_found": "फोटोमध्ये प्रश्न सापडला नाही — स्पष्ट, सरळ "
                           "फोटो पुन्हा पाठवा, किंवा प्रश्न लिहा.",
     "js_photo_sending": "प्रश्न सापडला — पाठवत आहे…",
+    "js_file_reading": "फाइल वाचत आहे… ⏳",
+    "js_file_unsupported": "हा फाइल प्रकार मी अजून वाचू शकत नाही — फोटो, PDF, Word (.docx) किंवा text (.txt) फाइल पाठव.",
+    "js_file_too_large": "ही फाइल खूप मोठी आहे — 2 MB पेक्षा लहान फाइल पाठव.",
     "js_photo_error": "फोटो वाचण्यात अडचण आली — पुन्हा प्रयत्न करा किंवा "
                       "प्रश्न लिहा.",
 }
@@ -705,6 +717,9 @@ _TA = {
                           "அனுப்பவும், அல்லது கேள்வியைத் தட்டச்சு "
                           "செய்யவும்.",
     "js_photo_sending": "கேள்வி கிடைத்தது — அனுப்புகிறேன்…",
+    "js_file_reading": "கோப்பைப் படிக்கிறேன்… ⏳",
+    "js_file_unsupported": "இந்த வகை கோப்பை என்னால் இன்னும் படிக்க முடியாது — புகைப்படம், PDF, Word (.docx) அல்லது text (.txt) கோப்பை அனுப்பு.",
+    "js_file_too_large": "அந்தக் கோப்பு மிகப் பெரியது — 2 MB-க்கு குறைவான கோப்பை அனுப்பு.",
     "js_photo_error": "புகைப்படத்தைப் படிப்பதில் சிக்கல் ஏற்பட்டது — "
                       "மீண்டும் முயற்சிக்கவும் அல்லது கேள்வியைத் "
                       "தட்டச்சு செய்யவும்.",
@@ -843,6 +858,9 @@ _TE = {
                           "ఫోటోను మళ్లీ పంపండి, లేదా ప్రశ్నను టైప్ "
                           "చేయండి.",
     "js_photo_sending": "ప్రశ్న దొరికింది — పంపుతున్నాను…",
+    "js_file_reading": "ఫైల్ చదువుతున్నాను… ⏳",
+    "js_file_unsupported": "ఈ రకం ఫైల్‌ను నేను ఇంకా చదవలేను — ఫోటో, PDF, Word (.docx) లేదా text (.txt) ఫైల్ పంపు.",
+    "js_file_too_large": "ఆ ఫైల్ చాలా పెద్దది — 2 MB కంటే చిన్న ఫైల్ పంపు.",
     "js_photo_error": "ఫోటో చదవడంలో సమస్య వచ్చింది — మళ్లీ "
                       "ప్రయత్నించండి లేదా ప్రశ్నను టైప్ చేయండి.",
 }
