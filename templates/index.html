@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 {% block body_class %}chat-page{% endblock %}
 {% block main_class %}chat-main{% endblock %}
+{% block head_extra %}
+  {# Wave 27 (speed): preload the three Logo Jungle sprites so
+     the first scene — now 2-4s after every load — never has
+     to wait on a download. #}
+  <link rel="preload" as="image"
+        href="{{ url_for('static', filename='scene-eagle.webp') }}" />
+  <link rel="preload" as="image"
+        href="{{ url_for('static', filename='scene-tiger.webp') }}" />
+  <link rel="preload" as="image"
+        href="{{ url_for('static', filename='scene-boy.webp') }}" />
+{% endblock %}
 {% block header %}
   {# Wave 7: slim chat top bar — brand, Saathi pill, compact Dhyaan
      pill, language switch and one hamburger menu. Nothing else. #}
@@ -56,10 +67,10 @@
               alt="Ganitra" /></div>
             {# Wave 25: width/height attributes pin the actors
                to their stage sizes even if the stylesheet has
-               not loaded (or a stale cached copy is served) —
-               the sprites are 1600px files and rendered at
-               natural size when the Wave-23 CSS went missing.
-               The CSS still governs whenever it is present. #}
+               not loaded (or a stale cached copy is served).
+               Wave 27: the sprite files are transparent 384px
+               WebPs now (the baked-in cream card is gone), so
+               they stand on the page as real characters. #}
             <img class="scene-actor scene-eagle" id="scene-eagle"
               width="92" height="92"
               src="{{ url_for('static', filename='scene-eagle.webp') }}"
@@ -144,8 +155,12 @@
           <button type="button" id="file-btn" class="composer-btn icon-btn"
                   aria-label="{{ t.file_btn }}"
                   title="{{ t.file_btn }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l8.57-8.57A4 4 0 1118 8.84l-8.59 8.57a2 2 0 01-2.83-2.83l8.49-8.48"/></svg></button>
+          {# Wave 27 (Suraj): NO placeholder — the box used to
+             carry a pre-written example question
+             (t.question_placeholder) and he wants the box
+             "bilkul plane": completely plain, empty. The
+             language-switch script no longer sets one either. #}
           <textarea id="q" name="question" rows="1"
-            placeholder="{{ t.question_placeholder }}"
             aria-label="{{ t.enter_question }}"
             required></textarea>
           <div class="chat-bar-tools">
@@ -155,7 +170,12 @@
             <label class="composer-btn icon-btn" for="photo-input"
                    aria-label="{{ t.photo_btn }}"
                    title="{{ t.photo_btn }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></label>
-            <input type="file" id="photo-input" accept="image/*" hidden />
+            {# Wave 27 (Suraj): NO accept restriction — the
+               picker must offer EVERY file type ("koi si bhi
+               file ho, all file ko select karane kaa option
+               hona chahiye"). The change handler sorts out
+               what Ganitra can actually read. #}
+            <input type="file" id="photo-input" hidden />
             <button type="submit" class="send-btn icon-btn"
                     aria-label="{{ t.solve_btn }}"
                     title="{{ t.solve_btn }}"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
@@ -1673,9 +1693,8 @@
                             ui.error_tip3];
         }
         if (ui.error_retry_btn) CHAT.errorRetry = ui.error_retry_btn;
-        if (ui.question_placeholder) {
-          box.placeholder = ui.question_placeholder;
-        }
+        /* Wave 27: the composer stays PLAIN in every language —
+           the example-question placeholder is never (re)applied. */
         if (ui.enter_question) {
           box.setAttribute("aria-label", ui.enter_question);
           var qLabel = document.querySelector('label[for="q"]');
@@ -1878,7 +1897,15 @@
          Wave 11: the 📎 file-select button and the 📷 camera
          label drive the SAME hidden file input and the same OCR
          flow — the clip simply opens the picker directly (where
-         the student can also pick a gallery photo or a file). */
+         the student can also pick a gallery photo or a file).
+         Wave 27: the input accepts ANY file (no accept filter).
+         Images still OCR here in the browser; every other file
+         goes to the server's /file-extract (PDF text layer or
+         first-page image, .docx text, .txt text) and whatever
+         question text comes back rides the SAME photo-form to
+         /photo-solve a photo's OCR text uses. A file type
+         Ganitra cannot read gets an honest note, never a
+         dead end and never a made-up solve. */
       var photoInput = document.getElementById("photo-input");
       var fileBtn = document.getElementById("file-btn");
       if (fileBtn && photoInput) {
@@ -1888,32 +1915,66 @@
       }
       var photoForm = document.getElementById("photo-form");
       var photoQuestion = document.getElementById("photo-question");
-      if (typeof window.Tesseract === "undefined") {
-        photoInput.disabled = true;
-        say(L.js_photo_unavailable);
+      function sendQuestionText(text) {
+        text = (text || "").trim();
+        if (!text) { say(L.js_photo_not_found); return; }
+        photoQuestion.value = text;
+        say(L.js_photo_sending);
+        photoForm.submit();
       }
-      photoInput.addEventListener("change", function () {
-        var file = photoInput.files && photoInput.files[0];
-        if (!file) return;
+      function ocrBlob(blob) {
         if (typeof window.Tesseract === "undefined") {
           say(L.js_photo_unavailable);
           return;
         }
         say(L.js_photo_reading);
-        window.Tesseract.recognize(file, "eng")
+        window.Tesseract.recognize(blob, "eng")
           .then(function (res) {
-            var text = ((res && res.data && res.data.text) || "").trim();
-            if (!text) {
-              say(L.js_photo_not_found);
-              return;
-            }
-            photoQuestion.value = text;
-            say(L.js_photo_sending);
-            photoForm.submit();
+            sendQuestionText(
+              (res && res.data && res.data.text) || "");
           })
-          .catch(function () {
-            say(L.js_photo_error);
-          });
+          .catch(function () { say(L.js_photo_error); });
+      }
+      function extractFileOnServer(file) {
+        if (!window.fetch || !window.FormData) {
+          say(L.js_photo_error);
+          return;
+        }
+        say(L.js_file_reading);
+        var fd = new FormData();
+        fd.append("file", file);
+        window.fetch("/file-extract", { method: "POST", body: fd })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.kind === "text") {
+              sendQuestionText(d.text);
+            } else if (d && d.kind === "image" && d.image) {
+              /* Scanned PDF: its first page came back as an
+                 image — OCR it exactly like a photo. */
+              window.fetch("data:image/png;base64," + d.image)
+                .then(function (r) { return r.blob(); })
+                .then(ocrBlob)
+                .catch(function () { say(L.js_photo_error); });
+            } else if (d && d.code === "unsupported") {
+              say(L.js_file_unsupported);
+            } else if (d && d.code === "too_large") {
+              say(L.js_file_too_large);
+            } else {
+              say(L.js_photo_not_found);
+            }
+          })
+          .catch(function () { say(L.js_photo_error); });
+      }
+      photoInput.addEventListener("change", function () {
+        var file = photoInput.files && photoInput.files[0];
+        if (!file) return;
+        var name = (file.name || "").toLowerCase();
+        var isImage = (file.type &&
+                       file.type.indexOf("image/") === 0) ||
+          /\.(png|jpe?g|gif|webp|bmp|heic)$/.test(name);
+        if (isImage) ocrBlob(file);
+        else extractFileOnServer(file);
+        photoInput.value = "";
       });
 
       /* Wave 12: fill the full-page menu's stats lines with the
@@ -2038,9 +2099,15 @@
        the moving (transforms on the <img>, nothing else).
        Restraint: the schedule is deliberately UNPREDICTABLE
        (Suraj: "ye saari cheeje alag-alag time honi chahiye har
-       baar") — the first scene lands at a random ~5-15s, later
-       gaps are a random ~25-75s, and the scene order is shuffled
-       with no scene repeating back-to-back. Tapping the stage
+       baar") — later gaps are a random ~25-75s, and the scene
+       order is shuffled with no scene repeating back-to-back.
+       Wave 27 (Suraj: "jab bhi wo reload kare, jab bhi aa
+       jaaye" + "speed se karana chahiye kaam"): the FIRST
+       scene is no longer 5-15s away — it lands ~2-4s after
+       EVERY load/reload of the empty chat (this director
+       runs fresh on each page load, so the guarantee is
+       structural), still rotating, never the same scene
+       twice in a row within a visit. Tapping the stage
        still plays a scene instantly. Scenes stop for good once
        the student starts typing or chatting, pause while the
        tab is hidden, never run under prefers-reduced-motion,
@@ -2050,7 +2117,10 @@
     (function () {
       /* SCENE-LOGIC-BEGIN */
       var SCENE_ORDER = ["eagle", "tiger", "chase"];
-      var SCENE_MS = { eagle: 5400, tiger: 8600, chase: 11200 };
+      /* Wave 27: durations trimmed ~20% (5400/8600/11200 ->
+         4400/6900/9000) so the scenes feel lively, not
+         sluggish — the CSS keyframes carry the same values. */
+      var SCENE_MS = { eagle: 4400, tiger: 6900, chase: 9000 };
       function _rand(rand) {
         return (typeof rand === "number" && rand >= 0 && rand < 1)
           ? rand : Math.random();
@@ -2068,9 +2138,11 @@
       function sceneDelayMs(rand) {
         return 25000 + Math.floor(_rand(rand) * 50000);
       }
-      // The first scene after the empty chat loads: ~5-15s.
+      // The first scene after the empty chat loads: ~2-4s,
+      // on EVERY load (Wave 27) — quick, but never instant,
+      // so the page settles first.
       function firstSceneDelayMs(rand) {
-        return 5000 + Math.floor(_rand(rand) * 10000);
+        return 2000 + Math.floor(_rand(rand) * 2000);
       }
       /* SCENE-LOGIC-END */
 
