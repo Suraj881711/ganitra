@@ -1085,6 +1085,17 @@ def create_app():
         # recognised text in an editable box on top — agar OCR ne galat
         # padha ho, user text theek karke normal /solve se dobara bhej
         # sakta hai.
+        # Wave 28: the form also carries WHERE the text came from
+        # (Wave 27's any-file upload rides this same route): "photo"
+        # (a real photo, OCR'd in the browser), "file" (clean text
+        # extracted from a PDF/.docx/.txt — no OCR ran) or "file-ocr"
+        # (a scanned file page, OCR'd). The answer page words its
+        # header accordingly and shows the OCR-misread warning only
+        # when OCR actually ran. Anything unexpected counts as a
+        # photo (the historical behaviour of this route).
+        source = request.form.get("source", "photo")
+        if source not in ("photo", "file", "file-ocr"):
+            source = "photo"
         raw = request.form.get("question", "")
         question = normalize_ocr_text(raw)
         if not question:
@@ -1108,6 +1119,7 @@ def create_app():
         session["history"] = history[:_HISTORY_LIMIT]
         return render_template("answer.html", question=question,
                                result=result, photo_text=question,
+                               source=source,
                                explanation=(None if failed
                                             else explanation_for(result,
                                                                  _lang())),

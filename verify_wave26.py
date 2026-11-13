@@ -35,11 +35,11 @@ remaining layer, with fetched evidence:
 
 Fixes pinned by the checks below:
   1. templates/base.html links the stylesheet with a
-     version query (?v=27 via url_for) — a cache key no
+     version query (?v=28 via url_for) — a cache key no
      browser has ever seen, so the current CSS lands on the
      next page load everywhere (HTTP cache, worker cache,
      any edge). Bump the number on every future CSS change.
-  2. static/sw.js: cache name v3 (v1/v2 purged on activate)
+  2. static/sw.js: cache name v5 (older purged on activate)
      and code fetches use cache: "no-cache" — the worker
      now REVALIDATES with the server (ETag -> cheap 304)
      instead of trusting HTTP-cache freshness ever again.
@@ -137,7 +137,7 @@ check("served chat page links a VERSIONED stylesheet",
 check("base.html builds the link with a version query",
       re.search(r"url_for\('static',\s*filename='style\.css',"
                 r"\s*v='\d+'\)", BASE) is not None)
-_served_css = c.get("/static/style.css?v=27")
+_served_css = c.get("/static/style.css?v=28")
 check("versioned URL serves the current stylesheet bytes",
       _served_css.status_code == 200
       and _served_css.data.decode("utf-8") == CSS,
@@ -151,8 +151,10 @@ check("no language picker on the served chat page",
       "call, not a picker)")
 
 # --- 2. The worker can never trust a stale copy again ---------
-check("service worker cache is versioned v3",
-      'GANITRA_CACHE = "ganitra-static-v4"' in SW
+check("service worker cache is versioned v5",
+      'GANITRA_CACHE = "ganitra-static-v5"' in SW
+      and "ganitra-static-v4" not in SW
+      and "ganitra-static-v3" not in SW
       and "ganitra-static-v2" not in SW
       and "ganitra-static-v1" not in SW)
 check("service worker revalidates code (no-cache fetch)",

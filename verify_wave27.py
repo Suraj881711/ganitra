@@ -40,6 +40,8 @@ Plus his follow-ups the same morning:
    composer 13.5px, final answer 14.5px, headings 12px,
    line-height still 1.65.
 Delivery hygiene: stylesheet ?v=27, worker cache v4.
+(Wave 28: both bumped again — ?v=28, cache v5, and the
+sprite URLs versioned too; the pins below follow.)
 """
 import hashlib
 import json
@@ -241,10 +243,10 @@ check("chat fonts: 13 / 14 / 13.5 / 14.5 / 12, lh 1.65",
       and "font-size: 12px; letter-spacing: .04em;" in CSS)
 
 # --- Delivery hygiene + frozen logo ---------------------------------
-check("stylesheet bumped to ?v=27 (template + served)",
-      "v='27'" in BASE and "style.css?v=27" in PAGE)
-check("service worker cache bumped to v4",
-      'GANITRA_CACHE = "ganitra-static-v4"' in SW)
+check("stylesheet bumped to ?v=28 (template + served)",
+      "v='28'" in BASE and "style.css?v=28" in PAGE)
+check("service worker cache bumped to v5",
+      'GANITRA_CACHE = "ganitra-static-v5"' in SW)
 for _name, _want in (
         ("logo-full-t.png", "f18c8e42"), ("logo-full.png", "07009560"),
         ("logo-mark-t.png", "01aa3d23"), ("logo-mark.png", "03bc03dc")):
