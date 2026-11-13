@@ -9,8 +9,9 @@ eagle perches on the logo; the tiger cub rolls it off-stage
 and the jungle boy brings it back; and in Scene C the tiger
 drags the logo away, the boy (stick in hand) chases it down,
 hugs the logo and carries it home. The schedule is deliberately
-unpredictable: first scene at a random ~5-15s, gaps of a random
-~25-75s, scene order shuffled with no back-to-back repeat.
+unpredictable: first scene at a random ~2-4s (Wave 27; it was
+~5-15s in Wave 23), gaps of a random ~25-75s, scene order
+shuffled with no back-to-back repeat.
 Tapping the stage plays a scene instantly; scenes stop when
 the student starts typing, pause while the tab is hidden, and
 never run under prefers-reduced-motion. The frozen logo files
@@ -100,9 +101,10 @@ def test_director_wiring_and_restraint():
                "playNext", "stopScenes", "schedule"):
         assert f"function {fn}" in INDEX
     # First scene is scheduled; the picker gets the last scene
-    # so it can avoid repeating it.
+    # (so it can avoid repeating it) and the broken-sprite map
+    # (Wave 28: a dead sprite removes only its own scenes).
     assert "schedule(true)" in INDEX
-    assert "pickSceneName(lastScene)" in INDEX
+    assert "pickSceneName(lastScene, null, broken)" in INDEX
     # Tap-to-play on the stage itself.
     assert 'stage.addEventListener("click"' in INDEX
     # Pause/stop conditions: typing, hidden tab, reduced motion.
@@ -110,9 +112,17 @@ def test_director_wiring_and_restraint():
     assert "visibilitychange" in INDEX
     assert "(prefers-reduced-motion: reduce)" in INDEX
     assert "if (reduced) return;" in INDEX
-    # A dead sprite disables the scenes silently.
-    assert 'addEventListener("error", stopScenes)' in INDEX
+    # Wave 28: a dead sprite marks ITSELF broken (per-sprite
+    # map + a post-load naturalWidth probe) — the Wave 23-27
+    # wiring, in which any sprite error stopped EVERY scene,
+    # is gone.
+    assert 'addEventListener("error", stopScenes)' not in INDEX
+    assert "markBroken(pair[1])" in INDEX
     assert "naturalWidth === 0" in INDEX
+    # Wave 28: the first scene stays owed until it plays in
+    # front of the student (hidden-tab fires re-arm short).
+    assert "firstPending" in INDEX
+    assert "schedule(firstPending)" in INDEX
 
 
 def test_scene_css_tracks_and_reduced_motion():

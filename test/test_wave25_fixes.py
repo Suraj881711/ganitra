@@ -76,7 +76,9 @@ def test_real_payload_shape():
 # --- Bug 3's root: the service worker ------------------------
 
 def test_service_worker_never_freezes_code_again():
-    assert 'GANITRA_CACHE = "ganitra-static-v4"' in SW
+    assert 'GANITRA_CACHE = "ganitra-static-v5"' in SW
+    assert "ganitra-static-v4" not in SW
+    assert "ganitra-static-v3" not in SW
     assert "ganitra-static-v2" not in SW
     assert "ganitra-static-v1" not in SW
     assert r"/\.(css|js)$/" in SW          # code: network-first
