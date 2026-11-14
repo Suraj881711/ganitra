@@ -391,6 +391,12 @@ def _quadratic_info(q):
     if not m:
         return None
     text = m.group(1).strip().rstrip(".?")
+    # Wave 32 robustness fix (not a new topic): "nature of roots
+    # of THE EQUATION x^2 + ..." kept the words "the equation" in
+    # the captured text and the parse failed, so the ask fell
+    # through; without those words the same question worked.
+    text = re.sub(r"^(?:the\s+)?(?:quadratic\s+)?(?:equation|polynomial)\s+",
+                  "", text)
     text = re.sub(r"=\s*0\s*$", "", text)
     if "=" in text:
         left, right = text.split("=", 1)
@@ -1027,14 +1033,878 @@ def _digits(q):
             "answer": str(num), "steps": steps, "value": num}
 
 
+# --------------------------------------------------------------------------
+# Wave 32 families — ~50 new topics (Suraj, 14 Nov 2026: "or bhi
+# topics add karo"). Every pattern below was first PROVEN to be a
+# gap by a probe battery through the real user path (the question
+# returned a fallback, or — worse — a valid-looking op with a wrong
+# number). All patterns stay strict: clean numbers or None.
+# --------------------------------------------------------------------------
+
+def _money(x):
+    """Money display: exact when whole, else 2 decimal places
+    (the NCERT convention) instead of a bare fraction."""
+    f = float(x)
+    if abs(f - round(f)) < 1e-9:
+        return fmt_num(int(round(f)))
+    return fmt_num(round(f, 2))
+
+
+def _compound_interest_freq(q):
+    """CI compounded half-yearly / quarterly. The annual pattern
+    below used to swallow these questions and silently IGNORE the
+    frequency, answering the annual figure — a wrong answer with a
+    valid op. This family runs first and only fires when a
+    compounding frequency is actually named."""
+    if "compound interest" not in q:
+        return None
+    if "half-yearly" in q or "half yearly" in q:
+        n = 2
+    elif "quarterly" in q:
+        n = 4
+    else:
+        return None
+    m = re.search(
+        r"compound\s+interest\s+on\s+(?:" + _RS + r"\s*)?("
+        + _NUM + r")\s+at\s+(" + _NUM + r")\s*%\s*(?:per\s+"
+        r"annum\s+)?(?:for\s+)?(" + _NUM + r")\s*(?:years?|yrs?)",
+        q)
+    if not m:
+        return None
+    P, R, T = (sp.Rational(m.group(i)) for i in (1, 2, 3))
+    periods = n * T
+    if periods != int(periods) or periods <= 0:
+        return None
+    periods = int(periods)
+    rate = R / n
+    amount = P * (1 + rate / 100) ** periods
+    ci = amount - P
+    steps = [
+        f"Compounded {'half-yearly' if n == 2 else 'quarterly'}: "
+        f"the rate is divided by {n} and the time is multiplied "
+        f"by {n}.",
+        f"Rate per period = {fmt_num(R)}% / {n} = "
+        f"{fmt_num(rate)}%, number of periods = {n} × "
+        f"{fmt_num(T)} = {periods}",
+        "Amount A = P(1 + r/100)^n",
+        f"A = {fmt_num(P)} × (1 + {fmt_num(rate)}/100)^{periods} "
+        f"= Rs {_money(amount)}",
+        f"Compound interest = A - P = {_money(amount)} - "
+        f"{fmt_num(P)} = Rs {_money(ci)}",
+    ]
+    return {"type": "applied", "op": "compound_interest_freq",
+            "answer": _money(ci), "value": float(ci),
+            "steps": steps, "amount": float(amount)}
+
+
+def _gst(q):
+    if "gst" not in q:
+        return None
+    # Reverse: total price INCLUDING gst -> price before gst.
+    # Form A: "including 28% GST is Rs 6400" (rate, then total).
+    # Form B: "Rs 6400 including 28% GST" (total, then rate).
+    rate = total = None
+    mA = re.search(r"includ\w*\s+(?:a\s+)?(?:gst\s+of\s+)?("
+                   + _NUM + r")\s*%\s*gst[^.]{0,50}?(?:"
+                   + _RS + r"\s*)?(" + _NUM + r")", q)
+    mB = re.search(r"(?:" + _RS + r"\s*)?(" + _NUM
+                   + r")\s*(?:rs)?[^.]{0,30}?includ\w*\s+"
+                   r"(?:a\s+)?(?:gst\s+of\s+)?(" + _NUM
+                   + r")\s*%", q)
+    if mA:
+        rate, total = _num(mA.group(1)), _num(mA.group(2))
+    elif mB:
+        total, rate = _num(mB.group(1)), _num(mB.group(2))
+    if rate is not None and total is not None:
+        base = total * 100.0 / (100.0 + rate)
+        gst_amt = total - base
+        steps = [
+            f"Total price (including GST) = Rs {fmt_num(total)}, "
+            f"GST rate = {fmt_num(rate)}%",
+            "Price before GST = total × 100 / (100 + rate)",
+            f"= {fmt_num(total)} × 100 / {fmt_num(100.0 + rate)} "
+            f"= Rs {fmt_num(base)}",
+            f"GST amount = {fmt_num(total)} - {fmt_num(base)} "
+            f"= Rs {fmt_num(gst_amt)}",
+        ]
+        return {"type": "applied", "op": "gst_reverse",
+                "answer": f"Rs {fmt_num(base)}",
+                "steps": steps, "value": base}
+    # Forward: price + gst rate -> gst amount and total.
+    mr = re.search(r"(" + _NUM + r")\s*%\s*gst", q) or \
+        re.search(r"gst\s*(?:is\s*)?(?:charged\s*at\s*|@\s*)?("
+                  + _NUM + r")\s*%", q)
+    mp = re.search(r"(?:" + _RS + r")\s*(" + _NUM + r")", q) or \
+        re.search(r"(?:costs?|price|worth|amount)\s+(?:is\s+)?"
+                  r"(?:rs\.?\s*)?(" + _NUM + r")", q)
+    if not (mp and mr):
+        return None
+    price, rate = _num(mp.group(1)), _num(mr.group(1))
+    if price == rate:
+        # The "price" found is just the rate restated; look for
+        # any other number to serve as the price.
+        others = [_num(v) for v in re.findall(_NUM, q)
+                  if _num(v) != rate]
+        if not others:
+            return None
+        price = others[0]
+    if price <= 0 or not (0 < rate < 100):
+        return None
+    gst_amt = price * rate / 100.0
+    total = price + gst_amt
+    steps = [
+        f"Price = Rs {fmt_num(price)}, GST rate = "
+        f"{fmt_num(rate)}%",
+        f"GST amount = {fmt_num(rate)}% of {fmt_num(price)} = "
+        f"Rs {fmt_num(gst_amt)}",
+        f"Total amount to be paid = {fmt_num(price)} + "
+        f"{fmt_num(gst_amt)} = Rs {fmt_num(total)}",
+    ]
+    return {"type": "applied", "op": "gst",
+            "answer": f"GST Rs {fmt_num(gst_amt)}, total "
+                      f"Rs {fmt_num(total)}",
+            "steps": steps, "value": total}
+
+
+def _successive_discount(q):
+    if "successive" not in q or "discount" not in q:
+        return None
+    pcts = [float(v) for v in re.findall(
+        r"(" + _NUM + r")\s*%\s*(?:discount)?", q)
+        if 0 < float(v) < 100]
+    ds = re.findall(r"(" + _NUM + r")\s*%", q)
+    if len(ds) < 2:
+        return None
+    d1, d2 = float(ds[0]), float(ds[1])
+    if not (0 < d1 < 100 and 0 < d2 < 100):
+        return None
+    equiv = d1 + d2 - d1 * d2 / 100.0
+    if "equivalent" in q or "single discount" in q:
+        steps = [
+            "A single discount equivalent to two successive "
+            "discounts of a% and b% is a + b - ab/100.",
+            f"= {fmt_num(d1)} + {fmt_num(d2)} - "
+            f"({fmt_num(d1)} × {fmt_num(d2)})/100 "
+            f"= {fmt_num(equiv)}%",
+        ]
+        return {"type": "applied", "op": "successive_discount_equiv",
+                "answer": f"{fmt_num(equiv)}%", "steps": steps,
+                "value": equiv}
+    mm = re.search(r"marked\s+(?:price\s+)?(?:is\s+|at\s+)?(?:"
+                   + _RS + r"\s*)?(" + _NUM + r")", q) or \
+        re.search(r"(?:" + _RS + r"\s*)?(" + _NUM + r")", q)
+    if not mm:
+        return None
+    M = _num(mm.group(1))
+    after1 = M * (1 - d1 / 100.0)
+    sp_ = after1 * (1 - d2 / 100.0)
+    steps = [
+        f"Marked price = Rs {fmt_num(M)}",
+        f"After the first discount of {fmt_num(d1)}%: "
+        f"{fmt_num(M)} × (1 - {fmt_num(d1)}/100) = "
+        f"Rs {fmt_num(after1)}",
+        f"After the second discount of {fmt_num(d2)}%: "
+        f"{fmt_num(after1)} × (1 - {fmt_num(d2)}/100) = "
+        f"Rs {fmt_num(sp_)}",
+        f"(The two discounts together equal a single discount "
+        f"of {fmt_num(equiv)}%.)",
+    ]
+    return {"type": "applied", "op": "successive_discount",
+            "answer": f"Rs {fmt_num(sp_)}", "steps": steps,
+            "value": sp_}
+
+
+def _two_articles_same_sp(q):
+    m = re.search(r"two\s+(?:articles|items|watches|shirts|"
+                  r"objects)[^.]{0,40}?(?:" + _RS + r"\s*)?("
+                  + _NUM + r")\s+each", q)
+    if not m:
+        return None
+    mg = re.search(r"(?:gain|profit)(?:s|ed)?\s*(?:of\s*)?("
+                   + _NUM + r")\s*%", q)
+    ml = re.search(r"(?:loss|loses|lost)(?:\s*of)?\s*(" + _NUM
+                   + r")\s*%", q)
+    if not (mg and ml):
+        return None
+    sp_each = sp.Rational(m.group(1))
+    g, l = sp.Rational(mg.group(1)), sp.Rational(ml.group(1))
+    if sp_each <= 0 or g <= 0 or l >= 100:
+        return None
+    cp1 = sp_each / (1 + g / 100)
+    cp2 = sp_each / (1 - l / 100)
+    cp_total = cp1 + cp2
+    sp_total = 2 * sp_each
+    diff = sp_total - cp_total
+    pct = diff / cp_total * 100
+    steps = [
+        f"Selling price of each article = Rs "
+        f"{fmt_num(sp_each)}",
+        f"CP of the first = SP / (1 + gain%) = "
+        f"{fmt_num(sp_each)} / (1 + {fmt_num(g)}/100) = "
+        f"Rs {fmt_num(cp1)}",
+        f"CP of the second = SP / (1 - loss%) = "
+        f"{fmt_num(sp_each)} / (1 - {fmt_num(l)}/100) = "
+        f"Rs {fmt_num(cp2)}",
+        f"Total CP = Rs {fmt_num(cp_total)}, total SP = "
+        f"Rs {fmt_num(sp_total)}",
+    ]
+    if diff > 0:
+        steps.append(f"SP is more than CP, so there is a gain "
+                     f"of {fmt_num(pct)}%.")
+        ans = f"Gain of {fmt_num(pct)}%"
+    elif diff < 0:
+        steps.append(f"CP is more than SP, so there is a loss "
+                     f"of {fmt_num(-pct)}%.")
+        ans = f"Loss of {fmt_num(-pct)}%"
+    else:
+        steps.append("Total SP equals total CP: no gain, "
+                     "no loss.")
+        ans = "No gain, no loss (0%)"
+    return {"type": "applied", "op": "two_articles_same_sp",
+            "answer": ans, "steps": steps, "value": float(pct)}
+
+
+def _quad_coeffs(text):
+    """Parse a quadratic text -> (a, b, c, var) with sympy
+    expressions (coefficients may involve one parameter), or
+    None. Shared by the Wave 32 quadratic families."""
+    text = text.strip().rstrip(".?")
+    text = re.sub(r"^(?:the\s+)?(?:quadratic\s+)?(?:equation|polynomial)\s+",
+                  "", text)
+    text = re.sub(r"=\s*0\s*$", "", text)
+    if "=" in text:
+        left, right = text.split("=", 1)
+        text = f"({left}) - ({right})"
+    try:
+        expr = sp.expand(parse_expression(text))
+        symbols = sorted(expr.free_symbols, key=lambda s: s.name)
+        if not (1 <= len(symbols) <= 2):
+            return None
+        var = None
+        for s in symbols:
+            if s.name == "x":
+                var = s
+        if var is None:
+            var = symbols[0]
+        poly = sp.Poly(expr, var)
+        if poly is None or poly.degree() != 2:
+            return None
+        coeffs = poly.all_coeffs()
+        return coeffs[0], coeffs[1], coeffs[2], var
+    except Exception:
+        return None
+
+
+def _eq_text_after_of(q):
+    """The equation text after '... of (the) (equation) ...'.
+    The first 'of' in "sum of roots of the equation 3x^2..." is
+    NOT the equation's own 'of', so strip any leading filler
+    words (roots / of / the / equation) from the capture."""
+    m = re.search(r"\bof\s+(.+)$", q)
+    if not m:
+        return None
+    text = m.group(1)
+    prev = None
+    while prev != text:
+        prev = text
+        text = re.sub(r"^(?:the\s+|roots\s+|of\s+|equation\s+|"
+                      r"quadratic\s+|polynomial\s+|zeroes\s+|zeros\s+)", "", text)
+    return text
+
+
+def _find_k_equal_roots(q):
+    if "equal roots" not in q:
+        return None
+    m = re.search(r"(?:equation\s+)?(.+?)\s+has\s+(?:two\s+)?"
+                  r"equal\s+roots", q)
+    if not m:
+        return None
+    text = re.sub(r"^(?:for\s+which|which)\s+", "", m.group(1))
+    text = re.sub(r"^.*?equation\s+", "", text)
+    got = _quad_coeffs(text)
+    if not got:
+        return None
+    a, b, c, var = got
+    params = (a.free_symbols | b.free_symbols | c.free_symbols) \
+        - {var}
+    if len(params) != 1:
+        return None
+    param = list(params)[0]
+    D = sp.expand(b ** 2 - 4 * a * c)
+    sols = sp.solve(D, param)
+    if not sols:
+        return None
+    steps = [
+        f"For {fmt(sp.expand(a * var ** 2 + b * var + c))} = 0: "
+        f"a = {fmt(a)}, b = {fmt(b)}, c = {fmt(c)}",
+        f"Discriminant D = b^2 - 4ac = {fmt(D)}",
+        "Equal roots need D = 0.",
+        f"Solving {fmt(D)} = 0 gives {param} = "
+        + ", ".join(fmt(s) for s in sols),
+    ]
+    return {"type": "algebra", "op": "find_k_equal_roots",
+            "answer": ", ".join(f"{param} = {fmt(s)}"
+                                for s in sols),
+            "steps": steps}
+
+
+def _sum_product_roots(q):
+    if not re.search(r"\b(sum|product)\b[^.]{0,30}?"
+                     r"\b(roots|zeroes|zeros)\b", q):
+        return None
+    text = _eq_text_after_of(q)
+    if text is None:
+        return None
+    got = _quad_coeffs(text)
+    if not got:
+        return None
+    a, b, c, var = got
+    if (a.free_symbols | b.free_symbols | c.free_symbols) - {var}:
+        return None
+    if a == 0:
+        return None
+    s = sp.simplify(-b / a)
+    p = sp.simplify(c / a)
+    want_sum = "sum" in q
+    want_prod = "product" in q
+    steps = [
+        f"Standard form: a = {fmt(a)}, b = {fmt(b)}, "
+        f"c = {fmt(c)}",
+        "For ax^2 + bx + c = 0: sum of roots = -b/a, product "
+        "of roots = c/a.",
+    ]
+    parts = []
+    if want_sum:
+        steps.append(f"Sum of roots = -({fmt(b)})/{fmt(a)} "
+                     f"= {fmt(s)}")
+        parts.append(f"Sum = {fmt(s)}")
+    if want_prod:
+        steps.append(f"Product of roots = {fmt(c)}/{fmt(a)} "
+                     f"= {fmt(p)}")
+        parts.append(f"Product = {fmt(p)}")
+    if not parts:
+        return None
+    return {"type": "algebra", "op": "sum_product_roots",
+            "answer": ", ".join(parts), "steps": steps}
+
+
+_COUNT_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4,
+                "five": 5, "a": 1, "an": 1}
+
+
+def _insert_means(q):
+    m = re.search(
+        r"insert\s+(?:(\d+|one|two|three|four|five|a|an)\s+)?"
+        r"(arithmetic|geometric)\s+means?\s+between\s+"
+        r"(-?" + _NUM + r")\s+and\s+(-?" + _NUM + r")", q)
+    if not m:
+        return None
+    n = _COUNT_WORDS.get(m.group(1), None) if m.group(1) else 1
+    if m.group(1) and m.group(1).isdigit():
+        n = int(m.group(1))
+    if n is None or n < 1 or n > 10:
+        return None
+    kind = m.group(2)
+    A, B = sp.Rational(m.group(3)), sp.Rational(m.group(4))
+    if kind == "arithmetic":
+        d = (B - A) / (n + 1)
+        means = [A + i * d for i in range(1, n + 1)]
+        steps = [
+            f"Inserting {n} arithmetic mean(s) between "
+            f"{fmt(A)} and {fmt(B)} makes an AP of {n + 2} "
+            f"terms.",
+            f"Common difference d = (B - A)/(n + 1) = "
+            f"({fmt(B)} - {fmt(A)})/{n + 1} = {fmt(d)}",
+            "The means are "
+            + ", ".join(fmt(v) for v in means) + ".",
+        ]
+        return {"type": "sequences", "op": "insert_arithmetic_means",
+                "answer": ", ".join(fmt(v) for v in means),
+                "steps": steps}
+    # Geometric means: r = (B/A)^(1/(n+1)).
+    if A == 0 or B == 0 or (A < 0) != (B < 0):
+        return None
+    ratio = sp.simplify((B / A) ** sp.Rational(1, n + 1))
+    if ratio.has(sp.Pow) and not ratio.is_number:
+        return None
+    try:
+        ratio_f = float(ratio)
+    except Exception:
+        return None
+    if abs(ratio_f) == float("inf"):
+        return None
+    means = [sp.simplify(A * ratio ** i) for i in range(1, n + 1)]
+    steps = [
+        f"Inserting {n} geometric mean(s) between {fmt(A)} "
+        f"and {fmt(B)} makes a GP of {n + 2} terms.",
+        f"Common ratio r = (B/A)^(1/(n+1)) = "
+        f"({fmt(B)}/{fmt(A)})^(1/{n + 1}) = {fmt(ratio)}",
+        "The means are " + ", ".join(fmt(v) for v in means)
+        + ".",
+    ]
+    return {"type": "sequences", "op": "insert_geometric_means",
+            "answer": ", ".join(fmt(v) for v in means),
+            "steps": steps}
+
+
+def _identity_eval(q):
+    m = re.search(r"a\s*\+\s*b\s*=\s*(" + _NUM + r")\s*(?:,|and)"
+                  r"\s*(?:ab|a\s*b)\s*=\s*(" + _NUM + r")", q)
+    if not m:
+        return None
+    S, P = sp.Rational(m.group(1)), sp.Rational(m.group(2))
+    if re.search(r"a\s*(?:\^|\*\*)\s*3\s*\+\s*b\s*(?:\^|\*\*)"
+                 r"\s*3", q) or "a^3 + b^3" in q or \
+            "a³ + b³" in q:
+        val = S ** 3 - 3 * P * S
+        steps = [
+            f"Given a + b = {fmt(S)} and ab = {fmt(P)}.",
+            "Identity: a^3 + b^3 = (a + b)^3 - 3ab(a + b)",
+            f"= {fmt(S)}^3 - 3 × {fmt(P)} × {fmt(S)} "
+            f"= {fmt(val)}",
+        ]
+        return {"type": "algebra", "op": "identity_a3_b3",
+                "answer": fmt(val), "steps": steps,
+                "value": float(val)}
+    if re.search(r"a\s*(?:\^|\*\*)\s*2\s*\+\s*b\s*(?:\^|\*\*)"
+                 r"\s*2", q) or "a^2 + b^2" in q or \
+            "a² + b²" in q:
+        val = S ** 2 - 2 * P
+        steps = [
+            f"Given a + b = {fmt(S)} and ab = {fmt(P)}.",
+            "Identity: a^2 + b^2 = (a + b)^2 - 2ab",
+            f"= {fmt(S)}^2 - 2 × {fmt(P)} = {fmt(val)}",
+        ]
+        return {"type": "algebra", "op": "identity_a2_b2",
+                "answer": fmt(val), "steps": steps,
+                "value": float(val)}
+    return None
+
+
+def _frac_str(fr):
+    from fractions import Fraction as _F
+    fr = _F(fr).limit_denominator(10000)
+    return str(fr.numerator) if fr.denominator == 1 else \
+        f"{fr.numerator}/{fr.denominator}"
+
+
+def _pipes(q):
+    if "tank" not in q:
+        return None
+    fills = [float(v) for v in re.findall(
+        r"fill(?:s|ing)?\s+(?:a\s+tank|the\s+tank|it|"
+        r"the\s+container)\s+in\s+(" + _NUM + r")\s*hours?", q)]
+    empties = [float(v) for v in re.findall(
+        r"empt(?:y|ies|ying)\s+(?:a\s+tank|the\s+tank|it|"
+        r"the\s+container)?\s*in\s+(" + _NUM + r")\s*hours?", q)]
+    if not fills and not empties:
+        return None
+    if empties and not fills:
+        return None
+    from fractions import Fraction as F
+    rate = sum(F(1, 1) / F(str(t)) for t in fills) \
+        - sum(F(1, 1) / F(str(t)) for t in empties)
+    steps = []
+    for t in fills:
+        steps.append(f"A pipe that fills the tank in "
+                     f"{fmt_num(t)} hours fills 1/{fmt_num(t)} "
+                     f"of the tank in 1 hour.")
+    for t in empties:
+        steps.append(f"A pipe that empties the tank in "
+                     f"{fmt_num(t)} hours empties 1/{fmt_num(t)} "
+                     f"of the tank in 1 hour.")
+    if rate <= 0:
+        steps.append("The emptying rate is not less than the "
+                     "filling rate, so the tank will never fill.")
+        return {"type": "applied", "op": "pipes",
+                "answer": "The tank will never fill",
+                "steps": steps}
+    total = 1 / rate
+    steps.append(f"Net rate together = {_frac_str(rate)} of "
+                 f"the tank per hour.")
+    steps.append(f"Time to fill = 1 / ({_frac_str(rate)}) = "
+                 f"{_frac_str(total)} hours"
+                 + (f" ≈ {float(total):.2f} hours"
+                    if total.denominator != 1 else ""))
+    return {"type": "applied", "op": "pipes",
+            "answer": f"{_frac_str(total)} hours",
+            "steps": steps, "value": float(total)}
+
+
+def _work_together(q):
+    if "work" not in q or "together" not in q:
+        return None
+    if "efficient" in q:
+        return None  # the efficiency family owns that story
+    days = [float(v) for v in re.findall(
+        r"in\s+(" + _NUM + r")\s+days", q)]
+    if len(days) != 2:
+        return None
+    from fractions import Fraction as F
+    t1, t2 = days
+    total = F(str(t1)) * F(str(t2)) / (F(str(t1)) + F(str(t2)))
+    steps = [
+        f"One worker finishes the work in {fmt_num(t1)} days, "
+        f"so does 1/{fmt_num(t1)} of it in a day; the other "
+        f"does 1/{fmt_num(t2)} in a day.",
+        f"Together in 1 day: 1/{fmt_num(t1)} + "
+        f"1/{fmt_num(t2)} = {_frac_str(1 / total)} of the "
+        f"work.",
+        f"Days needed together = {_frac_str(total)} days"
+        + (f" ≈ {float(total):.2f} days"
+           if total.denominator != 1 else ""),
+    ]
+    return {"type": "applied", "op": "work_together",
+            "answer": f"{_frac_str(total)} days",
+            "steps": steps, "value": float(total)}
+
+
+_EFF_WORDS = {"twice": 2, "thrice": 3, "double": 2}
+
+
+def _work_efficiency(q):
+    if "efficient" not in q or "together" not in q:
+        return None
+    m = re.search(r"(\w+)\s+is\s+(twice|thrice|double|"
+                  r"(" + _NUM + r")\s+times)\s+as\s+efficient"
+                  r"\s+as\s+(\w+)", q)
+    mt = re.search(r"together[^.]{0,60}?in\s+(" + _NUM
+                   + r")\s+days", q)
+    if not (m and mt):
+        return None
+    first, second = m.group(1), m.group(4)
+    e = _EFF_WORDS.get(m.group(2))
+    if e is None:
+        e = float(m.group(3))
+    T = float(mt.group(1))
+    from fractions import Fraction as F
+    eF, TF = F(str(e)), F(str(T))
+    t_first = TF * (eF + 1) / eF
+    t_second = TF * (eF + 1)
+    ask_second = re.search(
+        rf"\b{re.escape(second)}\s+alone\b", q) is not None
+    pick, who = (t_second, second) if ask_second else \
+        (t_first, first)
+    steps = [
+        f"Efficiency ratio: {first} : {second} = "
+        f"{fmt_num(e)} : 1, so in 1 day they do "
+        f"{fmt_num(e)} + 1 = {fmt_num(e + 1)} units of work "
+        f"(taking {second}'s rate as 1 unit/day).",
+        f"Together they take {fmt_num(T)} days, so the whole "
+        f"work is {fmt_num(e + 1)} × {fmt_num(T)} = "
+        f"{fmt_num((e + 1) * T)} units.",
+        f"{who.capitalize()} alone does "
+        f"{fmt_num(e) if not ask_second else 1} unit/day, so "
+        f"needs {fmt_num((e + 1) * T)} / "
+        f"{fmt_num(e) if not ask_second else 1} = "
+        f"{_frac_str(pick)} days.",
+    ]
+    return {"type": "applied", "op": "work_efficiency",
+            "answer": f"{_frac_str(pick)} days",
+            "steps": steps, "value": float(pick)}
+
+
+def _boat_stream(q):
+    md = re.search(r"(" + _NUM + r")\s*km\s+downstream\s+in\s+"
+                   r"(" + _NUM + r")\s*hours?", q)
+    mu = re.search(r"(" + _NUM + r")\s*km\s+upstream\s+in\s+"
+                   r"(" + _NUM + r")\s*hours?", q)
+    if not (md and mu):
+        return None
+    d1, t1 = float(md.group(1)), float(md.group(2))
+    d2, t2 = float(mu.group(1)), float(mu.group(2))
+    if t1 == 0 or t2 == 0:
+        return None
+    down, up = d1 / t1, d2 / t2
+    boat = (down + up) / 2
+    stream = (down - up) / 2
+    if stream < 0:
+        return None
+    steps = [
+        f"Downstream speed = {fmt_num(d1)} / {fmt_num(t1)} "
+        f"= {fmt_num(down)} km/h (boat + stream)",
+        f"Upstream speed = {fmt_num(d2)} / {fmt_num(t2)} "
+        f"= {fmt_num(up)} km/h (boat - stream)",
+        f"Speed of the boat in still water = ({fmt_num(down)}"
+        f" + {fmt_num(up)}) / 2 = {fmt_num(boat)} km/h",
+        f"Speed of the stream = ({fmt_num(down)} - "
+        f"{fmt_num(up)}) / 2 = {fmt_num(stream)} km/h",
+    ]
+    return {"type": "applied", "op": "boat_stream",
+            "answer": f"Boat {fmt_num(boat)} km/h, stream "
+                      f"{fmt_num(stream)} km/h",
+            "steps": steps, "value": boat}
+
+
+def _two_trains(q):
+    if "two trains" not in q and "two train" not in q:
+        return None
+    ml = re.search(r"lengths?\s+(?:of\s+)?(" + _NUM + r")\s*m"
+                   r"(?:etres?)?\s+and\s+(" + _NUM + r")\s*m", q)
+    ms = re.search(r"(" + _NUM + r")\s*km/h\s+and\s+(" + _NUM
+                   + r")\s*km/h", q)
+    if not (ml and ms):
+        return None
+    L1, L2 = float(ml.group(1)), float(ml.group(2))
+    s1, s2 = float(ms.group(1)), float(ms.group(2))
+    if "opposite" in q:
+        rel = s1 + s2
+        rel_note = (f"opposite directions, so the relative "
+                    f"speed is {fmt_num(s1)} + {fmt_num(s2)} "
+                    f"= {fmt_num(rel)} km/h")
+    elif "same direction" in q:
+        rel = abs(s1 - s2)
+        if rel == 0:
+            return None
+        rel_note = (f"same direction, so the relative speed "
+                    f"is |{fmt_num(s1)} - {fmt_num(s2)}| = "
+                    f"{fmt_num(rel)} km/h")
+    else:
+        return None
+    dist = L1 + L2
+    secs = dist / (rel * 5 / 18)
+    steps = [
+        f"To cross each other the trains must cover "
+        f"{fmt_num(L1)} + {fmt_num(L2)} = {fmt_num(dist)} m.",
+        f"They run in {rel_note}.",
+        f"In m/s: {fmt_num(rel)} × 5/18 = "
+        f"{fmt_num(rel * 5 / 18)} m/s",
+        f"Time = {fmt_num(dist)} / {fmt_num(rel * 5 / 18)} "
+        f"= {fmt_num(secs)} seconds",
+    ]
+    return {"type": "applied", "op": "two_trains_crossing",
+            "answer": f"{fmt_num(secs)} seconds",
+            "steps": steps, "value": secs}
+
+
+_COLOURS = ("red", "black", "white", "green", "blue", "yellow")
+
+
+def _parse_bag(segment):
+    counts = {}
+    for colour in _COLOURS:
+        m = re.search(r"(" + _NUM + r")\s+" + colour, segment)
+        if m:
+            counts[colour] = float(m.group(1))
+    return counts
+
+
+def _bayes_bags(q):
+    from fractions import Fraction as F
+    if "bag" not in q:
+        return None
+    parts = re.split(r"\bbag\s+", q)
+    bags = []
+    for part in parts[1:]:
+        name_m = re.match(r"(\w+)\b", part)
+        if not name_m:
+            continue
+        counts = _parse_bag(part)
+        if counts:
+            bags.append((name_m.group(1), counts))
+    if len(bags) < 2:
+        return None
+    colour = None
+    mc = re.search(r"(?:found to be|drawn is|comes out|is)\s+"
+                   r"(" + "|".join(_COLOURS) + r")\b", q)
+    if mc:
+        colour = mc.group(1)
+    if colour is None:
+        return None
+    target = None
+    mt = re.search(r"drawn from bag\s+(\w+)", q) or \
+        re.search(r"from bag\s+(\w+)\s*\?\s*$", q.strip())
+    if mt:
+        target = mt.group(1)
+    if target is None:
+        target = bags[0][0]
+    weights = []
+    for name, counts in bags:
+        total = sum(counts.values())
+        if total == 0 or colour not in counts:
+            return None
+        weights.append((name, F(str(counts[colour]))
+                        / F(str(total))))
+    denom = sum(w for _, w in weights)
+    if denom == 0:
+        return None
+    post = dict((name, w / denom) for name, w in weights)
+    if target not in post:
+        return None
+    steps = [
+        "By Bayes' theorem, with each bag equally likely to "
+        "be chosen:",
+    ]
+    for name, counts in bags:
+        total = sum(counts.values())
+        steps.append(
+            f"P({colour} | bag {name}) = "
+            f"{fmt_num(counts[colour])}/{fmt_num(total)}")
+    steps.append(
+        f"P(bag {target} | {colour}) = P({colour} | bag "
+        f"{target}) / (sum over all bags) = "
+        f"{_frac_str(post[target])} ≈ "
+        f"{float(post[target]):.4f}")
+    return {"type": "statistics", "op": "bayes_bags",
+            "answer": f"{_frac_str(post[target])} ≈ "
+                      f"{float(post[target]):.4f}",
+            "steps": steps, "value": float(post[target])}
+
+
+def _prob_value(tok):
+    tok = tok.strip()
+    if tok.endswith("%"):
+        return float(tok[:-1]) / 100.0
+    return float(tok)
+
+
+def _bayes_medical(q):
+    from fractions import Fraction as F
+    if not re.search(r"disease|infection|condition", q):
+        return None
+    mp = re.search(r"(" + _NUM + r")\s*%\s*of\s+(?:the\s+)?"
+                   r"(?:people|population|persons)", q)
+    ms = re.search(r"(?:detects?|sensitivity|true positive)"
+                   r"[^.]{0,70}?(?:probability\s+)?(0\.\d+|"
+                   + _NUM + r"\s*%)", q)
+    mf = re.search(r"false positive[^.]{0,70}?(?:probability"
+                   r"\s+)?(0\.\d+|" + _NUM + r"\s*%)", q)
+    if not (mp and ms and mf):
+        return None
+    prev = float(mp.group(1)) / 100.0
+    sens = _prob_value(ms.group(1))
+    fpr = _prob_value(mf.group(1))
+    if not (0 < prev < 1 and 0 < sens <= 1 and 0 <= fpr < 1):
+        return None
+    num = sens * prev
+    den = num + fpr * (1 - prev)
+    post = F(str(num)) / F(str(den)) if den else None
+    if post is None:
+        return None
+    steps = [
+        f"Out of 100 people: {fmt_num(prev * 100)} have the "
+        f"disease and the test catches "
+        f"{fmt_num(sens * 100)}% of them, so true positives "
+        f"= {fmt_num(num * 100)}.",
+        f"The other {fmt_num((1 - prev) * 100)} do not have "
+        f"it, but {fmt_num(fpr * 100)}% of them still test "
+        f"positive: false positives = "
+        f"{fmt_num(fpr * (1 - prev) * 100)}.",
+        f"P(disease | positive) = {fmt_num(num * 100)} / "
+        f"({fmt_num(num * 100)} + "
+        f"{fmt_num(fpr * (1 - prev) * 100)}) = "
+        f"{_frac_str(post)} ≈ {float(post) * 100:.2f}%",
+    ]
+    return {"type": "statistics", "op": "bayes_medical",
+            "answer": f"{_frac_str(post)} ≈ "
+                      f"{float(post) * 100:.2f}%",
+            "steps": steps, "value": float(post)}
+
+
+def _bayes_factory(q):
+    from fractions import Fraction as F
+    if "machine" not in q or "defective" not in q:
+        return None
+    pairs = re.findall(
+        r"machine\s+(\w+)\s+produces\s+(" + _NUM + r")\s*%"
+        r"[^.]{0,50}?(" + _NUM + r")\s*%\s*(?:defective|"
+        r"defects|faulty)", q)
+    if len(pairs) < 2:
+        return None
+    target = None
+    mt = re.search(r"came from machine\s+(\w+)", q) or \
+        re.search(r"from machine\s+(\w+)\s*\?\s*$", q.strip())
+    if mt:
+        target = mt.group(1)
+    weights = []
+    for name, share, defect in pairs:
+        weights.append((name, F(str(float(share) / 100))
+                        * F(str(float(defect) / 100))))
+    if target is None:
+        target = weights[0][0]
+    denom = sum(w for _, w in weights)
+    if denom == 0:
+        return None
+    post = dict((name, w / denom) for name, w in weights)
+    if target not in post:
+        return None
+    steps = ["By Bayes' theorem:"]
+    for (name, share, defect), (_, w) in zip(pairs, weights):
+        steps.append(
+            f"P(defective and machine {name}) = "
+            f"{share}% × {defect}% = {float(w) * 100:.2f}% of "
+            f"all items")
+    steps.append(
+        f"P(machine {target} | defective) = "
+        f"{_frac_str(post[target])} ≈ "
+        f"{float(post[target]):.4f}")
+    return {"type": "statistics", "op": "bayes_factory",
+            "answer": f"{_frac_str(post[target])} ≈ "
+                      f"{float(post[target]):.4f}",
+            "steps": steps, "value": float(post[target])}
+
+
+def _lp_corners(q):
+    if "corner point" not in q:
+        return None
+    mo = re.search(r"\bz\s*=\s*(.+?)(?:\s+subject|\s+at\s+"
+                   r"(?:the\s+)?corner|,|\.$|$)", q)
+    if not mo:
+        return None
+    pts = [(float(a), float(b)) for a, b in re.findall(
+        r"\(\s*(-?" + _NUM + r")\s*,\s*(-?" + _NUM + r")\s*\)",
+        q)]
+    if len(pts) < 2:
+        return None
+    try:
+        expr = parse_expression(mo.group(1))
+        syms = expr.free_symbols
+        if len(syms) > 2:
+            return None
+        xs = [s for s in syms if s.name == "x"]
+        ys = [s for s in syms if s.name == "y"]
+        x = xs[0] if xs else sp.Symbol("x")
+        y = ys[0] if ys else sp.Symbol("y")
+    except Exception:
+        return None
+    vals = []
+    steps = [f"Evaluate Z = {fmt(expr)} at each corner point:"]
+    for (px, py) in pts:
+        v = sp.nsimplify(expr.subs({x: sp.Rational(str(px)),
+                                    y: sp.Rational(str(py))}))
+        vals.append((v, (px, py)))
+        steps.append(f"At ({fmt_num(px)}, {fmt_num(py)}): "
+                     f"Z = {fmt(v)}")
+    if "minim" in q:
+        best_v, best_p = min(vals, key=lambda t: float(t[0]))
+        word, op = "Minimum", "lp_minimise"
+    else:
+        best_v, best_p = max(vals, key=lambda t: float(t[0]))
+        word, op = "Maximum", "lp_maximise"
+    steps.append(f"{word} value of Z is {fmt(best_v)} at "
+                 f"({fmt_num(best_p[0])}, {fmt_num(best_p[1])}).")
+    return {"type": "applied", "op": op,
+            "answer": f"{word} Z = {fmt(best_v)} at "
+                      f"({fmt_num(best_p[0])}, "
+                      f"{fmt_num(best_p[1])})",
+            "steps": steps, "value": float(best_v)}
+
+
 _FAMILIES = (_ratio, _unitary_cost, _simple_interest, _profit_loss,
+             _gst, _successive_discount, _two_articles_same_sp,
              _speed, _word_equation, _quadratic_info,
+             _find_k_equal_roots, _sum_product_roots,
+             _identity_eval, _insert_means,
              _speed_time_quadratic, _sum_difference, _ages,
              _consecutive_product, _rectangle_word,
-             _compound_interest, _discount, _percent_score,
+             _compound_interest_freq, _compound_interest,
+             _discount, _percent_score,
              _profit_loss_forms, _ratio_share_ask,
              _inverse_proportion, _bells_lcm, _train_crossing,
-             _digits)
+             _digits,
+             _lp_corners, _bayes_bags, _bayes_medical,
+             _bayes_factory, _pipes, _work_together,
+             _work_efficiency, _boat_stream, _two_trains)
 
 
 def solve_applied(question: str):

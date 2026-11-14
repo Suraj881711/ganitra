@@ -254,6 +254,264 @@ def solve_trigonometry(question: str):
             "value": float(_h),
             "steps": steps,
         }
+    # --- Wave 32: angle of depression ---------------------------
+    if "angle of depression" in qlow:
+        _degs = re.findall(r"(\d+(?:\.\d+)?)\s*(?:degrees?|°)",
+                           qlow)
+        _mh = re.search(r"(\d+(?:\.\d+)?)\s*m\s+(?:high|tall)",
+                        qlow) or re.search(
+                            r"height[^.]{0,30}?(\d+(?:\.\d+)?)"
+                            r"\s*m\b", qlow)
+        _md = re.search(r"distance[^.]{0,30}?(\d+(?:\.\d+)?)"
+                        r"\s*m\b", qlow)
+        if _degs and _mh:
+            _th = sp.Rational(_degs[-1])
+            _h = sp.Rational(_mh.group(1))
+            _d = _h / sp.tan(_th * sp.pi / 180)
+            steps = [
+                "The angle of depression equals the angle of "
+                "elevation from the object (alternate angles).",
+                f"tan {_th}° = height / distance = "
+                f"{fmt_num(_h)} / d",
+                f"Distance d = {fmt_num(_h)} / tan {_th}° "
+                f"= {fmt(_d)} m ≈ {float(_d):.2f} m",
+            ]
+            return {
+                "type": "trigonometry",
+                "op": "angle_of_depression",
+                "answer": f"{fmt(_d)} m ≈ {float(_d):.2f} m",
+                "value": float(_d),
+                "steps": steps,
+            }
+        if _degs and _md:
+            _th = sp.Rational(_degs[-1])
+            _d = sp.Rational(_md.group(1))
+            _h = _d * sp.tan(_th * sp.pi / 180)
+            steps = [
+                "The angle of depression equals the angle of "
+                "elevation from the object (alternate angles).",
+                f"tan {_th}° = height / {fmt_num(_d)}, so "
+                f"height = {fmt_num(_d)} × tan {_th}°",
+                f"Height = {fmt(_h)} m ≈ {float(_h):.2f} m",
+            ]
+            return {
+                "type": "trigonometry",
+                "op": "angle_of_depression",
+                "answer": f"{fmt(_h)} m ≈ {float(_h):.2f} m",
+                "value": float(_h),
+                "steps": steps,
+            }
+
+    # --- Wave 32: two-observation heights & distances -----------
+    _two_obs = re.findall(r"(\d+(?:\.\d+)?)\s*(?:degrees?|°)",
+                          qlow)
+    if len(_two_obs) >= 2 and "angle of elevation" in qlow and (
+            "apart" in qlow or "between" in qlow):
+        _md = re.search(r"(\d+(?:\.\d+)?)\s*m\s+(?:apart|from)",
+                        qlow) or re.search(
+                            r"distance[^.]{0,30}?(\d+(?:\.\d+)?)"
+                            r"\s*m\b", qlow)
+        if _md:
+            _a1, _a2 = (sp.Rational(_two_obs[0]),
+                        sp.Rational(_two_obs[1]))
+            _d = sp.Rational(_md.group(1))
+            _cot = lambda t: 1 / sp.tan(t * sp.pi / 180)
+            _den = abs(_cot(_a1) - _cot(_a2))
+            if _den != 0:
+                _h = _d / _den
+                steps = [
+                    "If the tower's height is h, the distances "
+                    "of the two points from its foot are "
+                    "h·cot(angle) each.",
+                    f"The gap between the points is "
+                    f"h × |cot {_a1}° - cot {_a2}°| "
+                    f"= {fmt_num(_d)}",
+                    f"Height h = {fmt_num(_d)} / "
+                    f"{fmt(_den)} = {fmt(_h)} m "
+                    f"≈ {float(_h):.2f} m",
+                ]
+                return {
+                    "type": "trigonometry",
+                    "op": "two_observation_height",
+                    "answer": f"{fmt(_h)} m ≈ "
+                              f"{float(_h):.2f} m",
+                    "value": float(_h),
+                    "steps": steps,
+                }
+
+    # --- Wave 32: inverse trig evaluations ----------------------
+    _inv_sum = re.search(
+        r"(sin|cos)\^-1\s*\(\s*([^()]+?)\s*\)\s*\+\s*"
+        r"(sin|cos)\^-1\s*\(\s*([^()]+?)\s*\)", qlow)
+    if _inv_sum and _inv_sum.group(1) != _inv_sum.group(3) \
+            and _inv_sum.group(2) == _inv_sum.group(4):
+        steps = [
+            "Identity: sin^-1 x + cos^-1 x = pi/2 for the "
+            "same x.",
+            "So the value is pi/2 = 90 degrees.",
+        ]
+        return {
+            "type": "trigonometry", "op": "inverse_trig_sum",
+            "answer": "pi/2 (90 degrees)", "steps": steps,
+            "value": 1.5707963,
+        }
+    _inv_red = re.search(
+        r"(sin|cos|tan)\^-1\s*\(\s*(sin|cos|tan)\s+"
+        r"(\d+(?:\.\d+)?)\s*(?:degrees?|°)\s*\)", qlow)
+    if _inv_red and _inv_red.group(1) == _inv_red.group(2):
+        _fn = _inv_red.group(1)
+        _th = float(_inv_red.group(3))
+        if _fn == "sin":
+            _r = _th if _th <= 90 else (180 - _th if _th <= 270
+                                        else _th - 360)
+        elif _fn == "cos":
+            _r = _th if _th <= 180 else 360 - _th
+        else:
+            if _th == 90 or _th == 270:
+                _r = None
+            else:
+                _r = _th if _th < 90 else (_th - 180
+                                           if _th < 270
+                                           else _th - 360)
+        if _r is not None:
+            steps = [
+                f"{_fn}^-1({_fn} theta) must lie in the "
+                f"principal range of {_fn}^-1.",
+                f"{_th:g} degrees reduces to {_r:g} degrees "
+                f"in that range.",
+            ]
+            return {
+                "type": "trigonometry",
+                "op": "inverse_trig_reduction",
+                "answer": f"{_r:g} degrees", "steps": steps,
+                "value": float(_r),
+            }
+    _tan_sum = re.search(
+        r"tan\^-1\s*\(\s*(-?\d+(?:\.\d+)?(?:\s*/\s*"
+        r"\d+(?:\.\d+)?)?)\s*\)\s*\+\s*tan\^-1\s*\(\s*"
+        r"(-?\d+(?:\.\d+)?(?:\s*/\s*\d+(?:\.\d+)?)?)\s*\)",
+        qlow)
+    if _tan_sum:
+        _x = sp.Rational(_tan_sum.group(1).replace(" ", ""))
+        _y = sp.Rational(_tan_sum.group(2).replace(" ", ""))
+        if _x * _y != 1:
+            _val = sp.atan((_x + _y) / (1 - _x * _y))
+            if _x * _y > 1:
+                _val = _val + sp.pi
+            steps = [
+                "Formula: tan^-1 x + tan^-1 y = tan^-1("
+                "(x + y)/(1 - xy)).",
+                f"= tan^-1(({fmt(_x)} + {fmt(_y)}) / (1 - "
+                f"{fmt(_x * _y)})) = {fmt(_val)}",
+            ]
+            return {
+                "type": "trigonometry",
+                "op": "inverse_trig_formula",
+                "answer": fmt(_val), "steps": steps,
+                "value": float(_val),
+            }
+    _inv = re.search(
+        r"(sec|cosec|csc|cot|sin|cos|tan)\^-1\s*\(?\s*"
+        r"(-?\d+(?:\.\d+)?(?:\s*/\s*\d+(?:\.\d+)?)?"
+        r"|sqrt\s*\(?\s*\d+(?:\.\d+)?\s*\)?)\s*\)?", qlow)
+    if _inv:
+        _fn = _inv.group(1)
+        _arg_raw = _inv.group(2).replace(" ", "")
+        try:
+            if _arg_raw.startswith("sqrt"):
+                _num = re.search(r"\d+(?:\.\d+)?", _arg_raw)
+                _arg = sp.sqrt(sp.Rational(_num.group(0)))
+            else:
+                _arg = sp.Rational(_arg_raw)
+            if _fn in ("sec",):
+                _val = sp.acos(1 / _arg)
+            elif _fn in ("cosec", "csc"):
+                _val = sp.asin(1 / _arg)
+            elif _fn == "cot":
+                _val = sp.atan(1 / _arg) if _arg > 0 else \
+                    sp.pi + sp.atan(1 / _arg)
+            elif _fn == "sin":
+                _val = sp.asin(_arg)
+            elif _fn == "cos":
+                _val = sp.acos(_arg)
+            else:
+                _val = sp.atan(_arg)
+            _degf = float(sp.deg(_val))
+            if abs(_degf - round(_degf / 15) * 15) < 1e-9:
+                steps = [
+                    f"Principal value of {_fn}^-1"
+                    f"({fmt(_arg)}):",
+                    f"= {fmt(_val)} = {_degf:.0f} degrees",
+                ]
+                return {
+                    "type": "trigonometry",
+                    "op": "inverse_trig_value",
+                    "answer": f"{fmt(_val)} "
+                              f"({_degf:.0f} degrees)",
+                    "steps": steps, "value": float(_val),
+                }
+        except Exception:
+            pass
+
+    # --- Wave 32: complementary-angle ratios --------------------
+    _comp = re.search(
+        r"\b(tan|sin|cos|sec|cosec|cot)\s+(\d+(?:\.\d+)?)"
+        r"\s*(?:degrees?|°)\s*/\s*(tan|sin|cos|sec|cosec|cot)"
+        r"\s+(\d+(?:\.\d+)?)\s*(?:degrees?|°)", qlow)
+    if _comp:
+        _pairs = {("tan", "cot"), ("cot", "tan"),
+                  ("sin", "cos"), ("cos", "sin"),
+                  ("sec", "cosec"), ("cosec", "sec")}
+        _a1, _a2 = float(_comp.group(2)), float(_comp.group(4))
+        if (_comp.group(1), _comp.group(3)) in _pairs \
+                and abs(_a1 + _a2 - 90) < 1e-9:
+            steps = [
+                f"{_comp.group(3)} {_a2:g}° = "
+                f"{_comp.group(3)} (90° - {_a1:g}°) = "
+                f"{_comp.group(1)} {_a1:g}° (complementary "
+                f"angles).",
+                "So the ratio is 1.",
+            ]
+            return {
+                "type": "trigonometry",
+                "op": "complementary_ratio",
+                "answer": "1", "steps": steps, "value": 1.0,
+            }
+
+    # --- Wave 32: standard values, "degrees" written out --------
+    if "degrees" in qlow and re.search(
+            r"\b(sin|cos|tan|sec|cosec|cot)\b", qlow):
+        _t = qlow.replace("cosec", "csc")
+        _t = re.sub(
+            r"\b(sin|cos|tan|sec|csc|cot)\s*\^\s*2\s+"
+            r"(\d+(?:\.\d+)?)\s*degrees?",
+            r"(\1(\2*pi/180))^2", _t)
+        _t = re.sub(
+            r"\b(sin|cos|tan|sec|csc|cot)\s+"
+            r"(\d+(?:\.\d+)?)\s*degrees?",
+            r"\1(\2*pi/180)", _t)
+        _t = re.sub(r"\b(evaluate|find|value of|calculate)\b",
+                    "", _t).strip(" ?.=")
+        try:
+            _expr = parse_expression(_t)
+            if not _expr.free_symbols:
+                _val = sp.simplify(_expr)
+                steps = [
+                    "Use the standard values (sin 30 = 1/2, "
+                    "cos 30 = sqrt(3)/2, sin 60 = sqrt(3)/2, "
+                    "cos 60 = 1/2, ...).",
+                    f"The expression simplifies to "
+                    f"{fmt(_val)} ≈ "
+                    f"{fmt_num(float(_val))}",
+                ]
+                return {
+                    "type": "trigonometry", "op": "value",
+                    "answer": fmt(_val), "steps": steps,
+                    "value": float(_val),
+                }
+        except Exception:
+            pass
+
     # Angle of elevation of a tower from a ground point.
     if "angle of elevation" in qlow:
         _degs = re.findall(r"(\d+(?:\.\d+)?)\s*(?:degrees?|°)",

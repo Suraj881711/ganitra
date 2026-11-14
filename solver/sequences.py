@@ -2,6 +2,8 @@
 numbers / squares / cubes."""
 import re
 
+import sympy as sp
+
 from .expression_parser import fmt_num
 
 
@@ -49,6 +51,85 @@ def _ordinal(n):
 def solve_sequences(question: str):
     q = question.lower()
     params = _get_params(q)
+
+    # --- Wave 32: nth term of an AP from the END -----------------
+    _m_end = re.search(
+        r"(\d+)(?:st|nd|rd|th)\s+term\s+from\s+the\s+end", q)
+    if _m_end:
+        _terms = _parse_series(q)
+        _kind, _d = _classify(_terms) if _terms else (None, None)
+        _m_last = re.search(r"(?:\.\.\.|…)\s*,?\s*"
+                            r"(-?\d+(?:\.\d+)?)", q)
+        if _kind == "AP" and _m_last and _d:
+            _a = _terms[0]
+            _l = float(_m_last.group(1))
+            _k = int(_m_end.group(1))
+            _span = (_l - _a) / _d
+            if abs(_span - round(_span)) < 1e-9:
+                _N = int(round(_span)) + 1
+                if 1 <= _k <= _N:
+                    _pos = _N - _k + 1
+                    _val = _a + (_pos - 1) * _d
+                    steps = [
+                        f"The AP has a = {_a}, d = {_d} and "
+                        f"last term l = {_l:g}.",
+                        f"Number of terms N = (l - a)/d + 1 "
+                        f"= {_N}.",
+                        f"The {_k}th term from the end is "
+                        f"term number N - {_k} + 1 = {_pos} "
+                        f"from the start.",
+                        f"a_{_pos} = a + ({_pos} - 1)d = "
+                        f"{_val:g}",
+                    ]
+                    return {"type": "sequences",
+                            "op": "ap_nth_from_end",
+                            "answer": fmt_num(_val),
+                            "value": _val, "steps": steps}
+
+    # --- Wave 32: how many AP terms give a stated sum ------------
+    if "how many terms" in q and "sum" in q:
+        _terms = _parse_series(q)
+        _kind, _d = _classify(_terms) if _terms else (None, None)
+        _m_sum = re.search(r"sum[^.]{0,40}?(?:is|=)\s*"
+                           r"(-?\d+(?:\.\d+)?)", q)
+        if _kind == "AP" and _m_sum:
+            from fractions import Fraction as _F
+            _a = _F(str(_terms[0]))
+            _df = _F(str(_d))
+            _S = _F(str(_m_sum.group(1)))
+            # (n/2)(2a + (n-1)d) = S ->
+            # d n^2 + (2a - d) n - 2S = 0
+            _A, _B, _C = _df, 2 * _a - _df, -2 * _S
+            if _A != 0:
+                _disc = _B * _B - 4 * _A * _C
+                if _disc >= 0:
+                    _sq = sp.sqrt(sp.Rational(_disc.numerator,
+                                              _disc.denominator))
+                    if _sq.is_number and _sq ** 2 == _disc:
+                        for _cand in (
+                                (-_B + _sq) / (2 * _A),
+                                (-_B - _sq) / (2 * _A)):
+                            if _cand > 0 and \
+                                    float(_cand).is_integer():
+                                _n = int(_cand)
+                                steps = [
+                                    f"Sum of n terms: S_n = "
+                                    f"(n/2)(2a + (n - 1)d) "
+                                    f"with a = {_a}, "
+                                    f"d = {_df}.",
+                                    f"Setting S_n = {_S} "
+                                    f"gives {_A}·n^2 + "
+                                    f"{_B}·n "
+                                    f"{'+' if _C >= 0 else ''}"
+                                    f"{_C} = 0.",
+                                    f"Solving: n = {_n} "
+                                    f"(the positive root).",
+                                ]
+                                return {
+                                    "type": "sequences",
+                                    "op": "ap_terms_for_sum",
+                                    "answer": str(_n),
+                                    "value": _n, "steps": steps}
 
     # Sum of first n natural numbers / squares / cubes
     m = re.search(

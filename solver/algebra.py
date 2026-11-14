@@ -239,6 +239,235 @@ def solve_algebra(question: str):
                         "answer": _ans, "steps": _steps}
         except Exception:
             pass
+    # --- Wave 32: remainder / factor theorem, cubic zeroes ----
+    # --- relations, verify-zeroes, rationalisation -------------
+    _qlow = q.lower()
+    try:
+        if "remainder" in _qlow and "divided by" in _qlow:
+            _mr = re.search(
+                r"when\s+(.+?)\s+is\s+divided\s+by\s+"
+                r"(.+?)\s*\.?\s*$", q, re.I) or re.search(
+                    r"^(.+?)\s+is\s+divided\s+by\s+"
+                    r"(.+?)\s*\.?\s*$", q, re.I)
+            if _mr:
+                _P = parse_expression(_mr.group(1))
+                _D = parse_expression(_mr.group(2))
+                _syms = sorted(_P.free_symbols,
+                               key=lambda s: s.name)
+                if len(_syms) == 1:
+                    _var = _syms[0]
+                    _rem = sp.rem(sp.Poly(_P, _var),
+                                  sp.Poly(_D, _var), _var)
+                    _root = sp.solve(_D, _var)
+                    _steps = [
+                        f"Remainder theorem: the remainder on "
+                        f"dividing by {fmt(_D)} equals "
+                        f"P({_root[0] if _root else ''}) — the "
+                        f"value of the polynomial where the "
+                        f"divisor is zero.",
+                        f"Remainder = {fmt(_rem.as_expr())}",
+                    ]
+                    return {"type": "algebra",
+                            "op": "remainder_theorem",
+                            "answer": fmt(_rem.as_expr()),
+                            "steps": _steps}
+        if "is a factor of" in _qlow and (
+                "find" in _qlow and re.search(r"\bk\b", _qlow)):
+            _mf = re.search(r"(.+?)\s+is\s+a\s+factor\s+of\s+"
+                            r"(.+?)\s*\.?\s*$", q, re.I)
+            if _mf:
+                _left, _poly_text = _mf.group(1), _mf.group(2)
+                _pm = re.search(r"\(([^()]*)\)\s*$",
+                                _left.strip())
+                _div_text = _pm.group(1) if _pm else \
+                    _left.strip().split()[-3:]
+                if not isinstance(_div_text, str):
+                    _div_text = " ".join(_div_text)
+                _D = parse_expression(_div_text)
+                _P = parse_expression(_poly_text)
+                _syms = sorted(_P.free_symbols,
+                               key=lambda s: s.name)
+                if len(_syms) == 2:
+                    _var = [s for s in _syms
+                            if s.name == "x"][0]
+                    _par = [s for s in _syms if s is not _var][0]
+                    _root = sp.solve(_D, _var)[0]
+                    _eq = _P.subs(_var, _root)
+                    _sol = sp.solve(_eq, _par)
+                    if _sol:
+                        _steps = [
+                            f"If {fmt(_D)} is a factor, then "
+                            f"P({_root}) must be 0 "
+                            f"(factor theorem).",
+                            f"P({_root}) = {fmt(_eq)} = 0 "
+                            f"gives {_par} = {fmt(_sol[0])}",
+                        ]
+                        return {"type": "algebra",
+                                "op": "factor_theorem_k",
+                                "answer": f"{_par} = "
+                                          f"{fmt(_sol[0])}",
+                                "steps": _steps}
+        if re.search(r"\ba\s+factor\s+of\b", _qlow) and not (
+                "is a factor of" in _qlow and "find" in _qlow):
+            _mf = re.search(r"is\s+(.+?)\s+a\s+factor\s+of\s+"
+                            r"(.+?)\s*\??\s*$", q, re.I)
+            if _mf:
+                _D = parse_expression(_mf.group(1))
+                _P = parse_expression(_mf.group(2))
+                _syms = sorted(_P.free_symbols,
+                               key=lambda s: s.name)
+                if len(_syms) == 1:
+                    _var = _syms[0]
+                    _rem = sp.rem(sp.Poly(_P, _var),
+                                  sp.Poly(_D, _var), _var)
+                    _root = sp.solve(_D, _var)
+                    _steps = [
+                        f"Divide: the remainder on dividing "
+                        f"{fmt(_P)} by {fmt(_D)} is "
+                        f"{fmt(_rem.as_expr())} (equivalently "
+                        f"P({_root[0] if _root else ''})).",
+                    ]
+                    if _rem.is_zero:
+                        _steps.append("Remainder is 0, so YES, "
+                                      "it is a factor.")
+                        _ans = "Yes, it is a factor"
+                    else:
+                        _steps.append("Remainder is not 0, so "
+                                      "it is NOT a factor.")
+                        _ans = (f"No, not a factor (remainder "
+                                f"{fmt(_rem.as_expr())})")
+                    return {"type": "algebra",
+                            "op": "factor_theorem_check",
+                            "answer": _ans, "steps": _steps}
+        if "verify" in _qlow and ("zeroes" in _qlow
+                                  or "zeros" in _qlow):
+            _mv = re.search(r"that\s+(.+?)\s+are\s+"
+                            r"(?:the\s+)?(?:zeroes|zeros)", q,
+                            re.I)
+            _mp = re.search(r"polynomial\s+(.+?)\s*\.?\s*$",
+                            q, re.I)
+            if _mv and _mp:
+                _vals = [float(v) if "." in v else int(v)
+                         for v in re.findall(
+                             r"-?\d+(?:\.\d+)?", _mv.group(1))]
+                _P = parse_expression(_mp.group(1))
+                _syms = sorted(_P.free_symbols,
+                               key=lambda s: s.name)
+                if len(_syms) == 1 and _vals:
+                    _var = _syms[0]
+                    _checks = [(v, sp.expand(
+                        _P.subs(_var, v))) for v in _vals]
+                    _steps = [
+                        f"P({v}) = {fmt(val)}" +
+                        (" ✔" if val == 0 else " ✘")
+                        for v, val in _checks]
+                    if all(val == 0 for _, val in _checks):
+                        _ans = ("Verified: all are zeroes of "
+                                "the polynomial")
+                    else:
+                        _bad = [str(v) for v, val in _checks
+                                if val != 0]
+                        _ans = ("Not all are zeroes: " +
+                                ", ".join(_bad) +
+                                " is/are not")
+                    return {"type": "algebra",
+                            "op": "verify_zeroes",
+                            "answer": _ans, "steps": _steps}
+        if ("α" in q or "alpha" in _qlow) and \
+                "polynomial" in _qlow:
+            _mp = re.search(r"polynomial\s+(.+?)(?:,|\s+find"
+                            r"\b|\s*$)", q, re.I)
+            if _mp:
+                _P = parse_expression(_mp.group(1))
+                _syms = sorted(_P.free_symbols,
+                               key=lambda s: s.name)
+                if len(_syms) == 1:
+                    _var = _syms[0]
+                    _poly = sp.Poly(_P, _var)
+                    if _poly is not None and \
+                            _poly.degree() == 3:
+                        _cf = _poly.all_coeffs()
+                        _a, _b, _c, _d = _cf
+                        _s1 = sp.simplify(-_b / _a)
+                        _s2 = sp.simplify(_c / _a)
+                        _s3 = sp.simplify(-_d / _a)
+                        _steps = [
+                            f"For a cubic a·x^3 + b·x^2 + "
+                            f"c·x + d with a = {fmt(_a)}, "
+                            f"b = {fmt(_b)}, c = {fmt(_c)}, "
+                            f"d = {fmt(_d)}:",
+                            f"α + β + γ = -b/a = {fmt(_s1)}",
+                            f"αβ + βγ + γα = c/a = {fmt(_s2)}",
+                            f"αβγ = -d/a = {fmt(_s3)}",
+                        ]
+                        return {"type": "algebra",
+                                "op": "cubic_zeroe_relations",
+                                "answer": f"α + β + γ = "
+                                          f"{fmt(_s1)}, "
+                                          f"αβ + βγ + γα = "
+                                          f"{fmt(_s2)}, "
+                                          f"αβγ = {fmt(_s3)}",
+                                "steps": _steps}
+        if "rationalise" in _qlow or "rationalize" in _qlow:
+            _mrat = re.search(
+                r"rationali[sz]e\s+(?:the\s+denominator\s+of"
+                r"\s+)?(.+?)\s*\.?\s*$", q, re.I)
+            if _mrat:
+                _E = parse_expression(_mrat.group(1))
+
+                def _has_sqrt(_e):
+                    return any(
+                        isinstance(_a, sp.Pow)
+                        and _a.exp == sp.Rational(1, 2)
+                        for _a in _e.atoms(sp.Pow))
+                # Prefer the RAW numerator/denominator:
+                # sp.together() silently rationalises simple
+                # monomial denominators itself (5/sqrt(7) ->
+                # 5*sqrt(7)/7), which would hide the sqrt this
+                # branch exists to remove.
+                _num, _den = sp.fraction(_E)
+                if not _has_sqrt(_den):
+                    _num, _den = sp.fraction(sp.together(_E))
+                if _has_sqrt(_den):
+                    if isinstance(_den, sp.Add):
+                        _terms = list(_den.args)
+                        _conj = sum(_terms[:-1]) - _terms[-1]
+                    else:
+                        _conj = -_den
+                    _prod = sp.expand(_den * _conj)
+                    if not _has_sqrt(_prod):
+                        _res = sp.simplify(
+                            _num * _conj / _prod)
+                        _steps = [
+                            f"Multiply top and bottom by "
+                            f"the conjugate {fmt(_conj)}:",
+                            f"= {fmt(_res)}",
+                        ]
+                        return {"type": "algebra",
+                                "op": "rationalise",
+                                "answer": fmt(_res),
+                                "steps": _steps}
+                elif "sqrt" in _mrat.group(1) and \
+                        not _E.free_symbols:
+                    # Sympy already rationalised a simple
+                    # monomial denominator while parsing
+                    # (5/sqrt(7) is stored as 5*sqrt(7)/7);
+                    # that stored value IS the rationalised
+                    # form.
+                    _res = sp.simplify(_E)
+                    _steps = [
+                        "Multiply the numerator and "
+                        "denominator by the root in the "
+                        "denominator so it becomes a whole "
+                        "number:",
+                        f"= {fmt(_res)}",
+                    ]
+                    return {"type": "algebra",
+                            "op": "rationalise",
+                            "answer": fmt(_res),
+                            "steps": _steps}
+    except Exception:
+        pass
     _mz = re.search(
         r"(?:zeroes|zeros|roots)\s+of\s+(?:the\s+)?"
         r"(?:polynomial|equation)?\s*(.+)$", q, re.I)

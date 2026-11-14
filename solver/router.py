@@ -191,7 +191,8 @@ def route_intent(question: str) -> str:
     if re.search(
             r"(dy/dx|d2y|y\'|differential|dsolve|derivative|"
             r"differentiate|integration|integral|integrate|"
-            r"\blimit\b|\blim\b|d/d|partial)", q) or re.search(
+            r"\blimit\b|\blim\b|d/d|partial"
+            r"|continu\w*|differentiab\w*)", q) or re.search(
             r"\bintegrat\w*\b.+\b(graph|shade|plot)\b", q):
         return "calculus"
 
@@ -413,6 +414,88 @@ def _solve_question_uncached(question: str):
             r"\bhow\s+many\b", working, re.I):
         out = solve_units(working)
         if out is not None:
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 32 (algebra): polynomial-theorem asks (remainder /
+    # factor theorem, cubic zeroes relations, rationalisation)
+    # route to arithmetic, which answers a stray fragment.
+    # These phrases belong to solver/algebra.py; try it FIRST
+    # and accept ONLY the new theorem ops, so algebra's generic
+    # simplify fallthrough can never leak through this gate.
+    if re.search(
+            r"\ba\s+factor\s+of\b|rationali[sz]e"
+            r"|remainder\b[^.]{0,80}?divided by"
+            r"|α|β|γ", working, re.I):
+        try:
+            out = solve_algebra(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") in (
+                "remainder_theorem", "factor_theorem_k",
+                "factor_theorem_check", "cubic_zeroe_relations",
+                "verify_zeroes", "rationalise"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 32: a few very specific asks are systematically
+    # HIJACKED by an earlier solver that returns a valid-looking
+    # op answering a DIFFERENT question ("insert one geometric
+    # mean" -> statistics' plain mean of the two numbers; "sum
+    # and product of roots of ..." -> the equation's roots; "if
+    # a + b = 10 and ab = 21, find a^2 + b^2" -> a garbage
+    # "system"). These asks belong to solver/applied.py; try it
+    # FIRST for them, and fall through to normal routing
+    # unchanged whenever applied cannot solve them either.
+    if re.search(
+            r"insert\s+.*?(?:arithmetic|geometric)\s+means?\s+"
+            r"between"
+            r"|(?:sum|product)\b[^.]{0,25}?\b(?:roots|zeroes|"
+            r"zeros)\b"
+            r"|\bnature\s+of\s+(?:the\s+)?roots\b"
+            r"|\ba\s*\+\s*b\s*=\s*-?\d", working, re.I):
+        try:
+            out = solve_applied(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") not in (
+                "unknown", "error"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 32 (geometry): the same hijack problem in the other
+    # direction — circle-theorem, centroid/collinearity and 3D
+    # asks route to arithmetic/trigonometry/applied, which
+    # either fail or answer a different question, and geometry
+    # is never tried. These phrases belong to
+    # solver/geometry.py; try it FIRST for them, falling
+    # through to normal routing whenever it cannot solve them.
+    if re.search(
+            r"length of (?:the )?tangent"
+            r"|angle between (?:the )?(?:two )?tangents"
+            r"|\bchord\b"
+            r"|\bcentroid\b"
+            r"|\bcollinear\b"
+            r"|\bequidistant\b"
+            r"|direction (?:ratios|cosines)"
+            r"|angle between (?:the )?two lines"
+            r"|from the plane"
+            r"|arc of (?:a |the )?circle"
+            r"|sector of (?:a |the )?circle"
+            r"|segment of (?:a |the )?circle"
+            r"|distance of (?:the )?point .* from the origin"
+            r"|ratio does the (?:x|y)-axis divide"
+            r"|\(\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?"
+            r"\s*,\s*-?\d+(?:\.\d+)?\s*\)", working, re.I):
+        try:
+            out = solve_geometry(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") not in (
+                "unknown", "error"):
             if was_translated:
                 out["interpreted_as"] = translated
             return out

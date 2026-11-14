@@ -201,6 +201,190 @@ def _ode(q: str):
 def solve_calculus(question: str):
     q = question.strip()
 
+    # --- Wave 32: continuity / differentiability at a point ----
+    _qlow = q.lower()
+    if "continu" in _qlow or "differentiab" in _qlow:
+        try:
+            _xa, _xs = symbols("x k")
+            _ma = re.search(r"at\s+x\s*=\s*(-?\d+(?:\.\d+)?)",
+                            _qlow)
+            _m_le = re.search(r"x\s*<=\s*(-?\d+(?:\.\d+)?)",
+                              _qlow)
+            _a = None
+            if _ma:
+                _a = sp.Rational(_ma.group(1))
+            elif _m_le:
+                _a = sp.Rational(_m_le.group(1))
+
+            def _branch(region):
+                region = re.sub(r"\b(if|for)\s*$", "",
+                                region.strip())
+                region = re.sub(r"^.*?f\(x\)\s*=", "",
+                                region.strip())
+                return region.strip(" ,;")
+
+            if _m_le and _a is not None:
+                _m_gt = re.search(r"x\s*>\s*-?\d+(?:\.\d+)?",
+                                  _qlow)
+                _fstart = _qlow.find("f(x)")
+                _left = _branch(q[_fstart:_m_le.start()])
+                _right = None
+                if _m_gt:
+                    _seg = q[_m_le.end():_m_gt.start()] \
+                        if _m_gt.start() > _m_le.end() else ""
+                    _seg2 = q[_m_gt.end():]
+                    _cand = _branch(_seg) or _branch(
+                        re.split(r"\b(is|at)\b", _seg2)[0])
+                    _right = _cand
+                if _left and _right:
+                    _L = parse_expression(_left)
+                    _R = parse_expression(_right)
+                    _Lv = _L.subs(_xa, _a)
+                    _Rv = _R.subs(_xa, _a)
+                    if "k" in [s.name for s in
+                               (_L.free_symbols
+                                | _R.free_symbols)]:
+                        _sol = sp.solve(sp.Eq(_Lv, _Rv), _xs)
+                        if _sol:
+                            _steps = [
+                                f"For continuity at x = "
+                                f"{_a}, LHL must equal RHL.",
+                                f"LHL = {_left} at x = {_a} "
+                                f"= {fmt(_Lv)}",
+                                f"RHL = {_right} at x = "
+                                f"{_a} = {fmt(_Rv)}",
+                                f"Setting them equal: "
+                                f"{fmt(_Lv)} = {fmt(_Rv)} "
+                                f"gives k = {fmt(_sol[0])}",
+                            ]
+                            return {
+                                "type": "calculus",
+                                "op": "continuity_find_k",
+                                "answer": f"k = "
+                                          f"{fmt(_sol[0])}",
+                                "steps": _steps}
+                    else:
+                        _cont = _Lv == _Rv
+                        _steps = [
+                            f"LHL = {_left} at x = {_a} = "
+                            f"{fmt(_Lv)}",
+                            f"RHL = {_right} at x = {_a} = "
+                            f"{fmt(_Rv)}",
+                            f"f({_a}) (from the x <= {_a} "
+                            f"branch) = {fmt(_Lv)}",
+                        ]
+                        if _cont:
+                            _steps.append(
+                                "LHL = RHL = f(a), so f is "
+                                "CONTINUOUS at the point.")
+                            _ans = f"Continuous at x = {_a}"
+                        else:
+                            _steps.append(
+                                "LHL and RHL are not equal, "
+                                "so f is NOT continuous at "
+                                "the point.")
+                            _ans = (f"Not continuous at "
+                                    f"x = {_a}")
+                        return {"type": "calculus",
+                                "op": "continuity_check",
+                                "answer": _ans, "steps": _steps}
+            if "f(x)" in _qlow and _a is not None:
+                _mfx = re.search(r"f\(x\)\s*=\s*(.+?)\s+at\s+"
+                                 r"x\s*=", q, re.I)
+                if _mfx:
+                    _text = re.sub(
+                        r"\s+is\s+(?:not\s+)?(?:differentiable"
+                        r"|continuous)\b.*$", "",
+                        _mfx.group(1))
+                    _text = re.sub(r"\|([^|]+)\|",
+                                   r"abs(\1)", _text)
+                    _E = parse_expression(_text)
+                    _xv = _xa
+                    if "abs(" in _text:
+                        # diff(Abs(x)) only behaves with a
+                        # REAL symbol; with a plain (complex)
+                        # symbol sympy returns re/im terms
+                        # whose limits raise.
+                        _xv = sp.Symbol("x", real=True)
+                        _E = _E.subs(_xa, _xv)
+                    if "differentiab" in _qlow:
+                        _cont = sp.limit(_E, _xv, _a, "-") \
+                            == sp.limit(_E, _xv, _a, "+") \
+                            == _E.subs(_xv, _a)
+                        _lhd = sp.limit(sp.diff(_E, _xv),
+                                        _xv, _a, "-")
+                        _rhd = sp.limit(sp.diff(_E, _xv),
+                                        _xv, _a, "+")
+                        _steps = [
+                            f"Left-hand derivative at "
+                            f"x = {_a}: {fmt(_lhd)}",
+                            f"Right-hand derivative at "
+                            f"x = {_a}: {fmt(_rhd)}",
+                        ]
+                        if _cont and _lhd == _rhd and \
+                                _lhd.is_number:
+                            _steps.append(
+                                "LHD = RHD and f is "
+                                "continuous there, so f IS "
+                                "differentiable at the "
+                                "point.")
+                            _ans = (f"Differentiable at "
+                                    f"x = {_a}")
+                        else:
+                            _steps.append(
+                                "The two one-sided "
+                                "derivatives do not agree "
+                                "(or f is not continuous "
+                                "there), so f is NOT "
+                                "differentiable at the "
+                                "point.")
+                            _ans = (f"Not differentiable "
+                                    f"at x = {_a}")
+                        return {"type": "calculus",
+                                "op": "differentiability_check",
+                                "answer": _ans,
+                                "steps": _steps}
+                    _lim = sp.limit(_E, _xv, _a)
+                    try:
+                        _val = _E.subs(_xv, _a)
+                        _defined = bool(_val.is_number) and \
+                            _val not in (sp.zoo, sp.nan,
+                                         sp.oo, -sp.oo)
+                    except Exception:
+                        _defined = False
+                    _steps = [
+                        f"Limit of f as x -> {_a}: "
+                        f"{fmt(_lim)}",
+                    ]
+                    if _defined and _val == _lim:
+                        _steps.append(
+                            f"f({_a}) = {fmt(_val)} equals "
+                            f"the limit, so f is CONTINUOUS "
+                            f"at x = {_a}.")
+                        _ans = f"Continuous at x = {_a}"
+                    elif not _defined:
+                        _steps.append(
+                            f"f({_a}) is NOT defined "
+                            f"(denominator zero), so f is "
+                            f"not continuous at x = {_a} — "
+                            f"a removable discontinuity, "
+                            f"since the limit exists.")
+                        _ans = (f"Not continuous at "
+                                f"x = {_a} (removable "
+                                f"discontinuity; limit = "
+                                f"{fmt(_lim)})")
+                    else:
+                        _steps.append(
+                            f"f({_a}) = {fmt(_val)} does "
+                            f"not equal the limit, so f is "
+                            f"NOT continuous at x = {_a}.")
+                        _ans = f"Not continuous at x = {_a}"
+                    return {"type": "calculus",
+                            "op": "continuity_limit",
+                            "answer": _ans, "steps": _steps}
+        except Exception:
+            pass
+
     # Differential equations first: dy/dx / y' / y'' forms, or an ODE
     # written in implicit form ("y'' + y = 0"). The "for" exclusion keeps
     # implicit differentiation ("find dy/dx for x^2 + y^2 = 25") out, but

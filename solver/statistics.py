@@ -385,9 +385,129 @@ def _counting(q: str):
     return None
 
 
+def _parse_grouped_table(ql):
+    """(classes, freqs) from a text-given frequency table like
+    'class intervals 0-10, 10-20, 20-30 with frequencies
+    5, 8, 12' — or None when the shape is not clean."""
+    classes = [(float(a), float(b)) for a, b in re.findall(
+        r"(\d+(?:\.\d+)?)\s*[-–]\s*(\d+(?:\.\d+)?)", ql)]
+    mf = re.search(
+        r"(?:frequenc\w+|number\s+of\s+(?:students|"
+        r"observations|persons|workers|families))"
+        r"\s*(?:are|:|is)?\s*([\d][\d,\s]*)", ql)
+    if not classes or not mf:
+        return None
+    freqs = [float(v) for v in re.findall(r"\d+(?:\.\d+)?",
+                                          mf.group(1))]
+    if len(freqs) > len(classes):
+        freqs = freqs[:len(classes)]
+    if len(freqs) != len(classes) or len(classes) < 2:
+        return None
+    if any(b <= a for a, b in classes):
+        return None
+    if any(classes[i][0] < classes[i - 1][0]
+           for i in range(1, len(classes))):
+        return None
+    return classes, freqs
+
+
+def _grouped_stats(ql):
+    """Wave 32: mean / median / mode of GROUPED data from a
+    frequency table given in the question text. The raw-list
+    statistics below used to grab the frequency numbers as if
+    they were the data itself."""
+    got = _parse_grouped_table(ql)
+    if not got:
+        return None
+    classes, freqs = got
+    asks = [(ql.find(w), w) for w in ("median", "mode", "mean")
+            if w in ql]
+    if not asks:
+        return None
+    ask = min(asks)[1]
+    N = sum(freqs)
+    if ask == "mean":
+        mids = [(a + b) / 2 for a, b in classes]
+        sfx = sum(f * x for f, x in zip(freqs, mids))
+        val = sfx / N
+        steps = [
+            "Class marks (midpoints): "
+            + ", ".join(fmt_num(m) for m in mids),
+            f"Sum of f·x = {fmt_num(sfx)}, sum of f = "
+            f"{fmt_num(N)}",
+            f"Mean = {fmt_num(sfx)} / {fmt_num(N)} "
+            f"= {fmt_num(val)}",
+        ]
+        return {"type": "statistics", "op": "grouped_mean",
+                "answer": fmt_num(val), "value": val,
+                "steps": steps}
+    contiguous = all(classes[i][1] == classes[i + 1][0]
+                     for i in range(len(classes) - 1))
+    if not contiguous:
+        return None
+    if ask == "median":
+        half = N / 2
+        cf = 0.0
+        for i, (a, b) in enumerate(classes):
+            prev = cf
+            cf += freqs[i]
+            if cf >= half:
+                l, f, h = a, freqs[i], b - a
+                val = l + ((half - prev) / f) * h
+                steps = [
+                    f"N = {fmt_num(N)}, so N/2 = "
+                    f"{fmt_num(half)}.",
+                    f"The cumulative frequency first reaches "
+                    f"{fmt_num(half)} in the class "
+                    f"{fmt_num(a)}-{fmt_num(b)} — the median "
+                    f"class (l = {fmt_num(l)}, f = "
+                    f"{fmt_num(f)}, cf before it = "
+                    f"{fmt_num(prev)}, h = {fmt_num(h)}).",
+                    f"Median = l + ((N/2 - cf)/f) × h = "
+                    f"{fmt_num(val)}",
+                ]
+                return {"type": "statistics",
+                        "op": "grouped_median",
+                        "answer": fmt_num(val), "value": val,
+                        "steps": steps}
+        return None
+    # mode
+    widths = {b - a for a, b in classes}
+    if len(widths) != 1:
+        return None
+    i = max(range(len(freqs)), key=lambda j: freqs[j])
+    f1 = freqs[i]
+    f0 = freqs[i - 1] if i > 0 else 0.0
+    f2 = freqs[i + 1] if i < len(freqs) - 1 else 0.0
+    denom = 2 * f1 - f0 - f2
+    if denom == 0:
+        return None
+    l, h = classes[i][0], classes[i][1] - classes[i][0]
+    val = l + ((f1 - f0) / denom) * h
+    steps = [
+        f"The modal class is {fmt_num(classes[i][0])}-"
+        f"{fmt_num(classes[i][1])} (highest frequency "
+        f"{fmt_num(f1)}).",
+        f"Mode = l + ((f1 - f0)/(2·f1 - f0 - f2)) × h with "
+        f"f0 = {fmt_num(f0)}, f2 = {fmt_num(f2)}, "
+        f"h = {fmt_num(h)}",
+        f"= {fmt_num(val)}",
+    ]
+    return {"type": "statistics", "op": "grouped_mode",
+            "answer": fmt_num(val), "value": val,
+            "steps": steps}
+
+
 def solve_statistics(question: str):
     q = question.strip()
     ql = q.lower()
+
+    # Wave 32: grouped-data mean/median/mode from a text-given
+    # frequency table (added last in the wave, once the Wave 31
+    # deploy released this file).
+    _grouped = _grouped_stats(ql)
+    if _grouped is not None:
+        return _grouped
 
     # Wave 30: the missing value behind a stated mean ("The
     # mean of 5 numbers is 20. Four of the numbers are 18, 22,
