@@ -120,21 +120,21 @@ check("Tesseract CDN script carries defer",
 
 # --- 4. Sprite URLs versioned -------------------------------------
 for _name, _count in (("eagle", 2), ("tiger", 2), ("boy", 4)):
-    check(f"sprite {_name}: every URL versioned ?v=28",
+    check(f"sprite {_name}: every URL versioned ?v=29",
           PAGE.count(f"scene-{_name}.webp") == _count
-          and PAGE.count(f"scene-{_name}.webp?v=28") == _count,
+          and PAGE.count(f"scene-{_name}.webp?v=29") == _count,
           f"plain={PAGE.count(f'scene-{_name}.webp')} "
-          f"versioned={PAGE.count(f'scene-{_name}.webp?v=28')}")
+          f"versioned={PAGE.count(f'scene-{_name}.webp?v=29')}")
 check("JS boy-writer sprites use the versioned URL",
-      INDEX.count('"/static/scene-boy.webp?v=28"') == 2)
+      INDEX.count('"/static/scene-boy.webp?v=29"') == 2)
 
 # --- 5. Delivery hygiene ------------------------------------------
-check("stylesheet bumped to ?v=28 (template + served)",
-      "v='28'" in BASE and "style.css?v=28" in PAGE)
-check("service worker cache bumped to v5, older names absent",
-      'GANITRA_CACHE = "ganitra-static-v5"' in SW
+check("stylesheet bumped to ?v=29 (template + served)",
+      "v='29'" in BASE and "style.css?v=29" in PAGE)
+check("service worker cache bumped to v6, older names absent",
+      'GANITRA_CACHE = "ganitra-static-v6"' in SW
       and all(f"ganitra-static-v{n}" not in SW
-              for n in (1, 2, 3, 4)))
+              for n in (1, 2, 3, 4, 5)))
 for _name, _want in (
         ("logo-full-t.png", "f18c8e42"), ("logo-full.png", "07009560"),
         ("logo-mark-t.png", "01aa3d23"), ("logo-mark.png", "03bc03dc")):
