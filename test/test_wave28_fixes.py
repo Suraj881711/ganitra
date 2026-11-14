@@ -92,22 +92,23 @@ def test_sprite_urls_versioned_everywhere(client):
     page = client.get("/").get_data(as_text=True)
     # Preload + stage <img> for each sprite; the boy also has
     # two JS-built writer sprites in the inline scripts.
-    assert page.count("scene-eagle.webp?v=28") == 2
-    assert page.count("scene-tiger.webp?v=28") == 2
-    assert page.count("scene-boy.webp?v=28") == 4
+    assert page.count("scene-eagle.webp?v=29") == 2
+    assert page.count("scene-tiger.webp?v=29") == 2
+    assert page.count("scene-boy.webp?v=29") == 4
     # No unversioned sprite URL survives anywhere in the page:
     # every mention of a sprite file carries the version query.
     for name in ("eagle", "tiger", "boy"):
         assert page.count(f"scene-{name}.webp") \
-            == page.count(f"scene-{name}.webp?v=28"), name
+            == page.count(f"scene-{name}.webp?v=29"), name
     # The two JS-built boy-writer sprites use the versioned URL.
-    assert INDEX.count('"/static/scene-boy.webp?v=28"') == 2
+    assert INDEX.count('"/static/scene-boy.webp?v=29"') == 2
 
 
 def test_delivery_versions_wave28():
-    assert "v='28'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v5"' in SW
-    for old in ("ganitra-static-v4", "ganitra-static-v3",
+    assert "v='29'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v6"' in SW
+    for old in ("ganitra-static-v5", "ganitra-static-v4",
+                "ganitra-static-v3",
                 "ganitra-static-v2", "ganitra-static-v1"):
         assert old not in SW
 
