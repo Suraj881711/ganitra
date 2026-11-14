@@ -376,6 +376,19 @@ def _probability_hindi(q, ql):
                                  r"(?:रंग\s+की\s+)?(\d+)\s*"
                                  r"गेंद", qn):
                 c += int(m.group(1))
+            # Wave 42: colour-first order — "नीली गेंदें 3
+            # हैं" (the count AFTER गेंदें). Neither loop
+            # above sees it, so a bag stated this way yielded
+            # no counts at all and fell to a fallback. The
+            # [^0-9\s]* eats the colour word's own tail (the
+            # ी of नीली) without crossing a space, and the
+            # compulsory गेंदें keeps it from double-counting
+            # the "4 लाल गेंदें" (count-first) forms.
+            for m in re.finditer(r"(?:" + pat + r")"
+                                 r"[^0-9\s]*\s*"
+                                 r"(?:रंग\s+की\s+)?गेंदें?\s*"
+                                 r"(\d+)", qn):
+                c += int(m.group(1))
             if c:
                 counts[colour] = c
         # Target = the LAST colour mention in text order
@@ -546,13 +559,46 @@ def _probability(q: str):
             _n = 2
         elif re.search(r"\btossed\s+twice\b", ql):
             _n = 2
+        elif re.search(r"\b(?:tossed|thrown|flipped)\s+"
+                       r"thrice\b", ql):
+            _n = 3
         else:
+            # Wave 38: one coin tossed repeatedly is stated as
+            # "tossed 5 times" — without this the count stayed
+            # 1 and "exactly 3 heads" in 5 tosses counted the
+            # favourable outcomes of a SINGLE toss (0) — the
+            # broken binomial of Wave 35 audit #311.
+            _mtm = re.search(r"(?:tossed|thrown|flipped)\s+"
+                             + _num + r"\s+times", ql)
             _mr = re.search(r"\bin\s+" + _num + r"\s+tosses\b",
                             ql)
-            _n = _cnt(_mr.group(1)) if _mr else 1
+            if _mtm:
+                _n = _cnt(_mtm.group(1))
+            else:
+                _n = _cnt(_mr.group(1)) if _mr else 1
         if 1 <= _n <= 5:
             outcomes = list(_iproduct("HT", repeat=_n))
             _ev = None
+            # Wave 42: mixed exact events — "one head and
+            # two tails" / "two tails and one head". When the
+            # two counts add up to the number of coins, the
+            # head count alone fixes the event.
+            _m_ht = re.search(r"(?:getting\s+|of\s+)?" + _num
+                              + r"\s+heads?\s+and\s+" + _num
+                              + r"\s+tails?", ql)
+            _m_th = re.search(r"(?:getting\s+|of\s+)?" + _num
+                              + r"\s+tails?\s+and\s+" + _num
+                              + r"\s+heads?", ql)
+            _kh = _kt = None
+            if _m_ht:
+                _kh = _cnt(_m_ht.group(1))
+                _kt = _cnt(_m_ht.group(2))
+            elif _m_th:
+                _kt = _cnt(_m_th.group(1))
+                _kh = _cnt(_m_th.group(2))
+            if _kh is not None and _kh + _kt == _n:
+                _ev = (lambda h, k=_kh: h == k,
+                       f"{_kh} head(s) and {_kt} tail(s)")
             # (pattern, test(heads_count, k)) — the label is the
             # matched phrase itself, e.g. "at most one head".
             _specs = [
@@ -568,14 +614,23 @@ def _probability(q: str):
                  lambda h, k: h == k),
                 (r"exactly\s+" + _num + r"\s+tails?",
                  lambda h, k, n=_n: n - h == k),
+                # Wave 38: a bare count is an exact count —
+                # "getting two heads" (Wave 35 audit #227
+                # answered 1/2 via the single-coin shortcut).
+                # Wave 42: "get" added to the alternation.
+                (r"(?:getting|get|of)\s+" + _num + r"\s+heads?",
+                 lambda h, k: h == k),
+                (r"(?:getting|get|of)\s+" + _num + r"\s+tails?",
+                 lambda h, k, n=_n: n - h == k),
             ]
-            for _pat, _fn in _specs:
-                _m = re.search(_pat, ql)
-                if _m:
-                    _k = _cnt(_m.group(1))
-                    _ev = ((lambda fn, k: lambda h: fn(h, k))
-                           (_fn, _k), _m.group(0))
-                    break
+            if _ev is None:
+                for _pat, _fn in _specs:
+                    _m = re.search(_pat, ql)
+                    if _m:
+                        _k = _cnt(_m.group(1))
+                        _ev = ((lambda fn, k: lambda h: fn(h, k))
+                               (_fn, _k), _m.group(0))
+                        break
             if _ev is None:
                 if "both heads" in ql or "all heads" in ql:
                     _ev = (lambda h, n=_n: h == n, "all heads")
@@ -585,6 +640,11 @@ def _probability(q: str):
                     _ev = (lambda h: h == 0, "no head")
                 elif "no tail" in ql:
                     _ev = (lambda h, n=_n: h == n, "no tail")
+                elif _n == 2 and re.search(
+                        r"\b(?:a|one)\s+head\s+and\s+"
+                        r"(?:a|one)\s+tail\b", ql):
+                    _ev = (lambda h: h == 1,
+                           "one head and one tail")
             if _ev is not None:
                 fav = sum(1 for o in outcomes
                           if _ev[0](o.count("H")))
@@ -605,6 +665,39 @@ def _probability(q: str):
         return _prob_answer(Fraction(1, 2),
                             ["A fair coin has 2 equally likely outcomes; "
                              "tails is 1 of them."])
+
+    # Wave 38: one die thrown repeatedly — binomial with
+    # p = 1/6 for the named face. "A die is thrown 4 times.
+    # What is the probability of getting a six exactly 2
+    # times?" was answered 1/6 (the single-throw shortcut of
+    # Wave 35 audit #313); the coin analogue is the enumeration
+    # above, a die has too many outcomes to enumerate.
+    if "die" in ql or "dice" in ql:
+        _mdt = re.search(r"(?:thrown|rolled|tossed)\s+(\d+)\s+"
+                         r"times", ql)
+        _mex = re.search(r"exactly\s+(\d+)\s+times", ql)
+        _mface = re.search(
+            r"\b(?:a\s+|an\s+)?(one|two|three|four|five|six|"
+            r"[1-6])\b", ql[ql.find("getting"):]
+            if "getting" in ql else ql)
+        if _mdt and _mex and _mface:
+            _n2 = int(_mdt.group(1))
+            _k2 = int(_mex.group(1))
+            if 1 <= _n2 <= 30 and 0 <= _k2 <= _n2:
+                from math import comb as _comb
+                _face = _mface.group(1)
+                _prob = (Fraction(_comb(_n2, _k2))
+                         * Fraction(1, 6) ** _k2
+                         * Fraction(5, 6) ** (_n2 - _k2))
+                steps = [
+                    f"Each throw is independent with P({_face}) "
+                    f"= 1/6 — a binomial experiment with "
+                    f"n = {_n2}, p = 1/6.",
+                    f"P(exactly {_k2} times) = C({_n2}, {_k2}) "
+                    f"· (1/6)^{_k2} · (5/6)^{_n2 - _k2}",
+                    f"C({_n2}, {_k2}) = {_comb(_n2, _k2)}",
+                ]
+                return _prob_answer(_prob, steps)
 
     # Two dice: sum
     m = re.search(r"sum\s+(?:of\s+)?(\d+)\s+(?:with|on|of)?\s*two\s+dice",
@@ -1152,6 +1245,62 @@ def _freq_mean_unknown(ql):
 def solve_statistics(question: str):
     q = question.strip()
     ql = q.lower()
+
+    # Wave 38: binomial mean / variance relations (Wave 35
+    # audit #312 — "mean 20, variance 16, find n and p" was
+    # answered '4', the variance of the two stated numbers).
+    # mean = np and variance = npq, so q = variance / mean.
+    if "binomial" in ql:
+        _bm = re.search(r"mean\s*(?:is|=)\s*(\d+(?:\.\d+)?)",
+                        ql) or re.search(
+                            r"mean\b[^.]{0,45}?\bis\s+"
+                            r"(\d+(?:\.\d+)?)", ql)
+        _bv = re.search(r"variance\s*(?:is|=)\s*"
+                        r"(\d+(?:\.\d+)?)", ql) or re.search(
+                            r"variance\b[^.]{0,45}?\bis\s+"
+                            r"(\d+(?:\.\d+)?)", ql)
+        if _bm and _bv:
+            _M, _V = float(_bm.group(1)), float(_bv.group(1))
+            if 0 < _V < _M:
+                _qq = _V / _M
+                _pp = 1 - _qq
+                _nn = _M / _pp
+                steps = [
+                    f"For a binomial distribution, mean = np "
+                    f"= {fmt_num(_M)} and variance = npq = "
+                    f"{fmt_num(_V)}.",
+                    f"q = variance / mean = {fmt_num(_V)} / "
+                    f"{fmt_num(_M)} = {fmt_num(_qq)}",
+                    f"p = 1 - q = {fmt_num(_pp)}",
+                    f"n = mean / p = {fmt_num(_M)} / "
+                    f"{fmt_num(_pp)} = {fmt_num(_nn)}",
+                ]
+                return {"type": "statistics",
+                        "op": "binomial_mean_variance",
+                        "answer": f"n = {fmt_num(_nn)}, "
+                                  f"p = {fmt_num(_pp)}",
+                        "value": float(_nn), "steps": steps}
+        _bn = re.search(r"\bn\s*=\s*(\d+)", ql)
+        _bp = re.search(r"\bp\s*=\s*(\d+(?:\.\d+)?)", ql)
+        if _bn and _bp and ("mean" in ql or "variance" in ql):
+            _nn = int(_bn.group(1))
+            _pp = float(_bp.group(1))
+            if 0 < _pp < 1:
+                steps = [
+                    f"Binomial with n = {_nn}, p = {fmt_num(_pp)}"
+                    f", q = 1 - p = {fmt_num(1 - _pp)}.",
+                    f"Mean = np = {_nn} × {fmt_num(_pp)} = "
+                    f"{fmt_num(_nn * _pp)}",
+                    f"Variance = npq = {fmt_num(_nn * _pp)} × "
+                    f"{fmt_num(1 - _pp)} = "
+                    f"{fmt_num(_nn * _pp * (1 - _pp))}",
+                ]
+                return {"type": "statistics",
+                        "op": "binomial_mean_variance",
+                        "answer": f"Mean = {fmt_num(_nn * _pp)}, "
+                                  f"variance = "
+                                  f"{fmt_num(_nn * _pp * (1 - _pp))}",
+                        "value": float(_nn * _pp), "steps": steps}
 
     # Wave 33: ogive (cumulative frequency) median — before
     # the grouped/raw paths, which misread the cf pairs.

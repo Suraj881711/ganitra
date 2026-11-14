@@ -275,6 +275,24 @@ def _binomial(q: str):
         if m:
             k = int(m.group(1))
     if k is None:
+        # Wave 38: mean / variance asks carry no k — they used
+        # to fall out of the module entirely ("unknown").
+        ql = q.lower()
+        if ("mean" in ql or "variance" in ql) and 0 < p < 1:
+            steps = [
+                f"Binomial with n = {n}, p = {fmt_num(p)}, "
+                f"q = 1 - p = {fmt_num(1 - p)}.",
+                f"Mean = np = {n} × {fmt_num(p)} = "
+                f"{fmt_num(n * p)}",
+                f"Variance = npq = {fmt_num(n * p)} × "
+                f"{fmt_num(1 - p)} = {fmt_num(n * p * (1 - p))}",
+            ]
+            return {"type": "distributions",
+                    "op": "binomial_mean_variance",
+                    "answer": f"Mean = {fmt_num(n * p)}, "
+                              f"variance = "
+                              f"{fmt_num(n * p * (1 - p))}",
+                    "value": float(n * p), "steps": steps}
         return None
     k = int(k)
     cumulative = bool(re.search(

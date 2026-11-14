@@ -3,7 +3,10 @@ to the right solver, and falls back to a generic SymPy solve/simplify.
 
 Every result is a dict with at least: type, answer, steps.
 """
+import logging
+import math
 import re
+import threading
 
 from .algebra import solve_algebra
 from .answer_cache import get_cached, put_cached
@@ -243,21 +246,33 @@ def route_intent(question: str) -> str:
             r"(\barea\b|perimeter|volume|circumference|surface area|"
             r"distance between|midpoint|slope|hypotenuse|"
             r"equation of|triangle.{0,50}angle|section\s+formula|"
-            r"divides\s+the\s+line|coordinates\s+of\s+the\s+point)",
+            r"divides\s+the\s+line|coordinates\s+of\s+the\s+point|"
+            r"diagonal|pythagor|समकोण|कर्ण)",
             q):
         return "geometry"
 
     # Sequences & series
+    # Wave 42: Hindi / Hinglish sequence tokens — समांतर
+    # श्रेढ़ी (AP), Devanagari/Roman ordinals with पद/pad
+    # ("12वां पद", "12va pad"), "पदों का योग / padon ka yog"
+    # (sum) and "अगला पद / agla pad / next term". Without
+    # them every Hindi AP ask fell through to the arithmetic
+    # simplifier and came back as a concept/guide fallback.
     if re.search(
             r"(\bap\b|\bgp\b|arithmetic (progression|series|sequence)|"
             r"geometric (progression|series|sequence)|nth term|"
-            r"sum of (the )?first|sum of .* series)",
-            q) or re.search(r"\d+\s*(st|nd|rd|th)\s+term", q):
+            r"next\s+term|sum of (the )?first|sum of .* series|"
+            r"समांतर|sama?ntar|shreni|shredi|shrenee|"
+            r"अगला\s*पद|agla\s+pad|पदों\s*का\s*योग|"
+            r"padon\s+ka\s+(yog|jod))",
+            q) or re.search(r"\d+\s*(st|nd|rd|th)\s+term", q) or \
+            re.search(r"\d+\s*(?:वां|वाँ|वीं)\s*पद", q) or \
+            re.search(r"\d+\s*(?:va|wa|vaa)\s+pad\b", q):
         return "sequences"
 
     # Complex numbers (bare "i" expressions need digits around the i)
     if re.search(r"\bcomplex\b|conjugate|modulus|argument of|"
-                 r"real part|imaginary part", q) or (
+                 r"real part|imaginary part|a\s*\+\s*ib\b", q) or (
             "i" in q and re.search(r"\d\s*i\b|\bi\s*[\+\)\*]|\(\s*\d+\s*[\+\-]\s*\d+\s*i", q)):
         return "complex"
 
@@ -396,14 +411,135 @@ _TOPICS = (
 )
 
 
+log = logging.getLogger("ganitra.router")
+
+# ---------------------------------------------------------------------------
+# Wave 46 (audit F1a): a CPU budget for the primary solve.
+#
+# /api/solve and /solve are anonymous by design, and the host
+# gives the whole site 100 CPU-seconds/day — but the primary
+# solve ran unbounded: "expand (x + y + z + w)^60" was still
+# running when the audit killed it at 25 s, so ~4 such requests
+# could eat the site's whole day. Two defences, neither of which
+# touches a normal solve (the Wave-45 battery's legit p99 was
+# 1.6 s):
+#
+# 1. Pre-guards (_dangerous_shape): the known blow-up shapes are
+#    refused BEFORE any SymPy work starts, so they cost ~0 CPU.
+# 2. A wall-clock budget (_solve_with_budget): anything else
+#    that still runs long is cut off at the budget and answered
+#    with the solver's standard error dict, which the app
+#    layer's fallback turns into its friendly guide.
+
+SOLVE_BUDGET_SECONDS = 10.0
+
+#: An expansion of (t1 + ... + tk)^n has C(n+k-1, k-1) terms;
+#: past this many, writing it out is neither fast nor useful
+#: to a student. (x + y)^100 = 101 terms stays allowed;
+#: (x + y + z + w)^60 = 39,711 terms is refused.
+_EXPANSION_TERM_LIMIT = 5000
+
+#: A plain-integer power a^b whose result would have more
+#: digits than this is a memory/print bomb, not a school sum.
+_INT_POWER_DIGIT_LIMIT = 20000
+
+_SUM_POWER_RE = re.compile(r"\(([^()]*)\)\s*(?:\^|\*\*)\s*(\d+)")
+_INT_POWER_RE = re.compile(r"(?<![\d.])(\d+)\s*(?:\^|\*\*)\s*(\d+)")
+_INT_TOWER_RE = re.compile(
+    r"(\d+)\s*(?:\^|\*\*)\s*(\d+)\s*(?:\^|\*\*)\s*(\d+)")
+
+
+def _dangerous_shape(question):
+    """A short reason string when the question has a known
+    symbolic blow-up shape, else None. Pure text scan — no
+    SymPy work happens for a refused question."""
+    q = str(question)
+    # Power towers a^b^c evaluate right-first, so the effective
+    # exponent is b**c: 10^10^10 is a 10-billion-digit result.
+    for m in _INT_TOWER_RE.finditer(q):
+        base_b, exp_c = int(m.group(2)), int(m.group(3))
+        if base_b >= 2 and exp_c >= 2 \
+                and exp_c * math.log10(base_b) > 4:
+            return "power tower too large"
+    # (sum)^n expansions: count the terms before paying for them.
+    for m in _SUM_POWER_RE.finditer(q):
+        base, exp = m.group(1), int(m.group(2))
+        if exp < 2:
+            continue
+        terms = [part for part in re.split(r"[+-]", base)
+                 if part.strip()]
+        if len(terms) >= 2 and math.comb(
+                exp + len(terms) - 1,
+                len(terms) - 1) > _EXPANSION_TERM_LIMIT:
+            return "expansion too large"
+    # Plain-integer powers with absurd digit counts.
+    for m in _INT_POWER_RE.finditer(q):
+        base, exp = int(m.group(1)), int(m.group(2))
+        if base >= 2 and exp >= 2 and exp * math.log10(base) \
+                > _INT_POWER_DIGIT_LIMIT:
+            return "integer power too large"
+    return None
+
+
+def _too_big_result():
+    """The refusal for a guarded / over-budget solve, in the
+    solver's standard failure shape (op == "error"): the app
+    layer never shows this text — its Wave-18 fallback replaces
+    it with the friendly guide, and the answer cache never
+    stores op == "error" results."""
+    return {"type": "algebra", "op": "error",
+            "answer": "That one is too big to work out here.",
+            "steps": []}
+
+
+def _solve_with_budget(question, budget=SOLVE_BUDGET_SECONDS):
+    """_solve_question_uncached with a wall-clock budget — the
+    thread pattern from speedups.methods_nonblocking. A normal
+    solve finishes far inside the budget and its result (or its
+    exception) reaches the caller exactly as before; only an
+    overrun changes behaviour. An overrun worker keeps running
+    as a daemon (Python threads cannot be killed), which is why
+    the pre-guards above stop the known bombs from starting at
+    all; the budget caps the response time for the unforeseen."""
+    box = {}
+
+    def _run():
+        try:
+            box["result"] = _solve_question_uncached(question)
+        except BaseException as exc:  # re-raised on this thread
+            box["error"] = exc
+
+    worker = threading.Thread(target=_run, daemon=True,
+                              name="ganitra-solve")
+    worker.start()
+    worker.join(budget)
+    if worker.is_alive():
+        log.warning(
+            "solve exceeded %.0fs budget for %r; answering with "
+            "the fallback guide", budget, str(question)[:80])
+        return _too_big_result()
+    if "error" in box:
+        raise box["error"]
+    return box.get("result")
+
+
 def solve_question(question: str):
     """Cached entry point (Kami audit 2c-1): repeat questions are
     served from the in-memory answer cache at zero CPU cost; the
-    first ask, and anything uncacheable, runs the solver below."""
+    first ask, and anything uncacheable, runs the solver below.
+
+    Wave 46 (audit F1a): known blow-up shapes are refused by the
+    pre-guards and the solve itself runs under a wall-clock
+    budget — see SOLVE_BUDGET_SECONDS above."""
     cached = get_cached(question)
     if cached is not None:
         return cached
-    result = _solve_question_uncached(question)
+    reason = _dangerous_shape(question)
+    if reason is not None:
+        log.warning("solve pre-guard refused %r (%s)",
+                    str(question)[:80], reason)
+        return _too_big_result()
+    result = _solve_with_budget(question)
     put_cached(question, result)
     return result
 

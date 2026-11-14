@@ -63,7 +63,14 @@ def solve_trigonometry(question: str):
 
     # --- Identity proof / verification -------------------------------------
     if "=" in q and re.search(r"\b(prove|verify|identity|show)\b", qlow):
-        text = re.sub(r"\b(prove|verify|show\s+that)\b", "", q, flags=re.I)
+        # Wave 42: strip a following "that" too — the old
+        # pattern removed only bare "prove"/"verify", so
+        # "Prove that sin^2 A + cos^2 A = 1" kept the word
+        # "that", which the parser read as t·h·a·t symbols and
+        # the check answered "Not an identity" for the most
+        # famous identity in the chapter.
+        text = re.sub(r"\b(prove|verify|show)\b(\s+that)?", "",
+                      q, flags=re.I)
         if deg:
             text, _ = _convert_degrees(text)
         left, right = text.split("=", 1)
@@ -85,6 +92,41 @@ def solve_trigonometry(question: str):
             "verified": bool(ok),
             "steps": steps,
         }
+
+    # --- Wave 42: Hindi value asks ("sin 30 डिग्री का मान") --
+    # The English paths below feed the whole question to the
+    # expression parser, which turned the Devanagari words
+    # into a letter-product (audit #482, still live). A lone
+    # function + angle + डिग्री is a standard value: read it
+    # straight off the standard-angle table.
+    if "डिग्री" in q and "=" not in q:
+        _mh42 = re.search(
+            r"\b(sin|cos|tan|cot|sec|cosec|csc)\s*"
+            r"(\d+(?:\.\d+)?)\s*डिग्री", q)
+        if _mh42:
+            try:
+                _fn42 = _mh42.group(1).replace("cosec", "csc")
+                _ang42 = sp.Rational(_mh42.group(2))
+                _func42 = {"sin": sp.sin, "cos": sp.cos,
+                           "tan": sp.tan, "cot": sp.cot,
+                           "sec": sp.sec, "csc": sp.csc}[_fn42]
+                _val42 = _func42(_ang42 * sp.pi / 180)
+                _f42 = float(_val42)
+                steps = [
+                    f"{_fn42} {_ang42}° is a standard angle "
+                    f"(0°, 30°, 45°, 60°, 90° table).",
+                    f"{_fn42} {fmt_num(_ang42)}° = "
+                    f"{fmt(_val42)} ≈ {fmt_num(_f42)}",
+                ]
+                return {
+                    "type": "trigonometry",
+                    "op": "value",
+                    "answer": fmt(_val42),
+                    "value": _f42,
+                    "steps": steps,
+                }
+            except Exception:
+                pass
 
     # --- One ratio given, another asked (Wave 30) ------------------
     # "If sin A = 3/5, find cos A": build the right-triangle
@@ -542,6 +584,106 @@ def solve_trigonometry(question: str):
                 "value": float(_h),
                 "steps": steps,
             }
+
+    # --- Wave 42: clean expression evaluation ----------------
+    # "Evaluate sin 30° + cos 60°", "sin^2 30° + cos^2 30°",
+    # "2 tan^2 45° + cos^2 30° - sin^2 60°", "Simplify
+    # (1 - cos^2 A) / sin A", "Simplify sin A * cosec A",
+    # "cos 60 degree ka maan kya hai?". The plain-value path
+    # below feeds the RAW question (command words, ° signs)
+    # to the expression parser, which turned the words into
+    # letter-products ("°", "°^2", "f·i^2·l·m·p·y·...").
+    # Here the question is reduced to a pure trig expression
+    # first — and parsed ONLY if every remaining word is a
+    # trig function or a single-letter angle — so word
+    # problems (tower, ladder, ...) can never be hijacked.
+    if "^-1" not in q and "arc" not in qlow:
+        _t42 = q.replace("²", "^2").replace("³", "^3")
+        _t42 = re.sub(
+            r"\b(evaluate|calculate|simplify|find|value\s+of|"
+            r"ka\s+maan|kya\s+hai|batao|please|the|of)\b",
+            " ", _t42, flags=re.I)
+        _t42 = re.sub(r"\s*degrees?\b", "°", _t42, flags=re.I)
+        _theta42 = "θ" in _t42 or re.search(r"\btheta\b", _t42,
+                                            re.I)
+        _t42 = _t42.replace("θ", "u")
+        _t42 = re.sub(r"\btheta\b", "u", _t42, flags=re.I)
+        # In degree mode a bare number IS degrees, so the °
+        # signs can simply be dropped — leaving them in made
+        # _convert_degrees produce "sin(30*pi/180)°", and the
+        # parser read the stray ° as a symbol (the "°" / "°^2"
+        # junk answers). In radian mode a ° is contradictory
+        # input: keep it, and the purity gate below falls
+        # through to the old paths.
+        if deg:
+            _t42 = _t42.replace("°", "")
+        # fn^2 30 -> (fn 30)^2 ; fn^2 A -> (fn(A))^2
+        _t42 = re.sub(
+            r"\b(sin|cos|tan|cot|sec|csc)\s*\^\s*([23])\s*"
+            r"(-?\d+(?:\.\d+)?)",
+            r"(\1 \3)^\2", _t42)
+        _t42 = re.sub(
+            r"\b(sin|cos|tan|cot|sec|csc)\s*\^\s*([23])\s+"
+            r"([a-zA-Z])\b",
+            r"(\1(\3))^\2", _t42)
+        # fn A -> fn(A)
+        _t42 = re.sub(
+            r"\b(sin|cos|tan|cot|sec|csc)\s+([a-zA-Z])\b",
+            r"\1(\2)", _t42)
+        if deg:
+            _t42, _ = _convert_degrees(_t42)
+        # implicit multiplication: ")(", ") sin(", "2 ("
+        _t42 = re.sub(r"\)\s*(?=(?:sin|cos|tan|cot|sec|csc)\()",
+                      ")*", _t42)
+        _t42 = re.sub(r"\)\s*\(", ")*(", _t42)
+        _t42 = re.sub(r"(\d)\s*\(", r"\1*(", _t42)
+        _t42 = re.sub(r"\)\s*(\d)", r")*\1", _t42)
+        _t42 = _t42.strip().strip("?.").strip()
+        _toks42 = re.findall(r"[A-Za-z]+", _t42)
+        if _t42 and "°" not in _t42 and re.fullmatch(
+                r"[0-9a-zA-Z\s\.\+\-\*/\^\(\)]+", _t42) and \
+                all(t in ("sin", "cos", "tan", "cot", "sec",
+                          "csc", "pi") or len(t) == 1
+                    for t in _toks42) and re.search(
+                        r"(sin|cos|tan|cot|sec|csc)", _t42):
+            try:
+                _e42 = parse_expression(_t42)
+                if not _e42.free_symbols:
+                    _v42 = sp.simplify(_e42)
+                    steps = [
+                        "Use the standard values (sin 30 = "
+                        "1/2, cos 30 = sqrt(3)/2, tan 45 = 1, "
+                        "...).",
+                        f"The expression evaluates to "
+                        f"{fmt(_v42)} ≈ "
+                        f"{fmt_num(float(_v42))}",
+                    ]
+                    return {
+                        "type": "trigonometry", "op": "value",
+                        "answer": fmt(_v42),
+                        "value": float(_v42),
+                        "steps": steps,
+                    }
+                _s42 = sp.trigsimp(_e42)
+                if _s42 != _e42 or _s42.is_number:
+                    if _theta42:
+                        _s42 = _s42.subs(sp.Symbol("u"),
+                                         sp.Symbol("θ"))
+                    steps = [
+                        "Use sin^2 t + cos^2 t = 1 and the "
+                        "reciprocal relations (sin t · cosec "
+                        "t = 1, tan t · cot t = 1, ...).",
+                        f"The expression simplifies to "
+                        f"{fmt(_s42)}",
+                    ]
+                    return {
+                        "type": "trigonometry",
+                        "op": "simplify",
+                        "answer": fmt(_s42),
+                        "steps": steps,
+                    }
+            except Exception:
+                pass
 
     # --- Plain value: sin 30, cos(pi/3), sin 30 + cos 60 ------------------
     text = q

@@ -137,6 +137,179 @@ def _solve_single_equation(eq_text: str):
     return result
 
 
+# ---------------------------------------------------------------
+# Wave 38: the Class 9/10 system phrasing "If a + b = 10 and
+# a - b = 4, find a and b" reached _solve_system, whose split
+# on "and" fed the tail ", find a" into the expression parser
+# — the letters of "find" became symbols and the answer was
+# complex garbage in f and I (Wave 35 audit #62-65, and the
+# Hindi form #471 never parsed at all). The two helpers below
+# recognise the pattern directly from the raw question text:
+# exactly two linear equations in the same two single-letter
+# unknowns, wherever they sit in the sentence (English or
+# Hindi), plus the a±b / ab identity-value asks (#100).
+# ---------------------------------------------------------------
+_EQ2_RE = re.compile(
+    r"(?<![a-zA-Z])(\d+(?:\.\d+)?)?\s*([a-z])\s*([+\-])\s*"
+    r"(\d+(?:\.\d+)?)?\s*([a-z])\s*=\s*"
+    r"(-?\d+(?:\.\d+)?(?:\s*/\s*\d+)?)")
+
+
+def _rat(s):
+    return sp.Rational(str(s).replace(" ", ""))
+
+
+def _term_str(coef, var):
+    if coef == 1:
+        return var
+    if coef == -1:
+        return f"-{var}"
+    return f"{fmt(coef)}·{var}"
+
+
+def _eq_str(a, u, b, v):
+    left = _term_str(a, u)
+    if b >= 0:
+        left += " + " + _term_str(b, v).lstrip("-")
+    else:
+        left += " - " + _term_str(-b, v)
+    return left
+
+
+def _solve_two_linear(q: str):
+    ql = q.lower()
+    ms = list(_EQ2_RE.finditer(ql))
+    if len(ms) != 2:
+        return None
+    for m in ms:
+        # A leading '-' before the first term ("-a + b = 3") is
+        # not captured by the pattern — decline rather than
+        # solve the wrong system.
+        j = m.start() - 1
+        while j >= 0 and ql[j] == " ":
+            j -= 1
+        if j >= 0 and ql[j] == "-":
+            return None
+    (c1, u1, s1, c2, v1, r1), (c3, u2, s2, c4, v2, r2) = (
+        m.groups() for m in ms)
+    if u1 == v1 or u2 == v2 or {u1, v1} != {u2, v2}:
+        return None
+    u, v = u1, v1
+    a1 = _rat(c1) if c1 else sp.Integer(1)
+    b1 = (_rat(c2) if c2 else sp.Integer(1)) * (1 if s1 == "+" else -1)
+    a2 = sp.Integer(0)
+    b2 = sp.Integer(0)
+    for coef_s, letter, sign in ((c3, u2, "+"), (c4, v2, s2)):
+        coef = (_rat(coef_s) if coef_s else sp.Integer(1)) * (
+            1 if sign == "+" else -1)
+        if letter == u:
+            a2 = coef
+        else:
+            b2 = coef
+    r1, r2 = _rat(r1), _rat(r2)
+    det = a1 * b2 - a2 * b1
+    if det == 0:
+        return None
+    xv = (r1 * b2 - r2 * b1) / det
+    yv = (a1 * r2 - a2 * r1) / det
+    eq1 = f"{_eq_str(a1, u, b1, v)} = {fmt(r1)}"
+    eq2 = f"{_eq_str(a2, u, b2, v)} = {fmt(r2)}"
+    steps = [f"Equations: {eq1} and {eq2}"]
+    if abs(a1) == 1 and abs(a2) == 1 and a1 == a2:
+        # Classic sum/difference shape: one clean elimination.
+        if b1 == -b2:
+            tot = r1 + r2
+            steps.append(
+                f"Add the two equations — the {v} terms cancel: "
+                f"2·{u} = {fmt(tot)}, so {u} = {fmt(xv)}")
+            steps.append(
+                f"Put {u} = {fmt(xv)} in equation (1): "
+                f"{v} = {fmt(yv)}")
+        elif b1 == b2:
+            dif = r1 - r2
+            steps.append(
+                f"Subtract equation (2) from equation (1) — "
+                f"the {u} terms cancel: 2·{v} = {fmt(dif)}, "
+                f"so {v} = {fmt(yv)}")
+            steps.append(
+                f"Put {v} = {fmt(yv)} in equation (1): "
+                f"{u} = {fmt(xv)}")
+    if len(steps) == 1:
+        steps.append(
+            f"Solving the two equations together (elimination) "
+            f"gives {u} = {fmt(xv)} and {v} = {fmt(yv)}")
+        steps.append(
+            f"Check: {_eq_str(a1, u, b1, v)} with these values "
+            f"= {fmt(a1 * xv + b1 * yv)} ✓")
+    answer = f"{u} = {fmt(xv)}, {v} = {fmt(yv)}"
+    steps.append(f"Solution: {answer}")
+    return {
+        "type": "algebra",
+        "op": "system",
+        "answer": answer,
+        "solutions": [fmt(xv), fmt(yv)],
+        "steps": steps,
+    }
+
+
+def _identity_value(q: str):
+    """'If a - b = 4 and ab = 21, find a^2 + b^2' (audit #100)
+    and its (a+b)^2 / (a-b)^2 siblings."""
+    ql = q.lower().replace("²", "^2")
+    m_prod = re.search(r"\b([a-z])\s*\*?\s*([a-z])\s*=\s*"
+                       r"(-?\d+(?:\.\d+)?)", ql)
+    m_pm = re.search(r"\b([a-z])\s*([+\-])\s*([a-z])\s*=\s*"
+                     r"(-?\d+(?:\.\d+)?)", ql)
+    if not m_prod or not m_pm:
+        return None
+    u, v = m_pm.group(1), m_pm.group(3)
+    if {m_prod.group(1), m_prod.group(2)} != {u, v} or u == v:
+        return None
+    P = _rat(m_prod.group(3))
+    D = _rat(m_pm.group(4))
+    sign = m_pm.group(2)
+    given = f"{u} {'+' if sign == '+' else '-'} {v} = {fmt(D)}"
+    steps = [f"Given: {given} and {u}{v} = {fmt(P)}"]
+    if re.search(rf"\b{u}\s*\^\s*2\s*\+\s*{v}\s*\^\s*2\b", ql):
+        if sign == "-":
+            val = D ** 2 + 2 * P
+            steps.append(
+                f"({u} - {v})^2 = {u}^2 + {v}^2 - 2{u}{v}, so "
+                f"{u}^2 + {v}^2 = ({fmt(D)})^2 + 2·{fmt(P)} "
+                f"= {fmt(val)}")
+        else:
+            val = D ** 2 - 2 * P
+            steps.append(
+                f"({u} + {v})^2 = {u}^2 + {v}^2 + 2{u}{v}, so "
+                f"{u}^2 + {v}^2 = ({fmt(D)})^2 - 2·{fmt(P)} "
+                f"= {fmt(val)}")
+        return {"type": "algebra", "op": "identity_value",
+                "answer": fmt(val), "value": float(val),
+                "steps": steps}
+    m_t = re.search(r"\(\s*([a-z])\s*([+\-])\s*([a-z])\s*\)"
+                    r"\s*\^\s*2", ql)
+    if m_t and m_t.group(1) == u and m_t.group(3) == v:
+        tsign = m_t.group(2)
+        if tsign == sign:
+            val = D ** 2
+            steps.append(f"That is just ({given.split(' = ')[0]})^2 "
+                         f"= ({fmt(D)})^2 = {fmt(val)}")
+        elif sign == "-":
+            val = D ** 2 + 4 * P
+            steps.append(
+                f"({u} + {v})^2 = ({u} - {v})^2 + 4{u}{v} "
+                f"= ({fmt(D)})^2 + 4·{fmt(P)} = {fmt(val)}")
+        else:
+            val = D ** 2 - 4 * P
+            steps.append(
+                f"({u} - {v})^2 = ({u} + {v})^2 - 4{u}{v} "
+                f"= ({fmt(D)})^2 - 4·{fmt(P)} = {fmt(val)}")
+        return {"type": "algebra", "op": "identity_value",
+                "answer": fmt(val), "value": float(val),
+                "steps": steps}
+    return None
+
+
 def _solve_system(eq_text: str):
     parts = [p for p in re.split(r";|\band\b|,", eq_text) if "=" in p]
     eqs, syms = [], set()
@@ -577,6 +750,16 @@ def solve_algebra(question: str):
 
     if re.search(r"(<=|>=|<|>)", q):
         return _solve_inequality(q)
+
+    # Wave 38: exact two-linear-equation and identity-value
+    # patterns read the RAW question (the generic system path
+    # below mangles any sentence wrapped around the equations).
+    _idv = _identity_value(q)
+    if _idv is not None:
+        return _idv
+    _two = _solve_two_linear(q)
+    if _two is not None:
+        return _two
 
     eq_text = _strip_solve_prefix(q)
     n_eq = eq_text.count("=")

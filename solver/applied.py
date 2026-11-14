@@ -205,16 +205,37 @@ def _simple_interest(q):
 
 def _profit_loss(q):
     m = re.search(
-        r"\bbought\s+(?:for|at)?\s*(?:" + _RS + r"\s*)?(" + _NUM
-        + r")[\s\S]{0,30}?\bsold\s+(?:for|at)?\s*(?:" + _RS
+        r"\bbought\b[\s\S]{0,40}?(?:" + _RS + r"\s*)?(" + _NUM
+        + r")[\s\S]{0,30}?\bsold\b[\s\S]{0,30}?(?:" + _RS
         + r"\s*)?(" + _NUM + r")", q) or re.search(
-            r"\bcost\s+price\s+(?:is\s+)?(?:" + _RS + r"\s*)?("
-            + _NUM + r")[\s\S]{0,30}?\bselling\s+price\s+"
-            r"(?:is\s+)?(?:" + _RS + r"\s*)?(" + _NUM + r")", q) \
+            r"\bcost\s+price\b[\s\S]{0,30}?(?:" + _RS + r"\s*)?("
+            + _NUM + r")[\s\S]{0,30}?\bselling\s+price\b"
+            r"[\s\S]{0,20}?(?:" + _RS + r"\s*)?(" + _NUM + r")",
+            q) \
         or re.search(
             r"\bcp\s*(?:is|=)?\s*(?:" + _RS + r"\s*)?(" + _NUM
             + r")[\s\S]{0,20}?\bsp\s*(?:is|=)?\s*(?:" + _RS
-            + r"\s*)?(" + _NUM + r")", q)
+            + r"\s*)?(" + _NUM + r")", q) \
+        or re.search(
+            # Wave 38: present-tense NCERT phrasing — "A
+            # shopkeeper buys an article for Rs 500 and sells
+            # it for Rs 575" (Wave 35 audit #16-20: 0/10 exact;
+            # only the bought/sold past tense was recognised).
+            r"\bbuys?\b[\s\S]{0,50}?(?:" + _RS + r"\s*)?("
+            + _NUM + r")[\s\S]{0,40}?\bsells?\b[\s\S]{0,30}?"
+            r"(?:" + _RS + r"\s*)?(" + _NUM + r")", q) \
+        or re.search(
+            # Wave 38: Hindi — "800 रुपये में खरीदकर 1000 रुपये
+            # में बेची गई" (audit #476).
+            r"(" + _NUM + r")\s*(?:रुपये|रुपया)\s*में\s*खरीदकर\s*"
+            r"(" + _NUM + r")\s*(?:रुपये|रुपया)?\s*में\s*बेच",
+            q) \
+        or re.search(
+            # Wave 38: Roman Hinglish — "250 me khareedi aur
+            # 300 me bechi" (audit #422).
+            r"(" + _NUM + r")\s*(?:me|mein)\s*(?:khareed\w*|"
+            r"kharid\w*)[\s\S]{0,30}?(" + _NUM + r")\s*"
+            r"(?:me|mein)\s*bech\w*", q)
     if not m:
         return None
     cp, sp_ = _num(m.group(1)), _num(m.group(2))
@@ -222,7 +243,8 @@ def _profit_loss(q):
         return None
     diff = sp_ - cp
     kind = "Profit" if diff > 0 else "Loss" if diff < 0 else "None"
-    wants_pct = bool(re.search(r"percent|percentage|%", q))
+    wants_pct = bool(re.search(
+        r"percent|percentage|%|प्रतिशत|pratishat", q))
     steps = [
         f"Cost price (CP) = Rs {fmt_num(cp)}, selling price "
         f"(SP) = Rs {fmt_num(sp_)}",
@@ -847,6 +869,66 @@ def _profit_loss_forms(q):
         return {"type": "applied", "op": "profit_loss_sp",
                 "answer": f"Rs {fmt_num(sp_)}", "steps": steps,
                 "value": sp_}
+    # Wave 38: the same SP ask with the % stated BEFORE the CP
+    # — "A man sells an article at a loss of 15%. If the cost
+    # price is Rs 2000, find the selling price." (audit #256;
+    # the block above needs CP first, % second).
+    m = re.search(
+        r"\b(profit|loss)\s+of\s+(" + _NUM + r")\s*%"
+        r"[\s\S]{0,60}?(?:cost\s+price|cp)\s+(?:is\s+)?"
+        r"(?:" + _RS + r"\s*)?(" + _NUM + r")", q)
+    if m and "selling" in q:
+        kind, p, cp = m.group(1), _num(m.group(2)), \
+            _num(m.group(3))
+        if kind == "loss":
+            if p >= 100:
+                return None
+            sp_ = cp * (1 - p / 100.0)
+            steps = [f"SP = CP × (1 - loss/100) = "
+                     f"{fmt_num(cp)} × {fmt_num(1 - p / 100)} "
+                     f"= Rs {fmt_num(sp_)}"]
+        else:
+            sp_ = cp * (1 + p / 100.0)
+            steps = [f"SP = CP × (1 + profit/100) = "
+                     f"{fmt_num(cp)} × {fmt_num(1 + p / 100)} "
+                     f"= Rs {fmt_num(sp_)}"]
+        return {"type": "applied", "op": "profit_loss_sp",
+                "answer": f"Rs {fmt_num(sp_)}", "steps": steps,
+                "value": sp_}
+    # Wave 38: "By selling a watch for Rs 1275, a man loses
+    # 15%. Find the cost price." (audit #257) — the verb form
+    # "loses/gains P%" after the SP, where the first block
+    # needs "sold at/for ... loss of P%".
+    m = re.search(
+        r"(?:selling|sold)\b[\s\S]{0,40}?(?:" + _RS + r"\s*)?"
+        r"(" + _NUM + r")[\s\S]{0,40}?\b(loses|gains)\s+("
+        + _NUM + r")\s*%", q)
+    if m:
+        sp_, verb, p = _num(m.group(1)), m.group(2), \
+            _num(m.group(3))
+        if verb == "loses":
+            if p >= 100:
+                return None
+            cp = sp_ / (1 - p / 100.0)
+            steps = [
+                f"With a loss of {fmt_num(p)}%, SP = CP × "
+                f"(1 - {fmt_num(p)}/100) = "
+                f"{fmt_num(1 - p / 100)} × CP",
+                f"CP = {fmt_num(sp_)} ÷ "
+                f"{fmt_num(1 - p / 100)} = Rs {fmt_num(cp)}",
+            ]
+        else:
+            cp = sp_ / (1 + p / 100.0)
+            steps = [
+                f"With a profit of {fmt_num(p)}%, SP = CP × "
+                f"(1 + {fmt_num(p)}/100) = "
+                f"{fmt_num(1 + p / 100)} × CP",
+                f"CP = {fmt_num(sp_)} ÷ "
+                f"{fmt_num(1 + p / 100)} = Rs {fmt_num(cp)}",
+            ]
+        return {"type": "applied", "op": "reverse_profit_loss",
+                "answer": f"Rs {fmt_num(cp)}", "steps": steps,
+                "value": cp}
     return None
 
 

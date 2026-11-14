@@ -1014,9 +1014,141 @@ def _threed(q):
     return None
 
 
+def _sqrt_answer(sq):
+    """(answer_text, value) for sqrt(sq): exact integer when sq
+    is a perfect square, else the surd with a decimal."""
+    r = math.isqrt(int(sq)) if float(sq).is_integer() else None
+    if r is not None and r * r == int(sq):
+        return str(r), float(r)
+    val = math.sqrt(sq)
+    return f"√{fmt_num(sq)} ≈ {val:.4f}", val
+
+
+def _pythagoras(q):
+    """Wave 38: Pythagoras theorem — the audit found NO pattern
+    at all (0/6 exact, Wave 35 #352-356, #430): hypotenuse from
+    two legs, a leg from hypotenuse + other leg, rectangle /
+    square diagonals, and the right-angle check (EN + Hindi).
+    """
+    # Hindi right-angle check: three side lengths + समकोण.
+    if "समकोण" in q:
+        nums = [float(v) for v in re.findall(r"\d+(?:\.\d+)?", q)]
+        if len(nums) >= 3:
+            a, b, c = sorted(nums[:3])
+            steps = [
+                f"भुजाएँ: {fmt_num(a)}, {fmt_num(b)}, "
+                f"{fmt_num(c)} (सबसे बड़ी भुजा = {fmt_num(c)})",
+                f"{fmt_num(a)}^2 + {fmt_num(b)}^2 = "
+                f"{fmt_num(a * a + b * b)} और "
+                f"{fmt_num(c)}^2 = {fmt_num(c * c)}",
+            ]
+            if a * a + b * b == c * c:
+                steps.append("दोनों बराबर हैं, इसलिए पाइथागोरस "
+                             "प्रमेय से यह समकोण त्रिभुज है।")
+                return ("pythagoras_check",
+                        "Yes, it is a right-angled triangle",
+                        steps)
+            steps.append("दोनों बराबर नहीं हैं, इसलिए यह "
+                         "समकोण त्रिभुज नहीं है।")
+            return ("pythagoras_check",
+                    "No, it is not a right-angled triangle",
+                    steps)
+        return None
+
+    if "hypotenuse" in q:
+        mh = re.search(r"hypotenuse\s*(?:is\s*)?(\d+(?:\.\d+)?)",
+                       q)
+        ml = re.search(r"(?:one\s+)?leg\s*(?:is\s*)?"
+                       r"(\d+(?:\.\d+)?)", q)
+        if mh and ml:
+            H, L = float(mh.group(1)), float(ml.group(1))
+            if H > L:
+                ans, _v = _sqrt_answer(H * H - L * L)
+                steps = [
+                    "Pythagoras theorem: hypotenuse^2 = "
+                    "leg1^2 + leg2^2",
+                    f"Other leg = sqrt({fmt_num(H)}^2 - "
+                    f"{fmt_num(L)}^2) = sqrt({fmt_num(H * H)} - "
+                    f"{fmt_num(L * L)})",
+                    f"= {ans}",
+                ]
+                return ("pythagoras_leg", ans, steps)
+        nums = [float(v) for v in re.findall(r"\d+(?:\.\d+)?", q)]
+        if "leg" in q and len(nums) >= 2:
+            a, b = nums[0], nums[1]
+            ans, _v = _sqrt_answer(a * a + b * b)
+            steps = [
+                "Pythagoras theorem: hypotenuse^2 = "
+                "leg1^2 + leg2^2",
+                f"= {fmt_num(a)}^2 + {fmt_num(b)}^2 = "
+                f"{fmt_num(a * a)} + {fmt_num(b * b)} = "
+                f"{fmt_num(a * a + b * b)}",
+                f"Hypotenuse = {ans}",
+            ]
+            return ("pythagoras_hypotenuse", ans, steps)
+
+    if "diagonal" in q and "rectangle" in q:
+        ml = re.search(r"length\s*(?:is\s*)?(\d+(?:\.\d+)?)", q)
+        mb = re.search(r"(?:breadth|width)\s*(?:is\s*)?"
+                       r"(\d+(?:\.\d+)?)", q)
+        if ml and mb:
+            a, b = float(ml.group(1)), float(mb.group(1))
+            ans, _v = _sqrt_answer(a * a + b * b)
+            steps = [
+                "The diagonal splits the rectangle into two "
+                "right triangles, so Pythagoras applies: "
+                "diagonal^2 = length^2 + breadth^2",
+                f"= {fmt_num(a)}^2 + {fmt_num(b)}^2 = "
+                f"{fmt_num(a * a + b * b)}",
+                f"Diagonal = {ans}",
+            ]
+            return ("pythagoras_diagonal", ans, steps)
+    if "diagonal" in q and "square" in q:
+        ms = re.search(r"side\s*(?:is\s*)?(\d+(?:\.\d+)?)", q)
+        if ms:
+            s = float(ms.group(1))
+            ans, _v = _sqrt_answer(2 * s * s)
+            steps = [
+                "Diagonal of a square = side × √2 (Pythagoras "
+                "on the two equal sides)",
+                f"= {fmt_num(s)} × √2 = {ans}",
+            ]
+            return ("pythagoras_diagonal", ans, steps)
+
+    # English right-angle check from three sides.
+    if "right" in q and "side" in q and (
+            "?" in q or "whether" in q or "check" in q):
+        nums = [float(v) for v in re.findall(r"\d+(?:\.\d+)?", q)]
+        if len(nums) >= 3:
+            a, b, c = sorted(nums[:3])
+            steps = [
+                f"Sides: {fmt_num(a)}, {fmt_num(b)}, "
+                f"{fmt_num(c)}; the largest side "
+                f"{fmt_num(c)} would be the hypotenuse.",
+                f"{fmt_num(a)}^2 + {fmt_num(b)}^2 = "
+                f"{fmt_num(a * a + b * b)} and {fmt_num(c)}^2 "
+                f"= {fmt_num(c * c)}",
+            ]
+            if a * a + b * b == c * c:
+                steps.append("They are equal, so by the "
+                             "Pythagoras theorem the triangle "
+                             "IS right-angled.")
+                return ("pythagoras_check",
+                        "Yes, it is a right-angled triangle",
+                        steps)
+            steps.append("They are not equal, so the triangle "
+                         "is NOT right-angled.")
+            return ("pythagoras_check",
+                    "No, it is not a right-angled triangle",
+                    steps)
+    return None
+
+
 def solve_geometry(question: str):
     q = question.lower()
-    out = _third_angle(q)
+    out = _pythagoras(q)
+    if out is None:
+        out = _third_angle(q)
     if out is None:
         out = _threed(q)
     if out is None:

@@ -520,14 +520,29 @@ def solve_calculus(question: str):
         }
 
     # Integral: "integrate x^2", "integrate x from 0 to 1", "integral of x"
+    # Wave 38: the pattern used to require "integrat..." — the
+    # word "integral" does not contain "integrat", so EVERY
+    # "integral of ..." ask missed it and fell to the
+    # derivative_and_integral fallback, which parsed the whole
+    # sentence into letter-soup (Wave 35 audit: integration
+    # 0/6). "with respect to x" also stayed glued to the
+    # integrand and broke the parse; it now names the variable.
     m = re.search(
-        r"\bintegrat\w*\b\s*(?:of\s*)?(.+?)\s*"
+        r"\bintegr\w*\b\s*(?:of\s*)?(.+?)\s*"
         r"(?:from\s+(.+?)\s+to\s+(.+))?$",
         q, re.I,
     )
     if m:
         expr_text = m.group(1)
-        expr_text = re.sub(r"\s*d[a-zA-Z]\s*$", "", expr_text).strip()
+        wrt_var = None
+        _mwrt = re.search(
+            r"\s+(?:with\s+respect\s+to|w\.?r\.?t\.?)\s*"
+            r"([a-zA-Z])\s*\.?\s*$", expr_text, re.I)
+        if _mwrt:
+            wrt_var = _mwrt.group(1)
+            expr_text = expr_text[:_mwrt.start()]
+        expr_text = re.sub(r"\s*d[a-zA-Z]\s*$", "", expr_text)
+        expr_text = expr_text.strip().strip(".").strip()
         wants_graph = bool(re.search(
             r"\b(graph|plot|sketch|shade|diagram)\b", q, re.I))
         bound_b = m.group(3)
@@ -537,8 +552,10 @@ def solve_calculus(question: str):
             mb = re.match(r"\s*(-?\d+(?:\.\d+)?|[a-zA-Z])\b", bound_b)
             if mb:
                 bound_b = mb.group(1)
+        if bound_b:
+            bound_b = bound_b.strip().rstrip(".")
         expr = parse_expression(expr_text)
-        var = _guess_symbol(expr)
+        var = symbols(wrt_var) if wrt_var else _guess_symbol(expr)
         if m.group(2) and bound_b:
             a, b = parse_expression(m.group(2)), parse_expression(bound_b)
             val = integrate(expr, (var, a, b))

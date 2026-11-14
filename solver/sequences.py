@@ -7,6 +7,11 @@ import sympy as sp
 from .expression_parser import fmt_num
 
 
+# Wave 42: Devanagari digits (०१२३४५६७८९) -> ASCII, for parsing
+# Hindi questions that write their numbers in Devanagari.
+_DEV_DIGITS_42 = {ord("०") + i: str(i) for i in range(10)}
+
+
 def _parse_series(text: str):
     """Numbers of an explicit series like '2, 5, 8' (stops at '...' etc.)."""
     m = re.search(r"(-?\d+(?:\.\d+)?(?:\s*,\s*-?\d+(?:\.\d+)?)+)", text)
@@ -51,6 +56,101 @@ def _ordinal(n):
 def solve_sequences(question: str):
     q = question.lower()
     params = _get_params(q)
+
+    # --- Wave 42: Hindi / Hinglish AP phrasing + next term ----
+    # Wave 33 covered Hindi probability but left Hindi AP
+    # behind: "समांतर श्रेढ़ी 5, 10, 15, ... का 12वां पद" and
+    # Roman forms ("12va pad", "pehle 10 padon ka yog") matched
+    # no English pattern and fell to a concept/guide fallback.
+    # The ordinal/sum markers below mirror the English AP
+    # coverage (nth term, sum of n terms); steps stay in
+    # English, the house convention for Hindi patterns.
+    _qn = question.translate(_DEV_DIGITS_42)
+    _ql = _qn.lower()
+    _terms42 = _parse_series(_qn)
+    _kind42, _d42 = _classify(_terms42) if _terms42 \
+        else (None, None)
+    _hi42 = any(t in _qn for t in ("समांतर", "श्रेढ़ी",
+                                   "श्रेणी")) \
+        or re.search(r"sama?ntar|shreni|shredi|shrenee", _ql) \
+        or re.search(r"\d+\s*(?:वां|वाँ|वीं|वा)\s*पद", _qn) \
+        or re.search(r"\d+\s*(?:va|wa|vaa)\s+pad\b", _ql) \
+        or re.search(r"पदों\s*का\s*योग|padon\s+ka\s+"
+                     r"(?:yog|jod)", _ql)
+    _next42 = "अगला पद" in _qn or "agla pad" in _ql \
+        or "next term" in _ql
+    if _terms42 and _kind42 in ("AP", "GP") and \
+            (_hi42 or _next42):
+        _a42 = _terms42[0]
+        if _next42 and not re.search(
+                r"\d+\s*(?:वां|वाँ|वीं|वा)\s*पद", _qn):
+            if _kind42 == "AP":
+                _val = _terms42[-1] + _d42
+                steps = [
+                    f"AP with a = {fmt_num(_a42)}, "
+                    f"d = {fmt_num(_d42)}",
+                    f"Each term adds {fmt_num(_d42)}, so the "
+                    f"term after {fmt_num(_terms42[-1])} is "
+                    f"{fmt_num(_terms42[-1])} + "
+                    f"{fmt_num(_d42)} = {fmt_num(_val)}",
+                ]
+                return {"type": "sequences",
+                        "op": "ap_next_term",
+                        "answer": fmt_num(_val), "value": _val,
+                        "steps": steps}
+            _val = _terms42[-1] * _d42
+            steps = [
+                f"GP with a = {fmt_num(_a42)}, "
+                f"r = {fmt_num(_d42)}",
+                f"Each term multiplies by {fmt_num(_d42)}, "
+                f"so the term after {fmt_num(_terms42[-1])} "
+                f"is {fmt_num(_terms42[-1])} × "
+                f"{fmt_num(_d42)} = {fmt_num(_val)}",
+            ]
+            return {"type": "sequences", "op": "gp_next_term",
+                    "answer": fmt_num(_val), "value": _val,
+                    "steps": steps}
+        if _kind42 == "AP":
+            _msum = re.search(r"(?:पहले|प्रथम)\s*(\d+)\s*पद",
+                              _qn) \
+                or re.search(r"pehle\s+(\d+)\s+pad", _ql) \
+                or re.search(r"(\d+)\s*पदों\s*का\s*योग", _qn) \
+                or re.search(r"(\d+)\s*padon\s+ka\s+"
+                             r"(?:yog|jod)", _ql)
+            if _msum and ("योग" in _qn or "जोड़" in _qn
+                          or "yog" in _ql or "jod" in _ql):
+                _n = int(_msum.group(1))
+                _val = _n * (2 * _a42 + (_n - 1) * _d42) / 2
+                steps = [
+                    f"AP with a = {fmt_num(_a42)}, "
+                    f"d = {fmt_num(_d42)}",
+                    "Sum of first n terms: S_n = n/2 · "
+                    "(2a + (n - 1)d)",
+                    f"S_{_n} = {_n}/2 × (2×{fmt_num(_a42)} + "
+                    f"{_n - 1}×{fmt_num(_d42)}) = "
+                    f"{fmt_num(_val)}",
+                ]
+                return {"type": "sequences", "op": "ap_sum",
+                        "answer": fmt_num(_val), "value": _val,
+                        "steps": steps}
+            _mn = re.search(r"(\d+)\s*(?:वां|वाँ|वीं|वा)\s*"
+                            r"पद", _qn) \
+                or re.search(r"(\d+)\s*(?:va|wa|vaa)\s+pad\b",
+                             _ql)
+            if _mn:
+                _n = int(_mn.group(1))
+                _val = _a42 + (_n - 1) * _d42
+                steps = [
+                    f"AP with a = {fmt_num(_a42)}, "
+                    f"d = {fmt_num(_d42)}",
+                    "nth term: a_n = a + (n - 1)d",
+                    f"a_{_n} = {fmt_num(_a42)} + ({_n} - 1) × "
+                    f"{fmt_num(_d42)} = {fmt_num(_val)}",
+                ]
+                return {"type": "sequences",
+                        "op": "ap_nth_term",
+                        "answer": fmt_num(_val), "value": _val,
+                        "steps": steps}
 
     # --- Wave 33: nth term from a given S_n -------------------
     # "The sum of the first n terms of an AP is 3n^2 + 5n.
@@ -211,6 +311,37 @@ def solve_sequences(question: str):
     kind, ratio_diff = (None, None)
     if terms:
         kind, ratio_diff = _classify(terms)
+    # Wave 38: an explicit "GP" / "AP" label in the question
+    # beats _classify's two-term default — two terms alone are
+    # read as an AP (difference), so "8th term of the GP 3, 6,
+    # ..." answered 24 (the AP value) instead of 384 (Wave 35
+    # audit #117-119). The student's own label is authoritative.
+    if terms and len(terms) >= 2:
+        if re.search(r"\bgp\b|geometric", q):
+            if terms[0] != 0:
+                kind, ratio_diff = "GP", terms[1] / terms[0]
+        elif re.search(r"\bap\b|arithmetic", q):
+            kind, ratio_diff = "AP", terms[1] - terms[0]
+    # Wave 38: parameters stated in words ("the first term is
+    # 4 and the common ratio is 3") — _get_params only reads
+    # the a= / r= forms, so these asks got "I need the first
+    # term and common ratio" despite stating both.
+    if "a" not in params:
+        _mw = re.search(r"first\s+term\s+is\s+(-?\d+(?:\.\d+)?)", q)
+        if _mw:
+            _v = float(_mw.group(1))
+            params["a"] = int(_v) if _v == int(_v) else _v
+    if "r" not in params:
+        _mw = re.search(r"common\s+ratio\s+is\s+(-?\d+(?:\.\d+)?)", q)
+        if _mw:
+            _v = float(_mw.group(1))
+            params["r"] = int(_v) if _v == int(_v) else _v
+    if "d" not in params:
+        _mw = re.search(r"common\s+difference\s+is\s+"
+                        r"(-?\d+(?:\.\d+)?)", q)
+        if _mw:
+            _v = float(_mw.group(1))
+            params["d"] = int(_v) if _v == int(_v) else _v
     if kind is None:
         if "gp" in q or "geometric" in q:
             kind = "GP"
@@ -339,6 +470,31 @@ def solve_sequences(question: str):
                             "common ratio again and again never "
                             f"reaches {fmt_num(V)}.",
                         ]}
+        # Wave 38: sum to infinity (only exists for |r| < 1).
+        if "infinit" in q:
+            if abs(r) < 1:
+                val = a / (1 - r)
+                steps = [
+                    f"GP with a = {fmt_num(a)}, r = {fmt_num(r)}",
+                    "Sum to infinity: S = a / (1 - r), valid "
+                    "because |r| < 1",
+                    f"S = {fmt_num(a)} / (1 - {fmt_num(r)}) = "
+                    f"{fmt_num(val)}",
+                ]
+                return {"type": "sequences",
+                        "op": "gp_sum_infinity",
+                        "answer": fmt_num(val), "value": val,
+                        "steps": steps}
+            return {"type": "sequences", "op": "gp_sum_infinity",
+                    "answer": "The sum to infinity does not "
+                              "exist, because |r| >= 1, so the "
+                              "terms do not shrink to zero.",
+                    "steps": [
+                        f"GP with a = {fmt_num(a)}, "
+                        f"r = {fmt_num(r)}: |r| >= 1, so each "
+                        "term is at least as big as the one "
+                        "before and the sum grows without "
+                        "bound."]}
         m = re.search(r"(\d+)(?:st|nd|rd|th)\s+term", q)
         wants_sum = "sum" in q
         n = None

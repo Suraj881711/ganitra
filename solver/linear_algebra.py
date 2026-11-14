@@ -57,6 +57,61 @@ def solve_linear_algebra(question: str):
         raise ValueError("Provide a matrix like [[1,2],[3,4]].")
     M = mats[0]
 
+    # Wave 42: named two-matrix ops — "find A - B", "find AB".
+    # The old block only saw operator characters or keywords
+    # between the matrices, so "find A - B" silently returned
+    # A + B and "find AB" fell through entirely. "Subtract X
+    # from Y" names the subtrahend first: the result is Y - X,
+    # NOT text order (the old code returned [[-4, -4], ...]
+    # for "Subtract [[5,6],[7,8]] from [[9,10],[11,12]]").
+    _named42 = None
+    _sub_from42 = False
+    if len(mats) >= 2:
+        if re.search(r"(?<![A-Za-z])A\s*-\s*B(?![A-Za-z])", q):
+            _named42 = ("subtract", mats[0] - mats[1],
+                        "A - B: subtract the second matrix "
+                        "from the first, entry by entry.")
+        elif re.search(r"(?<![A-Za-z])B\s*-\s*A(?![A-Za-z])", q):
+            _named42 = ("subtract", mats[1] - mats[0],
+                        "B - A: subtract the first matrix "
+                        "from the second, entry by entry.")
+        elif re.search(r"(?<![A-Za-z])A\s*\+\s*B(?![A-Za-z])", q):
+            _named42 = ("add", mats[0] + mats[1],
+                        "A + B: add the two matrices entry "
+                        "by entry.")
+        elif re.search(r"(?<![A-Za-z])AB(?![A-Za-z])", q) or \
+                re.search(r"(?<![A-Za-z])A\s*\*\s*B"
+                          r"(?![A-Za-z])", q):
+            _named42 = ("multiply", mats[0] * mats[1],
+                        "AB: multiply the first matrix by "
+                        "the second — each entry is a "
+                        "row·column dot product.")
+        elif re.search(r"(?<![A-Za-z])BA(?![A-Za-z])", q):
+            _named42 = ("multiply", mats[1] * mats[0],
+                        "BA: multiply the second matrix by "
+                        "the first — each entry is a "
+                        "row·column dot product.")
+        _si42 = ql.find("subtract")
+        if _named42 is None and _si42 != -1 \
+                and "[[" in ql[_si42:] \
+                and re.search(r"\bfrom\b", ql[_si42:]):
+            _sub_from42 = True
+    if _sub_from42:
+        R = mats[1] - mats[0]
+        steps = [
+            "'Subtract X from Y' means Y - X: subtract the "
+            "first-named matrix from the second, entry by "
+            "entry.",
+            f"Result: {_mstr(R)}",
+        ]
+        return {"type": "linear_algebra", "op": "subtract",
+                "answer": _mstr(R), "steps": steps}
+    if _named42 is not None:
+        _op42, _R42, _step42 = _named42
+        return {"type": "linear_algebra", "op": _op42,
+                "answer": _mstr(_R42),
+                "steps": [_step42, f"Result: {_mstr(_R42)}"]}
+
     # Two-matrix arithmetic: [[..]] * [[..]], "multiply", "add", ...
     _between = q.split("]]", 1)[1] if "]]" in q else ""
     if len(mats) >= 2 and (
@@ -88,7 +143,30 @@ def solve_linear_algebra(question: str):
         return {"type": "linear_algebra", "op": opname,
                 "answer": _mstr(R), "steps": steps}
 
-    if "det" in ql or "determinant" in ql:
+    # Wave 42: scalar multiple — "Find 2A if A = [[...]]",
+    # "Find A * 3". One matrix, one number: multiply every
+    # entry. Skipped when another matrix task is named.
+    if len(mats) == 1 and re.search(r"\bA\s*=", q) and not \
+            re.search(r"determinant|inverse|transpose|rank|"
+                      r"trace|eigen", ql):
+        _ms42 = re.search(r"(?<![\d.])(\d+(?:\.\d+)?)\s*\*?\s*"
+                          r"A\b", q) or re.search(
+                              r"\bA\s*\*\s*(\d+(?:\.\d+)?)", q)
+        if _ms42:
+            _k42 = sp.nsimplify(_ms42.group(1), rational=True)
+            R = _k42 * M
+            steps = [
+                f"Scalar multiplication: multiply every entry "
+                f"of A by {fmt(_k42)}.",
+                f"Result: {_mstr(R)}",
+            ]
+            return {"type": "linear_algebra",
+                    "op": "scalar_multiply",
+                    "answer": _mstr(R), "steps": steps}
+
+    # Wave 42: "|A|" is the school notation for det(A).
+    if "det" in ql or "determinant" in ql or \
+            re.search(r"\|\s*A\s*\|", q):
         d = M.det()
         steps = [f"Matrix: {_mstr(M)}"]
         if M.rows == 2 and M.cols == 2:
