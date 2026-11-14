@@ -139,9 +139,15 @@ def _probability(q: str):
         ]
         return _prob_answer(Fraction(prob).limit_denominator(10**9), steps)
 
-    # Coins: exactly k heads in n tosses (or "2 heads in 3 tosses")
+    # Coins: exactly k heads in n tosses (or "2 heads in 3 tosses").
+    # Wave 31: "at least / at most k heads in n tosses" must NOT be
+    # hijacked by this exactly-shortcut (the "exactly" below is
+    # optional) — those fall through to the enumeration block,
+    # which knows the quantifiers.
     m = re.search(r"(?:exactly\s+)?(\d+)\s+heads?\s+in\s+(\d+)\s+"
                   r"(?:coin\s+)?tosses", ql)
+    if m and re.search(r"at\s+(?:least|most)\s+$", ql[:m.start()]):
+        m = None
     if m:
         k, n = int(m.group(1)), int(m.group(2))
         from math import comb
@@ -152,40 +158,74 @@ def _probability(q: str):
             f"= {fav}",
         ]
         return _prob_answer(Fraction(fav, 2**n), steps)
-    # Coins tossed together (Wave 30): enumerate the outcomes.
-    # The old shortcut below answered 1/2 for ANY coin+head
-    # question — "two coins ... at least one head" is 3/4.
+    # Coins tossed together (Wave 30; full event set, Wave 31):
+    # enumerate the outcomes and count the matches. The legacy
+    # single-coin shortcuts just below answer 1/2 for ANY
+    # coin+head / coin+tail question, so every standard event
+    # must be recognised here first. Wave 30 covered only
+    # "at least / exactly ... heads / both / no head" — "two
+    # coins ... at most one head" (correct 3/4) silently fell
+    # through to the shortcut and returned 1/2, and "no tail" /
+    # "at most ... tail" / "exactly ... tails" were missing too.
     if "coin" in ql and ("toss" in ql or "throw" in ql
                          or "flip" in ql):
-        _mc = re.search(r"\b(one|two|three|four|five|\d+)\s+"
-                        r"coins?\b", ql)
         _words = {"one": 1, "two": 2, "three": 3, "four": 4,
                   "five": 5}
-        _n = _words.get(_mc.group(1)) if _mc else 1
-        if _n is None:
-            _n = int(_mc.group(1))
+        _num = r"(one|two|three|four|five|\d+)"
+
+        def _cnt(word):
+            _w = _words.get(word)
+            return _w if _w is not None else int(word)
+
+        # How many coins? "two coins" / "a pair of coins", or one
+        # coin tossed repeatedly ("in 3 tosses", "tossed twice");
+        # otherwise a single coin.
+        _mc = re.search(r"\b" + _num + r"\s+coins?\b", ql)
+        if _mc:
+            _n = _cnt(_mc.group(1))
+        elif re.search(r"\ba\s+pair\s+of\s+coins?\b", ql):
+            _n = 2
+        elif re.search(r"\btossed\s+twice\b", ql):
+            _n = 2
+        else:
+            _mr = re.search(r"\bin\s+" + _num + r"\s+tosses\b",
+                            ql)
+            _n = _cnt(_mr.group(1)) if _mr else 1
         if 1 <= _n <= 5:
             outcomes = list(_iproduct("HT", repeat=_n))
             _ev = None
-            _mk = re.search(r"exactly\s+(one|two|three|four|"
-                            r"\d+)\s+heads?", ql)
-            if "at least one head" in ql:
-                _ev = (lambda h: h >= 1, "at least one head")
-            elif "at least one tail" in ql:
-                _ev = (lambda h, n=_n: n - h >= 1,
-                       "at least one tail")
-            elif _mk:
-                _k = _words.get(_mk.group(1))
-                if _k is None:
-                    _k = int(_mk.group(1))
-                _ev = (lambda h, k=_k: h == k,
-                       f"exactly {_k} head(s)")
-            elif "both heads" in ql or "all heads" in ql:
-                _ev = (lambda h, n=_n: h == n, "all heads")
-            elif "both tails" in ql or "all tails" in ql:
-                _ev = (lambda h: h == 0, "all tails")
-            elif "no head" in ql:
-                _ev = (lambda h: h == 0, "no head")
+            # (pattern, test(heads_count, k)) — the label is the
+            # matched phrase itself, e.g. "at most one head".
+            _specs = [
+                (r"at\s+least\s+" + _num + r"\s+heads?",
+                 lambda h, k: h >= k),
+                (r"at\s+least\s+" + _num + r"\s+tails?",
+                 lambda h, k, n=_n: n - h >= k),
+                (r"at\s+most\s+" + _num + r"\s+heads?",
+                 lambda h, k: h <= k),
+                (r"at\s+most\s+" + _num + r"\s+tails?",
+                 lambda h, k, n=_n: n - h <= k),
+                (r"exactly\s+" + _num + r"\s+heads?",
+                 lambda h, k: h == k),
+                (r"exactly\s+" + _num + r"\s+tails?",
+                 lambda h, k, n=_n: n - h == k),
+            ]
+            for _pat, _fn in _specs:
+                _m = re.search(_pat, ql)
+                if _m:
+                    _k = _cnt(_m.group(1))
+                    _ev = ((lambda fn, k: lambda h: fn(h, k))
+                           (_fn, _k), _m.group(0))
+                    break
+            if _ev is None:
+                if "both heads" in ql or "all heads" in ql:
+                    _ev = (lambda h, n=_n: h == n, "all heads")
+                elif "both tails" in ql or "all tails" in ql:
+                    _ev = (lambda h: h == 0, "all tails")
+                elif "no head" in ql:
+                    _ev = (lambda h: h == 0, "no head")
+                elif "no tail" in ql:
+                    _ev = (lambda h, n=_n: h == n, "no tail")
             if _ev is not None:
                 fav = sum(1 for o in outcomes
                           if _ev[0](o.count("H")))
