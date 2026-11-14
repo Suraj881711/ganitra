@@ -1890,6 +1890,224 @@ def _lp_corners(q):
             "steps": steps, "value": float(best_v)}
 
 
+def _lp_inequalities(q):
+    """Wave 33: linear programming from RAW inequalities —
+    "Maximise Z = 3x + 4y subject to x + y ≤ 4, x ≥ 0,
+    y ≥ 0". Wave 32 covered only the corner-points-given
+    form; the raw form routed to algebra, whose parser
+    turned the sentence into letter-soup. Method (Class 12):
+    the optimum of a linear objective over a polygon sits at
+    a corner — intersect every pair of boundary lines, keep
+    the feasible corners, evaluate Z at each. All arithmetic
+    is exact (sympy rationals), so NCERT answers like
+    235/19 at (20/19, 45/19) come out as fractions."""
+    if not re.search(r"maxim|minim", q):
+        return None
+    if "corner point" in q:
+        return None  # _lp_corners owns that form
+    mo = re.search(r"\bz\s*=\s*(.+?)(?=\s+subject\b|,|;|$)", q)
+    if not mo:
+        return None
+    obj_text = mo.group(1).strip()
+    rest = q[mo.end():]
+    mc = re.search(r"subject\s+to\s+(?:the\s+)?"
+                   r"(?:constraints?\s+)?", rest)
+    ctext = rest[mc.end():] if mc else rest.lstrip(" ,;")
+    x, y = sp.symbols("x y")
+    try:
+        oexpr = sp.expand(parse_expression(obj_text))
+    except Exception:
+        return None
+    if not oexpr.free_symbols or not \
+            oexpr.free_symbols <= {x, y}:
+        return None
+    oc_a, oc_b = oexpr.coeff(x), oexpr.coeff(y)
+    oc_c = oexpr.subs({x: 0, y: 0})
+    if oc_a == 0 and oc_b == 0:
+        return None
+    cons = []  # (a, b, c, sense): a·x + b·y <sense> c
+    if re.search(r"\bx\s*,\s*y\s*(>=|≥)", ctext):
+        cons += [(sp.Integer(1), sp.Integer(0), sp.Integer(0),
+                  ">="), (sp.Integer(0), sp.Integer(1),
+                          sp.Integer(0), ">=")]
+        ctext = re.sub(r"\bx\s*,\s*y\s*(?:>=|≥)\s*0", " ", ctext)
+    pieces = [p.strip(" .")
+              for p in re.split(r"[,;]|\band\b", ctext)
+              if p.strip(" .")]
+    if not pieces:
+        return None
+    sense_map = {"<=": "<=", "≤": "<=", ">=": ">=", "≥": ">=",
+                 "=": "==", "<": "<=", ">": ">="}
+    for p in pieces:
+        m = re.match(r"^(.*?)(<=|>=|≤|≥|=|<|>)\s*"
+                     r"(-?\d+(?:\.\d+)?)\s*$", p)
+        if not m:
+            return None
+        try:
+            lhs = sp.expand(parse_expression(m.group(1)))
+        except Exception:
+            return None
+        if not lhs.free_symbols or not \
+                lhs.free_symbols <= {x, y}:
+            return None
+        rhs = sp.Rational(m.group(3))
+        cons.append((lhs.coeff(x), lhs.coeff(y),
+                     rhs - lhs.subs({x: 0, y: 0}),
+                     sense_map[m.group(2)]))
+    if len(cons) < 2:
+        return None
+
+    def _feasible(px, py):
+        for a, b, c, s in cons:
+            v = a * px + b * py
+            if s == "<=" and v > c:
+                return False
+            if s == ">=" and v < c:
+                return False
+            if s == "==" and v != c:
+                return False
+        return True
+
+    corners = []
+    lines = [(a, b, c) for a, b, c, _s in cons]
+    for i in range(len(lines)):
+        for j in range(i + 1, len(lines)):
+            a1, b1, c1 = lines[i]
+            a2, b2, c2 = lines[j]
+            det = a1 * b2 - a2 * b1
+            if det == 0:
+                continue
+            px = (c1 * b2 - c2 * b1) / det
+            py = (a1 * c2 - a2 * c1) / det
+            if _feasible(px, py) and (px, py) not in corners:
+                corners.append((px, py))
+    if _feasible(sp.Integer(0), sp.Integer(0)) and \
+            (sp.Integer(0), sp.Integer(0)) not in corners:
+        corners.append((sp.Integer(0), sp.Integer(0)))
+    if not corners:
+        return None
+    # Unbounded? A boundary-line direction that stays in the
+    # recession cone and improves Z means no optimum exists
+    # in that direction (an honest Class-12 answer).
+    def _improves(dx, dy, want_max):
+        for a, b, c, s in cons:
+            v = a * dx + b * dy
+            if s == "<=" and v > 0:
+                return False
+            if s == ">=" and v < 0:
+                return False
+            if s == "==" and v != 0:
+                return False
+        delta = oc_a * dx + oc_b * dy
+        return delta > 0 if want_max else delta < 0
+
+    dirs = set()
+    for a, b, c in lines:
+        dirs.add((-b, a))
+        dirs.add((b, -a))
+    want_max = "maxim" in q
+    want_min = "minim" in q
+    unb_max = want_max and any(
+        _improves(dx, dy, True) for dx, dy in dirs)
+    unb_min = want_min and any(
+        _improves(dx, dy, False) for dx, dy in dirs)
+    steps = [
+        "The feasible region's corner points come from "
+        "intersecting the boundary lines of the constraints "
+        "(the optimum of a linear Z is always at a corner):",
+    ]
+    vals = []
+    for (px, py) in corners:
+        v = oc_a * px + oc_b * py + oc_c
+        vals.append((v, (px, py)))
+        steps.append(f"Corner ({fmt(px)}, {fmt(py)}): "
+                     f"Z = {fmt(v)}")
+    parts = []
+    if want_max:
+        if unb_max:
+            steps.append("The feasible region is unbounded "
+                         "in a direction that keeps "
+                         "increasing Z, so Z has no maximum "
+                         "value.")
+            parts.append("No maximum value (feasible region "
+                         "is unbounded)")
+        else:
+            bv, bp = max(vals, key=lambda t: float(t[0]))
+            steps.append(f"Maximum value of Z is {fmt(bv)} "
+                         f"at ({fmt(bp[0])}, {fmt(bp[1])}).")
+            parts.append(f"Maximum Z = {fmt(bv)} at "
+                         f"({fmt(bp[0])}, {fmt(bp[1])})")
+    if want_min:
+        if unb_min:
+            steps.append("The feasible region is unbounded "
+                         "in a direction that keeps "
+                         "decreasing Z, so Z has no minimum "
+                         "value.")
+            parts.append("No minimum value (feasible region "
+                         "is unbounded)")
+        else:
+            bv, bp = min(vals, key=lambda t: float(t[0]))
+            steps.append(f"Minimum value of Z is {fmt(bv)} "
+                         f"at ({fmt(bp[0])}, {fmt(bp[1])}).")
+            parts.append(f"Minimum Z = {fmt(bv)} at "
+                         f"({fmt(bp[0])}, {fmt(bp[1])})")
+    if not parts:
+        return None
+    op = "lp_minimise" if (want_min and not want_max) \
+        else "lp_maximise"
+    best = None
+    if parts and "at (" in parts[0]:
+        best = float(max(vals, key=lambda t: float(t[0]))[0]
+                     if op == "lp_maximise" else
+                     min(vals, key=lambda t: float(t[0]))[0])
+    return {"type": "applied", "op": op,
+            "answer": "; ".join(parts), "steps": steps,
+            "value": best}
+
+
+def _rectangle_diagonal(q):
+    """Wave 33: the NCERT rectangle form "the diagonal is
+    60 m more than the shorter side, the longer side is
+    30 m more than the shorter side — find the sides".
+    With shorter side s: s^2 + (s + A)^2 = (s + B)^2
+    (Pythagoras), a quadratic in s."""
+    md = re.search(r"diagonal[^.]{0,60}?(" + _NUM + r")\s*"
+                   r"(?:m\s+)?more\s+than\s+the\s+shorter\s+"
+                   r"side", q)
+    ml = re.search(r"longer\s+side\s+is\s+(" + _NUM + r")\s*"
+                   r"(?:m\s+)?more\s+than\s+the\s+shorter\s+"
+                   r"side", q)
+    if not (md and ml):
+        return None
+    B, A = _num(md.group(1)), _num(ml.group(1))
+    # s^2 + (2A - 2B)s + (A^2 - B^2) = 0
+    bq, cq = 2 * A - 2 * B, A * A - B * B
+    disc = bq * bq - 4 * cq
+    if disc < 0:
+        return None
+    sd = math.sqrt(disc)
+    cands = [(-bq + sd) / 2, (-bq - sd) / 2]
+    good = [c for c in cands if c > 0]
+    if not good:
+        return None
+    s = good[0]
+    steps = [
+        f"Let the shorter side be s m. Then the longer "
+        f"side is s + {fmt_num(A)} and the diagonal is "
+        f"s + {fmt_num(B)}.",
+        f"By Pythagoras: s^2 + (s + {fmt_num(A)})^2 = "
+        f"(s + {fmt_num(B)})^2.",
+        f"Solving the quadratic gives s = {fmt_num(s)} "
+        f"(the positive root).",
+        f"Longer side = {fmt_num(s)} + {fmt_num(A)} = "
+        f"{fmt_num(s + A)} m.",
+    ]
+    return {"type": "applied", "op": "rectangle_diagonal",
+            "answer": f"Shorter side = {fmt_num(s)} m, "
+                      f"longer side = {fmt_num(s + A)} m",
+            "steps": steps, "value": [s + A, s]}
+
+
 _FAMILIES = (_ratio, _unitary_cost, _simple_interest, _profit_loss,
              _gst, _successive_discount, _two_articles_same_sp,
              _speed, _word_equation, _quadratic_info,
@@ -1897,12 +2115,14 @@ _FAMILIES = (_ratio, _unitary_cost, _simple_interest, _profit_loss,
              _identity_eval, _insert_means,
              _speed_time_quadratic, _sum_difference, _ages,
              _consecutive_product, _rectangle_word,
+             _rectangle_diagonal,
              _compound_interest_freq, _compound_interest,
              _discount, _percent_score,
              _profit_loss_forms, _ratio_share_ask,
              _inverse_proportion, _bells_lcm, _train_crossing,
              _digits,
-             _lp_corners, _bayes_bags, _bayes_medical,
+             _lp_corners, _lp_inequalities, _bayes_bags,
+             _bayes_medical,
              _bayes_factory, _pipes, _work_together,
              _work_efficiency, _boat_stream, _two_trains)
 

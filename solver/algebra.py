@@ -15,7 +15,36 @@ x, y = sp.symbols("x y")
 
 def _strip_solve_prefix(q: str) -> str:
     q = re.sub(r"^\s*(solve|find|work\s+out)\b", "", q, flags=re.I).strip()
-    return q.strip(" :")
+    # Wave 33: lead-ins and method suffixes used to be parsed
+    # as VARIABLES — "Solve the quadratic equation 2x^2 - 7x
+    # + 3 = 0" answered a letter-soup "a = 2^(2/3)·(7/(c·d…"
+    # and "Find the roots of 1/(x+4) - … = 11/30" failed to
+    # parse at all. Strip them so the bare equation remains.
+    # (The no-"=" "roots of" polynomial form is handled
+    # earlier by the zeroes block; this only affects the
+    # equation path.)
+    q = re.sub(
+        r"^(the\s+)?(roots?|zeroes|zeros|solutions?|values?)"
+        r"\s+of\s+(the\s+)?(quadratic\s+)?"
+        r"(equation|polynomial)?\s*", "", q, flags=re.I).strip()
+    q = re.sub(r"^(the\s+)?(following\s+)?(quadratic\s+)?"
+               r"equation\s+", "", q, flags=re.I).strip()
+    q = re.sub(
+        r"\s+by\s+(completing\s+the\s+square|factorisation|"
+        r"factorization|factoring|splitting\s+the\s+middle\s+"
+        r"term|the\s+quadratic\s+formula|quadratic\s+formula)"
+        r"\b.*$", "", q, flags=re.I).strip()
+    q = re.sub(
+        r"\s+using\s+(the\s+)?(quadratic\s+formula|"
+        r"completing\s+the\s+square)\b.*$", "", q,
+        flags=re.I).strip()
+    # Wave 33: a trailing domain restriction ("..., x not
+    # equal to -4 and 7") is not part of the equation.
+    q = re.sub(
+        r",?\s*\bx\s*(?:not\s+equal\s+to|≠|!=)\s*"
+        r"-?\d+(?:\s*(?:,|and|or)\s*-?\d+)*\s*\.?\s*$",
+        "", q, flags=re.I).strip()
+    return q.strip(" :.")
 
 
 def _poly_coeffs(expr, var):

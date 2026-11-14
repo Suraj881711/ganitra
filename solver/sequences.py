@@ -52,6 +52,60 @@ def solve_sequences(question: str):
     q = question.lower()
     params = _get_params(q)
 
+    # --- Wave 33: nth term from a given S_n -------------------
+    # "The sum of the first n terms of an AP is 3n^2 + 5n.
+    # Find the nth term." a_n = S_n - S_(n-1); the params
+    # path below answered "I need the first term and common
+    # difference" — the very thing the student is asking to
+    # derive.
+    if "nth term" in q or "n-th term" in q or \
+            "general term" in q or "first term" in q:
+        _msn = re.search(
+            r"sum\s+of\s+(?:the\s+)?first\s+n\s+terms[^.]*?"
+            r"(?:is|=)\s*(.+?)\s*(?:\.|$)", q) or re.search(
+                r"\bs_?n\s*=\s*(.+?)\s*(?:,|\.|$)", q)
+        if _msn:
+            try:
+                from .expression_parser import (
+                    fmt as _fmt, parse_expression as _parse)
+                _n = sp.Symbol("n")
+                _S = _parse(_msn.group(1))
+                if _S.free_symbols and \
+                        _S.free_symbols <= {_n}:
+                    _an = sp.expand(_S - _S.subs(_n, _n - 1))
+                    _a1 = _S.subs(_n, 1)
+                    _d = sp.expand(_an - _an.subs(_n, 1))
+                    if "first term" in q and \
+                            "nth term" not in q and \
+                            "general term" not in q:
+                        return {
+                            "type": "sequences",
+                            "op": "ap_first_from_sum",
+                            "answer": _fmt(_a1),
+                            "value": float(_a1),
+                            "steps": [
+                                "The first term is S_1 "
+                                "(the sum of just the first "
+                                "term).",
+                                f"S_1 = {_fmt(_S.subs(_n, 1))}",
+                            ]}
+                    steps = [
+                        f"S_n = {_fmt(_S)}",
+                        "Use a_n = S_n - S_(n-1) (the nth "
+                        "term is what the sum gains at "
+                        "step n).",
+                        f"a_n = ({_fmt(_S)}) - "
+                        f"({_fmt(_S.subs(_n, _n - 1))}) "
+                        f"= {_fmt(_an)}",
+                        f"Check: a = a_1 = {_fmt(_a1)}, "
+                        f"d = {_fmt(_d)}.",
+                    ]
+                    return {"type": "sequences",
+                            "op": "ap_nth_from_sum",
+                            "answer": _fmt(_an), "steps": steps}
+            except Exception:
+                pass
+
     # --- Wave 32: nth term of an AP from the END -----------------
     _m_end = re.search(
         r"(\d+)(?:st|nd|rd|th)\s+term\s+from\s+the\s+end", q)

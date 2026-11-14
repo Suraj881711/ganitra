@@ -645,6 +645,40 @@ def _coordinate(q: str):
             f"= (1/2) × |{s}| = {fmt_num(val)} square units",
         ]
         return "quadrilateral area", fmt_num(val), steps
+    # Wave 33: find k for collinearity — one coordinate of
+    # the three points is the unknown k, so extract_points
+    # (numeric only) dropped that point and the check below
+    # never fired. Collinearity ⟺ the determinant (twice
+    # the signed area) is zero; that condition is linear
+    # in k.
+    if "collinear" in q:
+        _raw = re.findall(
+            r"\(\s*(-?\d+(?:\.\d+)?|k)\s*,\s*"
+            r"(-?\d+(?:\.\d+)?|k)\s*\)", q)
+        if len(_raw) == 3 and sum(v == "k" for p in _raw
+                                  for v in p) == 1:
+            _k = sp.Symbol("k")
+            _pts = [tuple(_k if v == "k" else
+                          sp.Rational(v) for v in p)
+                    for p in _raw]
+            (x1, y1), (x2, y2), (x3, y3) = _pts
+            _det = (x1 * (y2 - y3) + x2 * (y3 - y1)
+                    + x3 * (y1 - y2))
+            _sol = sp.solve(_det, _k)
+            if len(_sol) == 1:
+                _disp = [f"({a}, {b})" for a, b in _raw]
+                steps = [
+                    "Three points are collinear exactly "
+                    "when the area of the triangle they "
+                    "form is zero.",
+                    "Area condition: x1(y2 - y3) + "
+                    "x2(y3 - y1) + x3(y1 - y2) = 0 with "
+                    f"the points {_disp[0]}, {_disp[1]}, "
+                    f"{_disp[2]}.",
+                    f"Solving for k: k = {fmt(_sol[0])}",
+                ]
+                return ("collinearity",
+                        f"k = {fmt(_sol[0])}", steps)
     if "collinear" in q and len(pts) == 3:
         (x1, y1), (x2, y2), (x3, y3) = pts
         area2 = abs(x1 * (y2 - y3) + x2 * (y3 - y1)
@@ -734,6 +768,30 @@ def _circles_extra(q):
     """Wave 32 circle theorems: tangent length from an external
     point, angle between two tangents, chord distance from the
     centre."""
+    # Wave 33: area between two concentric circles (ring /
+    # annulus) — the generic circle branch had no form for
+    # it and returned the "tell me the shape" shrug.
+    if "concentric" in q:
+        _mr = re.search(r"radii\s+(?:of\s+)?"
+                        r"(\d+(?:\.\d+)?)\s*(?:cm|m|mm)?\s*"
+                        r"and\s+(\d+(?:\.\d+)?)", q)
+        _rads = [float(_mr.group(1)), float(_mr.group(2))] \
+            if _mr else [float(v) for v in re.findall(
+                r"radius\s+(?:of\s+)?(?:the\s+)?\w*\s*(?:is\s+)?"
+                r"(\d+(?:\.\d+)?)", q)]
+        if len(_rads) == 2 and _rads[0] != _rads[1]:
+            _R, _r = max(_rads), min(_rads)
+            _val = PI * (_R * _R - _r * _r)
+            steps = [
+                "Area between two concentric circles "
+                "= π(R^2 - r^2), with R the larger radius "
+                "and r the smaller.",
+                f"= π({fmt_num(_R)}^2 - {fmt_num(_r)}^2) "
+                f"= π × {fmt_num(_R * _R - _r * _r)} "
+                f"= {fmt_num(_val)}",
+            ]
+            return ("ring area",
+                    f"{fmt_num(_val)} square units", steps)
     if "tangent" in q and "length" in q:
         pts = extract_points(q)
         r = find_param(q, ["radius", "r"])

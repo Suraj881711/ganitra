@@ -92,10 +92,15 @@ def solve_trigonometry(question: str):
     # asked ratio off it. This used to fall through to the
     # expression parser, which "solved" a stray fragment.
     mr = re.search(
-        r"\b(sin|cos|tan)\s*([a-z])\s*=\s*(\d+(?:\.\d+)?"
+        r"\b(sin|cos|tan)\s*(theta|θ|[a-z])\s*=\s*(\d+(?:\.\d+)?"
         r"(?:\s*/\s*\d+(?:\.\d+)?)?)", qlow)
     if mr and "find" in qlow:
-        _fn, _ang = mr.group(1), mr.group(2).upper()
+        _fn = mr.group(1)
+        # Wave 33: "theta" / "θ" name the angle too — display
+        # it as θ (the single-letter path upper-cases its
+        # letter, which would print "THETA").
+        _ang = "θ" if mr.group(2) in ("theta", "θ") \
+            else mr.group(2).upper()
         _raw = mr.group(3).replace(" ", "")
         _val = sp.Rational(_raw) if "/" in _raw else \
             sp.nsimplify(float(_raw), rational=True)

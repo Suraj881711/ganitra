@@ -222,10 +222,20 @@ def route_intent(question: str) -> str:
 
     # Statistics & probability ("mode" as a standalone word only, so
     # "model" etc. are not hijacked; dice handled by word boundary)
+    # Wave 33: Hindi / Hinglish statistics tokens — प्रायिकता /
+    # संभावना (probability), सिक्का (coin), पासा (die), गेंद
+    # (ball), पत्ते (cards), माध्य / माध्यक / बहुलक / औसत
+    # (mean / median / mode / average) and their Roman forms.
+    # Without them every Hindi statistics question fell to the
+    # arithmetic simplifier and came back as letter-soup.
     if re.search(
             r"(probabilit|permutation|combination|factorial|\bmean\b|"
             r"median|\bmode\b|standard deviation|variance|\bdice\b|"
-            r"\bdie\b|coin|choose|arrange)", q):
+            r"\bdie\b|coin|choose|arrange|"
+            r"प्रायिकता|संभावना|सिक्क|पासा|पासे|गेंद|पत्त|"
+            r"माध्य|माध्यक|बहुलक|औसत|"
+            r"sambhavna|sambhaavana|\bsikka\b|\bsikke\b|"
+            r"\bpasa\b|\bpaase\b)", q):
         return "statistics"
 
     # Geometry
@@ -501,6 +511,39 @@ def _solve_question_uncached(question: str):
             return out
 
     intent = route_intent(working)
+
+    # Wave 33: two more systematically-misrouted families get
+    # the Wave-32 pre-check treatment. (a) LP from raw
+    # inequalities routes to algebra ("=" + "≤"), whose parser
+    # turns the sentence into letter-soup; the applied LP
+    # patterns own it. (b) "Draw an ogive…" routes to plot;
+    # the ogive-median pattern in statistics owns the median
+    # ask. Both gates accept ONLY their own ops and fall
+    # through unchanged otherwise.
+    _wl = working.lower()
+    if re.search(r"\bz\s*=", _wl) and \
+            re.search(r"maxim|minim", _wl) and (
+                "subject" in _wl or "≤" in working
+                or "<=" in working or "≥" in working
+                or ">=" in working):
+        try:
+            out = solve_applied(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") in (
+                "lp_maximise", "lp_minimise"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+    if "ogive" in _wl:
+        try:
+            out = solve_statistics(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") == "ogive_median":
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
 
     # Wave 20 science guard: a science question whose ONLY match
     # is a weak junior phrase must never be force-solved by the
