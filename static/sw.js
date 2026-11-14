@@ -51,7 +51,10 @@
    Teach narration hardening and the source-aware
    accessible name on the answer page ride along; the
    pins all move together, as always. */
-var GANITRA_CACHE = "ganitra-static-v6";
+/* Wave 43: cache name bumped to v7 alongside the ?v=30
+   stylesheet (Chapter Test Mode styles) — the pins all move
+   together, as always. */
+var GANITRA_CACHE = "ganitra-static-v7";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();

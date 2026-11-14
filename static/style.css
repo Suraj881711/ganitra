@@ -2016,3 +2016,9 @@ body.chat-page .chat-bar .send-btn::after {
   content: ""; position: absolute; inset: -2px;
   border-radius: 999px;
 }
+
+/* Wave 43: Chapter Test Mode — the worked-answer block on the
+   result review (plain lines, the final Answer line bold). */
+.test-steps { margin: 6px 0 2px; }
+.test-steps p { margin: 2px 0; }
+.test-steps p:last-child { font-weight: 700; }
