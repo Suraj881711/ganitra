@@ -702,6 +702,33 @@ def _guide_result(question, hindi, kind):
 
 
 # ---------------------------------------------------------------------------
+# Wave 37: the Gemini free-tier second brain (gemini_fallback.py)
+# ---------------------------------------------------------------------------
+
+# The fallback kinds that mean "the student's OWN question is
+# still unanswered": a similar example, a concept card, or the
+# general guide. Only these may be upgraded by Gemini. Real
+# solver answers, salvage solves, greetings, non-maths and
+# science replies never reach the check at all (they return
+# earlier), and vague/gibberish asks have no real question to
+# send.
+_GEMINI_KINDS = ("similar", "concept", "guide")
+
+
+def _gemini_answer(question, hindi):
+    """Ask Gemini for the student's own question. Lazy import
+    so the module (and its env key) stays fully optional; ANY
+    failure returns None and the honest Wave-18 fallback is
+    served exactly as before."""
+    try:
+        from gemini_fallback import try_gemini_answer
+        return try_gemini_answer(question,
+                                 "hi" if hindi else None)
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
 # The entry point
 # ---------------------------------------------------------------------------
 
@@ -737,17 +764,28 @@ def with_fallback(question, result):
 
     concept = _concept_result(question, hindi)
     if concept is not None:
-        return concept
+        result_out = concept
+    else:
+        similar = _similar_result(question, hindi)
+        if similar is not None:
+            result_out = similar
+        elif _is_vague(question):
+            result_out = _guide_result(question, hindi, "vague")
+        elif _is_gibberish(question):
+            result_out = _guide_result(question, hindi, "gibberish")
+        else:
+            result_out = _guide_result(question, hindi, "guide")
 
-    similar = _similar_result(question, hindi)
-    if similar is not None:
-        return similar
-
-    if _is_vague(question):
-        return _guide_result(question, hindi, "vague")
-    if _is_gibberish(question):
-        return _guide_result(question, hindi, "gibberish")
-    return _guide_result(question, hindi, "guide")
+    # Wave 37: when the honest layers still could not answer
+    # the student's own question (similar example, concept card
+    # or the general guide), ask Gemini (free tier) before
+    # settling — solver first, AI only as the fallback. Any
+    # Gemini failure leaves the Wave-18 answer untouched.
+    if result_out.get("fallback_kind") in _GEMINI_KINDS:
+        ai_result = _gemini_answer(question, hindi)
+        if ai_result is not None:
+            return ai_result
+    return result_out
 
 
 def fallback_answer(question, result=None):
