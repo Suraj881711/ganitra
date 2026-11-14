@@ -87,6 +87,13 @@ BATTERY = [
     ("derivative of x^3 + 2x", "REAL", "3"),
     ("area of circle with radius 5", "REAL", "78.5"),
     ("5 aur 3 ko jodo", "REAL", "8"),
+    # Wave 30: this Hinglish train question used to sit in the
+    # "similar" group below — the solver could not read Roman
+    # Hindi distance questions at all. It is now normalised
+    # ("60 km/h for 2 hours") and solved EXACTLY (120 km),
+    # which is the whole point of Wave 30, so it belongs here.
+    ("ek train 60 km/h se 2 ghante chalti hai kitni door gayi",
+     "REAL", "120"),
     ("what is 15% of 200 batao", "REAL", "30"),
     ("240 ka 15 pratishat kitna hoga", "REAL", "36"),
     ("find the hcf of 12 and 18", "REAL", "6"),
@@ -131,8 +138,6 @@ BATTERY = [
     # Similar example — honestly labelled, different numbers
     ("ek ladke ke paas 50 rupaye hai usne 3 chocolate 10 rupaye "
      "ki kharidi kitne bache", "similar", "Similar example"),
-    ("ek train 60 km/h se 2 ghante chalti hai kitni door gayi",
-     "similar", "Similar example"),
     # Greetings / small talk
     ("hello", "greeting", "Hello"),
     ("hi", "greeting", "Hello"),
@@ -179,8 +184,14 @@ for q in ("", "   "):
           f"kind={kind_of(r)}")
 
 # --- Honesty: labels on the non-exact layers ----------------------------------
+# Wave 30: the labelling check now uses the chocolate-money
+# question — the train question it used before is solved
+# exactly since Wave 30 (see the REAL battery above), and the
+# honesty property being tested (label + ask for the exact
+# numbers) belongs to a question that still lands here.
 r = fallback_answer(
-    "ek train 60 km/h se 2 ghante chalti hai kitni door gayi")
+    "ek ladke ke paas 50 rupaye hai usne 3 chocolate 10 rupaye "
+    "ki kharidi kitne bache")
 steps_text = " ".join(r.get("steps") or [])
 check("similar example is labelled + asks for exact numbers",
       str(r.get("answer", "")).startswith("Similar example")
