@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card" id="test-setup">
+    <h2>Chapter Test</h2>
+    <p class="muted">10 questions · {{ (time_limit // 60) }} minutes ·
+      pick a class and topic, then start. Your score and the full
+      working for every question come at the end.</p>
+    <div class="quiz-setup">
+      <label>Class
+        <select id="test-class">
+          {% for c in classes %}
+            <option value="{{ c }}">{{ c }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Topic
+        <select id="test-topic">
+          {% for topic in topics %}
+            <option value="{{ topic }}">{{ labels[topic] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="button" id="test-start-btn">Start test</button>
+    </div>
+    <p class="bad" id="test-setup-error" hidden>Could not start the
+      test. Please try again.</p>
+  </div>
+
+  <div class="card" id="test-paper" hidden>
+    <h2>Chapter Test</h2>
+    <p class="muted"><span id="test-meta"></span></p>
+    <div class="quiz-timer">{{ t.time_left }}
+      <span id="test-timer">--:--</span></div>
+    <div id="test-questions"></div>
+    <button type="button" id="test-submit-btn">
+      {{ t.submit_answers }}</button>
+  </div>
+
+  <div class="card" id="test-result" hidden>
+    <h2>{{ t.result_heading }}</h2>
+    <p class="answer-big">{{ t.score_label }}
+      <span id="test-score"></span></p>
+    <p class="muted" id="test-result-meta"></p>
+    <div id="test-review"></div>
+    <p id="test-mistakes-note" hidden>Your wrong questions are
+      saved in your <a href="/mistakes">{{ t.nav_mistakes }}</a> —
+      practise them there any time.</p>
+    <a class="back" href="/test">New test</a>
+    <a class="back" href="/">{{ t.back_to_solver }}</a>
+  </div>
+
+  <script>
+    (function () {
+      var setup = document.getElementById("test-setup");
+      var paper = document.getElementById("test-paper");
+      var result = document.getElementById("test-result");
+      var timerEl = document.getElementById("test-timer");
+      var questionsEl = document.getElementById("test-questions");
+      var tick = null, left = 0, startedAt = 0, total = 0;
+
+      function fmtTime(s) {
+        var m = Math.floor(s / 60), r = s % 60;
+        return m + ":" + (r < 10 ? "0" : "") + r;
+      }
+
+      function startTimer() {
+        startedAt = Date.now();
+        timerEl.textContent = fmtTime(left);
+        tick = setInterval(function () {
+          left -= 1;
+          timerEl.textContent = fmtTime(Math.max(left, 0));
+          if (left <= 0) { clearInterval(tick); submitTest(); }
+        }, 1000);
+      }
+
+      function collectAnswers() {
+        var out = [];
+        for (var i = 0; i < total; i++) {
+          var el = document.getElementById("test-answer-" + i);
+          out.push(el ? el.value : "");
+        }
+        return out;
+      }
+
+      function submitTest() {
+        if (paper.hidden) return;
+        if (tick) clearInterval(tick);
+        var taken = Math.round((Date.now() - startedAt) / 1000);
+        fetch("/test/submit", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({answers: collectAnswers(),
+                                time_taken: taken})
+        }).then(function (r) { return r.json(); })
+          .then(showResult)
+          .catch(function () { /* stay on the paper on failure */ });
+      }
+
+      function showResult(d) {
+        if (!d || !d.ok) return;
+        paper.hidden = true;
+        result.hidden = false;
+        document.getElementById("test-score").textContent =
+          d.score + " / " + d.total;
+        var meta = [];
+        if (d.time_taken != null) meta.push("Finished in " +
+          fmtTime(d.time_taken));
+        document.getElementById("test-result-meta").textContent =
+          meta.join(" · ");
+        var review = document.getElementById("test-review");
+        review.textContent = "";
+        var wrong = 0;
+        d.rows.forEach(function (row, i) {
+          if (!row.correct) wrong += 1;
+          var box = document.createElement("div");
+          box.className = "practice-q";
+          var q = document.createElement("p");
+          var strong = document.createElement("strong");
+          strong.textContent = "Q" + (i + 1) + ".";
+          q.appendChild(strong);
+          q.appendChild(document.createTextNode(" " + row.question));
+          box.appendChild(q);
+          var yours = document.createElement("p");
+          yours.appendChild(document.createTextNode(
+            {{ t.your_answer_label | tojson }} + " "));
+          var span = document.createElement("span");
+          span.className = row.correct ? "ok" : "bad";
+          span.textContent = (row.correct ? "✔ " : "✘ ") +
+            (row.given || {{ t.blank | tojson }});
+          yours.appendChild(span);
+          if (!row.correct) {
+            yours.appendChild(document.createTextNode(
+              " — " + {{ t.correct_answer_label | tojson }} + " "));
+            var exp = document.createElement("strong");
+            exp.textContent = row.expected;
+            yours.appendChild(exp);
+          }
+          box.appendChild(yours);
+          var steps = document.createElement("div");
+          steps.className = "test-steps";
+          (row.steps || []).forEach(function (line) {
+            var p = document.createElement("p");
+            p.textContent = line;
+            steps.appendChild(p);
+          });
+          box.appendChild(steps);
+          review.appendChild(box);
+        });
+        document.getElementById("test-mistakes-note").hidden =
+          wrong === 0;
+        result.scrollIntoView();
+      }
+
+      document.getElementById("test-start-btn").addEventListener(
+        "click", function () {
+          var body = {
+            class_num: document.getElementById("test-class").value,
+            topic: document.getElementById("test-topic").value
+          };
+          fetch("/test/start", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(body)
+          }).then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (!d || !d.ok) {
+                document.getElementById(
+                  "test-setup-error").hidden = false;
+                return;
+              }
+              total = d.questions.length;
+              left = d.time_limit_seconds;
+              document.getElementById("test-meta").textContent =
+                "Class " + d.class_num + " · " + d.topic_label +
+                " · " + total + " questions";
+              questionsEl.textContent = "";
+              d.questions.forEach(function (item, i) {
+                var box = document.createElement("div");
+                box.className = "practice-q";
+                var q = document.createElement("p");
+                var strong = document.createElement("strong");
+                strong.textContent = "Q" + (i + 1) + ".";
+                q.appendChild(strong);
+                q.appendChild(document.createTextNode(
+                  " " + item.question));
+                box.appendChild(q);
+                var input = document.createElement("input");
+                input.type = "text";
+                input.id = "test-answer-" + i;
+                input.placeholder = {{ t.your_answer_ph | tojson }};
+                input.setAttribute("autocomplete", "off");
+                box.appendChild(input);
+                questionsEl.appendChild(box);
+              });
+              setup.hidden = true;
+              paper.hidden = false;
+              startTimer();
+            })
+            .catch(function () {
+              document.getElementById(
+                "test-setup-error").hidden = false;
+            });
+        });
+
+      document.getElementById("test-submit-btn").addEventListener(
+        "click", submitTest);
+    })();
+  </script>
+{% endblock %}

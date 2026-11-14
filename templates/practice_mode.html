@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block content %}
+  {# Wave 40: Practice Mode — one fresh generated question at a
+     time (practice_gen.py, Wave 34). Pick class + topic, get a
+     question, type an answer, check it at once; the worked
+     answer (plain lines + final answer line) shows either way.
+     All traffic is the two JSON endpoints in app.py; the answer
+     itself never reaches the page before the check. #}
+  <div class="card">
+    <h2>{{ t.pm_heading }}</h2>
+    <p class="muted">{{ t.pm_intro }}</p>
+
+    <div class="quiz-setup">
+      <label for="pm-class">{{ t.papers_choose_class }}</label>
+      <select id="pm-class">
+        {% for n in classes %}
+          <option value="{{ n }}">{{ t.board_class_word }} {{ n }}</option>
+        {% endfor %}
+      </select>
+      <label for="pm-topic">{{ t.topic_label }}</label>
+      <select id="pm-topic">
+        {% for topic in topics %}
+          <option value="{{ topic }}">{{ t["pm_topic_" + topic] }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" id="pm-get">{{ t.pm_get_btn }}</button>
+    </div>
+
+    <div id="pm-area" hidden>
+      <div class="practice-q">
+        <p><strong id="pm-question"></strong></p>
+        <input type="text" id="pm-answer"
+               placeholder="{{ t.your_answer_ph }}"
+               autocomplete="off" />
+      </div>
+      <div class="board-actions">
+        <button type="button" class="board-opt"
+                id="pm-check">{{ t.pm_check_btn }}</button>
+        <button type="button" class="board-opt"
+                id="pm-next">{{ t.pm_next_btn }}</button>
+      </div>
+      <div id="pm-result" hidden>
+        <p id="pm-verdict"></p>
+        <p><strong>{{ t.pm_worked_heading }}</strong></p>
+        <div id="pm-steps"></div>
+        <p><strong>{{ t.papers_answer_label }}:
+          <span id="pm-expected"></span></strong></p>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var STR = {
+        correct: {{ t.pm_correct | tojson }},
+        wrong: {{ t.pm_wrong | tojson }}
+      };
+      var area = document.getElementById("pm-area");
+      var qEl = document.getElementById("pm-question");
+      var aEl = document.getElementById("pm-answer");
+      var resEl = document.getElementById("pm-result");
+      var verdictEl = document.getElementById("pm-verdict");
+      var stepsEl = document.getElementById("pm-steps");
+      var expEl = document.getElementById("pm-expected");
+
+      function post(url, body) {
+        return fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        }).then(function (r) { return r.json(); });
+      }
+
+      function newQuestion() {
+        post("/practice-mode/question", {
+          class_num: document.getElementById("pm-class").value,
+          topic: document.getElementById("pm-topic").value
+        }).then(function (d) {
+          if (!d || !d.ok) return;
+          qEl.textContent = d.question;
+          aEl.value = "";
+          resEl.hidden = true;
+          area.hidden = false;
+          aEl.focus();
+        }).catch(function () { /* stay put; try again */ });
+      }
+
+      function checkAnswer() {
+        post("/practice-mode/check", {
+          answer: aEl.value
+        }).then(function (d) {
+          if (!d || !d.ok) return;
+          verdictEl.textContent =
+            d.correct ? STR.correct : STR.wrong;
+          stepsEl.innerHTML = "";
+          (d.steps || []).forEach(function (line) {
+            var p = document.createElement("p");
+            p.textContent = line;
+            stepsEl.appendChild(p);
+          });
+          expEl.textContent = d.expected;
+          resEl.hidden = false;
+        }).catch(function () { /* stay put; try again */ });
+      }
+
+      document.getElementById("pm-get")
+        .addEventListener("click", newQuestion);
+      document.getElementById("pm-next")
+        .addEventListener("click", newQuestion);
+      document.getElementById("pm-check")
+        .addEventListener("click", checkAnswer);
+      aEl.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter") { ev.preventDefault(); checkAnswer(); }
+      });
+    })();
+  </script>
+{% endblock %}
