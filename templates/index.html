@@ -1967,12 +1967,7 @@
         say(L.js_photo_sending);
         photoForm.submit();
       }
-      function ocrBlob(blob, source) {
-        if (typeof window.Tesseract === "undefined") {
-          say(L.js_photo_unavailable);
-          return;
-        }
-        say(L.js_photo_reading);
+      function ocrBlobEngOnly(blob, source) {
         window.Tesseract.recognize(blob, "eng")
           .then(function (res) {
             sendQuestionText(
@@ -1980,6 +1975,31 @@
               source || "photo");
           })
           .catch(function () { say(L.js_photo_error); });
+      }
+      function ocrBlob(blob, source) {
+        if (typeof window.Tesseract === "undefined") {
+          say(L.js_photo_unavailable);
+          return;
+        }
+        say(L.js_photo_reading);
+        /* Wave 36: read with English + Hindi first, so a photo
+           of a Hindi (Devanagari) question OCRs as Hindi instead
+           of Latin-script garbage. If the Hindi traineddata
+           cannot be loaded (offline, CDN blocked) the recognize
+           promise rejects — caught here and retried English-only,
+           so the photo flow never dead-ends on the extra
+           language. An empty bilingual read (data loaded but
+           nothing recognised) also falls back to English-only. */
+        window.Tesseract.recognize(blob, "eng+hin")
+          .then(function (res) {
+            var text = (res && res.data && res.data.text) || "";
+            if (text.trim()) {
+              sendQuestionText(text, source || "photo");
+            } else {
+              ocrBlobEngOnly(blob, source);
+            }
+          })
+          .catch(function () { ocrBlobEngOnly(blob, source); });
       }
       function extractFileOnServer(file) {
         if (!window.fetch || !window.FormData) {
