@@ -5,7 +5,7 @@
   {# Wave 27 (speed): preload the three Logo Jungle sprites so
      the first scene — now 2-4s after every load — never has
      to wait on a download.
-     Wave 28: the sprite URLs are VERSIONED (?v=28, like the
+     Wave 28: the sprite URLs are VERSIONED (?v=29, like the
      stylesheet) — PythonAnywhere serves /static/ with a
      day-long max-age and the worker serves media
      stale-while-revalidate, so the unversioned Wave 27 URLs
@@ -14,11 +14,11 @@
      in its tan card on a fresh deploy). BUMP the sprite
      version on every wave that ships sprite changes. #}
   <link rel="preload" as="image"
-        href="{{ url_for('static', filename='scene-eagle.webp', v='28') }}" />
+        href="{{ url_for('static', filename='scene-eagle.webp', v='29') }}" />
   <link rel="preload" as="image"
-        href="{{ url_for('static', filename='scene-tiger.webp', v='28') }}" />
+        href="{{ url_for('static', filename='scene-tiger.webp', v='29') }}" />
   <link rel="preload" as="image"
-        href="{{ url_for('static', filename='scene-boy.webp', v='28') }}" />
+        href="{{ url_for('static', filename='scene-boy.webp', v='29') }}" />
 {% endblock %}
 {% block header %}
   {# Wave 7: slim chat top bar — brand, Saathi pill, compact Dhyaan
@@ -81,15 +81,15 @@
                they stand on the page as real characters. #}
             <img class="scene-actor scene-eagle" id="scene-eagle"
               width="92" height="92"
-              src="{{ url_for('static', filename='scene-eagle.webp', v='28') }}"
+              src="{{ url_for('static', filename='scene-eagle.webp', v='29') }}"
               alt="" aria-hidden="true" />
             <img class="scene-actor scene-tiger" id="scene-tiger"
               width="104" height="104"
-              src="{{ url_for('static', filename='scene-tiger.webp', v='28') }}"
+              src="{{ url_for('static', filename='scene-tiger.webp', v='29') }}"
               alt="" aria-hidden="true" />
             <img class="scene-actor scene-boy" id="scene-boy"
               width="96" height="96"
-              src="{{ url_for('static', filename='scene-boy.webp', v='28') }}"
+              src="{{ url_for('static', filename='scene-boy.webp', v='29') }}"
               alt="" aria-hidden="true" />
             {# Scene C: the boy's stick — a plain CSS shape he
                carries while chasing the tiger, then throws away. #}
@@ -818,7 +818,7 @@
           boy.className = "boy-writer in-typing on";
           boy.width = 54;   /* Wave 25: attribute-level size */
           boy.height = 54;  /* (see showBoyWriter's note).    */
-          boy.src = "/static/scene-boy.webp?v=28";  /* Wave 28: versioned sprite URL */
+          boy.src = "/static/scene-boy.webp?v=29";  /* Wave 28: versioned sprite URL */
           boy.alt = "";
           boy.setAttribute("aria-hidden", "true");
           boy.addEventListener("error", function () {
@@ -1209,7 +1209,7 @@
                card width. CSS governs when present. */
             boyWriter.width = 82;
             boyWriter.height = 82;
-            boyWriter.src = "/static/scene-boy.webp?v=28";  /* Wave 28: versioned sprite URL */
+            boyWriter.src = "/static/scene-boy.webp?v=29";  /* Wave 28: versioned sprite URL */
             boyWriter.alt = "";
             boyWriter.setAttribute("aria-hidden", "true");
             boyWriter.addEventListener("error", function () {
@@ -1312,7 +1312,27 @@
           function speakPart(part, done) {
             if (st.dead) return;
             if (!part || !part.text) { done(); return; }
+            /* Wave 29: build the utterance behind a guard.
+               The speech API is vendor machinery — on some
+               browsers and WebViews the utterance constructor
+               or the voice tuning throws even though
+               "speechSynthesis" is present, and an unguarded
+               throw here killed the whole narration chain
+               inside the Teach click (the board then sat
+               frozen exactly as if Teach had never been
+               tapped). A part that cannot be voiced now falls
+               through to the same timer pacing the no-speech
+               path below uses, so the board always advances
+               and the tap always shows. */
+            var u = null;
             if ("speechSynthesis" in window) {
+              try {
+                u = new SpeechSynthesisUtterance(part.text);
+                u.lang = part.lang;
+                tuneUtterance(u, part.lang);
+              } catch (e) { u = null; }
+            }
+            if (u) {
               var advanced = false;
               var startedAt = Date.now();
               function adv() {
@@ -1343,9 +1363,6 @@
                   adv();
                 }
               }
-              var u = new SpeechSynthesisUtterance(part.text);
-              u.lang = part.lang;
-              tuneUtterance(u, part.lang);
               u.onend = advTimed;
               u.onerror = advTimed;
               // Safety net: if neither event ever fires (some
