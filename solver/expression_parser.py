@@ -71,9 +71,23 @@ def parse_expression(text: str):
     t = re.sub(r"\b(sin|cos|tan|cot|sec|csc)\s*\^\s*(\d+)\s+"
                r"([a-zA-Z])\b", _tp, t)
     try:
-        return parse_expr(t, transformations=_TRANSFORMS, evaluate=True)
+        result = parse_expr(t, transformations=_TRANSFORMS,
+                            evaluate=True)
     except Exception as e:
         raise ValueError(f"Could not parse expression: {text!r}") from e
+    # Wave 30: SymPy parses comma-separated text ("..., ...") into a
+    # TUPLE of expressions. A natural-language sentence containing
+    # commas (e.g. Suraj's Hindi train question) therefore used to
+    # hand a tuple to callers, which then crashed on
+    # `expr.free_symbols` ("'tuple' object has no attribute
+    # 'free_symbols'") and the fallback layer masked the crash with
+    # a similar example. A tuple is never a valid single expression
+    # here — reject it with the same readable ValueError as any
+    # other unparseable input, so this input class can never
+    # hard-error a solver again.
+    if isinstance(result, tuple):
+        raise ValueError(f"Could not parse expression: {text!r}")
+    return result
 
 
 def is_equation(text: str) -> bool:

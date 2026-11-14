@@ -86,6 +86,76 @@ def solve_trigonometry(question: str):
             "steps": steps,
         }
 
+    # --- One ratio given, another asked (Wave 30) ------------------
+    # "If sin A = 3/5, find cos A": build the right-triangle
+    # triple (3-4-5 style) from the given ratio and read the
+    # asked ratio off it. This used to fall through to the
+    # expression parser, which "solved" a stray fragment.
+    mr = re.search(
+        r"\b(sin|cos|tan)\s*([a-z])\s*=\s*(\d+(?:\.\d+)?"
+        r"(?:\s*/\s*\d+(?:\.\d+)?)?)", qlow)
+    if mr and "find" in qlow:
+        _fn, _ang = mr.group(1), mr.group(2).upper()
+        _raw = mr.group(3).replace(" ", "")
+        _val = sp.Rational(_raw) if "/" in _raw else \
+            sp.nsimplify(float(_raw), rational=True)
+        if _val > 0 and (_fn == "tan" or _val < 1):
+            if _fn == "sin":
+                _opp, _hyp = _val.p, _val.q
+                _adj = sp.sqrt(_hyp ** 2 - _opp ** 2)
+                _given = (f"sin {_ang} = opposite/hypotenuse "
+                          f"= {_opp}/{_hyp}, so take opposite "
+                          f"= {_opp} and hypotenuse = {_hyp}")
+                _third = (f"adjacent = sqrt({_hyp}^2 - "
+                          f"{_opp}^2) = {fmt(_adj)} "
+                          f"(Pythagoras)")
+            elif _fn == "cos":
+                _adj, _hyp = _val.p, _val.q
+                _opp = sp.sqrt(_hyp ** 2 - _adj ** 2)
+                _given = (f"cos {_ang} = adjacent/hypotenuse "
+                          f"= {_adj}/{_hyp}, so take adjacent "
+                          f"= {_adj} and hypotenuse = {_hyp}")
+                _third = (f"opposite = sqrt({_hyp}^2 - "
+                          f"{_adj}^2) = {fmt(_opp)} "
+                          f"(Pythagoras)")
+            else:
+                _opp, _adj = _val.p, _val.q
+                _hyp = sp.sqrt(_opp ** 2 + _adj ** 2)
+                _given = (f"tan {_ang} = opposite/adjacent "
+                          f"= {_opp}/{_adj}, so take opposite "
+                          f"= {_opp} and adjacent = {_adj}")
+                _third = (f"hypotenuse = sqrt({_opp}^2 + "
+                          f"{_adj}^2) = {fmt(_hyp)} "
+                          f"(Pythagoras)")
+            _vals = {"sin": _opp / _hyp, "cos": _adj / _hyp,
+                     "tan": _opp / _adj}
+            _tail = qlow[qlow.index("find"):]
+            _asked = [f for f in ("sin", "cos", "tan")
+                      if f != _fn
+                      and re.search(rf"\b{f}\s*{mr.group(2)}\b",
+                                    _tail)]
+            if not _asked:
+                _asked = [f for f in ("sin", "cos", "tan")
+                          if f != _fn]
+            steps = [_given, _third]
+            for f in _asked:
+                _num_name = {"sin": "opposite", "cos": "adjacent",
+                             "tan": "opposite"}[f]
+                _den_name = {"sin": "hypotenuse",
+                             "cos": "hypotenuse",
+                             "tan": "adjacent"}[f]
+                steps.append(
+                    f"{f} {_ang} = {_num_name}/{_den_name} "
+                    f"= {fmt(_vals[f])}")
+            return {
+                "type": "trigonometry",
+                "op": "ratio_from_ratio",
+                "answer": ", ".join(
+                    f"{f} {_ang} = {fmt(_vals[f])}"
+                    for f in _asked),
+                "steps": steps,
+            }
+
     # --- Trig equation: solve sin(x) = 1/2 --------------------------------
     if "=" in q and re.search(r"(sin|cos|tan)\s*\(", q):
         text = re.sub(r"^\s*solve\b", "", q, flags=re.I).strip()
@@ -143,6 +213,72 @@ def solve_trigonometry(question: str):
             "value": deg_val,
             "steps": steps,
         }
+
+    # --- Heights & distances (Wave 30) ------------------------------
+    # Ladder against a wall: the ladder is the hypotenuse.
+    _ml = re.search(r"ladder\s+(?:of\s+length\s+)?"
+                    r"(\d+(?:\.\d+)?)\s*m\s*(?:long)?", qlow)
+    _ma = re.search(r"(\d+(?:\.\d+)?)\s*(?:degrees?|°)\s+with\s+"
+                    r"the\s+(ground|wall)", qlow)
+    if _ml and _ma:
+        _L = sp.Rational(_ml.group(1))
+        _fmt_l = fmt_num(_L)
+        _th = sp.Rational(_ma.group(1))
+        _with = _ma.group(2)
+        if _with == "ground":
+            _h = _L * sp.sin(_th * sp.pi / 180)
+            steps = [
+                f"The ladder itself is the hypotenuse "
+                f"({_fmt_l} m), and the height reached on the "
+                f"wall is the side opposite the "
+                f"{fmt_num(_th)}° angle with the ground.",
+                f"sin {fmt_num(_th)}° = height / ladder length, "
+                f"so height = {_fmt_l} × sin {fmt_num(_th)}°",
+                f"Height = {fmt(_h)} m ≈ {float(_h):.2f} m",
+            ]
+        else:
+            _h = _L * sp.cos(_th * sp.pi / 180)
+            steps = [
+                f"The ladder itself is the hypotenuse "
+                f"({_fmt_l} m); with the angle measured from "
+                f"the wall, the height reached is the side "
+                f"adjacent to the {fmt_num(_th)}° angle.",
+                f"cos {fmt_num(_th)}° = height / ladder length, "
+                f"so height = {_fmt_l} × cos {fmt_num(_th)}°",
+                f"Height = {fmt(_h)} m ≈ {float(_h):.2f} m",
+            ]
+        return {
+            "type": "trigonometry",
+            "op": "heights_distances",
+            "answer": f"{fmt(_h)} m ≈ {float(_h):.2f} m",
+            "value": float(_h),
+            "steps": steps,
+        }
+    # Angle of elevation of a tower from a ground point.
+    if "angle of elevation" in qlow:
+        _degs = re.findall(r"(\d+(?:\.\d+)?)\s*(?:degrees?|°)",
+                           qlow)
+        _md = re.search(r"(\d+(?:\.\d+)?)\s*m\s+(?:away|from)\b",
+                        qlow)
+        if _degs and _md:
+            _th = sp.Rational(_degs[-1])
+            _d = sp.Rational(_md.group(1))
+            _h = _d * sp.tan(_th * sp.pi / 180)
+            steps = [
+                "tan(angle of elevation) = height of the tower "
+                "/ distance of the point from its foot",
+                f"tan {fmt_num(_th)}° = h / {fmt_num(_d)}, so "
+                f"h = {fmt_num(_d)} × tan {fmt_num(_th)}°",
+                f"Height of the tower = {fmt(_h)} m "
+                f"≈ {float(_h):.2f} m",
+            ]
+            return {
+                "type": "trigonometry",
+                "op": "heights_distances",
+                "answer": f"{fmt(_h)} m ≈ {float(_h):.2f} m",
+                "value": float(_h),
+                "steps": steps,
+            }
 
     # --- Plain value: sin 30, cos(pi/3), sin 30 + cos 60 ------------------
     text = q

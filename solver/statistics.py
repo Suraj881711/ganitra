@@ -152,6 +152,52 @@ def _probability(q: str):
             f"= {fav}",
         ]
         return _prob_answer(Fraction(fav, 2**n), steps)
+    # Coins tossed together (Wave 30): enumerate the outcomes.
+    # The old shortcut below answered 1/2 for ANY coin+head
+    # question — "two coins ... at least one head" is 3/4.
+    if "coin" in ql and ("toss" in ql or "throw" in ql
+                         or "flip" in ql):
+        _mc = re.search(r"\b(one|two|three|four|five|\d+)\s+"
+                        r"coins?\b", ql)
+        _words = {"one": 1, "two": 2, "three": 3, "four": 4,
+                  "five": 5}
+        _n = _words.get(_mc.group(1)) if _mc else 1
+        if _n is None:
+            _n = int(_mc.group(1))
+        if 1 <= _n <= 5:
+            outcomes = list(_iproduct("HT", repeat=_n))
+            _ev = None
+            _mk = re.search(r"exactly\s+(one|two|three|four|"
+                            r"\d+)\s+heads?", ql)
+            if "at least one head" in ql:
+                _ev = (lambda h: h >= 1, "at least one head")
+            elif "at least one tail" in ql:
+                _ev = (lambda h, n=_n: n - h >= 1,
+                       "at least one tail")
+            elif _mk:
+                _k = _words.get(_mk.group(1))
+                if _k is None:
+                    _k = int(_mk.group(1))
+                _ev = (lambda h, k=_k: h == k,
+                       f"exactly {_k} head(s)")
+            elif "both heads" in ql or "all heads" in ql:
+                _ev = (lambda h, n=_n: h == n, "all heads")
+            elif "both tails" in ql or "all tails" in ql:
+                _ev = (lambda h: h == 0, "all tails")
+            elif "no head" in ql:
+                _ev = (lambda h: h == 0, "no head")
+            if _ev is not None:
+                fav = sum(1 for o in outcomes
+                          if _ev[0](o.count("H")))
+                steps = [
+                    f"{_n} coin(s) tossed together give "
+                    f"2^{_n} = {2 ** _n} equally likely "
+                    f"outcomes: "
+                    + ", ".join("".join(o) for o in outcomes),
+                    f"Favourable outcomes ({_ev[1]}) = {fav}",
+                ]
+                return _prob_answer(Fraction(fav, 2 ** _n),
+                                    steps)
     if "coin" in ql and "head" in ql:
         return _prob_answer(Fraction(1, 2),
                             ["A fair coin has 2 equally likely outcomes; "
@@ -302,6 +348,34 @@ def _counting(q: str):
 def solve_statistics(question: str):
     q = question.strip()
     ql = q.lower()
+
+    # Wave 30: the missing value behind a stated mean ("The
+    # mean of 5 numbers is 20. Four of the numbers are 18, 22,
+    # 19 and 21. Find the fifth number."). The generic list-mean
+    # below averaged every number in the sentence — count and
+    # mean included — and answered 17.5 for that question.
+    _mm = re.search(
+        r"mean\s+of\s+(\d+)\s+(?:numbers|observations|items|"
+        r"values)\s+is\s+(\d+(?:\.\d+)?)", ql)
+    if _mm:
+        _n = int(_mm.group(1))
+        _mean_v = float(_mm.group(2))
+        _known = _extract_list(ql[_mm.end():])
+        if _n >= 2 and len(_known) == _n - 1:
+            _total = _n * _mean_v
+            _missing = _total - sum(_known)
+            steps = [
+                f"Sum of all {_n} numbers = mean × count = "
+                f"{fmt_num(_mean_v)} × {_n} = {fmt_num(_total)}",
+                f"Sum of the known {_n - 1} numbers = "
+                + " + ".join(fmt_num(v) for v in _known)
+                + f" = {fmt_num(sum(_known))}",
+                f"Missing number = {fmt_num(_total)} - "
+                f"{fmt_num(sum(_known))} = {fmt_num(_missing)}",
+            ]
+            return {"type": "statistics", "op": "mean_missing",
+                    "answer": fmt_num(_missing),
+                    "value": float(_missing), "steps": steps}
 
     if "probab" in ql:
         out = _probability(q)

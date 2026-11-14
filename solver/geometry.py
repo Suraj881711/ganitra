@@ -10,14 +10,100 @@ from .expression_parser import extract_points, find_param, fmt, fmt_num
 PI = math.pi
 
 
+def _param_flex(q, names):
+    """find_param, plus the NCERT sentence form "the radius of a
+    cylinder is 7 cm" (Wave 30): the plain finder expects the
+    number right after the name ("radius 7", "radius is 7") and
+    missed the "radius of a <shape> is N" phrasing entirely, so
+    whole mensuration questions fell to the similar-example
+    layer even though the formula code existed."""
+    v = find_param(q, names)
+    if v is not None:
+        return v
+    for name in names:
+        if len(name) < 3:
+            continue
+        m = re.search(
+            rf"\b{name}\s+of\s+(?:a\s+|an\s+|the\s+)?\w+\s+is\s+"
+            r"(-?\d+(?:\.\d+)?)", q)
+        if m:
+            s = m.group(1)
+            return float(s) if "." in s else int(s)
+    return None
+
+
+def _three_sides(q):
+    """The three side lengths after the word "side(s)", tolerating
+    units and filler ("sides of a triangle are 5 cm, 12 cm and
+    13 cm") — the old capture regex stopped at the first unit
+    ("cm" is not a digit) and Heron never fired (Wave 30)."""
+    m = re.search(r"sides?\b[^.]{0,60}", q)
+    if not m:
+        return None
+    nums = [float(v) for v in re.findall(r"\d+(?:\.\d+)?",
+                                         m.group(0))]
+    return nums if len(nums) == 3 else None
+
+
+def _third_angle(q):
+    """Two angles of a triangle given, the third asked (Wave 30).
+    "angle A = 50 degrees and angle B = 60 degrees. Find angle
+    C" used to reach algebra, which echoed "A = 50" back."""
+    if "triangle" not in q or "angle" not in q:
+        return None
+    pairs = re.findall(
+        r"angle\s*([a-z])\s*(?:=|is)\s*(\d+(?:\.\d+)?)\s*"
+        r"(?:degrees?|°)?", q)
+    given = {lab: float(v) for lab, v in pairs}
+    ma = re.search(r"find\s+(?:the\s+)?angle\s*([a-z])\b", q)
+    if len(given) == 2 and ma and ma.group(1) not in given:
+        asked = ma.group(1)
+        rest = " + ".join(fmt_num(v) for v in given.values())
+        third = 180 - sum(given.values())
+        steps = [
+            "The three angles of a triangle add up to 180°.",
+            f"Angle {asked.upper()} = 180° - ({rest}) = "
+            f"{fmt_num(third)}°",
+        ]
+        return "third angle", f"{fmt_num(third)}°", steps
+    m = re.search(
+        r"angles?\s+of\s+a\s+triangle\s+are\s+(\d+(?:\.\d+)?)"
+        r"\s*(?:degrees?|°)?\s*and\s+(\d+(?:\.\d+)?)", q)
+    if m:
+        a1, a2 = float(m.group(1)), float(m.group(2))
+        third = 180 - a1 - a2
+        steps = [
+            "The three angles of a triangle add up to 180°.",
+            f"Third angle = 180° - ({fmt_num(a1)}° + "
+            f"{fmt_num(a2)}°) = {fmt_num(third)}°",
+        ]
+        return "third angle", f"{fmt_num(third)}°", steps
+    return None
+
+
 def _area_perimeter_volume(q: str):
     # ---- Circle ------------------------------------------------------
     if "circle" in q or "circumference" in q:
-        r = find_param(q, ["radius", "r"])
+        r = _param_flex(q, ["radius", "r"])
         d = find_param(q, ["diameter"])
         if r is None and d is not None:
             r = d / 2
         if r is None:
+            # Wave 30: area asked with the CIRCUMFERENCE given
+            # ("area of a circle whose circumference is 44 cm")
+            # — recover r from C = 2·pi·r first.
+            C = find_param(q, ["circumference"])
+            if C is not None and "area" in q:
+                rr = C / (2 * PI)
+                val = PI * rr * rr
+                steps = [
+                    f"Radius from the circumference: r = C / "
+                    f"(2·pi) = {fmt_num(C)} / (2 × pi) "
+                    f"≈ {rr:.4f}",
+                    f"Area = pi·r^2 = pi × {rr:.4f}^2 "
+                    f"≈ {val:.4f}",
+                ]
+                return "area", f"≈ {val:.4f}", steps
             return None
         if "circumference" in q or "perimeter" in q:
             val = 2 * PI * r
@@ -70,15 +156,12 @@ def _area_perimeter_volume(q: str):
     # ---- Triangle ----------------------------------------------------
     if "triangle" in q:
         if "perimeter" in q:
-            m = re.search(r"sides?\s*(?:are|:)?\s*([\d\s,\.and]+)", q)
-            if m:
-                sides = [float(v) for v in
-                         re.findall(r"\d+(?:\.\d+)?", m.group(1))]
-                if len(sides) == 3:
-                    steps = ["Perimeter = sum of the three sides = "
-                             + " + ".join(fmt_num(s) for s in sides)
-                             + f" = {fmt_num(sum(sides))}"]
-                    return "perimeter", fmt_num(sum(sides)), steps
+            sides = _three_sides(q)
+            if sides:
+                steps = ["Perimeter = sum of the three sides = "
+                         + " + ".join(fmt_num(s) for s in sides)
+                         + f" = {fmt_num(sum(sides))}"]
+                return "perimeter", fmt_num(sum(sides)), steps
             return None
         base = find_param(q, ["base"])
         height = find_param(q, ["height", "h"])
@@ -88,27 +171,24 @@ def _area_perimeter_volume(q: str):
                      f"{fmt_num(base)} × {fmt_num(height)} = "
                      f"{fmt_num(val)}"]
             return "area", fmt_num(val), steps
-        m = re.search(r"sides?\s*(?:are|:)?\s*([\d\s,\.and]+)", q)
-        if m:  # Heron's formula
-            sides = [float(v) for v in
-                     re.findall(r"\d+(?:\.\d+)?", m.group(1))]
-            if len(sides) == 3:
-                a, b, c = sides
-                s = (a + b + c) / 2
-                area = math.sqrt(max(s * (s - a) * (s - b) * (s - c), 0))
-                steps = [
-                    f"Semi-perimeter s = (a + b + c)/2 = {fmt_num(s)}",
-                    "Heron: Area = sqrt(s(s-a)(s-b)(s-c))",
-                    f"= sqrt({fmt_num(s)} × {fmt_num(s - a)} × "
-                    f"{fmt_num(s - b)} × {fmt_num(s - c)}) "
-                    f"≈ {area:.4f}",
-                ]
-                return "area (Heron)", f"{area:.4f}", steps
+        sides = _three_sides(q)
+        if sides:  # Heron's formula
+            a, b, c = sides
+            s = (a + b + c) / 2
+            area = math.sqrt(max(s * (s - a) * (s - b) * (s - c), 0))
+            steps = [
+                f"Semi-perimeter s = (a + b + c)/2 = {fmt_num(s)}",
+                "Heron: Area = sqrt(s(s-a)(s-b)(s-c))",
+                f"= sqrt({fmt_num(s)} × {fmt_num(s - a)} × "
+                f"{fmt_num(s - b)} × {fmt_num(s - c)}) "
+                f"≈ {area:.4f}",
+            ]
+            return "area (Heron)", f"{area:.4f}", steps
         return None
 
     # ---- Sphere ------------------------------------------------------
     if "sphere" in q:
-        r = find_param(q, ["radius", "r"])
+        r = _param_flex(q, ["radius", "r"])
         if r is None:
             return None
         if "surface" in q:
@@ -135,8 +215,8 @@ def _area_perimeter_volume(q: str):
 
     # ---- Cylinder ----------------------------------------------------
     if "cylinder" in q:
-        r = find_param(q, ["radius", "r"])
-        h = find_param(q, ["height", "h"])
+        r = _param_flex(q, ["radius", "r"])
+        h = _param_flex(q, ["height", "h"])
         if r is None or h is None:
             return None
         if "surface" in q:
@@ -152,8 +232,8 @@ def _area_perimeter_volume(q: str):
 
     # ---- Cone --------------------------------------------------------
     if "cone" in q:
-        r = find_param(q, ["radius", "r"])
-        h = find_param(q, ["height", "h"])
+        r = _param_flex(q, ["radius", "r"])
+        h = _param_flex(q, ["height", "h"])
         if r is None or h is None:
             return None
         val = (1 / 3) * PI * r * r * h
@@ -166,6 +246,65 @@ def _area_perimeter_volume(q: str):
 
 def _coordinate(q: str):
     pts = extract_points(q)
+
+    # Wave 30: section formula — the point dividing the join of
+    # two points in a given ratio. This question used to leak to
+    # the applied ratio simplifier, which answered "1 : 2" (the
+    # ratio echoed back) instead of the point.
+    if "divides" in q and len(pts) >= 2:
+        mr = re.search(r"ratio\s+(\d+(?:\.\d+)?)\s*:\s*"
+                       r"(\d+(?:\.\d+)?)", q)
+        if mr:
+            (x1, y1), (x2, y2) = pts[0], pts[1]
+            m_, n_ = float(mr.group(1)), float(mr.group(2))
+            if "externally" in q and m_ != n_:
+                px = (m_ * x2 - n_ * x1) / (m_ - n_)
+                py = (m_ * y2 - n_ * y1) / (m_ - n_)
+                steps = [
+                    "Section formula (external division): "
+                    "P = ((m·x2 - n·x1)/(m - n), "
+                    "(m·y2 - n·y1)/(m - n))",
+                    f"= (({fmt_num(m_)}×{fmt_num(x2)} - "
+                    f"{fmt_num(n_)}×{fmt_num(x1)}) / "
+                    f"{fmt_num(m_ - n_)}, ({fmt_num(m_)}×"
+                    f"{fmt_num(y2)} - {fmt_num(n_)}×"
+                    f"{fmt_num(y1)}) / {fmt_num(m_ - n_)})",
+                    f"= ({fmt_num(px)}, {fmt_num(py)})",
+                ]
+                return "section formula", \
+                    f"({fmt_num(px)}, {fmt_num(py)})", steps
+            px = (m_ * x2 + n_ * x1) / (m_ + n_)
+            py = (m_ * y2 + n_ * y1) / (m_ + n_)
+            steps = [
+                "Section formula (internal division): "
+                "P = ((m·x2 + n·x1)/(m + n), "
+                "(m·y2 + n·y1)/(m + n))",
+                f"= (({fmt_num(m_)}×{fmt_num(x2)} + "
+                f"{fmt_num(n_)}×{fmt_num(x1)}) / "
+                f"{fmt_num(m_ + n_)}, ({fmt_num(m_)}×"
+                f"{fmt_num(y2)} + {fmt_num(n_)}×"
+                f"{fmt_num(y1)}) / {fmt_num(m_ + n_)})",
+                f"= ({fmt_num(px)}, {fmt_num(py)})",
+            ]
+            return "section formula", \
+                f"({fmt_num(px)}, {fmt_num(py)})", steps
+
+    # Wave 30: area of a triangle from its three vertices
+    # (shoelace formula).
+    if "area" in q and "triangle" in q and len(pts) >= 3:
+        (x1, y1), (x2, y2), (x3, y3) = pts[0], pts[1], pts[2]
+        val = abs(x1 * (y2 - y3) + x2 * (y3 - y1)
+                  + x3 * (y1 - y2)) / 2
+        steps = [
+            "Area of a triangle with vertices (x1, y1), "
+            "(x2, y2), (x3, y3) = (1/2)·|x1(y2 - y3) + "
+            "x2(y3 - y1) + x3(y1 - y2)|",
+            f"= (1/2)·|{fmt_num(x1)}×({fmt_num(y2)} - "
+            f"{fmt_num(y3)}) + {fmt_num(x2)}×({fmt_num(y3)} - "
+            f"{fmt_num(y1)}) + {fmt_num(x3)}×({fmt_num(y1)} - "
+            f"{fmt_num(y2)})| = {fmt_num(val)} square units",
+        ]
+        return "area", fmt_num(val), steps
 
     if "distance" in q and len(pts) >= 2:
         (x1, y1), (x2, y2) = pts[0], pts[1]
@@ -258,7 +397,9 @@ def _coordinate(q: str):
 
 def solve_geometry(question: str):
     q = question.lower()
-    out = _coordinate(q)
+    out = _third_angle(q)
+    if out is None:
+        out = _coordinate(q)
     if out is None:
         out = _area_perimeter_volume(q)
     if out is None:

@@ -35,6 +35,31 @@ def solve_number_theory(question: str):
         return {"type": "number_theory", "op": "modulo",
                 "answer": str(a % b), "value": a % b, "steps": steps}
 
+    # Wave 30: HCF and LCM asked TOGETHER ("Find the HCF and
+    # LCM of 12 and 18") — the HCF branch below used to fire
+    # alone and the LCM was silently never given.
+    _wants_gcd = "gcd" in q or "hcf" in q or "greatest common" in q
+    _wants_lcm = "lcm" in q or "least common multiple" in q
+    if _wants_gcd and _wants_lcm:
+        nums = _all_ints(question)
+        if len(nums) >= 2:
+            import math
+            g, l = nums[0], nums[0]
+            for v in nums[1:]:
+                g = math.gcd(g, v)
+                l = l * v // math.gcd(l, v)
+            steps = [f"Prime factorisation: {nums[0]} = "
+                     f"{_factor_str(nums[0])}",
+                     f"Prime factorisation: {nums[1]} = "
+                     f"{_factor_str(nums[1])}",
+                     "HCF = product of the lowest powers of the "
+                     "common prime factors; LCM = product of the "
+                     "highest powers of all prime factors.",
+                     f"HCF = {g} and LCM = {l}"]
+            return {"type": "number_theory", "op": "hcf_lcm",
+                    "answer": f"HCF = {g}, LCM = {l}",
+                    "value": [g, l], "steps": steps}
+
     # GCD / HCF
     if "gcd" in q or "hcf" in q or "greatest common" in q:
         nums = _all_ints(question)

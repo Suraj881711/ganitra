@@ -194,6 +194,10 @@ def solve_arithmetic(question):
 
     text = _word_ops(question)
     expr = parse_expression(text)
+    # Wave 30 defence-in-depth: parse_expression now rejects tuples
+    # itself, but never call .free_symbols on a non-expression.
+    if not hasattr(expr, "free_symbols"):
+        raise ValueError(f"Could not parse expression: {question!r}")
     if expr.free_symbols:
         # A symbolic expression reached arithmetic: simplify it instead.
         simplified = sp.simplify(expr)

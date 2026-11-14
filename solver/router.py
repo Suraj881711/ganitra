@@ -93,6 +93,27 @@ def normalize_hinglish(question: str) -> str:
     if m:
         return f"{m.group(1)} + {m.group(2)}"
 
+    # Wave 30: two numbers from their sum & difference
+    # ("do sankhyaon ka jod 40 hai aur unka antar 8 hai") and
+    # "number ko N se guna karne par M milta hai" (times-table
+    # phrasing of "N times a number is M"), plus the Roman-Hindi
+    # train distance ("72 km/h ki speed se ... 3 ghante mein").
+    m = re.search(r"jod\s+(\d+(?:\.\d+)?)\s+hai\s+aur\s+"
+                  r"(?:unka\s+|unaka\s+)?antar\s+(\d+(?:\.\d+)?)"
+                  r"\s+hai", ql)
+    if m:
+        return (f"sum is {m.group(1)} and difference is "
+                f"{m.group(2)}")
+    m = re.search(r"(?:ek\s+)?number\s+ko\s+(\d+(?:\.\d+)?)\s+"
+                  r"se\s+guna\s+karne\s+par\s+(\d+(?:\.\d+)?)\s+"
+                  r"milta\s+hai", ql)
+    if m:
+        return f"{m.group(1)} times a number is {m.group(2)}"
+    m = re.search(r"(\d+(?:\.\d+)?)\s*km/h[^0-9]{0,80}?"
+                  r"(\d+(?:\.\d+)?)\s*ghante", ql)
+    if m:
+        return f"{m.group(1)} km/h for {m.group(2)} hours"
+
     # "ka maan (nikalo)" = "the value of": strip it and route normally.
     t = re.sub(r"\s+ka\s+maan\b.*$", "", ql).strip()
     t = re.sub(r"\s+(kitna\s+hoga|batao|nikalo|karo|kar\s+do)\s*$", "", t)
@@ -189,7 +210,8 @@ def route_intent(question: str) -> str:
             r"(arc\s*(sin|cos|tan)|\b(sin|cos|tan)\s*\^\s*\(?\s*-1|"
             r"inverse\s+(sin|cos|tan)|\ba(sin|cos|tan)\b)", q) or re.search(
             r"\b(sin|cos|tan|cot|sec|csc|cosec|sine|cosine|tangent|"
-            r"trigonometr\w*)\b", q) or "trig" in q:
+            r"trigonometr\w*)\b", q) or "trig" in q or re.search(
+            r"angle\s+of\s+(elevation|depression)|\bladder\b", q):
         return "trigonometry"
 
     # Counting notation: C(5,2), P(5,2), 5C2, 5P2
@@ -208,7 +230,10 @@ def route_intent(question: str) -> str:
     # Geometry
     if re.search(
             r"(\barea\b|perimeter|volume|circumference|surface area|"
-            r"distance between|midpoint|slope|hypotenuse|equation of)", q):
+            r"distance between|midpoint|slope|hypotenuse|"
+            r"equation of|triangle.{0,50}angle|section\s+formula|"
+            r"divides\s+the\s+line|coordinates\s+of\s+the\s+point)",
+            q):
         return "geometry"
 
     # Sequences & series
@@ -311,8 +336,13 @@ def route_intent(question: str) -> str:
         return "word_problems"
 
     # Algebra: equations, inequalities, factor/expand/simplify commands
+    # Wave 30: "zeroes of the polynomial ..." and polynomial
+    # division ("divide x^3 + ... by x + 1") are algebra too.
     if "=" in q or re.search(r"(<=|>=|<|>)", q) or re.search(
-            r"\b(solve|factorise|factorize|factor|expand|simplify)\b", q):
+            r"\b(solve|factorise|factorize|factor|expand|simplify)\b",
+            q) or re.search(r"\b(zeroes|zeros)\b", q) or (
+            re.search(r"\bdivide\b", q)
+            and re.search(r"[a-z]\s*\^", q)):
         return "algebra"
 
     return "arithmetic"
@@ -418,6 +448,12 @@ def _solve_question_uncached(question: str):
     # of 8 pens") names no intent keyword, so when the classic
     # pipeline cannot even parse the question, give the applied
     # patterns one chance before reporting the error.
+    # Wave 30: the same second chance now also fires when the
+    # probe "succeeded" only by turning a word problem into a
+    # letter-product simplify (a long sentence is never a bare
+    # expression) — that junk result was what pushed real word
+    # problems (compound interest, discount, marks-percentage)
+    # down to the similar-example layer.
     if intent in ("arithmetic", "algebra"):
         probe_solver = _SOLVERS.get(intent, solve_arithmetic)
         try:
@@ -425,7 +461,10 @@ def _solve_question_uncached(question: str):
         except Exception:
             probe = None
         if probe is None or (isinstance(probe, dict)
-                             and probe.get("op") == "error"):
+                             and (probe.get("op") == "error"
+                                  or (probe.get("op") == "simplify"
+                                      and len(working.split())
+                                      >= 5))):
             alt = solve_applied(working)
             if alt is not None:
                 if was_translated:
@@ -460,6 +499,24 @@ def _solve_question_uncached(question: str):
                   "answer": f"Could not solve this one: {e}",
                   "steps": []}
     if isinstance(result, dict):
+        # Wave 30 second chance: an intent solver that has no
+        # pattern for a word problem reports op "unknown" (or an
+        # error) — geometry's "Tell me the shape...", the word-
+        # problem catch-all, a statistics shrug. Before that
+        # non-answer is allowed to fall through to the fallback
+        # layer's similar example, give the strict applied
+        # patterns one pass: they return None unless the
+        # student's own numbers form a complete known pattern,
+        # so a real solver answer is never displaced.
+        if result.get("op") in ("error", "unknown"):
+            try:
+                alt = solve_applied(working)
+            except Exception:
+                alt = None
+            if alt is not None:
+                if was_translated:
+                    alt["interpreted_as"] = translated
+                return alt
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])

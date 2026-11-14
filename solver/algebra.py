@@ -199,6 +199,66 @@ def _solve_inequality(q: str):
 def solve_algebra(question: str):
     q = question.strip()
 
+    # Wave 30: polynomial division ("Divide x^3 + 3x^2 + 3x + 1
+    # by x + 1") and zeroes of a polynomial ("Find the zeroes of
+    # the polynomial x^2 - 3x - 10"). Both used to fall through
+    # to the bare-expression simplifier, which returned a stray
+    # fragment (the fallback then salvaged junk like "-1").
+    _md = re.match(
+        r"\s*(?:divide|division\s+of)\s+(.+?)\s+by\s+(.+?)\s*"
+        r"\.?\s*$", q, re.I)
+    if _md and re.search(r"[a-z]\s*\^|[a-z]\s*\*\*",
+                         _md.group(1)):
+        try:
+            _dividend = parse_expression(_md.group(1))
+            _divisor = parse_expression(_md.group(2))
+            _syms = sorted((_dividend + _divisor).free_symbols,
+                           key=lambda s: s.name)
+            if len(_syms) == 1:
+                _var = _syms[0]
+                _quot, _rem = sp.div(sp.Poly(_dividend, _var),
+                                     sp.Poly(_divisor, _var))
+                _steps = [
+                    f"Divide {fmt(_dividend)} by "
+                    f"{fmt(_divisor)} (polynomial long "
+                    f"division, highest degree first).",
+                    f"Quotient = {fmt(_quot.as_expr())}",
+                ]
+                if _rem.is_zero:
+                    _steps.append(
+                        "Remainder = 0, so the divisor is a "
+                        "factor of the dividend.")
+                    _ans = fmt(_quot.as_expr())
+                else:
+                    _steps.append(
+                        f"Remainder = {fmt(_rem.as_expr())}")
+                    _ans = (f"{fmt(_quot.as_expr())} "
+                            f"(remainder {fmt(_rem.as_expr())})")
+                return {"type": "algebra",
+                        "op": "polynomial_division",
+                        "answer": _ans, "steps": _steps}
+        except Exception:
+            pass
+    _mz = re.search(
+        r"(?:zeroes|zeros|roots)\s+of\s+(?:the\s+)?"
+        r"(?:polynomial|equation)?\s*(.+)$", q, re.I)
+    if _mz and "=" not in q:
+        _expr_text = _mz.group(1).strip().rstrip(".")
+        _expr_text = re.split(
+            r"\s+and\s+(?:verify|check|show)\b", _expr_text)[0]\
+            .strip()
+        if _expr_text:
+            try:
+                _res = _solve_single_equation(_expr_text + " = 0")
+                _res["steps"] = [
+                    "The zeroes of a polynomial are the values "
+                    "of the variable that make it 0 — solve "
+                    f"{_expr_text} = 0."] + _res["steps"]
+                _res["op"] = "zeroes"
+                return _res
+            except Exception:
+                pass
+
     # factor / expand / simplify commands
     m = re.match(r"\s*(factorise|factorize|factor)\b[:\s]*(.+)$", q, re.I)
     if m:

@@ -40,6 +40,12 @@ def _get_params(q):
     return out
 
 
+def _ordinal(n):
+    if 11 <= n % 100 <= 13:
+        return f"{n}th"
+    return f"{n}" + {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+
+
 def solve_sequences(question: str):
     q = question.lower()
     params = _get_params(q)
@@ -90,6 +96,44 @@ def solve_sequences(question: str):
                     "answer": "I need the first term and common "
                               "difference.",
                     "steps": []}
+        # Wave 30: "Which term of the AP ... is V?" — invert
+        # a_n = a + (n-1)d instead of asking for a term number.
+        if "which term" in q:
+            mv = re.search(r"\bis\s+(-?\d+(?:\.\d+)?)\s*\?*\s*$",
+                           q.strip())
+            if mv and d != 0:
+                V = float(mv.group(1))
+                V = int(V) if V == int(V) else V
+                num = V - a
+                if num % d == 0 and num // d >= 0:
+                    n = int(num // d) + 1
+                    steps = [
+                        f"AP with a = {fmt_num(a)}, "
+                        f"d = {fmt_num(d)}",
+                        "Set the nth term equal to the given "
+                        "value: a + (n - 1)d = "
+                        f"{fmt_num(V)}",
+                        f"(n - 1) = ({fmt_num(V)} - "
+                        f"{fmt_num(a)}) ÷ {fmt_num(d)} = "
+                        f"{fmt_num(num // d)}, so "
+                        f"n = {n}",
+                    ]
+                    return {"type": "sequences",
+                            "op": "ap_which_term",
+                            "answer": f"The {_ordinal(n)} term",
+                            "value": n, "steps": steps}
+                # A value WAS named and it is genuinely not
+                # reachable — that is the honest exact answer.
+                return {"type": "sequences", "op": "ap_which_term",
+                        "answer": f"{fmt_num(V)} is not a term "
+                                  f"of this AP.",
+                        "steps": [
+                            f"a + (n - 1)d = {fmt_num(V)} gives "
+                            f"n - 1 = {fmt_num(num)} ÷ "
+                            f"{fmt_num(d)}, which is not a "
+                            f"whole number, so no term equals "
+                            f"{fmt_num(V)}.",
+                        ]}
         m = re.search(r"(\d+)(?:st|nd|rd|th)\s+term", q)
         wants_sum = "sum" in q
         n = None
@@ -127,6 +171,39 @@ def solve_sequences(question: str):
             return {"type": "sequences", "op": "unknown",
                     "answer": "I need the first term and common ratio.",
                     "steps": []}
+        # Wave 30: "Which term of the GP ... is V?"
+        if "which term" in q:
+            mv = re.search(r"\bis\s+(-?\d+(?:\.\d+)?)\s*\?*\s*$",
+                           q.strip())
+            if mv and r not in (0, 1):
+                V = float(mv.group(1))
+                V = int(V) if V == int(V) else V
+                cur, n = a, 1
+                while n <= 500 and cur != V:
+                    cur = cur * r
+                    n += 1
+                if cur == V:
+                    steps = [
+                        f"GP with a = {fmt_num(a)}, "
+                        f"r = {fmt_num(r)}",
+                        "Keep multiplying by the common ratio "
+                        "until the given value appears: it is "
+                        f"reached at term {n}.",
+                        f"Check: a·r^{n - 1} = {fmt_num(a)} × "
+                        f"{fmt_num(r)}^{n - 1} = {fmt_num(V)}",
+                    ]
+                    return {"type": "sequences",
+                            "op": "gp_which_term",
+                            "answer": f"The {_ordinal(n)} term",
+                            "value": n, "steps": steps}
+                return {"type": "sequences", "op": "gp_which_term",
+                        "answer": f"{fmt_num(V)} is not a term "
+                                  f"of this GP.",
+                        "steps": [
+                            "Multiplying the first term by the "
+                            "common ratio again and again never "
+                            f"reaches {fmt_num(V)}.",
+                        ]}
         m = re.search(r"(\d+)(?:st|nd|rd|th)\s+term", q)
         wants_sum = "sum" in q
         n = None
