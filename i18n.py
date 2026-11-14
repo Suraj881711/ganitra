@@ -5056,3 +5056,131 @@ STRINGS["bn"].update(_BN_W18)
 STRINGS["mr"].update(_MR_W18)
 STRINGS["ta"].update(_TA_W18)
 STRINGS["te"].update(_TE_W18)
+
+# --- Wave 40 additions: Practice Mode --------------------------------------
+# One fresh generated question at a time (practice_gen.py, Wave
+# 34) at /practice-mode: pick class + topic, type an answer,
+# check it at once, see the worked answer. Every key exists in
+# all 6 languages, like every wave before.
+_EN_W40 = {
+    "menu_practice_mode": "✏️ Practice Mode",
+    "pm_heading": "Practice Mode ✏️",
+    "pm_intro": "Pick your class and a topic, then try one fresh "
+                "question at a time. Type your answer and check "
+                "it right away — if it is wrong, the worked "
+                "answer shows how it is done.",
+    "pm_get_btn": "Get a question →",
+    "pm_check_btn": "Check my answer",
+    "pm_next_btn": "↻ One more question",
+    "pm_correct": "Correct! Well done 🎉",
+    "pm_wrong": "Not quite — here is the worked answer:",
+    "pm_worked_heading": "Worked answer",
+    "pm_topic_arithmetic": "Arithmetic",
+    "pm_topic_algebra": "Algebra",
+    "pm_topic_geometry": "Geometry",
+    "pm_topic_mensuration": "Mensuration",
+    "pm_topic_probability": "Probability",
+}
+_HI_W40 = {
+    "menu_practice_mode": "✏️ अभ्यास मोड",
+    "pm_heading": "अभ्यास मोड ✏️",
+    "pm_intro": "अपनी कक्षा और एक विषय चुनिए, फिर एक-एक नया "
+                "प्रश्न आज़माइए। अपना उत्तर लिखकर तुरंत जाँचिए "
+                "— ग़लत हो तो हल किया हुआ उत्तर दिखाएगा कि यह "
+                "कैसे होता है।",
+    "pm_get_btn": "प्रश्न लाइए →",
+    "pm_check_btn": "मेरा उत्तर जाँचिए",
+    "pm_next_btn": "↻ एक और प्रश्न",
+    "pm_correct": "सही! बहुत बढ़िया 🎉",
+    "pm_wrong": "पूरी तरह सही नहीं — यहाँ हल किया हुआ उत्तर है:",
+    "pm_worked_heading": "हल किया हुआ उत्तर",
+    "pm_topic_arithmetic": "अंकगणित",
+    "pm_topic_algebra": "बीजगणित",
+    "pm_topic_geometry": "ज्यामिति",
+    "pm_topic_mensuration": "क्षेत्रमिति",
+    "pm_topic_probability": "प्रायिकता",
+}
+_BN_W40 = {
+    "menu_practice_mode": "✏️ অনুশীলন মোড",
+    "pm_heading": "অনুশীলন মোড ✏️",
+    "pm_intro": "আপনার শ্রেণি ও একটি বিষয় বেছে নিন, তারপর "
+                "একে একে নতুন প্রশ্ন চেষ্টা করুন। উত্তর লিখে "
+                "সঙ্গে সঙ্গে যাচাই করুন — ভুল হলে সমাধান করা "
+                "উত্তর দেখাবে কীভাবে করতে হয়।",
+    "pm_get_btn": "প্রশ্ন আনুন →",
+    "pm_check_btn": "আমার উত্তর যাচাই করুন",
+    "pm_next_btn": "↻ আরেকটি প্রশ্ন",
+    "pm_correct": "সঠিক! খুব ভালো 🎉",
+    "pm_wrong": "ঠিক হয়নি — এখানে সমাধান করা উত্তর:",
+    "pm_worked_heading": "সমাধান করা উত্তর",
+    "pm_topic_arithmetic": "পাটিগণিত",
+    "pm_topic_algebra": "বীজগণিত",
+    "pm_topic_geometry": "জ্যামিতি",
+    "pm_topic_mensuration": "ক্ষেত্রমিতি",
+    "pm_topic_probability": "সম্ভাবনা",
+}
+_MR_W40 = {
+    "menu_practice_mode": "✏️ सराव मोड",
+    "pm_heading": "सराव मोड ✏️",
+    "pm_intro": "तुमची इयत्ता आणि एक विषय निवडा, मग एकेक नवीन "
+                "प्रश्न सोडवा. उत्तर लिहा आणि लगेच तपासा — "
+                "चुकले तर सोडवलेले उत्तर कसे करायचे ते दाखवेल.",
+    "pm_get_btn": "प्रश्न आणा →",
+    "pm_check_btn": "माझे उत्तर तपासा",
+    "pm_next_btn": "↻ आणखी एक प्रश्न",
+    "pm_correct": "बरोबर! खूप छान 🎉",
+    "pm_wrong": "बरोबर नाही — येथे सोडवलेले उत्तर आहे:",
+    "pm_worked_heading": "सोडवलेले उत्तर",
+    "pm_topic_arithmetic": "अंकगणित",
+    "pm_topic_algebra": "बीजगणित",
+    "pm_topic_geometry": "भूमिती",
+    "pm_topic_mensuration": "क्षेत्रमिती",
+    "pm_topic_probability": "संभाव्यता",
+}
+_TA_W40 = {
+    "menu_practice_mode": "✏️ பயிற்சி முறை",
+    "pm_heading": "பயிற்சி முறை ✏️",
+    "pm_intro": "உங்கள் வகுப்பையும் ஒரு தலைப்பையும் "
+                "தேர்ந்தெடுங்கள், பிறகு ஒவ்வொரு புதிய "
+                "கேள்வியாக முயற்சி செய்யுங்கள். உங்கள் விடையை "
+                "எழுதி உடனே சரிபாருங்கள் — தவறாக இருந்தால், "
+                "வேலை செய்யப்பட்ட விடை எப்படி செய்வது என்று "
+                "காட்டும்.",
+    "pm_get_btn": "கேள்வி பெறுங்கள் →",
+    "pm_check_btn": "என் விடையைச் சரிபார்",
+    "pm_next_btn": "↻ இன்னொரு கேள்வி",
+    "pm_correct": "சரி! மிகவும் நன்று 🎉",
+    "pm_wrong": "சரியில்லை — இதோ வேலை செய்யப்பட்ட விடை:",
+    "pm_worked_heading": "வேலை செய்யப்பட்ட விடை",
+    "pm_topic_arithmetic": "எண்கணிதம்",
+    "pm_topic_algebra": "இயற்கணிதம்",
+    "pm_topic_geometry": "வடிவியல்",
+    "pm_topic_mensuration": "அளவியல்",
+    "pm_topic_probability": "நிகழ்தகவு",
+}
+_TE_W40 = {
+    "menu_practice_mode": "✏️ అభ్యాస విధానం",
+    "pm_heading": "అభ్యాస విధానం ✏️",
+    "pm_intro": "మీ తరగతిని మరియు ఒక అంశాన్ని ఎంచుకోండి, "
+                "ఆపై ఒక్కో కొత్త ప్రశ్నను ప్రయత్నించండి. మీ "
+                "జవాబు రాసి వెంటనే తనిఖీ చేయండి — తప్పైతే, "
+                "పని చేసిన జవాబు ఎలా చేయాలో చూపిస్తుంది.",
+    "pm_get_btn": "ప్రశ్న తెండి →",
+    "pm_check_btn": "నా జవాబు తనిఖీ చేయండి",
+    "pm_next_btn": "↻ మరో ప్రశ్న",
+    "pm_correct": "సరైనది! చాలా బాగుంది 🎉",
+    "pm_wrong": "సరిగ్గా లేదు — ఇదిగో పని చేసిన జవాబు:",
+    "pm_worked_heading": "పని చేసిన జవాబు",
+    "pm_topic_arithmetic": "అంకగణితం",
+    "pm_topic_algebra": "బీజగణితం",
+    "pm_topic_geometry": "జ్యామితి",
+    "pm_topic_mensuration": "క్షేత్రగణితం",
+    "pm_topic_probability": "సంభావ్యత",
+}
+
+STRINGS["en"].update(_EN_W40)
+STRINGS["hi"].update(_HI_W40)
+STRINGS["bn"].update(_BN_W40)
+STRINGS["mr"].update(_MR_W40)
+STRINGS["ta"].update(_TA_W40)
+STRINGS["te"].update(_TE_W40)

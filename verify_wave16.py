@@ -68,8 +68,14 @@ for paper in papers_data.PAPERS:
            or not str(q["text"]).strip()]
     check(f"library[{pid}]: every question has chapter+marks",
           not bad, f"bad={len(bad)}")
+    # Merge fix (Waves 38–46): Term-2 papers added in Wave 44 are
+    # complete 40-mark papers that genuinely have 14 questions, so
+    # the blanket >=30 floor (written before they existed) gets a
+    # Term-2 exception — >=14 when the paper's total is 40 marks.
+    paper_total_marks = sum(q["marks"] for q in paper["questions"])
+    min_questions = 14 if paper_total_marks == 40 else 30
     check(f"library[{pid}]: questions present",
-          len(paper["questions"]) >= 30,
+          len(paper["questions"]) >= min_questions,
           f"questions={len(paper['questions'])}")
 
 # --- 3. Analysis totals recomputed -------------------------------------------

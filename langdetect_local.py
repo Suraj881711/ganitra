@@ -64,10 +64,24 @@ _MARATHI_DEVA_CHARS = {"ळ"}
 _MARATHI_DEVA_WORDS = {
     "आहे", "आहेत", "नाही", "नाहीये", "मला", "माझा", "माझी", "माझे",
     "कसा", "कशी", "कसे", "सांगा", "सांग", "पाहिजे", "कुठे", "कधी",
-    "सोडवा", "सोडव", "येतो", "येते", "जातो", "जाते", "खूप",
-    "मुलगा", "मुलगी", "शाळा", "अभ्यास", "गणित", "प्रश्न", "उत्तर",
+    "सोडवा", "सोडव", "येतो", "येते", "जातो", "खूप",
+    "मुलगा", "मुलगी", "शाळा",
     "समजत", "कळत", "बघ", "ऐक", "काय",
 }
+# Wave 38: shared tatsama vocabulary — गणित (maths), प्रश्न
+# (question), उत्तर (answer), अभ्यास (practice) are IDENTICAL in
+# standard Hindi. They used to sit in the Marathi set above, so
+# a single one of them flipped an otherwise plain Hindi maths
+# question to Marathi (seen live 15 Nov: a Hindi answer card's
+# summary line rendered in Marathi). They no longer trigger a
+# switch on their own; real Marathi questions virtually always
+# carry a distinctly-Marathi function word from the set above.
+_SHARED_DEVA_WORDS = {"गणित", "प्रश्न", "उत्तर", "अभ्यास",
+                      # जाते: Marathi verb form, but also the
+                      # everyday Hindi passive auxiliary —
+                      # "सिक्के उछाले जाते हैं" is pure Hindi
+                      # (and was the live mis-detection).
+                      "जाते"}
 
 # ---------------------------------------------------------------- Hindi (Roman)
 # Strong: essentially only Hindi in Roman spelling.

@@ -52,6 +52,26 @@ SECTION_TITLES = {
 }
 
 
+def section_title_for(section, questions):
+    """Display title for one section of a STORED paper.
+
+    SECTION_TITLES describes the current 80-mark pattern above.
+    Wave 44 added real papers whose sections carry different
+    marks (CBSE 2022 Term-2: A=2/B=3/C=4; CBSE 2020: D=4), so
+    when a section's actual marks differ from PAPER_STRUCTURE,
+    build the title from the stored data instead of misstating
+    the marks. Sections that match the current pattern keep
+    their SECTION_TITLES text verbatim.
+    """
+    standard = PAPER_STRUCTURE[section][1]
+    marks = {q["marks"] for q in questions}
+    if marks == {standard}:
+        return SECTION_TITLES[section]
+    if len(marks) == 1:
+        return f"Section {section} ({marks.pop()} marks each)"
+    return f"Section {section}"
+
+
 def _q(number, section, marks, chapter, text):
     return {"number": number, "section": section, "marks": marks,
             "chapter": chapter, "text": text}
@@ -1722,6 +1742,720 @@ _CBSE10_2023 = [
 ]
 
 # ---------------------------------------------------------------------------
+# CBSE Class 10 Mathematics (Basic) 2025 — Q.P. Code 430/1/1,
+# Series GE1FH, Set 1.
+# Full text: CogniCraft solved paper (see source_url in the entry
+# below), cross-checked against the Swavid paper for the same code.
+# All 38 questions transcribed from the English text of the paper.
+# ---------------------------------------------------------------------------
+_CBSE10_2025_BASIC = [
+    _q(1, "A", 1, "real-numbers",
+       "If the HCF of two positive integers a and b is 1, then their LCM "
+       "is: (A) a + b (B) a (C) b (D) ab"),
+    _q(2, "A", 1, "real-numbers",
+       "The number 3 + √2 is: (A) a rational number (B) an irrational "
+       "number (C) an integer (D) a natural number"),
+    _q(3, "A", 1, "quadratic-equations",
+       "The discriminant of the quadratic equation x2 - 3x - 2 = 0 is: (A) "
+       "1 (B) 17 (C) √17 (D) -√17"),
+    _q(4, "A", 1, "quadratic-equations",
+       "The equation x + 1/x = 3 (x ≠ 0) is expressed as a quadratic "
+       "equation in the form ax2 + bx + c = 0. The value of a - b + c is: "
+       "(A) 5 (B) 2 (C) 1 (D) -1"),
+    _q(5, "A", 1, "coordinate-geometry",
+       "For a point (3, -5), the value of (abscissa - ordinate) is: (A) -8 "
+       "(B) -2 (C) 2 (D) 8"),
+    _q(6, "A", 1, "coordinate-geometry",
+       "The mid-point of a line segment divides the line segment in the "
+       "ratio: (A) 1 : 2 (B) 2 : 1 (C) 1 : 1 (D) 1/2 : 2"),
+    _q(7, "A", 1, "triangles",
+       "Which of the following is not the criterion for similarity of "
+       "triangles? (A) AAA (B) SSS (C) SAS (D) RHS"),
+    _q(8, "A", 1, "triangles",
+       "In the given figure, triangle ABC has AB = 3.8 cm, BC = 6 cm, AC = "
+       "3√3 cm, angle A = 80° and angle B = 60°, and triangle PQR has PQ = "
+       "12 cm, QR = 7.6 cm and PR = 6√3 cm. Which of the following is true "
+       "about the measure of angle P? (A) angle P = 60° (B) angle P = 80° "
+       "(C) angle P = 40° (D) The measure of angle P cannot be determined"),
+    _q(9, "A", 1, "circles",
+       "In the given figure, PA is a tangent to a circle with centre O, OP "
+       "= 10 cm and angle OPA = 30°. Then the length of AP is: (A) 10√3 cm "
+       "(B) 20 cm (C) 5 cm (D) 5√3 cm"),
+    _q(10, "A", 1, "introduction-to-trigonometry",
+       "Which of the following statements is false? (A) tan 45° = cot 45° "
+       "(B) sin 90° = tan 45° (C) sin 30° = cos 30° (D) sin 45° = cos 45°"),
+    _q(11, "A", 1, "introduction-to-trigonometry",
+       "The value of (tan2 A - 1/cos2 A) is: (A) more than 1 (B) 1 (C) 0 "
+       "(D) -1"),
+    _q(12, "A", 1, "some-applications-of-trigonometry",
+       "In the given figure, an observer at the top of a vertical line "
+       "looks down at an object on the ground; a dashed horizontal line "
+       "runs from the observer; angle z is between the horizontal line and "
+       "the line of sight, angle y is between the vertical and the line of "
+       "sight, angle x is at the object, and angle a is the right angle at "
+       "the base. Which of the following angles represents the angle of "
+       "depression? (A) x (B) y (C) z (D) a"),
+    _q(13, "A", 1, "areas-related-to-circles",
+       "In the given figure, a circle has centre O; two radii of length r "
+       "meet a chord of length a, and the shaded region is the triangle "
+       "formed by the two radii and the chord together with the segment "
+       "below the chord (i.e. a sector of the circle), the arc having "
+       "length l. The perimeter of the shaded region is: (A) l (B) l + a "
+       "(C) l + 2r (D) l + 2r + a"),
+    _q(14, "A", 1, "areas-related-to-circles",
+       "The ratio of the area of a quadrant of a circle to the area of the "
+       "same circle is: (A) 1 : 2 (B) 2 : 1 (C) 1 : 4 (D) 4 : 1"),
+    _q(15, "A", 1, "surface-areas-and-volumes",
+       "For which of the following solids is the lateral/curved surface "
+       "area and total surface area the same? (A) Cube (B) Cuboid (C) "
+       "Hemisphere (D) Sphere"),
+    _q(16, "A", 1, "statistics",
+       "The class mark of the median class of the following data is: Class "
+       "interval: 10-25, 25-40, 40-55, 55-70, 70-85, 85-100; Frequency: 2, "
+       "3, 7, 6, 6, 6. (A) 40 (B) 55 (C) 47.5 (D) 62.5"),
+    _q(17, "A", 1, "statistics",
+       "The following distribution shows the number of runs scored by some "
+       "batsmen in test matches: Runs scored: 3000-4000, 4000-5000, "
+       "5000-6000, 6000-7000; Number of batsmen: 5, 10, 9, 8. The lower "
+       "limit of the modal class is: (A) 3000 (B) 4000 (C) 5000 (D) 6000"),
+    _q(18, "A", 1, "probability",
+       "In a random experiment of throwing a die, which of the following "
+       "is a sure event? (A) Getting a number between 1 and 6 (B) Getting "
+       "an odd number < 7 (C) Getting an even number < 7 (D) Getting a "
+       "natural number < 7"),
+    _q(19, "A", 1, "real-numbers",
+       "Assertion (A): For any two natural numbers a and b, the HCF of a "
+       "and b is a factor of the LCM. Reason (R): HCF of any two natural "
+       "numbers divides both the numbers. (A) Both A and R are true and R "
+       "is the correct explanation of A (B) Both A and R are true, but R "
+       "is not the correct explanation of A (C) A is true, but R is false "
+       "(D) A is false, but R is true"),
+    _q(20, "A", 1, "pair-of-linear-equations",
+       "Assertion (A): The value of p for which the system of equations 4x "
+       "+ py + 8 = 0 and 2x + 2y + 2 = 0 is consistent is 4. Reason (R): "
+       "The system of equations a1x + b1y = c1 and a2x + b2y = c2 is "
+       "consistent with infinitely many solutions, if a1/a2 = b1/b2 = "
+       "c1/c2. (A) Both A and R are true and R is the correct explanation "
+       "of A (B) Both A and R are true, but R is not the correct "
+       "explanation of A (C) A is true, but R is false (D) A is false, but "
+       "R is true"),
+    _q(21, "B", 2, "pair-of-linear-equations",
+       "Solve the following system of equations for x and y: x/2 + 2y/3 = "
+       "-1 and x - y/3 = 3."),
+    _q(22, "B", 2, "triangles",
+       "(a) In the given figure, lines PS and QR cross at O with PQ "
+       "parallel to RS; if PQ || RS, then prove that triangle POQ ~ "
+       "triangle SOR. OR (b) In the given figure, triangle OSR ~ triangle "
+       "OQP, angle ROQ = 125° and angle ORS = 70°. Find the measures of "
+       "angle OSR and angle OQP."),
+    _q(23, "B", 2, "circles",
+       "Two concentric circles are of radii 6 cm and 10 cm. Find the "
+       "length of the chord of the larger circle which touches the smaller "
+       "circle."),
+    _q(24, "B", 2, "introduction-to-trigonometry",
+       "(a) Find the values of A and B (0° ≤ A < 90°, 0° ≤ B < 90°), if "
+       "tan(A + B) = 1 and tan(A - B) = 1/√3. OR (b) Prove that tan 45° = "
+       "1 geometrically."),
+    _q(25, "B", 2, "areas-related-to-circles",
+       "A chord of a circle of diameter 20 cm subtends an angle of 60° at "
+       "the centre of the circle. Find the area of the corresponding minor "
+       "segment of the circle. (Use π = 3.14 and √3 = 1.73)"),
+    _q(26, "C", 3, "real-numbers",
+       "(a) Prove that √3 is an irrational number. OR (b) The factor tree "
+       "of a number x is as follows: x splits into 2 and y; y splits into "
+       "2 and 210; 210 splits into a and 70; 70 splits into 2 and 35; 35 "
+       "splits into 5 and b. Find the values of x, y, a and b. Hence, "
+       "write the product of the prime factors of the number x so "
+       "obtained."),
+    _q(27, "C", 3, "polynomials",
+       "Find a quadratic polynomial whose sum and product of zeroes are 0 "
+       "and -9, respectively. Also, find the zeroes of the polynomial so "
+       "obtained."),
+    _q(28, "C", 3, "pair-of-linear-equations",
+       "(a) Solve the following system of equations graphically: x + 3y = "
+       "6; 2x - 3y = 12. OR (b) x and y are complementary angles such that "
+       "x : y = 1 : 2. Express the given information as a system of linear "
+       "equations in two variables and hence solve it."),
+    _q(29, "C", 3, "circles",
+       "Prove that a rectangle circumscribing a circle is a square."),
+    _q(30, "C", 3, "introduction-to-trigonometry",
+       "Prove that: (1 + cot2 A)/(1 + tan2 A) = ((1 - cot A)/(1 - tan A))2"),
+    _q(31, "C", 3, "probability",
+       "A lot consists of 200 pens of which 180 are good and the rest are "
+       "defective. A customer will buy a pen if it is not defective. The "
+       "shopkeeper draws a pen at random and gives it to the customer. "
+       "What is the probability that the customer will not buy it? Another "
+       "lot of 100 pens containing 80 good pens is mixed with the previous "
+       "lot of 200 pens. The shopkeeper now draws one pen at random from "
+       "the entire lot and gives it to the customer. What is the "
+       "probability that the customer will buy the pen?"),
+    _q(32, "D", 5, "quadratic-equations",
+       "(a) The difference of the squares of two positive numbers is 180. "
+       "The square of the smaller number is 8 times the greater number. "
+       "Find the two numbers. OR (b) Find the value(s) of k for which the "
+       "equation 2x2 + kx + 3 = 0 has real and equal roots. Hence, find "
+       "the roots of the equations so obtained."),
+    _q(33, "D", 5, "triangles",
+       "State 'Basic Proportionality Theorem' and use it to prove the "
+       "following: In a quadrilateral ABCD, diagonals AC and BD intersect "
+       "each other at O such that AO/BO = CO/DO, as shown in the given "
+       "figure. Prove that ABCD is a trapezium."),
+    _q(34, "D", 5, "surface-areas-and-volumes",
+       "(a) A toy is in the form of a cone surmounted on a hemisphere. The "
+       "cone and hemisphere have the same radii. The height of the conical "
+       "part of the toy is equal to the diameter of its base. If the "
+       "radius of the conical part is 5 cm, find the volume of the toy. OR "
+       "(b) A cubical block is surmounted by a hemisphere of radius 3.5 "
+       "cm. What is the smallest possible length of the edge of the cube "
+       "so that the hemisphere can totally lie on the cube? Find the total "
+       "surface area of the solid so formed."),
+    _q(35, "D", 5, "statistics",
+       "The following data gives the information on the observed lifetime "
+       "(in hours) of 200 electrical components: Lifetime (in hours): "
+       "0-20, 20-40, 40-60, 60-80, 80-100, 100-120; Number of electrical "
+       "components: 10, 35, 50, 60, 30, 15. Find the mean lifetime (in "
+       "hours) of the electrical components."),
+    _q(36, "E", 4, "some-applications-of-trigonometry",
+       "Case study: An injured bird was found on the roof of a building. "
+       "The building is 15 m high. A fireman was called to rescue the "
+       "bird. The fireman used an adjustable ladder to reach the roof. He "
+       "placed the ladder in such a way that the ladder makes an angle of "
+       "60° with the ground in order to reach the roof. (i) Find the "
+       "length of the ladder used by the fireman to reach the roof. (ii) "
+       "Find the distance of the point on the ground at which the ladder "
+       "was fixed from the bottom of the building. (iii) In order to avoid "
+       "skidding, the fireman placed the ladder in such a way that the "
+       "bottom of the ladder touches the base of the wall which is "
+       "opposite to the building, making an angle of 30° with the ground. "
+       "(a) Draw a neat diagram to represent the above situation and hence "
+       "find the width of the road between the building and the wall. OR "
+       "(b) Find the length of the ladder used by the fireman in this "
+       "case."),
+    _q(37, "E", 4, "arithmetic-progressions",
+       "Case study: In a garden, saplings of rose flowers were planted at "
+       "equal intervals to form a spiral pattern. The spiral is made up of "
+       "successive semicircles, with centres alternately at A and B, "
+       "starting with centre at A, of radii 50 cm, 100 cm, 150 cm, ....... "
+       "Spiral 1 has 10 flowers, Spiral 2 has 20 flowers, Spiral 3 has 30 "
+       "flowers and so on. (i) What is the radius of the 13th spiral? (ii) "
+       "If the radius of the nth spiral is 500 cm, find the value of n. "
+       "(iii) (a) Find the total number of saplings till the 11th spiral. "
+       "OR (b) Till which spiral, will there be a total of 450 saplings?"),
+    _q(38, "E", 4, "coordinate-geometry",
+       "Case study: In a society, there is a circular park having two "
+       "gates. The gates are placed at points A(10, 20) and B(50, 50), as "
+       "shown in the figure below (AB is a diameter of the circle). Two "
+       "fountains are installed at points P and Q on AB such that AP = PQ "
+       "= QB. (i) Find the coordinates of the centre C. (ii) Find the "
+       "radius of the circular park. (iii) (a) Find the coordinates of the "
+       "point P. OR (b) Find the distance of the fountain at Q from gate "
+       "A."),
+]
+
+# ---------------------------------------------------------------------------
+# CBSE Class 10 Mathematics (Standard) 2020 — Q.P. Code 30/1/1,
+# Series JBB/1, Set 1.
+# Full text: LearnCBSE (see source_url in the entry below); the
+# questions LearnCBSE redacts as out-of-syllabus were recovered
+# from the Oswaal Solved Paper 2020 for the same code and
+# cross-checked against NotesBazar's paper for the same code.
+# All 40 questions transcribed from the English text of the paper.
+# ---------------------------------------------------------------------------
+_CBSE10_2020 = [
+    _q(1, "A", 1, "polynomials",
+       "If one of the zeroes of the quadratic polynomial x2 + 3x + k is 2, "
+       "then the value of k is (A) 10 (B) -10 (C) -7 (D) -2"),
+    _q(2, "A", 1, "real-numbers",
+       "The total number of factors of a prime number is (A) 1 (B) 0 (C) 2 "
+       "(D) 3"),
+    _q(3, "A", 1, "polynomials",
+       "The quadratic polynomial, the sum of whose zeroes is -5 and their "
+       "product is 6, is (A) x2 + 5x + 6 (B) x2 - 5x + 6 (C) x2 - 5x - 6 "
+       "(D) -x2 + 5x + 6"),
+    _q(4, "A", 1, "pair-of-linear-equations",
+       "The value of k for which the system of equations x + y - 4 = 0 and "
+       "2x + ky = 3, has no solution, is (A) -2 (B) ≠ 2 (C) 3 (D) 2"),
+    _q(5, "A", 1, "real-numbers",
+       "The HCF and LCM of 12, 21, 15 respectively are (A) 3, 140 (B) 12, "
+       "420 (C) 3, 420 (D) 420, 3"),
+    _q(6, "A", 1, "arithmetic-progressions",
+       "The value of x for which 2x, (x + 10) and (3x + 2) are the three "
+       "consecutive terms of an AP, is (A) 6 (B) -6 (C) 18 (D) -18"),
+    _q(7, "A", 1, "arithmetic-progressions",
+       "The first term of an AP is p and the common difference is q, then "
+       "its 10th term is (A) q + 9p (B) p - 9q (C) p + 9q (D) 2p + 9q"),
+    _q(8, "A", 1, "coordinate-geometry",
+       "The distance between the points (a cos θ + b sin θ, 0) and (0, a "
+       "sin θ - b cos θ) is (A) a2 + b2 (B) a2 - b2 (C) √(a2 + b2) (D) "
+       "√(a2 - b2)"),
+    _q(9, "A", 1, "coordinate-geometry",
+       "If the point P(k, 0) divides the line segment joining the points "
+       "A(2, -2) and B(-7, 4) in the ratio 1 : 2, then the value of k is "
+       "(A) 1 (B) 2 (C) -2 (D) -1"),
+    _q(10, "A", 1, "coordinate-geometry",
+       "The value of p, for which the points A(3, 1), B(5, p) and C(7, -5) "
+       "are collinear, is (A) -2 (B) 2 (C) -1 (D) 1"),
+    _q(11, "A", 1, "circles",
+       "In Fig. 1, triangle ABC is circumscribing a circle, with AR = 4 "
+       "cm, AC = 11 cm and BP = 3 cm (P, Q, R being the points of contact "
+       "on BC, CA, AB respectively as shown in the figure). The length of "
+       "BC is ______ cm."),
+    _q(12, "A", 1, "triangles",
+       "Given triangle ABC ~ triangle PQR, if AB/PQ = 1/3, then "
+       "ar(triangle ABC)/ar(triangle PQR) = ______."),
+    _q(13, "A", 1, "triangles",
+       "Triangle ABC is an equilateral triangle of side 2a, then length of "
+       "one of its altitude is ______."),
+    _q(14, "A", 1, "introduction-to-trigonometry",
+       "cos 80°/sin 10° + cos 59° cosec 31° = ______."),
+    _q(15, "A", 1, "introduction-to-trigonometry",
+       "The value of (sin2 θ + 1/(1 + tan2 θ)) = ______. OR The value of "
+       "(1 + tan2 θ)(1 - sin θ)(1 + sin θ) = ______."),
+    _q(16, "A", 1, "some-applications-of-trigonometry",
+       "The ratio of the length of a vertical rod and the length of its "
+       "shadow is 1 : √3. Find the angle of elevation of the sun at that "
+       "moment?"),
+    _q(17, "A", 1, "surface-areas-and-volumes",
+       "Two cones have their heights in the ratio 1 : 3 and radii in the "
+       "ratio 3 : 1. What is the ratio of their volumes?"),
+    _q(18, "A", 1, "probability",
+       "A letter of English alphabet is chosen at random. What is the "
+       "probability that the chosen letter is a consonant?"),
+    _q(19, "A", 1, "probability",
+       "A die is thrown once. What is the probability of getting a number "
+       "less than 3? OR If the probability of winning a game is 0.07, what "
+       "is the probability of losing it?"),
+    _q(20, "A", 1, "statistics",
+       "If the mean of the first n natural numbers is 15, then find n."),
+    _q(21, "B", 2, "arithmetic-progressions",
+       "Show that (a - b)2, (a2 + b2) and (a + b)2 are in AP."),
+    _q(22, "B", 2, "triangles",
+       "In Fig., DE || AC and DC || AP. Prove that BE/EC = BC/CP. OR In "
+       "Fig., two tangents TP and TQ are drawn to a circle with centre O "
+       "from an external point T. Prove that angle PTQ = 2 angle OPQ."),
+    _q(23, "B", 2, "introduction-to-trigonometry",
+       "The rod AC of a TV disc antenna is fixed at right angle to the "
+       "wall AB and a rod CD is supporting the disc as shown in Fig. If AC "
+       "= 1.5 m long and CD = 3 m, find (i) tan θ (ii) sec θ + cosec θ."),
+    _q(24, "B", 2, "areas-related-to-circles",
+       "A piece of wire 22 cm long is bent into the form of an arc of a "
+       "circle subtending an angle of 60° at its centre. Find the radius "
+       "of the circle. [Use π = 22/7]"),
+    _q(25, "B", 2, "probability",
+       "If a number x is chosen at random from the numbers -3, -2, -1, 0, "
+       "1, 2, 3, what is the probability that x2 ≤ 4?"),
+    _q(26, "B", 2, "statistics",
+       "Find the mean of the following distribution: Class: 3-5, 5-7, 7-9, "
+       "9-11, 11-13; Frequency: 5, 10, 10, 7, 8. OR Find the mode of the "
+       "following data: Class: 0-20, 20-40, 40-60, 60-80, 80-100, 100-120, "
+       "120-140; Frequency: 6, 8, 10, 12, 6, 5, 3."),
+    _q(27, "C", 3, "polynomials",
+       "(a) Find a quadratic polynomial whose zeroes are reciprocals of "
+       "the zeroes of the polynomial f(x) = ax2 + bx + c, a ≠ 0, c ≠ 0. OR "
+       "(b) Divide the polynomial f(x) = 3x2 - x3 - 3x + 5 by the "
+       "polynomial g(x) = x - 1 - x2 and verify the division algorithm."),
+    _q(28, "C", 3, "pair-of-linear-equations",
+       "(a) Determine graphically the coordinates of the vertices of a "
+       "triangle, the equations of whose sides are given by 2y - x = 8, 5y "
+       "- x = 14 and y - 2x = 1. OR (b) If 4 is a zero of the cubic "
+       "polynomial x3 - 3x2 - 10x + 24, find its other two zeroes."),
+    _q(29, "C", 3, "quadratic-equations",
+       "In a flight of 600 km, an aircraft was slowed due to bad weather. "
+       "Its average speed for the trip was reduced by 200 km/hr and time "
+       "of flight increased by 30 minutes. Find the original duration of "
+       "flight."),
+    _q(30, "C", 3, "coordinate-geometry",
+       "(a) Find the area of triangle PQR formed by the points P(-5, 7), "
+       "Q(-4, -5) and R(4, 5). OR (b) If the point C(-1, 2) divides "
+       "internally the line segment joining A(2, 5) and B(x, y) in the "
+       "ratio 3 : 4, find the coordinates of B."),
+    _q(31, "C", 3, "triangles",
+       "In Fig., angle D = angle E and AD/DB = AE/EC, prove that BAC is an "
+       "isosceles triangle."),
+    _q(32, "C", 3, "triangles",
+       "In a triangle, if square of one side is equal to the sum of the "
+       "squares of the other two sides, then prove that the angle opposite "
+       "to the first side is a right angle."),
+    _q(33, "C", 3, "introduction-to-trigonometry",
+       "If sin θ + cos θ = √3, then prove that tan θ + cot θ = 1."),
+    _q(34, "C", 3, "surface-areas-and-volumes",
+       "A cone of base radius 4 cm is divided into two parts by drawing a "
+       "plane through the mid-point of its height and parallel to its "
+       "base. Compare the volume of the two parts."),
+    _q(35, "D", 4, "real-numbers",
+       "Show that the square of any positive integer cannot be of the form "
+       "(5q + 2) or (5q + 3) for any integer q. OR Prove that one of every "
+       "three consecutive positive integers is divisible by 3."),
+    _q(36, "D", 4, "arithmetic-progressions",
+       "The sum of four consecutive numbers in AP is 32 and the ratio of "
+       "the product of the first and last terms to the product of two "
+       "middle terms is 7 : 15. Find the numbers. OR Solve: 1 + 4 + 7 + 10 "
+       "+ … + x = 287."),
+    _q(37, "D", 4, "circles",
+       "Draw a line segment AB of length 7 cm. Taking A as centre, draw a "
+       "circle of radius 3 cm and taking B as centre, draw another circle "
+       "of radius 2 cm. Construct tangents to each circle from the centre "
+       "of the other circle."),
+    _q(38, "D", 4, "some-applications-of-trigonometry",
+       "A vertical tower stands on a horizontal plane and is surmounted by "
+       "a vertical flag-staff of height 6 m. At a point on the plane, the "
+       "angle of elevation of the bottom and top of the flag-staff are 30° "
+       "and 45° respectively. Find the height of the tower. (Take √3 = "
+       "1.73)"),
+    _q(39, "D", 4, "surface-areas-and-volumes",
+       "A bucket in the form of a frustum of a cone of height 30 cm with "
+       "radii of its lower and upper ends as 10 cm and 20 cm, "
+       "respectively. Find the capacity of the bucket. Also find the cost "
+       "of milk which can completely fill the bucket at the rate of Rs. 40 "
+       "per litre. (Use π = 22/7)"),
+    _q(40, "D", 4, "statistics",
+       "(a) The following table gives production yield per hectare (in "
+       "quintals) of wheat of 100 farms of a village: Production "
+       "yield/hect.: 40-45, 45-50, 50-55, 55-60, 60-65, 65-70; No. of "
+       "farms: 4, 6, 16, 20, 30, 24. Change the distribution to 'a more "
+       "than' type distribution and draw its ogive. OR (b) The median of "
+       "the following data is 525. Find the values of x and y, if total "
+       "frequency is 100: Class: 0-100, 100-200, 200-300, 300-400, "
+       "400-500, 500-600, 600-700, 700-800, 800-900, 900-1000; Frequency: "
+       "2, 5, x, 12, 17, 20, y, 9, 7, 4."),
+]
+
+# ---------------------------------------------------------------------------
+# CBSE Class 10 Mathematics (Standard) 2022, Term 2 — Q.P. Code
+# 30/1/1, Series PPQQA/1, Set 1.
+# Full text: AglaSem Docs (see source_url in the entry below),
+# cross-checked against NetExplanations and CareerPower solutions
+# for the same series/code.
+# All 14 questions transcribed from the English text of the paper.
+# ---------------------------------------------------------------------------
+_CBSE10_2022_TERM2 = [
+    _q(1, "A", 2, "arithmetic-progressions",
+       "(a) Find the sum of first 30 terms of AP : -30, -24, -18, ..... . "
+       "OR (b) In an AP if Sn = n (4n + 1), then find the AP."),
+    _q(2, "A", 2, "surface-areas-and-volumes",
+       "A solid metallic sphere of radius 10.5 cm is melted and recast "
+       "into a number of smaller cones, each of radius 3.5 cm and height 3 "
+       "cm. Find the number of cones so formed."),
+    _q(3, "A", 2, "quadratic-equations",
+       "(a) Find the value of m for which the quadratic equation (m - 1) "
+       "x² + 2 (m - 1) x + 1 = 0 has two real and equal roots. OR (b) "
+       "Solve the following quadratic equation for x : √3 x² + 10x + 7√3 = "
+       "0."),
+    _q(4, "A", 2, "statistics",
+       "Find the mode of the following frequency distribution : Class 10 - "
+       "20, 20 - 30, 30 - 40, 40 - 50, 50 - 60; Frequency 15, 10, 12, 17, "
+       "4."),
+    _q(5, "A", 2, "quadratic-equations",
+       "The product of Rehan's age (in years) 5 years ago and his age 7 "
+       "years from now, is one more than twice his present age. Find his "
+       "present age."),
+    _q(6, "A", 2, "circles",
+       "Two concentric circles are of radii 4 cm and 3 cm. Find the length "
+       "of the chord of the larger circle which touches the smaller "
+       "circle."),
+    _q(7, "B", 3, "statistics",
+       "For what value of x, is the median of the following frequency "
+       "distribution 34.5 ? Class 0 - 10, 10 - 20, 20 - 30, 30 - 40, 40 - "
+       "50, 50 - 60, 60 - 70; Frequency 3, 5, 11, 10, x, 3, 2."),
+    _q(8, "B", 3, "circles",
+       "Draw a circle of radius 3 cm. Take two points P and Q on one of "
+       "its extended diameter each at a distance of 7 cm from its centre. "
+       "Construct tangents to the circle from these two points P and Q."),
+    _q(9, "B", 3, "some-applications-of-trigonometry",
+       "(a) The angle of elevation of the top of a building from the foot "
+       "of the tower is 30° and the angle of elevation of the top of the "
+       "tower from the foot of the building is 60°. If the tower is 50 m "
+       "high, then find the height of the building. OR (b) From a point on "
+       "a bridge across a river, the angles of depression of the banks on "
+       "opposite sides of the river are 30° and 45° respectively. If the "
+       "bridge is at a height of 3 m from the banks, then find the width "
+       "of the river."),
+    _q(10, "B", 3, "statistics",
+       "Following is the daily expenditure on lunch by 30 employees of a "
+       "company : Daily Expenditure (in Rupees) 100 - 120, 120 - 140, 140 "
+       "- 160, 160 - 180, 180 - 200; Number of Employees 8, 3, 8, 6, 5. "
+       "Find the mean daily expenditure of the employees."),
+    _q(11, "C", 4, "surface-areas-and-volumes",
+       "(a) From a solid cylinder of height 30 cm and radius 7 cm, a "
+       "conical cavity of height 24 cm and same radius is hollowed out. "
+       "Find the total surface area of the remaining solid. OR (b) Water "
+       "in a canal, 8 m wide and 6 m deep, is flowing with a speed of 12 "
+       "km/hour. How much area will it irrigate in one hour, if 0.05 m of "
+       "standing water is required ?"),
+    _q(12, "C", 4, "circles",
+       "In Figure 1, a triangle ABC with ∠B = 90° is shown. Taking AB as "
+       "diameter, a circle has been drawn intersecting AC at point P. "
+       "Prove that the tangent drawn at point P bisects BC."),
+    _q(13, "C", 4, "arithmetic-progressions",
+       "Case study: In Mathematics, relations can be expressed in various "
+       "ways. The matchstick patterns are based on linear relations. "
+       "Different strategies can be used to calculate the number of "
+       "matchsticks used in different figures. One such pattern is shown "
+       "in the paper (figures of matchstick triangles). Observe the "
+       "pattern and answer the following questions using Arithmetic "
+       "Progression : (a) Write the AP for the number of triangles used in "
+       "the figures. Also, write the nth term of this AP. (b) Which figure "
+       "has 61 matchsticks ?"),
+    _q(14, "C", 4, "some-applications-of-trigonometry",
+       "Case study: Gadisar Lake is located in the Jaisalmer district of "
+       "Rajasthan. It was built by the King of Jaisalmer and rebuilt by "
+       "Gadsi Singh in 14th century. The lake has many Chhatris. One of "
+       "them is shown in the paper. Observe the picture. From a point A h "
+       "m above from water level, the angle of elevation of top of Chhatri "
+       "(point B) is 45° and angle of depression of its reflection in "
+       "water (point C) is 60°. If the height of Chhatri above water level "
+       "is (approximately) 10 m, then (a) draw a well-labelled figure "
+       "based on the above information; (b) find the height (h) of the "
+       "point A above water level. (Use √3 = 1.73)"),
+]
+
+# ---------------------------------------------------------------------------
+# CBSE Class 12 Mathematics 2022, Term 2 — Q.P. Code 65/2/1,
+# Series ABCD1/2, Set 1.
+# Full text: AglaSem Docs (see source_url in the entry below),
+# cross-checked against the Collegedunia solved paper for the
+# same set 65/2/1.
+# All 14 questions transcribed from the English text of the paper.
+# ---------------------------------------------------------------------------
+_CBSE12_2022_TERM2 = [
+    _q(1, "A", 2, "differential-equations",
+       "Find the product of the order and the degree of the differential "
+       "equation (dy/dx) (d/dx)(x y²) + y = 0."),
+    _q(2, "A", 2, "integrals",
+       "(a) Find : ∫ (sin 3x)/(sin x) dx. OR (b) Evaluate : ∫(0 to (1/2) "
+       "log 3) e^x/(e^(2x) + 1) dx."),
+    _q(3, "A", 2, "vector-algebra",
+       "a and b are two unit vectors such that |2a + 3b| = |3a - 2b|. Find "
+       "the angle between a and b."),
+    _q(4, "A", 2, "probability",
+       "A pair of dice is thrown. It is given that the sum of numbers "
+       "appearing on both dice is an even number. Find the probability "
+       "that the number appearing on at least one die is 3."),
+    _q(5, "A", 2, "probability",
+       "Probabilities of A and B solving a specific problem are 2/3 and "
+       "3/5 respectively. If both of them try independently to solve the "
+       "problem, then find the probability that the problem is solved."),
+    _q(6, "A", 2, "three-dimensional-geometry",
+       "Write the cartesian equation of the line PQ passing through points "
+       "P(2, 2, 1) and Q(5, 1, -2). Hence, find the y-coordinate of the "
+       "point on the line PQ whose z-coordinate is -2."),
+    _q(7, "B", 3, "vector-algebra",
+       "ABCD is a parallelogram such that AC = î + ĵ and BD = 2î + ĵ + k̂. "
+       "Find AB and AD. Also, find the area of the parallelogram ABCD."),
+    _q(8, "B", 3, "integrals",
+       "(a) Evaluate : ∫(0 to 1) tan^(-1) x dx. OR (b) Find : ∫ 2x/(x² + "
+       "3x + 2) dx."),
+    _q(9, "B", 3, "differential-equations",
+       "Find the particular solution of the differential equation (y + "
+       "3x²) (dx/dy) = x, given that y = 1, when x = 1."),
+    _q(10, "B", 3, "three-dimensional-geometry",
+       "(a) Find the equation of the plane passing through points (2, 1, "
+       "0), (3, -2, -2) and (1, 1, -7). Also, obtain its distance from the "
+       "origin. OR (b) Find the distance between the lines x/1 = (y - 1)/2 "
+       "= (z - 2)/3 and (x + 1)/1 = (y + 2)/2 = (z - 1)/3."),
+    _q(11, "C", 4, "three-dimensional-geometry",
+       "Find the distance of the point (-1, -5, -10) from the point of "
+       "intersection of the line (x - 2)/3 = (y + 1)/4 = (z - 2)/12 and "
+       "the plane x - y + z = 5."),
+    _q(12, "C", 4, "integrals",
+       "Evaluate : ∫(0 to 1) x (1 - x)^n dx."),
+    _q(13, "C", 4, "application-of-integrals",
+       "(a) Using integration, find the area of the smaller region "
+       "enclosed by the curve 4x² + 4y² = 9 and the line 2x + 2y = 3. OR "
+       "(b) If the area of the region bounded by the curve y² = 4ax and "
+       "the line x = 4a is 256/3 sq. units, then using integration, find "
+       "the value of a, where a > 0."),
+    _q(14, "C", 4, "probability",
+       "Case study: At the start of a cricket match, a coin is tossed and "
+       "the team winning the toss has the opportunity to choose to bat or "
+       "bowl. Such a coin is unbiased with equal probabilities of getting "
+       "head and tail. Based on the above information, answer the "
+       "following questions : (a) If such a coin is tossed 2 times, then "
+       "find the probability distribution of number of tails. (b) Find the "
+       "probability of getting at least one head in three tosses of such a "
+       "coin."),
+]
+
+# ---------------------------------------------------------------------------
+# HBSE (Board of School Education Haryana) Class 12 Mathematics,
+# Annual Examination 2024 — Code No. 1232, Series SS/Annual
+# Exam.-2024, SET: A.
+# Full text: AglaSem Docs (see source_url in the entry below),
+# cross-checked against the Indian Express copy of the same
+# document; the board's own March-2024 index (bseh.org.in)
+# lists this paper's Sets A–D.
+# All 38 questions transcribed from the English text of the
+# bilingual paper.
+# ---------------------------------------------------------------------------
+_HBSE12_2024 = [
+    _q(1, "A", 1, "relations-and-functions",
+       "Let N be the set of natural numbers and the function f : N → N be "
+       "defined by f(n) = 2n + 3 for all n ∈ N, then f is: (A) Surjective "
+       "(B) Injective (C) Bijective (D) None of these"),
+    _q(2, "A", 1, "inverse-trigonometric-functions",
+       "The domain of sin⁻¹ 2x is: (A) [0, 1] (B) [-1, 1] (C) [-1/2, 1/2] "
+       "(D) [-2, 2]"),
+    _q(3, "A", 1, "matrices",
+       "Total numbers of possible matrices of order 3 × 3 with each entry "
+       "2 or 0, are: (A) 9 (B) 27 (C) 81 (D) 512"),
+    _q(4, "A", 1, "determinants",
+       "If |x, 2; 18, x| = |6, 2; 18, 6|, then x is equal to: (A) 6 (B) ±6 "
+       "(C) -6 (D) 0"),
+    _q(5, "A", 1, "determinants",
+       "Let A be a non-singular square matrix of order 3 × 3. Then |adj A| "
+       "is equal to ............ ."),
+    _q(6, "A", 1, "continuity-and-differentiability",
+       "The derivative of sin(log x) w. r. t. x is: (A) cos(log x)/x² (B) "
+       "cos(log x) (C) cos(log x)/x (D) None of these"),
+    _q(7, "A", 1, "continuity-and-differentiability",
+       "The derivative of sin x w. r. t. cos x is ............ ."),
+    _q(8, "A", 1, "integrals",
+       "∫ e^x sec x (1 + tan x) dx is equal to: (A) e^x cos x + c (B) e^x "
+       "sec x + c (C) e^x sin x + c (D) e^x tan x + c"),
+    _q(9, "A", 1, "integrals",
+       "The value of ∫ sin⁵ x dx, from -π/2 to π/2, is equal to "
+       "............ ."),
+    _q(10, "A", 1, "application-of-integrals",
+       "The area enclosed by circle x² + y² = 2 is equal to: (A) 4π sq. "
+       "units (B) 2√2 π sq. units (C) 4π² sq. units (D) 2π sq. units"),
+    _q(11, "A", 1, "differential-equations",
+       "The order and degree of the differential equation [1 + (dy/dx)²] = "
+       "d²y/dx² respectively are: (A) 1, 2 (B) 2, 2 (C) 2, 1 (D) 4, 2"),
+    _q(12, "A", 1, "differential-equations",
+       "Integrating factor of the differential equation x dy/dx - y = sin "
+       "x is ............ ."),
+    _q(13, "A", 1, "vector-algebra",
+       "Let the vectors a and b be such that |a| = 3 and |b| = √2/3, then "
+       "a × b is a unit vector, if the angle between a and b is: (A) π/6 "
+       "(B) π/4 (C) π/3 (D) π/2"),
+    _q(14, "A", 1, "vector-algebra",
+       "If the vectors a = 2i + λj + k and b = i + 2j + 3k are orthogonal, "
+       "then the value of λ is ............ ."),
+    _q(15, "A", 1, "three-dimensional-geometry",
+       "The equations of x-axis in space are: (A) x = 0, y = 0 (B) x = 0, "
+       "z = 0 (C) x = 0 (D) y = 0, z = 0"),
+    _q(16, "A", 1, "probability",
+       "The probability of obtaining an even prime number on each die, "
+       "when a pair of dice is rolled is ............ ."),
+    _q(17, "A", 1, "probability",
+       "A bag contains 5 red and 3 blue balls. If 3 balls are drawn at "
+       "random without replacement, the probability of getting exactly one "
+       "red ball is ............ ."),
+    _q(18, "A", 1, "probability",
+       "Two cards are drawn from well shuffled deck of 52 playing cards "
+       "with replacement. The probability, that both cards are queens is "
+       "............ ."),
+    _q(19, "A", 1, "relations-and-functions",
+       "Assertion (A): A relation R = {(a, b); |a - b| < 2} defined on the "
+       "set A = {1, 2, 3, 4, 5} is reflexive. Reason (R): A relation R on "
+       "the set A is said to be reflexive if for (a, b) ∈ R and (b, c) ∈ "
+       "R, we have (a, c) ∈ R. (A) Both Assertion (A) and Reason (R) are "
+       "true and Reason (R) is the correct explanation of Assertion (A). "
+       "(B) Both Assertion (A) and Reason (R) are true and Reason (R) is "
+       "not the correct explanation of Assertion (A). (C) Assertion (A) is "
+       "true, but Reason (R) is false. (D) Assertion (A) is false, but "
+       "Reason (R) is true."),
+    _q(20, "A", 1, "three-dimensional-geometry",
+       "Assertion (A): The angle between the straight lines (x + 1)/2 = (y "
+       "- 2)/5 = (z + 3)/4 and (x - 1)/1 = (y + 2)/2 = (z - 3)/(-3) is "
+       "90°. Reason (R): Skew lines are lines in different planes which "
+       "are parallel and intersecting. (A) Both Assertion (A) and Reason "
+       "(R) are true and Reason (R) is the correct explanation of "
+       "Assertion (A). (B) Both Assertion (A) and Reason (R) are true and "
+       "Reason (R) is not the correct explanation of Assertion (A). (C) "
+       "Assertion (A) is true, but Reason (R) is false. (D) Assertion (A) "
+       "is false, but Reason (R) is true."),
+    _q(21, "B", 2, "relations-and-functions",
+       "Let f : R → R be defined by f(x) = sin x and g : R → R be defined "
+       "by g(x) = x², then find fog and gof. Show that: fog ≠ gof OR Find "
+       "the value of: cos⁻¹ (1/2) + 2 sin⁻¹ (1/2)"),
+    _q(22, "B", 2, "matrices",
+       "If A = [[cos θ, sin θ], [-sin θ, cos θ]], then verify that: A'A = "
+       "I"),
+    _q(23, "B", 2, "continuity-and-differentiability",
+       "Differentiate w. r. t. x: tan⁻¹ ((1 - cos x)/(1 + cos x)), -π/4 < "
+       "x < π/4"),
+    _q(24, "B", 2, "differential-equations",
+       "Verify that the function xy = log y + c is a solution of the "
+       "differential equation dy/dx = y²/(1 - xy), (xy ≠ 1). OR Find the "
+       "general solution of differential equation dy/dx = (1 + x²)(1 + "
+       "y²)."),
+    _q(25, "B", 2, "probability",
+       "Evaluate P(A ∪ B), if 2P(A) = P(B) = 5/13 and P(A/B) = 2/5."),
+    _q(26, "C", 3, "relations-and-functions",
+       "Show that the relation R defined in the set A of all triangles as "
+       "R = {(T1, T2); T1 is similar to T2}, is equivalence relation. OR "
+       "Write the following function in simplest form: tan⁻¹ ((3a²x - "
+       "x³)/(a³ - 3ax²)), a > 0; -a/√3 < x < a/√3"),
+    _q(27, "C", 3, "matrices",
+       "If A = [[3, -2], [4, -2]] and I = [[1, 0], [0, 1]], find K, so "
+       "that A² = KA - 2I."),
+    _q(28, "C", 3, "continuity-and-differentiability",
+       "Find the value of K, so that the function f(x) = K cos x/(π - 2x), "
+       "if x ≠ π/2; f(x) = 3, if x = π/2, is continuous at x = π/2."),
+    _q(29, "C", 3, "application-of-derivatives",
+       "A balloon, which always remains spherical, has a variable diameter "
+       "(3/2)(2x + 1). Find the rate of change of its volume with respect "
+       "to x."),
+    _q(30, "C", 3, "integrals",
+       "Integrate: ∫ tan x/(sin x . cos x) dx OR Integrate: ∫ 1/[x(x⁴ - "
+       "1)] dx"),
+    _q(31, "C", 3, "vector-algebra",
+       "Find λ and μ, if (2i + 6j + 27k) × (i + λj + μk) = 0."),
+    _q(32, "D", 5, "matrices",
+       "Solve the following system of linear equations, using matrix "
+       "method: 2x + y + z = 1; x - 2y - z = 3/2; 3y - 5z = 9"),
+    _q(33, "D", 5, "integrals",
+       "Evaluate the following definite integral: ∫ log(1 + tan x) dx, "
+       "from 0 to π/4 OR Find the area of the region bounded by the "
+       "ellipse 9x² + 4y² = 36."),
+    _q(34, "D", 5, "three-dimensional-geometry",
+       "Find the shortest distance between the lines whose vector "
+       "equations are: r = i + 2j + 3k + λ(i - 3j + 2k) and r = 4i + 5j + "
+       "6k + μ(2i + 3j + k) OR Find the shortest distance between the "
+       "lines whose vector equations are: r = (1 - t)i + (t - 2)j + (3 - "
+       "2t)k and r = (s + 1)i + (2s - 1)j - (2s + 1)k"),
+    _q(35, "D", 5, "linear-programming",
+       "Minimize and maximize z = 5x + 10y subject to constraints: x + 2y "
+       "≤ 120, x + y ≥ 60, x - 2y ≥ 0, x ≥ 0, y ≥ 0"),
+    _q(36, "E", 4, "application-of-derivatives",
+       "Case study: Let a cone is inscribed in a sphere of radius R. The "
+       "height and radius of cone are h and r respectively. On the basis "
+       "of above information, answer the following questions: (i) Write "
+       "the relation between r and R in terms of x. (ii) Write the volume "
+       "V of the cone in terms of R and x. (iii) Show that volume V of the "
+       "cone is maximum, when x = R/3. OR If volume V of the cone is "
+       "maximum at x = R/3, then find the maximum value of V and find the "
+       "ratio of volume of cone and volume of sphere, when volume of cone "
+       "is maximum."),
+    _q(37, "E", 4, "differential-equations",
+       "Case study: Polio drops are delivered to 50 K children in a "
+       "district. The rate at which polio drops are given is directly "
+       "proportional to the number of children who have not been "
+       "administered the drops. By the end of 2nd week, half the children "
+       "have been given the polio drops. How many will have been given the "
+       "drops by the end of 3rd week can be estimated using the solution "
+       "to the differential equation dy/dx = λ(50 - y), where x denotes "
+       "the number of weeks and y the number of children who have been "
+       "given the drops. Based on the above information, answer the "
+       "following questions: (i) State the order of the above differential "
+       "equation. (ii) Which method of solving a differential equation can "
+       "be used to solve dy/dx = λ(50 - y)? (iii) Solve the differential "
+       "equation: dy/dx = λ(50 - y) OR If λ = 0.049 and y(0) = 0, then "
+       "find the particular solution of differential equation."),
+    _q(38, "E", 4, "probability",
+       "Case study: In a school, teacher asks a question to three students "
+       "Ravi, Mohit and Sonia. The probability of solving the question by "
+       "Ravi, Mohit and Sonia are 30%, 25% and 45% respectively. The "
+       "probability of making error by Ravi, Mohit and Sonia are 1%, 1.2% "
+       "and 2% respectively. Based on the above information, answer the "
+       "following questions: (i) Find the total probability of committing "
+       "an error in solving the question. (ii) If the solution of question "
+       "is checked by teacher and has some error, then find the "
+       "probability that the question is not solved by Ravi."),
+]
+
+# ---------------------------------------------------------------------------
 # The library registry. Every entry: id, class, board, year, set label,
 # source name + URL (the public page the full text was fetched from),
 # an honesty note, and the transcribed questions.
@@ -1890,6 +2624,145 @@ PAPERS = [
                 "cross-checked against the official CBSE "
                 "marking scheme for paper code 30/1/1.",
         "questions": _CBSE10_2023,
+    },
+    {
+        "id": "cbse-10-2025-basic",
+        "class_num": 10,
+        "board": "CBSE",
+        "year": 2025,
+        "set_label": "Mathematics (Basic) 2025, Q.P. Code 430/1/1, Series "
+                     "GE1FH, Set 1",
+        "source_name": "CogniGuru (Cognicraft Edu) — CBSE Class 10 Maths "
+                       "Basic 2025 Question Paper (Set 430/1/1) with "
+                       "Solutions, checked against CBSE's answer key; "
+                       "cross-checked against Swavid's 430/1/1 paper",
+        "source_url": "https://cognicraftedu.com/cbse- "
+                      "class-10-papers/maths-basic/2025/430-1-1",
+        "note": "All 38 questions are included; none omitted. Figure "
+                "questions Q8, Q9, Q12, Q13, Q22, Q26(b), Q33 and the case "
+                "studies Q36-Q38 are included with the figure's data "
+                "spelled out in words in the text, exactly as described in "
+                "the primary source (the printed figures themselves are not "
+                "reproduced). Q7 is transcribed with its printed options; "
+                "CBSE's own marking scheme for this paper states that none "
+                "of the given options is correct. No question is shown "
+                "without options.",
+        "questions": _CBSE10_2025_BASIC,
+    },
+    {
+        "id": "cbse-10-2020",
+        "class_num": 10,
+        "board": "CBSE",
+        "year": 2020,
+        "set_label": "Mathematics (Standard) 2020, Q.P. Code 30/1/1, "
+                     "Series JBB/1, Set 1 (Delhi Set-I)",
+        "source_name": "LearnCBSE — CBSE Class 10 Maths Question Paper "
+                       "2020 (Series: JBB/1) with Solutions; questions "
+                       "redacted there as 'Not in Current Syllabus' "
+                       "recovered from Oswaal CBSE Solved Paper 2020 "
+                       "(Delhi Set-I, Code No. 30/1/1) and NotesBazar "
+                       "30/1/1",
+        "source_url": "https://www.learncbse.in/cbse-class-10-maths- "
+                      "question-paper-2020-series-jbb-1/",
+        "note": "All 40 questions are included; none omitted. LearnCBSE "
+                "redacts Q10, Q12, Q13, Q14, Q28, Q32, Q34, Q35, Q37 and "
+                "Q39 as 'Not in Current Syllabus' without printing their "
+                "text; their text was recovered verbatim from the Oswaal "
+                "Solved Paper 2020 for the same code 30/1/1 (Delhi Set-I) "
+                "and agrees with NotesBazar's 30/1/1 paper. LearnCBSE also "
+                "prints only one side of the internal choices in Q27, Q28, "
+                "Q30 and Q40 and only the main part of Q35 and Q40; both "
+                "choices are given here from Oswaal/NotesBazar. Q11 is "
+                "figure-based; the figure's values (AR = 4 cm, AC = 11 cm, "
+                "BP = 3 cm) are spelled out in the text from the Oswaal "
+                "figure. Q22, Q23 and Q31 refer to printed figures whose "
+                "defining conditions are fully stated in the text. No "
+                "question is shown without options. The CBSE Portal page "
+                "titled 'Maths Standard 2020' is a DIFFERENT set (its Q1 is "
+                "on prime factorisation of 196) and was not used for "
+                "transcription.",
+        "questions": _CBSE10_2020,
+    },
+    {
+        "id": "cbse-10-2022-term2",
+        "class_num": 10,
+        "board": "CBSE",
+        "year": 2022,
+        "set_label": "Q.P. Code 30/1/1 · Series PPQQA/1 · Set 1 · "
+                     "Mathematics (Standard) · Term 2 (40 marks)",
+        "source_name": "CBSE Class 10 Mathematics (Standard) Question "
+                       "Paper 2022, Term 2, Set 1 (30/1/1), full text on "
+                       "AglaSem Docs, cross-checked against "
+                       "NetExplanations and CareerPower solutions for the "
+                       "same series/code",
+        "source_url": "https://docs.aglasem.com/view/7ee698c4-5d00-11ed-8e08-0a5e36bc6706",
+        "note": "All 14 questions of the Term 2 paper are included (the "
+                "2022 board exam was held in two terms; this is the "
+                "complete Term 2 paper, 40 marks). Question 12 refers to "
+                "the paper's Figure 1 and Question 13 to the printed "
+                "matchstick-pattern figures; both question texts are "
+                "complete as printed, but the figures themselves are not "
+                "reproduced here. The AglaSem OCR drops most minus signs; "
+                "every sign was restored only where the cross-check sources "
+                "agree (e.g. Q.1's AP is -30, -24, -18, ...).",
+        "questions": _CBSE10_2022_TERM2,
+    },
+    {
+        "id": "cbse-12-2022-term2",
+        "class_num": 12,
+        "board": "CBSE",
+        "year": 2022,
+        "set_label": "Q.P. Code 65/2/1 · Series ABCD1/2 · Set 1 · Term 2 "
+                     "(40 marks)",
+        "source_name": "CBSE Class 12 Mathematics Question Paper 2022, "
+                       "Term 2, Set 1 (65/2/1), full text on AglaSem Docs, "
+                       "cross-checked against the Collegedunia solved "
+                       "paper for the same set 65/2/1",
+        "source_url": "https://docs.aglasem.com/view/eb06c30a-5da3-11ed-83f1-0a5e36bc6706",
+        "note": "All 14 questions of the Term 2 paper are included (the "
+                "2022 board exam was held in two terms; this is the "
+                "complete Term 2 paper, 40 marks). The AglaSem OCR drops "
+                "most minus signs and mangles formula layout; every formula "
+                "and sign below was restored only where the Collegedunia "
+                "solved paper for the same code 65/2/1 agrees (e.g. Q.6's "
+                "point Q is (5, 1, -2), Q.10(a)'s points are (3, -2, -2) "
+                "and (1, 1, -7), Q.11's point is (-1, -5, -10)).",
+        "questions": _CBSE12_2022_TERM2,
+    },
+    {
+        "id": "hbse-12-2024",
+        "class_num": 12,
+        "board": "HBSE (Haryana Board)",
+        "year": 2024,
+        "set_label": "Code No. 1232, Series: SS/Annual Exam.-2024, SET: A",
+        "source_name": "AglaSem Docs — HBSE Class 12 Question Paper 2024 "
+                       "Mathematics (full text version, 26 pages)",
+        "source_url": "https://docs.aglasem.com/view/5169be2e-eea5-11ef- "
+                      "bf8b-0a5e36bc6706",
+        "note": "All 38 questions included (80/80 marks); English text "
+                "transcribed from the bilingual paper. No omissions and no "
+                "stem-only questions. Flags: Q10 options (B)/(C) "
+                "radical/exponent placement (2√2 π, 4π²) read from the OCR "
+                "layout; Q11 — the text versions show an extra superscript "
+                "'2' floating at the bracket of the equation whose "
+                "attachment could not be resolved, equation transcribed in "
+                "its linear visible form [1 + (dy/dx)²] = d²y/dx², treat as "
+                "provisional; Q13 |b| = √2/3 — the radical over the 2 is "
+                "dropped in both OCR text versions (fraction shows as 2 "
+                "over 3), read as the standard printed form; Q23 — lower "
+                "bound read as -π/4 (minus sign dropped in the AglaSem OCR, "
+                "present in the second source's rendering) and no radical "
+                "is legible over the fraction (1 - cos x)/(1 + cos x) in "
+                "either text version, transcribed as printed there; Q26 OR "
+                "— denominator read as a³ - 3ax² and bounds as -a/√3 < x < "
+                "a/√3 (exponents/radicals garbled in OCR); Q30 — no radical "
+                "is legible over tan x in either text version, transcribed "
+                "as printed there; Q36 — the variable x is defined only in "
+                "the printed figure (labels D, R, O, R, x, A, B, C), not in "
+                "the text. Q19 Reason and Q20 Reason are transcribed "
+                "exactly as printed, even though both statements are "
+                "mathematically odd as printed.",
+        "questions": _HBSE12_2024,
     },
 ]
 
@@ -2330,6 +3203,7 @@ def generate_practice_paper(class_num, seed=None):
 
 __all__ = ["PAPERS", "PAPER_BY_ID", "CLASSES_WITH_PAPERS",
            "PAPER_STRUCTURE", "TOTAL_MARKS", "SECTION_TITLES",
+           "section_title_for",
            "get_paper", "papers_for_class", "chapter_title",
            "paper_total_marks", "analysis_for_class",
            "generate_practice_paper"]

@@ -14,6 +14,36 @@ _HISTORY_LIMIT = 30
 _QUESTION_LIMIT = 500
 
 
+def trimmed_history_entry(question, result):
+    """Wave 46 (audit F4): the session-history copy of a solve.
+
+    The /history page renders only the question and the final
+    answer (templates/history.html reads e.question and
+    e.result.answer), but entries used to store the FULL result
+    dict — steps, latex, fallback payloads and all — so the
+    client-side session cookie crossed the ~4,096 B browser
+    limit after ~30 ordinary solves and the browser silently
+    dropped it (the student looked logged out and lost history
+    mid-session). Entries now keep exactly what the UI reads —
+    question, answer, op, fallback_kind — in the same
+    {"question": ..., "result": {...}} shape.
+
+    session["last_result"] is NOT removed: /download and
+    /solution/print read the full result (steps included) from
+    it, so it is a real consumer, not a duplicate — the
+    duplication disappears because history no longer carries a
+    second full copy."""
+    result = result or {}
+    return {
+        "question": question,
+        "result": {
+            "answer": result.get("answer", ""),
+            "op": result.get("op", ""),
+            "fallback_kind": result.get("fallback_kind"),
+        },
+    }
+
+
 def _solve_friendly(question):
     """Wave 5b: solve, and on failure gently re-ask once with a hint
     appended (same behaviour as the classic /solve route), so the
@@ -147,7 +177,8 @@ def api_solve():
     session["last_question"] = question
     session["last_result"] = result
     history = session.get("history", [])
-    history.insert(0, {"question": question, "result": result})
+    # Wave 46 (audit F4): trimmed entry — see trimmed_history_entry.
+    history.insert(0, trimmed_history_entry(question, result))
     session["history"] = history[:_HISTORY_LIMIT]
 
     if solve_failed(question, result):

@@ -30,6 +30,17 @@ untouched. Anything else is routed through the layers:
   4. vague / gibberish / guide: a friendly reply that shows how
      to ask, with a tiny solved example — never a bare error
 
+Wave 39 adds one layer to this chain, between the science
+guard and salvage: the Verified Data Bank (bank.py). When the
+solver could not really answer and the question is an EXACT
+normalised match with a banked item, the item's own steps +
+final answer are served instead of a salvaged fragment, a
+similar example or the general guide — every banked answer was
+independently SymPy-verified before banking. A real solver
+answer is still served untouched above it, a science question
+never reaches it, and a miss changes nothing: the rest of the
+flow is byte-for-byte the pre-Wave-39 behaviour.
+
 HONESTY RULE: a fallback result is flagged (fallback=True,
 fallback_kind=...) and never presents a guessed or similar
 answer as the exact answer to the student's question.
@@ -703,15 +714,17 @@ def _guide_result(question, hindi, kind):
 
 # ---------------------------------------------------------------------------
 # Wave 37: the Gemini free-tier second brain (gemini_fallback.py)
+# Wave 41: Groq (groq_fallback.py) joins as the second brain —
+# consulted only when Gemini returned None.
 # ---------------------------------------------------------------------------
 
 # The fallback kinds that mean "the student's OWN question is
 # still unanswered": a similar example, a concept card, or the
-# general guide. Only these may be upgraded by Gemini. Real
-# solver answers, salvage solves, greetings, non-maths and
-# science replies never reach the check at all (they return
-# earlier), and vague/gibberish asks have no real question to
-# send.
+# general guide. Only these may be upgraded by an AI brain.
+# Real solver answers, salvage solves, greetings, non-maths
+# and science replies never reach the check at all (they
+# return earlier), and vague/gibberish asks have no real
+# question to send.
 _GEMINI_KINDS = ("similar", "concept", "guide")
 
 
@@ -724,6 +737,36 @@ def _gemini_answer(question, hindi):
         from gemini_fallback import try_gemini_answer
         return try_gemini_answer(question,
                                  "hi" if hindi else None)
+    except Exception:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Wave 39: the Verified Data Bank (bank.py) — exact matches only
+# ---------------------------------------------------------------------------
+
+def _bank_answer(question):
+    """The banked, SymPy-verified answer for this EXACT question
+    (bank.lookup_result), or None. Lazy import + blanket guard,
+    same pattern as the Gemini layer: the bank snapshot is an
+    optional file and any failure must leave the Wave-18 flow
+    exactly as it was."""
+    try:
+        from bank import lookup_result
+        return lookup_result(question)
+    except Exception:
+        return None
+
+
+def _groq_answer(question, hindi):
+    """Wave 41: ask Groq for the student's own question —
+    only ever called when Gemini returned None. Same contract
+    as _gemini_answer: lazy import, ANY failure returns None
+    and the honest Wave-18 fallback is served unchanged."""
+    try:
+        from groq_fallback import try_groq_answer
+        return try_groq_answer(question,
+                               "hi" if hindi else None)
     except Exception:
         return None
 
@@ -757,6 +800,21 @@ def with_fallback(question, result):
     if has_science_signal(question):
         return _science_result(question, hindi)
 
+    # Wave 39: the Verified Data Bank exact-match layer. It sits
+    # AFTER the science guard (a science question is never
+    # served from the bank) and after a real solver answer has
+    # been served untouched above — what it upgrades is the
+    # fall-through: a question the solver could not really
+    # answer, whose EXACT normalised text matches a banked item,
+    # gets that item's SymPy-verified steps + final answer
+    # instead of a salvaged fragment, a similar example or the
+    # general guide. Exact-only, so it can never shadow the
+    # solver for a non-identical question; on a miss the layers
+    # below run exactly as before.
+    banked = _bank_answer(question)
+    if banked is not None:
+        return banked
+
     # The solver did not really answer. Work the layers.
     salvaged = _salvage(question, hindi)
     if salvaged is not None:
@@ -781,8 +839,14 @@ def with_fallback(question, result):
     # or the general guide), ask Gemini (free tier) before
     # settling — solver first, AI only as the fallback. Any
     # Gemini failure leaves the Wave-18 answer untouched.
+    # Wave 41: when Gemini returns None, Groq (also free tier)
+    # gets the same question before we settle. Exact solves,
+    # salvage, greetings, non-maths and science replies have
+    # all returned earlier, so neither brain can reach them.
     if result_out.get("fallback_kind") in _GEMINI_KINDS:
         ai_result = _gemini_answer(question, hindi)
+        if ai_result is None:
+            ai_result = _groq_answer(question, hindi)
         if ai_result is not None:
             return ai_result
     return result_out

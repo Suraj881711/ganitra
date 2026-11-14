@@ -400,11 +400,13 @@ TPL = open(os.path.join("templates", "base.html"),
            encoding="utf8").read()
 SW = open(os.path.join("static", "sw.js"),
           encoding="utf8").read()
-check("stylesheet pin deliberately unchanged (?v=29)",
-      "stylesheet?v=29" in TPL or 'stylesheet")}?v=29' in TPL
-      or "?v=29" in TPL)
-check("service-worker cache deliberately unchanged (v6)",
-      'GANITRA_CACHE = "ganitra-static-v6"' in SW)
+# Merge (Waves 38-46): Wave 43 deliberately bumped the pins to
+# ?v=30 / ganitra-static-v7 — assert the current merged pins,
+# same convention Wave 43 applied to the pytest pin tests.
+check("stylesheet pin at Wave 43 bump (?v=30)",
+      "v='30'" in TPL or "?v=30" in TPL)
+check("service-worker cache at Wave 43 bump (v7)",
+      'GANITRA_CACHE = "ganitra-static-v7"' in SW)
 for _name, _want in (
         ("logo-full-t.png", "f18c8e42"),
         ("logo-full.png", "07009560"),

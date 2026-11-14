@@ -302,9 +302,17 @@ def record_failed_login(name_key):
     (this failure reached LOGIN_ATTEMPT_LIMIT, or a lock was
     already running — a running lock is NOT extended by further
     attempts, so it always ends LOGIN_LOCKOUT_SECONDS after the
-    failure that tripped it). An expired lock's stale count is
-    kept, so the first failure after expiry re-locks at once;
-    only a successful login clears the slate."""
+    failure that tripped it).
+
+    Wave 46 (audit F2): when a lock has EXPIRED, its stale fail
+    count is reset BEFORE this failure is counted. The old
+    behaviour kept the count, so ONE failure after expiry
+    re-locked instantly — and since a student's login name is
+    public by design, anyone could keep a classmate locked out
+    forever at the cost of ~1 request every 30 minutes. Now a
+    fresh failure window starts at expiry: re-locking costs the
+    full LOGIN_ATTEMPT_LIMIT failures again. (A successful login
+    still clears the slate via clear_login_failures.)"""
     key = str(name_key or "")
     if not key:
         return False
@@ -318,6 +326,11 @@ def record_failed_login(name_key):
         locked_until = row["locked_until"] if row else 0
         if locked_until > now:
             return True
+        if locked_until:
+            # A lock exists but is in the past: it has expired,
+            # so its fail count is stale — start a fresh window.
+            fails = 0
+            locked_until = 0
         fails += 1
         if fails >= LOGIN_ATTEMPT_LIMIT:
             locked_until = now + LOGIN_LOCKOUT_SECONDS

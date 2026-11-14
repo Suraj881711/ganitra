@@ -24,6 +24,15 @@ _shape_result also strips numbering/markdown defensively, so
 what reaches the renderers is shaped like every other Ganitra
 answer ({type, op, answer, steps, ...}) with the honesty flags
 set (fallback=True, fallback_kind="gemini", ai_generated=True).
+
+Wave 41: the Wave-37 build hardcoded gemini-2.5-flash, which
+Google has since gated OFF for new users (it returns 404 for
+Suraj's key). MODELS is now an ordered chain of the models
+verified working on his key: a model-level failure (HTTP
+404/429/503, raised or returned as an error body) moves on to
+the next model; any other failure (no key, timeout, a 400,
+an unusable reply) still degrades silently to None exactly
+as before.
 """
 import json
 import os
@@ -31,11 +40,41 @@ import re
 import urllib.error
 import urllib.request
 
-MODEL = "gemini-2.5-flash"
-API_URL = ("https://generativelanguage.googleapis.com/v1beta/"
-           f"models/{MODEL}:generateContent")
+# Wave 41: ordered model chain (see module docstring). The
+# first model is tried first; a model-level failure moves to
+# the next. MODEL stays as the primary for anything that
+# imported it.
+MODELS = ["gemini-3-flash-preview", "gemini-3.1-flash-lite"]
+MODEL = MODELS[0]
+_API_BASE = ("https://generativelanguage.googleapis.com/"
+             "v1beta/models")
+API_URL = f"{_API_BASE}/{MODEL}:generateContent"
 ENV_KEY = "GANITRA_GEMINI_API_KEY"
 TIMEOUT_SECONDS = 15
+
+# HTTP statuses that mean "this MODEL cannot serve right now"
+# (gated off / free-tier quota / transient overload) — the
+# chain's cue to try the next model. Anything else (400 bad
+# request, auth errors, timeouts) is not model-specific and
+# keeps the old fail-silent behaviour.
+_CHAIN_STATUSES = (404, 429, 503)
+
+
+def _api_url(model):
+    return f"{_API_BASE}/{model}:generateContent"
+
+
+def _is_model_failure(exc=None, response=None):
+    """True when a failure is model-level: an HTTPError-style
+    exception carrying a chain status, or an error body whose
+    code is one."""
+    if exc is not None:
+        return getattr(exc, "code", None) in _CHAIN_STATUSES
+    if isinstance(response, dict):
+        error = response.get("error")
+        if isinstance(error, dict):
+            return error.get("code") in _CHAIN_STATUSES
+    return False
 
 _LANG_NAMES = {
     "en": "English",
@@ -162,15 +201,26 @@ def try_gemini_answer(question, lang=None):
         "generationConfig": {"temperature": 0.2,
                              "maxOutputTokens": 1024},
     }
-    try:
-        response = _post_json(API_URL, payload, api_key,
-                              TIMEOUT_SECONDS)
-    except Exception:
-        return None
-    if not isinstance(response, dict) or response.get("error"):
-        return None
-    return _shape_result(_extract_text(response))
+    # Wave 41: walk the model chain. A model-level failure
+    # (404/429/503) tries the next model; every other failure
+    # returns None at once, as Wave 37 did.
+    for model in MODELS:
+        try:
+            response = _post_json(_api_url(model), payload,
+                                  api_key, TIMEOUT_SECONDS)
+        except Exception as exc:
+            if _is_model_failure(exc=exc):
+                continue
+            return None
+        if not isinstance(response, dict):
+            return None
+        if response.get("error"):
+            if _is_model_failure(response=response):
+                continue
+            return None
+        return _shape_result(_extract_text(response))
+    return None
 
 
-__all__ = ["try_gemini_answer", "MODEL", "ENV_KEY",
+__all__ = ["try_gemini_answer", "MODEL", "MODELS", "ENV_KEY",
            "TIMEOUT_SECONDS"]

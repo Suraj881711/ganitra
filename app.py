@@ -1,5 +1,6 @@
 import base64
 import io
+import math
 import os
 import re
 import secrets
@@ -9,10 +10,11 @@ import tempfile
 import zipfile
 import xml.etree.ElementTree as ET
 from datetime import timedelta
+from fractions import Fraction
 
 from flask import (Flask, Response, jsonify, render_template, request,
                    redirect, session, url_for, flash)
-from api import api_bp
+from api import api_bp, trimmed_history_entry
 from i18n import (LANG_NAMES, SPEECH_LANGS, SUPPORTED_LANGS,
                   advice_for, explanation_for, get_strings,
                   normalise_lang, remark_key_for, result_unsolvable,
@@ -28,6 +30,9 @@ from board_data import (BOARD_NAMES, BOARDS, CLASS_NUMBERS,
 from board_quiz import (CLASSIC_QUESTION_COUNT, display_answer,
                         generate_chapter_questions)
 import papers_data
+import practice_gen
+from test_mode import (TEST_TIME_LIMIT, TOPIC_LABELS as TEST_TOPICS,
+                       check_test_answer, generate_test, worked_steps)
 from solver.router import solve_question
 from fallback import with_fallback
 from langdetect_local import detect_language_confident
@@ -211,6 +216,14 @@ def create_app():
         # the real cookie lifetime — log in once, stay logged in
         # for 30 days, ChatGPT-style.
         PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+        # Wave 46 (audit F1): a hard ceiling on request bodies.
+        # The largest legitimate uploads are the 2 MB photo and
+        # /file-extract caps, so 4 MB leaves multipart headroom
+        # while stopping unbounded spooling of an attacker's body
+        # to the 512 MB disk. Bodies past this get a plain 413;
+        # the per-route 2 MB friendly errors still fire first for
+        # anything under it.
+        MAX_CONTENT_LENGTH=4 * 1024 * 1024,
     )
 
     # Register API blueprint
@@ -732,7 +745,14 @@ def create_app():
         upload = request.files.get("photo")
         if upload is None or not upload.filename:
             return _account_page(user, strings["acct_err_required"])
-        data = upload.read()
+        # Wave 46 (audit F5): read at most the cap + 1 byte and
+        # enforce the size limit BEFORE the bytes are parsed —
+        # the old code read the whole upload into memory first
+        # and only measured it afterwards. Mirrors /file-extract.
+        data = upload.stream.read(_PHOTO_MAX_BYTES + 1)
+        if len(data) > _PHOTO_MAX_BYTES:
+            return _account_page(user,
+                                 strings["acct_err_photo_size"])
         ctype = (upload.content_type or "").lower()
         kind = _photo_kind(data)
         if kind is None or ctype not in (
@@ -744,9 +764,6 @@ def create_app():
         if _photo_end(data, kind) != len(data):
             return _account_page(user,
                                  strings["acct_err_photo_type"])
-        if len(data) > _PHOTO_MAX_BYTES:
-            return _account_page(user,
-                                 strings["acct_err_photo_size"])
         accounts.set_photo(user["id"], data)
         return redirect(url_for("account_page", saved=1))
 
@@ -905,7 +922,9 @@ def create_app():
         session["last_question"] = question
         session["last_result"] = result
         history = session.get("history", [])
-        history.insert(0, {"question": question, "result": result})
+        # Wave 46 (audit F4): trimmed entry — see
+        # api.trimmed_history_entry.
+        history.insert(0, trimmed_history_entry(question, result))
         session["history"] = history[:_HISTORY_LIMIT]
         return render_template("answer.html", question=question,
                                result=result,
@@ -960,22 +979,72 @@ def create_app():
         except Exception:
             return None
 
+    _PDF_RENDER_MAX_PIXELS = 2_000_000  # ~2 megapixels
+    _PDF_RENDER_MAX_DPI = 150           # the historical fixed DPI
+
+    def _pdf_render_dpi(data):
+        """The DPI at which pdftoppm may render this PDF's first
+        page so the output stays within ~2 MP, however large the
+        page CLAIMS to be. Wave 46 (audit F1b): the render used a
+        fixed 150 DPI with no page-size cap, so a 433-byte blank
+        PDF whose MediaBox claims 7920x7920 pt (110 in square)
+        rendered at 16,500x16,500 px — 23 s and ~1 GB RAM, from
+        an anonymous route. Normal pages (A4 and friends) still
+        get ~150 DPI; only absurd pages scale down. The size is
+        the max of MediaBox and CropBox, times any /UserUnit
+        scale, so a small MediaBox cannot hide a huge page.
+        Returns None when the size cannot be read — the caller
+        then caps the render with pdftoppm's own -scale-to."""
+        try:
+            from pypdf import PdfReader
+            reader = PdfReader(io.BytesIO(data))
+            if not reader.pages:
+                return None
+            page = reader.pages[0]
+            width = height = 0.0
+            for box in (page.mediabox, page.cropbox):
+                width = max(width, abs(float(box.width)))
+                height = max(height, abs(float(box.height)))
+            try:
+                unit = abs(float(page.user_unit or 1.0))
+            except Exception:
+                unit = 1.0
+            width *= unit
+            height *= unit
+        except Exception:
+            return None
+        if width <= 0 or height <= 0:
+            return None
+        # pixels = (w/72 * dpi) * (h/72 * dpi) <= MAX_PIXELS
+        dpi = 72.0 * math.sqrt(
+            _PDF_RENDER_MAX_PIXELS / (width * height))
+        return max(1, min(_PDF_RENDER_MAX_DPI, int(dpi)))
+
     def _pdf_first_page_png(data):
         """A PDF's first page rendered to PNG bytes by poppler
         (pdftoppm), or None when poppler is missing or the
-        render fails."""
+        render fails. Wave 46 (audit F1b): the render is capped
+        at ~2 MP of output (see _pdf_render_dpi) and the
+        subprocess timeout drops from 30 s to 10 s."""
         exe = shutil.which("pdftoppm")
         if not exe:
             return None
+        dpi = _pdf_render_dpi(data)
+        if dpi is not None:
+            size_args = ["-r", str(dpi)]
+        else:
+            side = int(math.sqrt(_PDF_RENDER_MAX_PIXELS))
+            size_args = ["-scale-to", str(side)]
         try:
             with tempfile.TemporaryDirectory() as tmp:
                 src = os.path.join(tmp, "in.pdf")
                 with open(src, "wb") as fh:
                     fh.write(data)
                 subprocess.run(
-                    [exe, "-png", "-f", "1", "-l", "1", "-r", "150",
+                    [exe, "-png", "-f", "1", "-l", "1",
+                     *size_args,
                      src, os.path.join(tmp, "page")],
-                    check=True, timeout=30,
+                    check=True, timeout=10,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL)
                 out = os.path.join(tmp, "page-1.png")
@@ -1115,7 +1184,9 @@ def create_app():
         session["last_question"] = question
         session["last_result"] = result
         history = session.get("history", [])
-        history.insert(0, {"question": question, "result": result})
+        # Wave 46 (audit F4): trimmed entry — see
+        # api.trimmed_history_entry.
+        history.insert(0, trimmed_history_entry(question, result))
         session["history"] = history[:_HISTORY_LIMIT]
         return render_template("answer.html", question=question,
                                result=result, photo_text=question,
@@ -1279,6 +1350,96 @@ def create_app():
             difficulties=QUIZ_DIFFICULTIES,
             time_limit=QUIZ_QUESTION_COUNT * QUIZ_SECONDS_PER_QUESTION,
         )
+
+    # ------------------------------------------------- wave 43 tests
+    # Chapter Test Mode: a timed 10-question test over the
+    # practice_gen topics (Classes 6-10), scored EXACTLY with
+    # fractions (test_mode.py) — the Board Mode chapter test
+    # (Wave 5) covers NCERT chapters; this one covers the topic
+    # generator that had no route until now. Like /practice it is
+    # an open page (no sign-in gate); the answers stay server-side
+    # in the session and are never sent to the browser.
+    def _test_labels():
+        strings = _t()
+        return {topic: strings.get(f"quiz_topic_{topic}", label)
+                for topic, label in TEST_TOPICS.items()}
+
+    @app.get("/test")
+    def chapter_test():
+        return render_template(
+            "test.html", classes=practice_gen.CLASSES,
+            topics=practice_gen.TOPICS, labels=_test_labels(),
+            time_limit=TEST_TIME_LIMIT)
+
+    @app.post("/test/start")
+    def chapter_test_start():
+        data = request.get_json(silent=True) or request.form
+        try:
+            class_num = int(data.get("class_num", ""))
+        except (TypeError, ValueError):
+            class_num = -1
+        topic = str(data.get("topic", "")).strip()
+        if (class_num not in practice_gen.CLASSES
+                or topic not in practice_gen.TOPICS):
+            return jsonify({"ok": False,
+                            "error": "bad_class_or_topic"}), 400
+        items = generate_test(class_num, topic)
+        session["topic_test"] = {
+            "class_num": class_num, "topic": topic, "items": items}
+        return jsonify({
+            "ok": True,
+            "class_num": class_num,
+            "topic": topic,
+            "topic_label": _test_labels().get(topic, topic),
+            "time_limit_seconds": TEST_TIME_LIMIT,
+            "questions": [{"question": it["question"]}
+                          for it in items],
+        })
+
+    @app.post("/test/submit")
+    def chapter_test_submit():
+        test = session.get("topic_test")
+        if not test:
+            return jsonify({"ok": False,
+                            "error": "no_test_in_progress"}), 400
+        data = request.get_json(silent=True) or {}
+        answers = data.get("answers")
+        if not isinstance(answers, list):
+            answers = []
+        try:
+            time_taken = int(data.get("time_taken", ""))
+        except (TypeError, ValueError):
+            time_taken = None
+        rows, score = [], 0
+        for i, item in enumerate(test["items"]):
+            given = answers[i] if i < len(answers) else ""
+            if given is None:
+                given = ""
+            ok = check_test_answer(item, str(given))
+            score += 1 if ok else 0
+            rows.append({
+                "question": item["question"],
+                "expected": item["answer"],
+                "given": str(given),
+                "correct": ok,
+                "topic": test["topic"],
+                "steps": worked_steps(item),
+            })
+        _record_mistakes(
+            rows, f"Class {test['class_num']} · "
+                  f"{_test_labels().get(test['topic'], test['topic'])}"
+                  " test")
+        _copycheck(rows, score, len(rows),
+                   {test["topic"]: _test_labels().get(
+                       test["topic"], test["topic"])})
+        session.pop("topic_test", None)
+        return jsonify({
+            "ok": True,
+            "score": score,
+            "total": len(rows),
+            "time_taken": time_taken,
+            "rows": rows,
+        })
 
     # ------------------------------------------------------------ print
     @app.get("/solution/print")
@@ -1458,7 +1619,10 @@ def create_app():
             if qs:
                 sections.append({
                     "section": section,
-                    "title": papers_data.SECTION_TITLES[section],
+                    # Wave 44 merge fix: Term-2 / 2020 papers carry
+                    # different per-section marks than the current
+                    # pattern — title from the stored data.
+                    "title": papers_data.section_title_for(section, qs),
                     "questions": qs,
                 })
         chapters = {q["chapter"]: papers_data.chapter_title(
@@ -1526,6 +1690,231 @@ def create_app():
         if not paper:
             return redirect(url_for("papers_generate"))
         return render_template("papers_print.html", paper=paper)
+
+    # ------------------------------------------------- wave 40 practice mode
+    # Practice Mode (Wave 40): one fresh generated question at a
+    # time from practice_gen.py (Wave 34 — Classes 6-10 x
+    # arithmetic / algebra / geometry / mensuration /
+    # probability; every answer exact by construction). The
+    # current question's answer state rides in the session
+    # (small: kind + params + answer text), the same trick the
+    # papers generator uses with its seed reference. /practice
+    # itself is the older quiz, so this lives at /practice-mode.
+    # Account page like /papers: anonymous visitors go back to
+    # the sign-in gate at /, and the JSON endpoints answer
+    # 401 login-required like the chats endpoints.
+    def _pm_fmt(value):
+        value = Fraction(value)
+        if value.denominator == 1:
+            return str(value.numerator)
+        return f"{value.numerator}/{value.denominator}"
+
+    def _pm_steps(item):
+        """Worked-answer lines for a practice_gen item, in house
+        style (plain lines; the caller adds the final answer
+        line). Built from the generator's own params, so the
+        working always matches the question that was asked."""
+        p = item["params"]
+        kind = item["kind"]
+        if kind == "expression":
+            return [f"Multiply first: {p['b']} × {p['c']} = "
+                    f"{p['b'] * p['c']}",
+                    f"{p['a']} + {p['b'] * p['c']} − {p['d']}"]
+        if kind == "fraction_add":
+            num = p["a"] * p["d"] + p["c"] * p["b"]
+            den = p["b"] * p["d"]
+            lines = [f"{p['a']}/{p['b']} + {p['c']}/{p['d']} "
+                     f"= {num}/{den}"]
+            if f"{num}/{den}" != item["answer"]:
+                lines.append(f"{num}/{den} = {item['answer']}")
+            return lines
+        if kind == "percent":
+            return [f"{p['p']}% means {p['p']}/100",
+                    f"{p['p']}/100 × {p['n']}"]
+        if kind == "simple_interest":
+            return ["Simple interest = P × R × T / 100",
+                    f"= {p['principal']} × {p['rate']} × "
+                    f"{p['years']} / 100"]
+        if kind == "linear_equation":
+            rhs = p["c"] - p["b"]
+            move = (f"{p['a']}x = {p['c']} − {p['b']} = {rhs}"
+                    if p["b"] >= 0 else
+                    f"{p['a']}x = {p['c']} + {abs(p['b'])} = {rhs}")
+            return [move, f"x = {rhs} / {p['a']}"]
+        if kind == "evaluate_linear":
+            b = p["b"]
+            tail = f"+ {b}" if b >= 0 else f"− {abs(b)}"
+            return [f"Put x = {p['x']} in {p['a']}x {tail}",
+                    f"{p['a']} × {p['x']} {tail}"]
+        if kind == "expand_binomials":
+            return [f"(x + {p['a']})(x + {p['b']}) = x² + "
+                    f"({p['a']} + {p['b']})x + "
+                    f"({p['a']})({p['b']})"]
+        if kind == "ap_nth_term":
+            return ["nth term = a + (n − 1)d",
+                    f"= {p['a']} + ({p['n']} − 1) × {p['d']} "
+                    f"= {p['a']} + "
+                    f"{(p['n'] - 1) * p['d']}"]
+        if kind == "quadratic_roots":
+            s = p["r1"] + p["r2"]
+            prod = p["r1"] * p["r2"]
+            return [f"The two roots add to {s} and multiply "
+                    f"to {prod}",
+                    f"(x − ({p['r1']}))(x − ({p['r2']})) = 0"]
+        if kind == "supplementary_angle":
+            return ["Supplementary angles add to 180°",
+                    f"Other angle = 180° − {p['a']}°"]
+        if kind == "triangle_third_angle":
+            return ["Angles of a triangle add to 180°",
+                    f"Third angle = 180° − {p['a']}° − "
+                    f"{p['b']}°"]
+        if kind == "rectangle_area":
+            return [f"Area = length × breadth = {p['length']} "
+                    f"× {p['breadth']}"]
+        if kind == "circle_circumference":
+            return [f"Circumference = 2πr = 2 × 22/7 × {p['r']}"]
+        if kind == "cuboid_volume":
+            return [f"Volume = length × breadth × height = "
+                    f"{p['length']} × {p['breadth']} × "
+                    f"{p['height']}"]
+        if kind == "cube_surface_area":
+            return [f"Total surface area = 6 × side² = 6 × "
+                    f"{p['side']} × {p['side']}"]
+        if kind == "cylinder_volume":
+            return [f"Volume = πr²h = 22/7 × {p['r']}² × "
+                    f"{p['h']}"]
+        if kind == "cone_volume":
+            return [f"Volume = (1/3)πr²h = 1/3 × 22/7 × "
+                    f"{p['r']}² × {p['h']}"]
+        if kind == "bag_probability":
+            total = p["red"] + p["blue"]
+            return [f"Total balls = {p['red']} + {p['blue']} "
+                    f"= {total}",
+                    f"P(red) = {p['red']}/{total}"]
+        if kind == "die_greater":
+            fav = 6 - p["k"]
+            nums = ", ".join(str(i) for i in range(p["k"] + 1, 7))
+            return [f"Numbers greater than {p['k']}: {nums} "
+                    f"— {fav} outcomes",
+                    f"P = {fav}/6"]
+        if kind == "coins_at_least_one_head":
+            none = _pm_fmt(Fraction(1, 2 ** p["n"]))
+            return [f"P(no head at all) = (1/2)^{p['n']} = {none}",
+                    f"P(at least one head) = 1 − {none}"]
+        return []
+
+    def _pm_parse_number(text):
+        """Parse a student's typed answer to an exact Fraction.
+
+        Accepts integers, decimals ("0.75") and fractions
+        ("3/4"); a leading "x =" or "Answer:" is forgiven.
+        Returns None when the text is not a single number."""
+        if not isinstance(text, str):
+            return None
+        t = text.strip().replace("−", "-").replace(",", "")
+        t = re.sub(r"^(x\s*=|answer\s*:)\s*", "", t,
+                   flags=re.IGNORECASE)
+        if not t:
+            return None
+        try:
+            return Fraction(t)
+        except (ValueError, ZeroDivisionError):
+            return None
+
+    def _pm_check(state, given):
+        """Fraction-exact check of a typed answer against the
+        generator's answer for the session's current item."""
+        if state.get("answer_value") is not None:
+            expected = Fraction(state["answer_value"])
+            got = _pm_parse_number(given)
+            return got is not None and got == expected
+        if state.get("kind") == "quadratic_roots":
+            p = state["params"]
+            nums = re.findall(r"-?\d+(?:\.\d+)?(?:/\d+)?",
+                              str(given).replace("−", "-"))
+            got = set()
+            for token in nums:
+                try:
+                    got.add(Fraction(token))
+                except (ValueError, ZeroDivisionError):
+                    pass
+            return got == {Fraction(p["r1"]), Fraction(p["r2"])}
+        # expand_binomials: a text answer — compare with spaces
+        # and ^2/² spelling normalised.
+        def _norm(s):
+            return (re.sub(r"\s+", "", str(s).lower())
+                    .replace("**2", "²").replace("^2", "²"))
+        return _norm(given) == _norm(state["answer"])
+
+    @app.get("/practice-mode")
+    def practice_mode():
+        if not _papers_signed_in():
+            return redirect(url_for("index"))
+        return render_template(
+            "practice_mode.html",
+            classes=practice_gen.CLASSES,
+            topics=practice_gen.TOPICS)
+
+    @app.post("/practice-mode/question")
+    def practice_mode_question():
+        if not _papers_signed_in():
+            return jsonify({"ok": False,
+                            "error": "login-required"}), 401
+        data = request.get_json(silent=True) or {}
+        try:
+            class_num = int(data.get("class_num"))
+        except (TypeError, ValueError):
+            class_num = -1
+        topic = data.get("topic", "")
+        if class_num not in practice_gen.CLASSES or \
+                topic not in practice_gen.TOPICS:
+            return jsonify({"ok": False,
+                            "error": "bad-request"}), 400
+        previous = (session.get("pm_item") or {}).get("question")
+        item = None
+        for _ in range(6):
+            item = practice_gen.generate_question(
+                class_num, topic,
+                seed=secrets.randbelow(1 << 30))
+            if item["question"] != previous:
+                break
+        session["pm_item"] = {
+            "class_num": item["class_num"],
+            "topic": item["topic"],
+            "kind": item["kind"],
+            "question": item["question"],
+            "answer": item["answer"],
+            "answer_value": (_pm_fmt(item["answer_value"])
+                             if item["answer_value"] is not None
+                             else None),
+            "params": item["params"],
+        }
+        return jsonify({
+            "ok": True,
+            "question": item["question"],
+            "class_num": item["class_num"],
+            "topic": item["topic"],
+            "kind": item["kind"],
+        })
+
+    @app.post("/practice-mode/check")
+    def practice_mode_check():
+        if not _papers_signed_in():
+            return jsonify({"ok": False,
+                            "error": "login-required"}), 401
+        state = session.get("pm_item")
+        if not state:
+            return jsonify({"ok": False,
+                            "error": "no-question"}), 400
+        data = request.get_json(silent=True) or {}
+        given = str(data.get("answer", ""))
+        return jsonify({
+            "ok": True,
+            "correct": _pm_check(state, given),
+            "given": given,
+            "expected": state["answer"],
+            "steps": _pm_steps(state),
+        })
 
     # -------------------------------------------------- mistake notebook
     @app.get("/mistakes")
