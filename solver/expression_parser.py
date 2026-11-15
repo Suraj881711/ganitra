@@ -25,7 +25,7 @@ _TRANSFORMS = standard_transformations + (
 # Leading filler phrases that carry no maths meaning.
 _FILLER_LEAD = (
     r"(?:what\s+is|calculate|compute|evaluate|find|work\s+out|solve\s+for|"
-    r"the\s+value\s+of|value\s+of)\s+"
+    r"simplify|the\s+value\s+of|value\s+of)\s+"
 )
 
 
@@ -42,13 +42,30 @@ def clean_text(text: str) -> str:
         .replace("≤", "<=")
         .replace("≥", ">=")
     )
-    t = re.sub(r"[?।]\s*$", "", t).strip()
+    # Wave 56: a trailing full stop is sentence punctuation, not
+    # maths — "Evaluate 12.5 + 7.25." failed to parse at all
+    # because the final "." poisoned the last number token
+    # (the same class of bug Wave 47 fixed locally for trig
+    # identities). Strip it here, once, for every caller.
+    t = re.sub(r"[?।.]+\s*$", "", t).strip()
     # Strip one or two leading filler phrases ("what is the value of ...").
     for _ in range(2):
         t2 = re.sub(r"^\s*" + _FILLER_LEAD, "", t, flags=re.I)
         if t2 == t:
             break
         t = t2.strip()
+    # Wave 58: a standalone "x" between two numbers is a TIMES
+    # sign in school typing — "2^3 x 2^2" was parsed as
+    # 2^3 · x · 2^2 and "simplified" to 32·x, and "3 x 4"
+    # became 12·x (Wave 55 trap). The rewrite fires only when
+    # the text carries NO other letters (pi, from the π
+    # replacement above, is allowed): with any other letter
+    # present, x may be a genuine unknown and is left alone.
+    _no_x = re.sub(r"\bpi\b", "", t).replace("x", "") \
+        .replace("X", "")
+    if not re.search(r"[a-zA-Z]", _no_x):
+        t = re.sub(r"(?<=[\d\)])\s+[xX]\s+(?=[\d\(])",
+                   " * ", t)
     return t
 
 

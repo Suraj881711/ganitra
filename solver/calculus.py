@@ -1,6 +1,7 @@
 """Calculus: limits, derivatives (incl. partial & implicit), integrals,
 and basic differential equations — with step-by-step working.
 """
+import math
 import re
 
 import sympy as sp
@@ -93,6 +94,12 @@ def _ode(q: str):
     text = text.replace("y''", "d2y/dx2").replace("y'", "dy/dx")
     text = re.sub(r"\b(dsolve|solve|differential\s+equation)\b", "",
                   text, flags=re.I).strip(" :")
+    # Wave 58: "Solve THE differential equation dy/dx = ..."
+    # leaves a leading "the" behind once the phrase above is
+    # removed, and the left side then reads "the dy/dx", which
+    # matches no ODE form — the question fell to the salvage
+    # even though the stripped equation is trivial.
+    text = re.sub(r"^the\s+", "", text, flags=re.I).strip(" :")
     # Pull out initial conditions: y(0) = 1, dy/dx(0) = 2
     ics = {}
     yfun = sp.Function("y")
@@ -213,6 +220,136 @@ def _textbook_trig(deriv):
             -sp.cot(_w) ** 2 - 1, -sp.csc(_w) ** 2)
     except Exception:
         return deriv
+
+
+def _conic_line(A, B, C):
+    """Render A·x + B·y = C in simplest integer form."""
+    from fractions import Fraction
+    import math as _m
+
+    def _fr(v):
+        if hasattr(v, "p") and hasattr(v, "q"):
+            return Fraction(int(v.p), int(v.q))
+        return Fraction(v)
+
+    A, B, C = _fr(A), _fr(B), _fr(C)
+    den = 1
+    for v in (A, B, C):
+        den = den * v.denominator // _m.gcd(den, v.denominator)
+    A, B, C = int(A * den), int(B * den), int(C * den)
+    g = _m.gcd(_m.gcd(abs(A), abs(B)), abs(C)) or 1
+    A, B, C = A // g, B // g, C // g
+    if A < 0 or (A == 0 and B < 0):
+        A, B, C = -A, -B, -C
+    terms = []
+    for coef, var in ((A, "x"), (B, "y")):
+        if coef == 0:
+            continue
+        mag = var if abs(coef) == 1 else f"{abs(coef)}{var}"
+        terms.append((coef > 0, mag))
+    if not terms:
+        return None
+    lhs = terms[0][1] if terms[0][0] else "-" + terms[0][1]
+    for pos, mag in terms[1:]:
+        lhs += (" + " if pos else " - ") + mag
+    return f"{lhs} = {C}"
+
+
+def _conic_tangent_normal(q, qlow):
+    """Wave 58: equation of the tangent / normal to a CONIC at
+    a point on it — circle (standard or general form),
+    parabola, ellipse, hyperbola. These had no pattern at
+    all and were answered with a similar-example fragment
+    ("x = 3, x = 4"). One general method covers every conic:
+    the tangent is T = 0, the normal runs along the gradient.
+    The point is VERIFIED to lie on the conic first — an
+    off-conic point returns None rather than a formula
+    answer.
+    """
+    if "tangent" not in qlow and "normal" not in qlow:
+        return None
+    _mp = re.search(r"\(\s*(-?\d+(?:\.\d+)?(?:\s*/\s*\d+)?)"
+                    r"\s*,\s*(-?\d+(?:\.\d+)?(?:\s*/\s*\d+)?)"
+                    r"\s*\)", q)
+    if not _mp:
+        return None
+    _mi = re.search(r"[xy]\s*\^\s*2", qlow)
+    if not _mi:
+        return None
+    _seg = q[_mi.start():]
+    _seg = re.split(r"\s+at\s+|\s+which\s+|\s+to\s+the\s+"
+                    r"(?:circle|parabola|ellipse|hyperbola)",
+                    _seg)[0].strip().rstrip(".?").strip()
+    if "=" not in _seg:
+        return None
+    try:
+        _xs, _ys = symbols("x y")
+        _lt, _rt = _seg.split("=", 1)
+        _E = sp.expand(parse_expression(_lt)
+                       - parse_expression(_rt))
+        _poly = sp.Poly(_E, _xs, _ys)
+        if _poly is None or _poly.total_degree() != 2:
+            return None
+        _x1 = sp.Rational(_mp.group(1).replace(" ", ""))
+        _y1 = sp.Rational(_mp.group(2).replace(" ", ""))
+        if sp.simplify(_E.subs({_xs: _x1, _ys: _y1})) != 0:
+            return None  # point not on the conic
+        _A2 = _poly.coeff_monomial(_xs ** 2)
+        _B2 = _poly.coeff_monomial(_ys ** 2)
+        _H = _poly.coeff_monomial(_xs * _ys)
+        _G = _poly.coeff_monomial(_xs)
+        _F = _poly.coeff_monomial(_ys)
+        _C0 = _poly.coeff_monomial(1)
+        if _A2 == 0 and _B2 == 0:
+            return None
+        # Tangent (T = 0), coefficients doubled to stay exact.
+        _tA = 2 * _A2 * _x1 + _H * _y1 + _G
+        _tB = 2 * _B2 * _y1 + _H * _x1 + _F
+        _tC = -(_G * _x1 + _F * _y1 + 2 * _C0)
+        # Normal: along the gradient (E_x, E_y) at the point.
+        _Ex = 2 * _A2 * _x1 + _H * _y1 + _G
+        _Ey = 2 * _B2 * _y1 + _H * _x1 + _F
+        _nA, _nB = _Ey, -_Ex
+        _nC = _Ey * _x1 - _Ex * _y1
+        _tan = _conic_line(_tA, _tB, _tC)
+        _nor = _conic_line(_nA, _nB, _nC)
+        if _tan is None or _nor is None:
+            return None
+        _pt = f"({_mp.group(1)}, {_mp.group(2)})"
+        _base_steps = [
+            f"The point {_pt} lies on the conic (it satisfies "
+            f"the equation).",
+        ]
+        _want_t = "tangent" in qlow
+        _want_n = "normal" in qlow
+        if _want_t and _want_n:
+            steps = _base_steps + [
+                "Tangent by the T = 0 rule (replace x^2 by "
+                "x·x1, y^2 by y·y1, 2x by (x + x1), 2y by "
+                f"(y + y1)): {_tan}",
+                "The normal is perpendicular to the tangent "
+                f"at {_pt} (along the gradient): {_nor}",
+            ]
+            return {"type": "calculus", "op": "conic_tangent",
+                    "answer": f"Tangent: {_tan}; Normal: {_nor}",
+                    "steps": steps}
+        if _want_t:
+            steps = _base_steps + [
+                "Tangent by the T = 0 rule (replace x^2 by "
+                "x·x1, y^2 by y·y1, 2x by (x + x1), 2y by "
+                f"(y + y1)): {_tan}",
+            ]
+            return {"type": "calculus", "op": "conic_tangent",
+                    "answer": _tan, "steps": steps}
+        steps = _base_steps + [
+            "The normal at a point runs along the gradient "
+            "of the conic there — perpendicular to the "
+            f"tangent: {_nor}",
+        ]
+        return {"type": "calculus", "op": "conic_normal",
+                "answer": _nor, "steps": steps}
+    except Exception:
+        return None
 
 
 def solve_calculus(question: str):
@@ -629,6 +766,97 @@ def solve_calculus(question: str):
             except Exception:
                 pass
 
+    # Wave 52: conic tangents — "equation of the tangent to
+    # the circle x^2 + y^2 = 25 at (3, 4)" / "…to the parabola
+    # y^2 = 4x at (1, 2)" errored before this wave (the block
+    # below covers y = f(x) curves only). T = 0 forms: for the
+    # circle x·x1 + y·y1 = r^2; for y^2 = kx, y·y1 = (k/2)(x +
+    # x1). The point is verified ON the conic first — a point
+    # that is not on it falls through rather than earning a
+    # confident wrong line. Normal-to-a-conic asks stay open.
+    if "tangent" in _qlow and "normal" not in _qlow \
+            and ("circle" in _qlow or "parabola" in _qlow):
+        _mpt = re.search(
+            r"\(\s*(-?\d+(?:\.\d+)?)\s*,\s*"
+            r"(-?\d+(?:\.\d+)?)\s*\)", q)
+        if _mpt:
+            _x1 = sp.Rational(_mpt.group(1))
+            _y1 = sp.Rational(_mpt.group(2))
+            _xs52, _ys52 = symbols("x y")
+            _mc52 = re.search(
+                r"x\s*\^\s*2\s*\+\s*y\s*\^\s*2\s*=\s*"
+                r"(\d+(?:\.\d+)?)", _qlow)
+            if _mc52 and "circle" in _qlow:
+                _r2 = sp.Rational(_mc52.group(1))
+                if _x1 ** 2 + _y1 ** 2 == _r2:
+                    _lhs = _x1 * _xs52 + _y1 * _ys52
+                    _g = 0
+                    if all(v == int(v) for v in
+                           (_x1, _y1, _r2)):
+                        _g = math.gcd(math.gcd(abs(int(_x1)),
+                                               abs(int(_y1))),
+                                      abs(int(_r2)))
+                    if _g > 1:
+                        _lhs = _lhs / _g
+                        _r2 = _r2 / _g
+                    steps = [
+                        "For the circle x^2 + y^2 = r^2, the "
+                        "tangent at (x1, y1) is T = 0: "
+                        "x·x1 + y·y1 = r^2.",
+                        f"Here (x1, y1) = ({fmt(_x1)}, "
+                        f"{fmt(_y1)}) and r^2 = "
+                        f"{fmt(sp.Rational(_mc52.group(1)))}, "
+                        f"so the tangent is "
+                        f"{fmt(_lhs)} = {fmt(_r2)}.",
+                    ]
+                    return {"type": "calculus",
+                            "op": "conic_tangent_circle",
+                            "answer": f"{fmt(_lhs)} = "
+                                      f"{fmt(_r2)}",
+                            "steps": steps}
+            _mp52 = re.search(
+                r"y\s*\^\s*2\s*=\s*(\d+(?:\.\d+)?)\s*x\b",
+                _qlow)
+            if _mp52 and "parabola" in _qlow:
+                _k = sp.Rational(_mp52.group(1))
+                if _y1 ** 2 == _k * _x1:
+                    _a = _k / 4
+                    if _y1 == 0:
+                        return {"type": "calculus",
+                                "op": "conic_tangent_parabola",
+                                "answer": f"x = {fmt(_x1)}",
+                                "steps": [
+                                    "The tangent at the vertex "
+                                    "(0, 0) of y^2 = "
+                                    f"{fmt(_k)}x is the y-axis "
+                                    "itself, x = 0."]}
+                    _mm = _k / (2 * _y1)
+                    _cc = _k * _x1 / (2 * _y1)
+                    _line = _mm * _xs52 + _cc
+                    steps = [
+                        "For the parabola y^2 = 4ax, the "
+                        "tangent at (x1, y1) is T = 0: "
+                        "y·y1 = 2a(x + x1).",
+                        f"Here 4a = {fmt(_k)} (a = {fmt(_a)}) "
+                        f"and (x1, y1) = ({fmt(_x1)}, "
+                        f"{fmt(_y1)}), so "
+                        f"{fmt(_y1)}·y = {fmt(_k / 2)}(x + "
+                        f"{fmt(_x1)}), i.e. y = {fmt(_line)}.",
+                    ]
+                    return {"type": "calculus",
+                            "op": "conic_tangent_parabola",
+                            "answer": f"y = {fmt(_line)}",
+                            "steps": steps}
+
+    # Wave 58: tangent / normal to a CONIC at a point on it
+    # (circle, parabola, ellipse, hyperbola) — see
+    # _conic_tangent_normal. Runs before the y = f(x) curve
+    # block below, whose "y =" hunt cannot read an implicit
+    # conic equation.
+    _conic = _conic_tangent_normal(q, _qlow)
+    if _conic is not None:
+        return _conic
+
     if ("tangent" in _qlow or "normal" in _qlow) \
             and "curve" in _qlow:
         _meq = re.search(r"y\s*=\s*(.+)", q)
@@ -834,6 +1062,20 @@ def solve_calculus(question: str):
             flags=re.I)
         text = re.sub(r"^\s*the\s+", "", text, flags=re.I)
         text = text.strip().rstrip(".")
+        # Wave 56: "second derivative of x^4" — the order
+        # word survived into the expression text, which the
+        # parser read as s·e·c·o·n·d × x^4. Detect the
+        # order from the question, strip the word, and
+        # differentiate that many times.
+        _ord56 = 1
+        if re.search(r"\b(second|2nd)\s+derivative\b", q, re.I):
+            _ord56 = 2
+        elif re.search(r"\b(third|3rd)\s+derivative\b", q,
+                       re.I):
+            _ord56 = 3
+        if _ord56 > 1:
+            text = re.sub(r"\b(?:second|third|2nd|3rd)\s+",
+                          "", text, flags=re.I)
         # Wave 47: the parser reads a bare "e" as a symbol,
         # so "e^(3x)" differentiated to 3·e^(3x)·log(e)
         # (shown with a stray /e). When the student writes
@@ -854,12 +1096,18 @@ def solve_calculus(question: str):
         else:
             expr = _euler(parse_expression(text), text)
             var = _guess_symbol(expr)
-        _dres = _textbook_trig(diff(expr, var))
+        _dres = _textbook_trig(diff(expr, var, _ord56))
+        _steps56 = _derivative_steps(expr, var)
+        if _ord56 > 1:
+            _steps56 = _steps56 + [
+                f"Differentiate {_ord56 - 1} more time(s): "
+                f"the result is {fmt(_dres)}"]
         return {
             "type": "calculus",
-            "op": "derivative",
+            "op": "derivative" if _ord56 == 1 else
+                  "higher_derivative",
             "answer": fmt(_dres),
-            "steps": _derivative_steps(expr, var),
+            "steps": _steps56,
             "latex": sp.latex(_dres),
         }
 
@@ -899,6 +1147,18 @@ def solve_calculus(question: str):
         if bound_b:
             bound_b = bound_b.strip().rstrip(".")
         expr = parse_expression(expr_text)
+        # Wave 52: the Wave 47 Euler swap, mirrored for
+        # integrals — it was applied to the derivative paths
+        # only, so "Integrate e^(2x)" integrated a SYMBOL e
+        # and returned a Piecewise in log(e) (and "…e^(2x) dx"
+        # mangled worse). A bare e in e^... is Euler's
+        # number: swap it for E before the variable is
+        # guessed, so the integrand's only symbol is x.
+        if re.search(r"\be\s*\^", expr_text):
+            _es52 = [s for s in expr.free_symbols
+                     if str(s) == "e"]
+            if _es52:
+                expr = expr.subs(_es52[0], sp.E)
         var = symbols(wrt_var) if wrt_var else _guess_symbol(expr)
         if m.group(2) and bound_b:
             a, b = parse_expression(m.group(2)), parse_expression(bound_b)

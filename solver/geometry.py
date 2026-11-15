@@ -435,10 +435,121 @@ def _area_perimeter_volume(q: str):
         steps = [f"Area = side^2 = {fmt_num(s)}^2 = {fmt_num(s * s)}"]
         return "area", fmt_num(s * s), steps
 
+    # ---- Parallelogram / Trapezium / Rhombus / Four walls --
+    # Wave 56: standard mensuration schemas that had no
+    # branch at all and fell to the concept layer.
+    if "parallelogram" in q:
+        _pb = find_param(q, ["base"])
+        _ph = find_param(q, ["height", "h"])
+        if _pb is not None and _ph is not None:
+            val = _pb * _ph
+            steps = [f"Area of a parallelogram = base × "
+                     f"height = {fmt_num(_pb)} × "
+                     f"{fmt_num(_ph)} = {fmt_num(val)}"]
+            return "area", fmt_num(val), steps
+        return None
+    if "trapezium" in q or "trapezoid" in q:
+        _tm = re.search(r"parallel\s+sides\s+are\s+"
+                        r"(\d+(?:\.\d+)?)\s*(?:cm|m|mm)?\s+and"
+                        r"\s+(\d+(?:\.\d+)?)", q)
+        _th = find_param(q, ["distance", "height", "h"])
+        if _th is None:
+            # "the distance between them is 7 cm" — the
+            # number is not adjacent to the word "distance".
+            _md2 = re.search(r"distance\s+between\s+them\s+"
+                             r"is\s+(\d+(?:\.\d+)?)", q)
+            if _md2:
+                _th = float(_md2.group(1))
+        if _tm and _th is not None:
+            _a, _b = float(_tm.group(1)), float(_tm.group(2))
+            val = 0.5 * (_a + _b) * _th
+            steps = [
+                "Area of a trapezium = (1/2) × (sum of the "
+                "parallel sides) × distance between them",
+                f"= (1/2) × ({fmt_num(_a)} + {fmt_num(_b)}) "
+                f"× {fmt_num(_th)} = {fmt_num(val)}",
+            ]
+            return "area", fmt_num(val), steps
+        return None
+    if "rhombus" in q:
+        _dm = re.search(r"diagonals\s+are\s+"
+                        r"(\d+(?:\.\d+)?)\s*(?:cm|m|mm)?\s+and"
+                        r"\s+(\d+(?:\.\d+)?)", q)
+        if _dm:
+            _a, _b = float(_dm.group(1)), float(_dm.group(2))
+            val = 0.5 * _a * _b
+            steps = [
+                "Area of a rhombus = (1/2) × product of the "
+                "diagonals",
+                f"= (1/2) × {fmt_num(_a)} × {fmt_num(_b)} = "
+                f"{fmt_num(val)}",
+            ]
+            return "area", fmt_num(val), steps
+        return None
+    if "four walls" in q:
+        _fl = find_param(q, ["length", "l"])
+        _fb = find_param(q, ["breadth", "width", "b", "w"])
+        _fh = find_param(q, ["height", "h"])
+        if _fl is not None and _fb is not None \
+                and _fh is not None:
+            val = 2 * _fh * (_fl + _fb)
+            steps = [
+                "Area of the four walls = 2 × height × "
+                "(length + breadth)",
+                f"= 2 × {fmt_num(_fh)} × ({fmt_num(_fl)} + "
+                f"{fmt_num(_fb)}) = {fmt_num(val)}",
+            ]
+            return "area of four walls", fmt_num(val), steps
+        return None
+
     # ---- Rectangle ---------------------------------------------------
     if "rectangle" in q:
         l = find_param(q, ["length", "l"])
         b = find_param(q, ["breadth", "width", "b", "w"])
+        if (l is None) != (b is None) and "perimeter" in q:
+            # Wave 56: perimeter + one side -> the other side
+            # ("perimeter is 60, length is 18, find breadth").
+            _pm = re.search(r"perimeter\s+(?:is\s+)?"
+                            r"(\d+(?:\.\d+)?)", q) or \
+                re.search(r"perimeter\s+of\s+(?:a\s+|the\s+)?"
+                          r"rectangle\s+is\s+"
+                          r"(\d+(?:\.\d+)?)", q)
+            if _pm:
+                _P = float(_pm.group(1))
+                if l is not None:
+                    _other = _P / 2 - l
+                    if _other > 0:
+                        steps = [
+                            f"Perimeter = 2(l + b), so l + b "
+                            f"= {_P} / 2 = {fmt_num(_P / 2)}",
+                            f"Breadth = {fmt_num(_P / 2)} - "
+                            f"{fmt_num(l)} = "
+                            f"{fmt_num(_other)}",
+                        ]
+                        return "breadth", fmt_num(_other), steps
+                else:
+                    _other = _P / 2 - b
+                    if _other > 0:
+                        steps = [
+                            f"Perimeter = 2(l + b), so l + b "
+                            f"= {_P} / 2 = {fmt_num(_P / 2)}",
+                            f"Length = {fmt_num(_P / 2)} - "
+                            f"{fmt_num(b)} = {fmt_num(_other)}",
+                        ]
+                        return "length", fmt_num(_other), steps
+            return None
+        if l is None or b is None:
+            # Wave 57: "the length of a rectangle is 20 cm and
+            # breadth is 10 cm" — length stated BEFORE the word
+            # rectangle, so find_param's adjacency never sees it.
+            ml2 = re.search(r"length\s+of\s+a\s+rectangle\s+is\s+"
+                            r"(\d+(?:\.\d+)?)", q)
+            mb2 = re.search(r"(?:breadth|width)\s*(?:is\s+)?"
+                            r"(\d+(?:\.\d+)?)", q)
+            if ml2 and mb2:
+                l, b = float(ml2.group(1)), float(mb2.group(1))
+                l = int(l) if l == int(l) else l
+                b = int(b) if b == int(b) else b
         if l is None or b is None:
             # Wave 13: "rectangle 8 cm by 5 cm" / "rectangle 8 by 5"
             # — the two bare numbers after the word rectangle.
@@ -495,6 +606,12 @@ def _area_perimeter_volume(q: str):
     # ---- Sphere ------------------------------------------------------
     if "sphere" in q:
         r = _param_flex(q, ["radius", "r"])
+        if r is None:
+            # Wave 56: diameter given instead of radius
+            # ("volume of a sphere of diameter 14 cm").
+            _d56 = find_param(q, ["diameter"])
+            if _d56 is not None:
+                r = _d56 / 2
         if r is None:
             return None
         if "surface" in q:
@@ -849,7 +966,7 @@ def _circles_extra(q):
     # Wave 33: area between two concentric circles (ring /
     # annulus) — the generic circle branch had no form for
     # it and returned the "tell me the shape" shrug.
-    if "concentric" in q:
+    if "concentric" in q or "ring" in q or "annulus" in q:
         _mr = re.search(r"radii\s+(?:of\s+)?"
                         r"(\d+(?:\.\d+)?)\s*(?:cm|m|mm)?\s*"
                         r"and\s+(\d+(?:\.\d+)?)", q)
@@ -857,19 +974,44 @@ def _circles_extra(q):
             if _mr else [float(v) for v in re.findall(
                 r"radius\s+(?:of\s+)?(?:the\s+)?\w*\s*(?:is\s+)?"
                 r"(\d+(?:\.\d+)?)", q)]
+        _mo = re.search(r"outer\s+radius\s+(?:is\s+)?"
+                        r"(\d+(?:\.\d+)?)", q)
+        _mi = re.search(r"inner\s+radius\s+(?:is\s+)?"
+                        r"(\d+(?:\.\d+)?)", q)
+        if _mo and _mi:
+            _rads = [float(_mo.group(1)), float(_mi.group(1))]
         if len(_rads) == 2 and _rads[0] != _rads[1]:
             _R, _r = max(_rads), min(_rads)
-            _val = PI * (_R * _R - _r * _r)
-            steps = [
-                "Area between two concentric circles "
-                "= π(R^2 - r^2), with R the larger radius "
-                "and r the smaller.",
-                f"= π({fmt_num(_R)}^2 - {fmt_num(_r)}^2) "
-                f"= π × {fmt_num(_R * _R - _r * _r)} "
-                f"= {fmt_num(_val)}",
-            ]
-            return ("ring area",
-                    f"{fmt_num(_val)} square units", steps)
+            # Wave 56: a CHORD of the larger circle touching
+            # the smaller is a different schema — the ring
+            # branch used to answer its area (50.27) for the
+            # chord question. Chord = 2√(R² − r²).
+            if "chord" in q:
+                _val = 2 * math.sqrt(_R * _R - _r * _r)
+                steps = [
+                    "The chord of the larger circle touches "
+                    "the smaller circle, so the perpendicular "
+                    "from the centre to the chord has length "
+                    f"r = {fmt_num(_r)} and bisects the chord.",
+                    f"Half the chord = sqrt(R^2 - r^2) = "
+                    f"sqrt({fmt_num(_R * _R)} - "
+                    f"{fmt_num(_r * _r)}) = "
+                    f"{fmt_num(_val / 2)}",
+                    f"Chord length = {fmt_num(_val)}",
+                ]
+                return "concentric chord", fmt_num(_val), steps
+            if "area" in q or "ring" in q or "annulus" in q:
+                _val = PI * (_R * _R - _r * _r)
+                steps = [
+                    "Area between two concentric circles "
+                    "= π(R^2 - r^2), with R the larger radius "
+                    "and r the smaller.",
+                    f"= π({fmt_num(_R)}^2 - {fmt_num(_r)}^2) "
+                    f"= π × {fmt_num(_R * _R - _r * _r)} "
+                    f"= {fmt_num(_val)}",
+                ]
+                return ("ring area",
+                        f"{fmt_num(_val)} square units", steps)
     if "tangent" in q and "length" in q:
         pts = extract_points(q)
         r = find_param(q, ["radius", "r"])
@@ -888,9 +1030,21 @@ def _circles_extra(q):
         for p in pts:
             if p != centre:
                 ext = p
-        if r is None or ext is None:
+        if r is None:
             return None
-        d = math.hypot(ext[0] - centre[0], ext[1] - centre[1])
+        if ext is not None:
+            d = math.hypot(ext[0] - centre[0],
+                           ext[1] - centre[1])
+        else:
+            # Wave 56: the distance may be stated numerically
+            # with no point coordinates at all — "a point at
+            # a distance of 13 cm from the centre of a circle
+            # of radius 5 cm".
+            _md = re.search(r"distance\s+of\s+"
+                            r"(\d+(?:\.\d+)?)", q)
+            if not _md:
+                return None
+            d = float(_md.group(1))
         if d <= r:
             return None
         val = math.sqrt(d * d - r * r)
@@ -1164,6 +1318,22 @@ def _pythagoras(q):
                 f"Hypotenuse = {ans}",
             ]
             return ("pythagoras_hypotenuse", ans, steps)
+        # Wave 57: the legs named as base / perpendicular —
+        # "find the hypotenuse if base is 3 and perpendicular
+        # is 4" (no hypotenuse value given, so mh is None).
+        if mh is None and len(nums) >= 2 and (
+                "base" in q or "perpendicular" in q):
+            a, b = nums[0], nums[1]
+            ans, _v = _sqrt_answer(a * a + b * b)
+            steps = [
+                "Pythagoras theorem: hypotenuse^2 = "
+                "base^2 + perpendicular^2",
+                f"= {fmt_num(a)}^2 + {fmt_num(b)}^2 = "
+                f"{fmt_num(a * a)} + {fmt_num(b * b)} = "
+                f"{fmt_num(a * a + b * b)}",
+                f"Hypotenuse = {ans}",
+            ]
+            return ("pythagoras_hypotenuse", ans, steps)
 
     if "diagonal" in q and "rectangle" in q:
         ml = re.search(r"length\s*(?:is\s*)?(\d+(?:\.\d+)?)", q)
@@ -1222,9 +1392,184 @@ def _pythagoras(q):
     return None
 
 
+def _vec56_parse(q):
+    """One vector from '2i + 3j + 6k' or '(1, 2, 3)' form."""
+    m = re.search(_PT3, q)
+    if m:
+        return tuple(float(v) for v in m.groups())
+    comps = {}
+    for val, axis in re.findall(
+            r"([+-]?\s*\d+(?:\.\d+)?)\s*([ijk])\b", q):
+        comps[axis] = float(val.replace(" ", ""))
+    if comps and ("i" in comps or "j" in comps):
+        return (comps.get("i", 0.0), comps.get("j", 0.0),
+                comps.get("k", 0.0))
+    return None
+
+
+def _vectors56(q):
+    """Wave 56: vector basics (Class 12) — magnitude, unit
+    vector, dot product, 3D distance. No vector code existed
+    anywhere; these questions were hijacked by unrelated
+    intents (complex numbers read '2i + 3j' as algebra)."""
+    if "dot product" in q:
+        pts = _points3(q)
+        if len(pts) >= 2:
+            a, b = pts[0], pts[1]
+        elif " and " in q:
+            _l, _r = q.split(" and ", 1)
+            a, b = _vec56_parse(_l), _vec56_parse(_r)
+        else:
+            a = b = None
+        if a and b:
+            val = sum(x * y for x, y in zip(a, b))
+            steps = [
+                "Dot product = sum of the products of "
+                "corresponding components",
+                " = " + " + ".join(
+                    f"({fmt_num(x)} × {fmt_num(y)})"
+                    for x, y in zip(a, b))
+                + f" = {fmt_num(val)}",
+            ]
+            return "dot product", fmt_num(val), steps
+        return None
+    if "unit vector" in q:
+        v = _vec56_parse(q)
+        if v:
+            mag = math.sqrt(sum(x * x for x in v))
+            if mag == 0:
+                return None
+            s = ""
+            for c, ax in zip(v, "ijk"):
+                if c == 0:
+                    continue
+                u = c / mag
+                term = f"{fmt_num(round(abs(u), 4))}{ax}"
+                if not s:
+                    s = ("-" if u < 0 else "") + term
+                else:
+                    s += (" - " if u < 0 else " + ") + term
+            steps = [
+                f"|v| = sqrt({' + '.join(fmt_num(x) + '^2' for x in v)}) "
+                f"= {fmt_num(mag)}",
+                "Unit vector = v / |v|",
+            ]
+            return "unit vector", s, steps
+        return None
+    if "magnitude" in q and "vector" in q:
+        v = _vec56_parse(q)
+        if v:
+            val = math.sqrt(sum(x * x for x in v))
+            steps = [
+                f"|v| = sqrt({' + '.join(fmt_num(x) + '^2' for x in v)})",
+                f"= sqrt({fmt_num(sum(x * x for x in v))}) "
+                f"= {fmt_num(val)}",
+            ]
+            return "vector magnitude", fmt_num(val), steps
+        return None
+    if "distance" in q and "origin" in q:
+        pts = _points3(q)
+        if pts:
+            v = pts[0]
+            val = math.sqrt(sum(x * x for x in v))
+            steps = [
+                "Distance of a point from the origin = "
+                "sqrt(x^2 + y^2 + z^2)",
+                f"= sqrt({' + '.join(fmt_num(x) + '^2' for x in v)}) "
+                f"= {fmt_num(round(val, 4))}",
+            ]
+            return "distance from origin", \
+                fmt_num(round(val, 4)), steps
+    return None
+
+
+_DEV_DIGITS_HI = str.maketrans("०१२३४५६७८९", "0123456789")
+_NUM_HI = r"(\d+(?:\.\d+)?)"
+
+
+def _mensuration_hindi(q: str):
+    """Wave 57: Devanagari mensuration — "एक वृत्त की त्रिज्या
+    7 सेमी है, उसका क्षेत्रफल निकालो". The English patterns in
+    _area_perimeter_volume never match Hindi text, so these asks
+    fell to the arithmetic simplifier (letter-soup) or a similar
+    example. Same formulas, same answer formats, Hindi steps."""
+    q = q.translate(_DEV_DIGITS_HI)
+
+    def _val(m):
+        v = float(m.group(1))
+        return int(v) if v == int(v) else v
+
+    if "वृत्त" in q:
+        m = re.search(r"त्रिज्या\s*" + _NUM_HI, q)
+        if m:
+            r = _val(m)
+            if "परिधि" in q:
+                val = 2 * PI * r
+                steps = [
+                    f"परिधि = 2·pi·r = 2 × pi × {fmt_num(r)}",
+                    f"= {fmt_num(2 * r)}·pi ≈ {val:.4f}",
+                ]
+                return "circumference", \
+                    f"{fmt_num(2 * r)}·pi ≈ {val:.4f}", steps
+            if "क्षेत्रफल" in q:
+                val = PI * r * r
+                steps = [
+                    f"क्षेत्रफल = pi·r^2 = pi × {fmt_num(r)}^2 "
+                    f"= pi × {fmt_num(r * r)}",
+                    f"= {fmt_num(r * r)}·pi ≈ {val:.4f}",
+                ]
+                return "area", f"{fmt_num(r * r)}·pi ≈ {val:.4f}", \
+                    steps
+    if "आयत" in q and "क्षेत्रफल" in q:
+        ml = re.search(r"लंबाई\s*" + _NUM_HI, q)
+        mb = re.search(r"चौड़ाई\s*" + _NUM_HI, q)
+        if ml and mb:
+            l, b = _val(ml), _val(mb)
+            steps = [
+                f"आयत का क्षेत्रफल = लंबाई × चौड़ाई "
+                f"= {fmt_num(l)} × {fmt_num(b)} = {fmt_num(l * b)}",
+            ]
+            return "area", fmt_num(l * b), steps
+    if "वर्ग" in q and "भुजा" in q:
+        m = re.search(r"भुजा\s*" + _NUM_HI, q)
+        if m:
+            s = _val(m)
+            if "परिमाप" in q:
+                steps = [
+                    f"वर्ग का परिमाप = 4 × भुजा = 4 × "
+                    f"{fmt_num(s)} = {fmt_num(4 * s)}",
+                ]
+                return "perimeter", fmt_num(4 * s), steps
+            if "क्षेत्रफल" in q:
+                steps = [
+                    f"वर्ग का क्षेत्रफल = भुजा^2 = {fmt_num(s)}^2 "
+                    f"= {fmt_num(s * s)}",
+                ]
+                return "area", fmt_num(s * s), steps
+    if "त्रिभुज" in q and "क्षेत्रफल" in q:
+        mb = re.search(r"आधार\s*" + _NUM_HI, q)
+        mh = re.search(r"ऊ[ँं]चाई\s*" + _NUM_HI, q)
+        if mb and mh:
+            b, h = _val(mb), _val(mh)
+            val = b * h / 2
+            steps = [
+                f"त्रिभुज का क्षेत्रफल = (1/2) × आधार × ऊँचाई",
+                f"= (1/2) × {fmt_num(b)} × {fmt_num(h)} "
+                f"= {fmt_num(val)}",
+            ]
+            return "area", fmt_num(val), steps
+    return None
+
+
 def solve_geometry(question: str):
     q = question.lower()
-    out = _pythagoras(q)
+    # Wave 57 (merge-3): Devanagari mensuration first, as in
+    # the Wave 57 tree; disjoint from Wave 56's vectors.
+    out = _mensuration_hindi(q)
+    if out is None:
+        out = _vectors56(q)
+    if out is None:
+        out = _pythagoras(q)
     if out is None:
         out = _third_angle(q)
     if out is None:
