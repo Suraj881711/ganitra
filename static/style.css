@@ -2151,3 +2151,15 @@ body.chat-page .chat-bar .send-btn {
     body.chat-page .chat-bar textarea { font-size: 16px; }
   }
 }
+
+/* Wave 55: the /topics per-class directory renders each topic
+   as a link card (the 17 subject cards above stay divs). Only
+   what a linked card needs: no underline, block layout, class
+   group spacing, and small breathing room for the method steps
+   and the worked-example lines. Nothing else on the page moves. */
+a.topic-card { text-decoration: none; display: block; }
+.topic-group { margin-top: 26px; text-align: left; }
+.topic-group > h3 { margin: 0 0 12px; font-size: 19px; color: #16213a; }
+.topic-card .steps { margin-top: 6px; }
+.topic-card .steps p { margin: 0 0 2px; }
+.topic-card .ex { margin-top: 8px; }

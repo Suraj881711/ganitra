@@ -63,7 +63,8 @@
    v8) so this wave's CSS gets a fresh cache key. */
 /* Merge-2: pins reconciled as anticipated above — cache
    name v8, stylesheet ?v=31. */
-var GANITRA_CACHE = "ganitra-static-v8";
+/* Wave 55: topic-directory CSS — cache v9, stylesheet ?v=32. */
+var GANITRA_CACHE = "ganitra-static-v9";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();
