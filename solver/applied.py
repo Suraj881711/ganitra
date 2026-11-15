@@ -48,7 +48,8 @@ def _ratio(q):
     # is now allowed, its names are read, and a "how much does
     # X get" ask answers with X's share alone.
     m = re.search(
-        r"\bdivide\s+(?:" + _RS + r"\s*)?(" + _NUM + r")\s+"
+        r"\bdivide\s+(?:" + _RS + r"\s*)?(" + _NUM + r")"
+        r"\s*(?:" + _RS + r")?\s+"
         r"(?:among\s+([^.]+?)\s+)?in\s+"
         r"(?:the\s+)?ratio\s+(\d+)\s*:\s*(\d+)(?:\s*:\s*(\d+))?", q)
     if m:
@@ -115,11 +116,99 @@ def _ratio(q):
                 "answer": f"{fmt_num(a * per)} and "
                           f"{fmt_num(b * per)}",
                 "steps": steps, "value": [a * per, b * per]}
+    # Wave 65: AGES in a ratio with a given sum — "the ages
+    # of a and b are in ratio 4:7 and sum to 55. age of b?"
+    # (the numbers pattern above needs the word "numbers";
+    # the simplify catch-all echoed "4 : 7" for this form).
+    m = re.search(
+        r"\bages?\b[^.]{0,40}?in\s+(?:the\s+)?ratio\s+"
+        r"(\d+)\s*:\s*(\d+)\s+and\s+(?:their\s+)?sum\s+"
+        r"(?:is|to)\s+(" + _NUM + r")", q)
+    if m:
+        a, b, total = int(m.group(1)), int(m.group(2)), \
+            _num(m.group(3))
+        per = total / (a + b)
+        first, second = a * per, b * per
+        steps = [
+            f"The ages are {a} parts and {b} parts: "
+            f"{a} + {b} = {a + b} parts = {fmt_num(total)}",
+            f"1 part = {fmt_num(total)} ÷ {a + b} = "
+            f"{fmt_num(per)}",
+            f"First age = {a} × {fmt_num(per)} = "
+            f"{fmt_num(first)}",
+            f"Second age = {b} × {fmt_num(per)} = "
+            f"{fmt_num(second)}",
+        ]
+        if re.search(r"age\s+of\s+b\b", q):
+            return {"type": "applied", "op": "ages_ratio_sum",
+                    "answer": fmt_num(second), "steps": steps,
+                    "value": second}
+        if re.search(r"age\s+of\s+a\b", q):
+            return {"type": "applied", "op": "ages_ratio_sum",
+                    "answer": fmt_num(first), "steps": steps,
+                    "value": first}
+        return {"type": "applied", "op": "ages_ratio_sum",
+                "answer": f"{fmt_num(first)} and "
+                          f"{fmt_num(second)}",
+                "steps": steps, "value": [first, second]}
+    # Wave 65: SIDES of a triangle in a ratio with a given
+    # perimeter — the PERIMETER is split in the ratio (the
+    # angles branch below used to steal these via the
+    # "triANGLE" substring trap). Longest / shortest side
+    # asks answer with that side alone.
+    if "triangle" in q and "side" in q and "perimeter" in q:
+        mt = re.search(r"ratio\s+(\d+)\s*:\s*(\d+)\s*:\s*(\d+)",
+                       q)
+        mp = re.search(r"perimeter\s+(?:is\s+|of\s+)?("
+                       + _NUM + r")", q)
+        if mt and mp:
+            parts = [int(mt.group(i)) for i in (1, 2, 3)]
+            s = sum(parts)
+            per = _num(mp.group(1))
+            sides = [per * p / s for p in parts]
+            steps = [
+                f"The sides are {parts[0]} parts, {parts[1]} "
+                f"parts and {parts[2]} parts: "
+                f"{' + '.join(str(p) for p in parts)} = {s} "
+                f"parts = {fmt_num(per)} (the perimeter).",
+                f"Value of 1 part = {fmt_num(per)} ÷ {s} = "
+                f"{fmt_num(per / s)}",
+            ]
+            for p, sd in zip(parts, sides):
+                steps.append(f"{p} parts = {p} × "
+                             f"{fmt_num(per / s)} = "
+                             f"{fmt_num(sd)}")
+            if "longest" in q or "largest" in q \
+                    or "greatest" in q:
+                big = max(sides)
+                steps.append(f"The longest side is "
+                             f"{fmt_num(big)}.")
+                return {"type": "applied",
+                        "op": "triangle_sides_ratio",
+                        "answer": fmt_num(big), "steps": steps,
+                        "value": big}
+            if "shortest" in q or "smallest" in q:
+                small = min(sides)
+                steps.append(f"The shortest side is "
+                             f"{fmt_num(small)}.")
+                return {"type": "applied",
+                        "op": "triangle_sides_ratio",
+                        "answer": fmt_num(small), "steps": steps,
+                        "value": small}
+            return {"type": "applied",
+                    "op": "triangle_sides_ratio",
+                    "answer": ", ".join(fmt_num(sd)
+                                        for sd in sides),
+                    "steps": steps, "value": sides}
     # Wave 52 (echo case #349): "The angles of a triangle are
     # in the ratio 2:3:4. Find the largest angle." fell to the
     # simplify fallback below and echoed "2 : 3". The angles
     # are 180° split in the ratio.
-    if "triangle" in q and "angle" in q:
+    # Wave 65: the guard used to be `"angle" in q` — but
+    # "angle" is a substring of "triANGLE" (and "rectANGLE"),
+    # so SIDES-in-ratio questions were hijacked into this
+    # angles split. Word-boundary match now.
+    if "triangle" in q and re.search(r"\bangles?\b", q):
         mt = re.search(r"ratio\s+(\d+)\s*:\s*(\d+)\s*:\s*(\d+)", q)
         if mt:
             parts = [int(mt.group(i)) for i in (1, 2, 3)]
@@ -283,7 +372,8 @@ def _unitary_cost(q):
 # --------------------------------------------------------------------------
 _SI_RE = re.compile(
     r"simple\s+interest\s+on\s+(?:" + _RS + r"\s*)?(" + _NUM + r")"
-    r"\s+(?:at\s+)?(" + _NUM + r")\s*%\s*(?:per\s+annum\s+)?"
+    r"\s*(?:" + _RS + r")?\s+(?:at\s+)?(" + _NUM + r")\s*%\s*"
+    r"(?:per\s+(?:annum|year)\s+)?"
     r"(?:for\s+)?(" + _NUM + r")\s*(years?|yrs?|months?)", re.I)
 
 
@@ -389,6 +479,28 @@ def _profit_loss(q):
                 "steps": [
                     f"Selling price = cost price × (1 - "
                     f"loss/100) = {_cp:g} × {1 - _p / 100:g}",
+                    f"Selling price = Rs {_sp}"]}
+    # Wave 65: bought for a price, sold AT a profit/loss
+    # percent — "a shopkeeper buys a cycle for 3600 rs and
+    # sells it at 18% profit. selling price?" The buys/sells
+    # chain below would read the 18 as the selling price.
+    _mbp = re.search(
+        r"\bbuys?\b[\s\S]{0,50}?(?:" + _RS + r"\s*)?(" + _NUM
+        + r")[\s\S]{0,40}?\bsells?\b[\s\S]{0,30}?at\s+("
+        + _NUM + r")\s*%\s*(profit|loss)", q)
+    if _mbp:
+        _cp = float(_mbp.group(1))
+        _p = float(_mbp.group(2))
+        _sgn = 1 if _mbp.group(3) == "profit" else -1
+        _sp = _cp * (1 + _sgn * _p / 100)
+        _sp = int(_sp) if _sp == int(_sp) else _sp
+        return {"type": "applied", "op": "selling_price",
+                "answer": f"Rs {_sp}",
+                "steps": [
+                    f"Selling price = cost price × (1 "
+                    f"{'+' if _sgn > 0 else '-'} "
+                    f"{_mbp.group(3)}/100) = {_cp:g} × "
+                    f"{1 + _sgn * _p / 100:g}",
                     f"Selling price = Rs {_sp}"]}
     m = re.search(
         r"\bbought\b[\s\S]{0,40}?(?:" + _RS + r"\s*)?(" + _NUM
@@ -1072,10 +1184,32 @@ def _rectangle_word(q):
 def _compound_interest(q):
     m = re.search(
         r"compound\s+interest\s+on\s+(?:" + _RS + r"\s*)?("
-        + _NUM + r")\s+at\s+(" + _NUM + r")\s*%\s*(?:per\s+"
-        r"annum\s+)?(?:for\s+)?(" + _NUM + r")\s*(?:years?|yrs?)",
+        + _NUM + r")\s*(?:" + _RS + r")?\s+at\s+(" + _NUM
+        + r")\s*%\s*(?:per\s+(?:annum|year)\s+)?(?:for\s+)?("
+        + _NUM + r")\s*(?:years?|yrs?)",
         q)
     if not m:
+        # Wave 65: amount-first form — "find the amount on
+        # 8000 rs at 10% compound interest for 2 years".
+        m = re.search(
+            r"amount\s+on\s+(?:" + _RS + r"\s*)?(" + _NUM
+            + r")\s*(?:" + _RS + r")?\s+at\s+(" + _NUM
+            + r")\s*%\s*compound\s+interest\s+(?:for\s+)?("
+            + _NUM + r")\s*(?:years?|yrs?)", q)
+        if m:
+            P, R, T = (sp.Rational(m.group(i)) for i in (1, 2, 3))
+            if T != int(T):
+                return None
+            amount = P * (1 + R / 100) ** int(T)
+            steps = [
+                "Compound interest: Amount A = P(1 + R/100)^T",
+                f"A = {fmt_num(P)} × (1 + {fmt_num(R)}/100)"
+                f"^{fmt_num(T)} = {fmt_num(amount)}",
+            ]
+            return {"type": "applied", "op": "compound_amount",
+                    "answer": fmt_num(amount),
+                    "value": float(amount), "steps": steps,
+                    "amount": float(amount)}
         return None
     P, R, T = (sp.Rational(m.group(i)) for i in (1, 2, 3))
     if T != int(T):
@@ -2168,6 +2302,14 @@ def _pipes(q):
     from fractions import Fraction as F
     rate = sum(F(1, 1) / F(str(t)) for t in fills) \
         - sum(F(1, 1) / F(str(t)) for t in empties)
+    # Wave 65: "one tap fills a tank in 6 hours. how long
+    # will 3 such taps take?" — the count was ignored and
+    # the single-tap time (6) came back. With ONE fill time
+    # and an explicit tap count, the rate scales by it.
+    _cnt = re.search(r"(" + _NUM + r")\s+(?:such\s+)?"
+                     r"(?:taps?|pipes?)\b", q)
+    if _cnt and len(fills) == 1 and not empties:
+        rate = rate * int(float(_cnt.group(1)))
     steps = []
     for t in fills:
         steps.append(f"A pipe that fills the tank in "
@@ -3423,7 +3565,9 @@ def _angle_word(q):
     """Angle word schemas: triangle angles in a ratio,
     complement / supplement (plain, equal, k-times), and
     the exterior-angle theorem."""
-    if "triangle" in q and "ratio" in q and "angle" in q:
+    # Wave 65: \bangle — "angle" is a substring of "triangle".
+    if "triangle" in q and "ratio" in q \
+            and re.search(r"\bangles?\b", q):
         mp = re.search(r"ratio\s+(\d+(?:\s*:\s*\d+)+)", q)
         if mp:
             parts = [int(p) for p in mp.group(1).split(":")]
@@ -4426,6 +4570,16 @@ def _hinglish_schemas(q):
         seg = re.split(r"average|ausat|osat", q)[0]
         nums = [_num(x) for x in re.findall(r"(" + _NUM + r")",
                                             seg)]
+        # Wave 65: this block averaged EVERY number before
+        # the word "average" — including journey givens, so
+        # "120 km at 60 km/h and 120 km at 40 km/h, average
+        # speed?" answered 85 (the mean of 120, 60, 120, 40)
+        # and "24 km in 6 hours, back in 3, average speed?"
+        # answered 11. A bare list carries no journey/money
+        # units; when units are present it is not a list ask.
+        if re.search(r"km|hour|ghant|minute|second|speed|"
+                     r"rs\b|rupees|meter|metre", seg):
+            nums = []
         if len(nums) >= 3:
             v = sum(nums) / len(nums)
             return {"type": "applied", "op": "hinglish_average",
@@ -4594,6 +4748,622 @@ def _simple_interest_hindi(q):
             "answer": fmt_num(si), "steps": steps, "value": si}
 
 
+def _wave65_schemas(q):
+    """Wave 65: general word-problem schemas for the phrasing
+    families the trilingual batteries exposed (percent change
+    in all directions, SI unknowns other than the interest,
+    work together / inverse work, train pole & bridge,
+    relative speed, multi-leg average speed, pass marks,
+    clock durations, fencing cost, fraction-of-a-number,
+    times-a-number, k-times ages). Registered LAST in
+    _FAMILIES: every pattern is gated on its full phrasing,
+    so it only claims questions no earlier family wanted."""
+    # --- Percent change: forward --------------------------------
+    m = re.search(r"(" + _NUM + r")\s+(?:is\s+)?(increased|"
+                  r"decreased|reduced|raised|lowered)\s+by\s+("
+                  + _NUM + r")%", q)
+    if m:
+        base, pct = _num(m.group(1)), _num(m.group(3))
+        up = m.group(2) in ("increased", "raised")
+        new = base * (1 + (pct if up else -pct) / 100)
+        return {"type": "applied", "op": "percent_change65",
+                "answer": fmt_num(new), "value": float(new),
+                "steps": [
+                    f"Change = {fmt_num(pct)}% of "
+                    f"{fmt_num(base)} = "
+                    f"{fmt_num(base * pct / 100)}",
+                    f"New value = {fmt_num(base)} "
+                    f"{'+' if up else '-'} "
+                    f"{fmt_num(base * pct / 100)} = "
+                    f"{fmt_num(new)}"]}
+    # --- Percent change: base stated, then "increases by" ------
+    m = re.search(r"(?:is|of|was|are)\s+(" + _NUM + r")"
+                  r"[\s\S]{0,40}?(increases?|decreases?|"
+                  r"increased|decreased)\s+by\s+(" + _NUM + r")%",
+                  q)
+    if m:
+        base, pct = _num(m.group(1)), _num(m.group(3))
+        up = m.group(2).startswith("increas")
+        new = base * (1 + (pct if up else -pct) / 100)
+        return {"type": "applied", "op": "percent_change65",
+                "answer": fmt_num(new), "value": float(new),
+                "steps": [
+                    f"Change = {fmt_num(pct)}% of "
+                    f"{fmt_num(base)} = "
+                    f"{fmt_num(base * pct / 100)}",
+                    f"New value = {fmt_num(base)} "
+                    f"{'+' if up else '-'} "
+                    f"{fmt_num(base * pct / 100)} = "
+                    f"{fmt_num(new)}"]}
+    # --- Percent change: from A to B ----------------------------
+    m = re.search(r"(?:increased|decreased|changed|rose|fell|"
+                  r"reduced)\s+from\s+(" + _NUM + r")\s*"
+                  r"(?:cm|m|km|rs|rupees|kg)?\s*to\s+("
+                  + _NUM + r")", q)
+    if m and ("percent" in q or "%" in q):
+        a, b = _num(m.group(1)), _num(m.group(2))
+        if a:
+            pct = (b - a) / a * 100
+            return {"type": "applied",
+                    "op": "percent_change_from_to",
+                    "answer": fmt_num(pct) + "%",
+                    "value": float(pct),
+                    "steps": [
+                        f"Change = {fmt_num(b)} - {fmt_num(a)} "
+                        f"= {fmt_num(b - a)}",
+                        f"Percent change = ({fmt_num(b - a)} / "
+                        f"{fmt_num(a)}) × 100 = "
+                        f"{fmt_num(pct)}%"]}
+    # --- Percent change: reverse --------------------------------
+    m = re.search(r"(?:increased|increase|raised)\s+by\s+("
+                  + _NUM + r")%\s*(?:,?\s*(?:it|the\s+\w+|a\s+"
+                  r"salary|salary)\s+)?(?:becomes|is\s+now|"
+                  r"becomes?|now\s+is)\s+(" + _NUM + r")", q) \
+        or re.search(r"after\s+(?:a\s+|an\s+)?(" + _NUM
+                     + r")%\s+increase[^.]{0,50}?becomes\s+("
+                     + _NUM + r")", q)
+    if m:
+        pct, new = _num(m.group(1)), _num(m.group(2))
+        orig = new / (1 + pct / 100)
+        return {"type": "applied", "op": "percent_reverse65",
+                "answer": fmt_num(orig), "value": float(orig),
+                "steps": [
+                    f"New value = original × (1 + "
+                    f"{fmt_num(pct)}/100)",
+                    f"Original = {fmt_num(new)} / "
+                    f"{fmt_num(1 + pct / 100)} = "
+                    f"{fmt_num(orig)}"]}
+    m = re.search(r"(?:decreased|decrease|reduced)\s+by\s+("
+                  + _NUM + r")%\s*(?:,?\s*(?:it|the\s+\w+)\s+)?"
+                  r"(?:becomes|is\s+now)\s+(" + _NUM + r")", q) \
+        or re.search(r"after\s+(?:a\s+|an\s+)?(" + _NUM
+                     + r")%\s+(?:decrease|discount|reduction)"
+                     r"[^.]{0,50}?becomes\s+(" + _NUM + r")", q)
+    if m:
+        pct, new = _num(m.group(1)), _num(m.group(2))
+        orig = new / (1 - pct / 100)
+        return {"type": "applied", "op": "percent_reverse65",
+                "answer": fmt_num(orig), "value": float(orig),
+                "steps": [
+                    f"New value = original × (1 - "
+                    f"{fmt_num(pct)}/100)",
+                    f"Original = {fmt_num(new)} / "
+                    f"{fmt_num(1 - pct / 100)} = "
+                    f"{fmt_num(orig)}"]}
+    # --- Discount percent from marked & selling prices ----------
+    m = re.search(r"(" + _NUM + r")\s*(?:" + _RS + r")?"
+                  r"[\s\S]{0,50}?sold\s+for\s+(" + _NUM + r")"
+                  r"[\s\S]{0,50}?discount\s*(?:percent|%)", q)
+    if m:
+        mp_, sp_ = _num(m.group(1)), _num(m.group(2))
+        if mp_:
+            pct = (mp_ - sp_) / mp_ * 100
+            return {"type": "applied", "op": "discount_percent",
+                    "answer": fmt_num(pct) + "%",
+                    "value": float(pct),
+                    "steps": [
+                        f"Discount = {fmt_num(mp_)} - "
+                        f"{fmt_num(sp_)} = {fmt_num(mp_ - sp_)}",
+                        f"Discount % = ({fmt_num(mp_ - sp_)} / "
+                        f"{fmt_num(mp_)}) × 100 = "
+                        f"{fmt_num(pct)}%"]}
+    # --- Marked above cost, then discounted ----------------------
+    m = re.search(r"marks?\b[^.]{0,50}?(" + _NUM + r")%\s+above"
+                  r"\s+(?:the\s+)?cost[\s\S]{0,80}?(?:(" + _NUM
+                  + r")%\s+discount|discount\s+(?:of\s+)?(" + _NUM
+                  + r")%)[\s\S]{0,80}?cost\s+(?:is"
+                  r"|price\s+is)\s+(" + _NUM + r")", q)
+    if m:
+        mk = _num(m.group(1))
+        d = _num(m.group(2)) if m.group(2) else _num(m.group(3))
+        c = _num(m.group(4))
+        sp_ = c * (1 + mk / 100) * (1 - d / 100)
+        return {"type": "applied", "op": "marked_discount",
+                "answer": fmt_num(sp_), "value": float(sp_),
+                "steps": [
+                    f"Marked price = {fmt_num(c)} × "
+                    f"{fmt_num(1 + mk / 100)} = "
+                    f"{fmt_num(c * (1 + mk / 100))}",
+                    f"Selling price = marked price × "
+                    f"{fmt_num(1 - d / 100)} = "
+                    f"{fmt_num(sp_)}"]}
+    # --- SI: principal behind a stated amount --------------------
+    m = re.search(r"amounts?\s+to\s+(" + _NUM + r")\s*(?:"
+                  + _RS + r")?[^.]{0,30}?in\s+(" + _NUM
+                  + r")\s+years?\s+at\s+(" + _NUM
+                  + r")%\s*(?:per\s+\w+\s+)?(?:simple\s+interest)?",
+                  q)
+    if m and "simple" in q:
+        amt, t, r = (_num(m.group(i)) for i in (1, 2, 3))
+        p = amt / (1 + r * t / 100)
+        return {"type": "applied", "op": "si_principal_reverse",
+                "answer": fmt_num(p), "value": float(p),
+                "steps": [
+                    f"Amount = P(1 + RT/100), so P = Amount / "
+                    f"(1 + {fmt_num(r)} × {fmt_num(t)} / 100)",
+                    f"P = {fmt_num(amt)} / "
+                    f"{fmt_num(1 + r * t / 100)} = "
+                    f"{fmt_num(p)}"]}
+    # --- SI: time behind a stated interest -----------------------
+    m = re.search(r"in\s+what\s+time\s+will\s+(" + _NUM + r")"
+                  r"[^.]{0,40}?earn\s+(" + _NUM + r")\s*(?:"
+                  + _RS + r")?\s*(?:of\s+)?interest\s+at\s+("
+                  + _NUM + r")%", q)
+    if m:
+        p, si, r = (_num(m.group(i)) for i in (1, 2, 3))
+        if p and r:
+            t = si * 100 / (p * r)
+            return {"type": "applied", "op": "si_time",
+                    "answer": fmt_num(t), "value": float(t),
+                    "steps": [
+                        f"T = SI × 100 / (P × R) = "
+                        f"{fmt_num(si)} × 100 / ({fmt_num(p)} × "
+                        f"{fmt_num(r)}) = {fmt_num(t)} years"]}
+    # --- SI: rate behind a stated interest -----------------------
+    m = re.search(r"simple\s+interest\s+on\s+(" + _NUM + r")"
+                  r"[^.]{0,30}?for\s+(" + _NUM + r")\s+years?"
+                  r"\s+is\s+(" + _NUM + r")", q)
+    if m and "rate" in q:
+        p, t, si = (_num(m.group(i)) for i in (1, 2, 3))
+        if p and t:
+            r = si * 100 / (p * t)
+            return {"type": "applied", "op": "si_rate",
+                    "answer": fmt_num(r) + "%",
+                    "value": float(r),
+                    "steps": [
+                        f"R = SI × 100 / (P × T) = "
+                        f"{fmt_num(si)} × 100 / ({fmt_num(p)} × "
+                        f"{fmt_num(t)}) = {fmt_num(r)}%"]}
+    # --- Profit/loss reverse: SP and % -> CP ---------------------
+    m = re.search(r"sold\s+for\s+(" + _NUM + r")\s*(?:"
+                  + _RS + r")?[^.]{0,50}?(profit|loss)\s+of\s+("
+                  + _NUM + r")%", q)
+    if m:
+        sp_, p = _num(m.group(1)), _num(m.group(3))
+        sgn = 1 if m.group(2) == "profit" else -1
+        cp = sp_ / (1 + sgn * p / 100)
+        return {"type": "applied", "op": "cp_from_sp_percent",
+                "answer": fmt_num(cp), "value": float(cp),
+                "steps": [
+                    f"Cost price = selling price / (1 "
+                    f"{'+' if sgn > 0 else '-'} "
+                    f"{fmt_num(p)}/100) = {fmt_num(sp_)} / "
+                    f"{fmt_num(1 + sgn * p / 100)} = "
+                    f"{fmt_num(cp)}"]}
+    # --- Work together -------------------------------------------
+    m = re.search(r"in\s+(" + _NUM + r")\s+days?[\s\S]{0,80}?"
+                  r"in\s+(" + _NUM + r")\s+days?[\s\S]{0,60}?"
+                  r"together", q)
+    if m and ("work" in q or "job" in q or "finish" in q
+              or "complete" in q):
+        a, b = _num(m.group(1)), _num(m.group(2))
+        if a and b:
+            t = a * b / (a + b)
+            return {"type": "applied", "op": "work_together65",
+                    "answer": fmt_num(t), "value": float(t),
+                    "steps": [
+                        f"In 1 day together they do 1/"
+                        f"{fmt_num(a)} + 1/{fmt_num(b)} = "
+                        f"{fmt_num(1 / a + 1 / b)} of the work",
+                        f"Days together = 1 / "
+                        f"{fmt_num(1 / a + 1 / b)} = "
+                        f"{fmt_num(t)}"]}
+    # --- Inverse work: men-days ----------------------------------
+    m = re.search(r"(" + _NUM + r")\s+men\b[^.]{0,60}?in\s+("
+                  + _NUM + r")\s+days?[^.]{0,80}?(" + _NUM
+                  + r")\s+men\b", q)
+    if m:
+        m1, d1, m2 = (_num(m.group(i)) for i in (1, 2, 3))
+        if m2:
+            d2 = m1 * d1 / m2
+            return {"type": "applied", "op": "work_inverse65",
+                    "answer": fmt_num(d2), "value": float(d2),
+                    "steps": [
+                        f"Total work = {fmt_num(m1)} men × "
+                        f"{fmt_num(d1)} days = "
+                        f"{fmt_num(m1 * d1)} man-days",
+                        f"Days for {fmt_num(m2)} men = "
+                        f"{fmt_num(m1 * d1)} / {fmt_num(m2)} = "
+                        f"{fmt_num(d2)}"]}
+    # --- Single-rate scaling: one tap / one man ------------------
+    m = re.search(r"one\s+(tap|man|worker|pump|machine)\b"
+                  r"[^.]{0,60}?in\s+(" + _NUM + r")\s+"
+                  r"(hours?|days?)[\s\S]{0,80}?(" + _NUM + r")"
+                  r"\s+(?:such\s+)?(taps?|men|workers?|pumps?|"
+                  r"machines?)", q)
+    if m:
+        t1, n = _num(m.group(2)), _num(m.group(4))
+        if n:
+            t2 = t1 / n
+            return {"type": "applied", "op": "single_rate65",
+                    "answer": fmt_num(t2), "value": float(t2),
+                    "steps": [
+                        f"{fmt_num(n)} of them work {fmt_num(n)}"
+                        f" times as fast, so the time divides "
+                        f"by {fmt_num(n)}",
+                        f"Time = {fmt_num(t1)} / {fmt_num(n)} "
+                        f"= {fmt_num(t2)} {m.group(3)}"]}
+    # --- Train: pole (length from speed x time) ------------------
+    m = re.search(r"crosses\s+a\s+pole\s+in\s+(" + _NUM + r")"
+                  r"\s+seconds?\s+at\s+(" + _NUM + r")\s*km/h",
+                  q)
+    if m:
+        t, s = _num(m.group(1)), _num(m.group(2))
+        length = s * 5 / 18 * t
+        return {"type": "applied", "op": "train_pole_length",
+                "answer": fmt_num(length), "value": float(length),
+                "steps": [
+                    f"Speed = {fmt_num(s)} km/h = {fmt_num(s)} "
+                    f"× 5/18 = {fmt_num(s * 5 / 18)} m/s",
+                    f"Length of the train = speed × time = "
+                    f"{fmt_num(s * 5 / 18)} × {fmt_num(t)} = "
+                    f"{fmt_num(length)} m"]}
+    # --- Train: pole (time from length & speed) ------------------
+    m = re.search(r"train\s+(?:is\s+)?(" + _NUM + r")\s*m\s+"
+                  r"long[\s\S]{0,60}?(" + _NUM + r")\s*km/h"
+                  r"[\s\S]{0,60}?pole", q)
+    if m:
+        length, s = _num(m.group(1)), _num(m.group(2))
+        t = length / (s * 5 / 18)
+        return {"type": "applied", "op": "train_pole_time",
+                "answer": fmt_num(t), "value": float(t),
+                "steps": [
+                    f"Speed = {fmt_num(s)} km/h = "
+                    f"{fmt_num(s * 5 / 18)} m/s",
+                    f"Time to cross a pole = length / speed = "
+                    f"{fmt_num(length)} / "
+                    f"{fmt_num(s * 5 / 18)} = {fmt_num(t)} "
+                    f"seconds"]}
+    # --- Train: bridge -------------------------------------------
+    m = re.search(r"at\s+(" + _NUM + r")\s*km/h[\s\S]{0,40}?"
+                  r"crosses\s+a\s+bridge\s+in\s+(" + _NUM + r")"
+                  r"\s+seconds?[\s\S]{0,80}?train\s+is\s+("
+                  + _NUM + r")\s*m\s+long", q)
+    if m:
+        s, t, tl = (_num(m.group(i)) for i in (1, 2, 3))
+        total = s * 5 / 18 * t
+        bridge = total - tl
+        return {"type": "applied", "op": "train_bridge",
+                "answer": fmt_num(bridge),
+                "value": float(bridge),
+                "steps": [
+                    f"Speed = {fmt_num(s)} km/h = "
+                    f"{fmt_num(s * 5 / 18)} m/s",
+                    f"Train + bridge = {fmt_num(s * 5 / 18)} × "
+                    f"{fmt_num(t)} = {fmt_num(total)} m",
+                    f"Bridge = {fmt_num(total)} - "
+                    f"{fmt_num(tl)} = {fmt_num(bridge)} m"]}
+    # --- Relative speed ------------------------------------------
+    m = re.search(r"(" + _NUM + r")\s*km/h\s+and\s+(" + _NUM
+                  + r")\s*km/h[\s\S]{0,60}?relative\s+speed", q)
+    if m:
+        a, b = _num(m.group(1)), _num(m.group(2))
+        rel = a + b if ("opposite" in q or "towards each "
+                        "other" in q or "toward each other"
+                        in q) else abs(a - b)
+        if "m/s" in q or "metre per second" in q \
+                or "meter per second" in q:
+            v = rel * 5 / 18
+            return {"type": "applied", "op": "relative_speed",
+                    "answer": fmt_num(v), "value": float(v),
+                    "steps": [
+                        f"Relative speed = {fmt_num(a)} + "
+                        f"{fmt_num(b)} = {fmt_num(rel)} km/h",
+                        f"In m/s: {fmt_num(rel)} × 5/18 = "
+                        f"{fmt_num(v)} m/s"]}
+        return {"type": "applied", "op": "relative_speed",
+                "answer": fmt_num(rel), "value": float(rel),
+                "steps": [f"Relative speed = {fmt_num(rel)} "
+                          f"km/h"]}
+    # --- Average speed: two legs ----------------------------------
+    m = re.search(r"first\s+(" + _NUM + r")\s*km\s+at\s+("
+                  + _NUM + r")\s*km/h\s+and\s+(?:the\s+)?next\s+("
+                  + _NUM + r")\s*km\s+at\s+(" + _NUM
+                  + r")\s*km/h", q)
+    if m:
+        d1, s1, d2, s2 = (_num(m.group(i)) for i in (1, 2, 3, 4))
+        if s1 and s2:
+            avg = (d1 + d2) / (d1 / s1 + d2 / s2)
+            return {"type": "applied", "op": "avg_speed_legs",
+                    "answer": fmt_num(avg), "value": float(avg),
+                    "steps": [
+                        f"Total distance = {fmt_num(d1 + d2)} "
+                        f"km; total time = {fmt_num(d1 / s1)} + "
+                        f"{fmt_num(d2 / s2)} = "
+                        f"{fmt_num(d1 / s1 + d2 / s2)} hours",
+                        f"Average speed = {fmt_num(d1 + d2)} / "
+                        f"{fmt_num(d1 / s1 + d2 / s2)} = "
+                        f"{fmt_num(avg)} km/h"]}
+    # --- Average speed: out and back ------------------------------
+    m = re.search(r"(" + _NUM + r")\s*km\s+in\s+(" + _NUM + r")"
+                  r"\s+hours?[^.]{0,40}?back\s+in\s+(" + _NUM
+                  + r")\s+hours?", q)
+    if m and "average" in q:
+        d, t1, t2 = (_num(m.group(i)) for i in (1, 2, 3))
+        avg = 2 * d / (t1 + t2)
+        return {"type": "applied", "op": "avg_speed_round",
+                "answer": fmt_num(avg), "value": float(avg),
+                "steps": [
+                    f"Total distance = 2 × {fmt_num(d)} = "
+                    f"{fmt_num(2 * d)} km; total time = "
+                    f"{fmt_num(t1 + t2)} hours",
+                    f"Average speed = {fmt_num(2 * d)} / "
+                    f"{fmt_num(t1 + t2)} = {fmt_num(avg)} km/h"]}
+    # --- Boat: plain downstream / upstream speed -------------------
+    m = re.search(r"goes\s+(" + _NUM + r")\s*km\s+(downstream|"
+                  r"upstream)\s+in\s+(" + _NUM + r")\s+hours?",
+                  q)
+    if m:
+        d, t = _num(m.group(1)), _num(m.group(3))
+        if t:
+            v = d / t
+            return {"type": "applied", "op": "boat_plain_speed",
+                    "answer": fmt_num(v), "value": float(v),
+                    "steps": [
+                        f"Speed {m.group(2)} = distance / time "
+                        f"= {fmt_num(d)} / {fmt_num(t)} = "
+                        f"{fmt_num(v)} km/h"]}
+    # --- Boat: still-water speed + stream speed ------------------
+    m = re.search(r"still\s+water\s+is\s+(" + _NUM + r")"
+                  r"\s*km/h[^.]{0,60}?stream\s+is\s+(" + _NUM +
+                  r")\s*km/h", q)
+    if m and ("downstream" in q or "upstream" in q):
+        bw, st = _num(m.group(1)), _num(m.group(2))
+        if "downstream" in q:
+            v, sgn = bw + st, "+"
+            word = "downstream"
+        else:
+            v, sgn = bw - st, "-"
+            word = "upstream"
+        return {"type": "applied", "op": "boat_still_stream",
+                "answer": fmt_num(v), "value": float(v),
+                "steps": [
+                    f"{word.capitalize()} speed = speed in "
+                    f"still water {sgn} stream = "
+                    f"{fmt_num(bw)} {sgn} {fmt_num(st)}",
+                    f"= {fmt_num(v)} km/h"]}
+    # --- Fraction of a journey -------------------------------------
+    m = re.search(r"covers?\s+(" + _NUM + r")/(" + _NUM + r")"
+                  r"\s+of\s+(?:a|the)\s+journey\s+in\s+("
+                  + _NUM + r")\s+hours?\s+at\s+(" + _NUM
+                  + r")\s*km/h", q)
+    if m:
+        num_, den = _num(m.group(1)), _num(m.group(2))
+        t, s = _num(m.group(3)), _num(m.group(4))
+        leg = s * t
+        total = leg * den / num_ if num_ else 0
+        return {"type": "applied", "op": "journey_fraction",
+                "answer": fmt_num(total), "value": float(total),
+                "steps": [
+                    f"Distance covered = {fmt_num(s)} × "
+                    f"{fmt_num(t)} = {fmt_num(leg)} km, and "
+                    f"that is {fmt_num(num_)}/{fmt_num(den)} "
+                    f"of the journey",
+                    f"Total journey = {fmt_num(leg)} × "
+                    f"{fmt_num(den)}/{fmt_num(num_)} = "
+                    f"{fmt_num(total)} km"]}
+    # --- Clock duration --------------------------------------------
+    m = re.search(r"(?:leaves?|departs?|starts?)\s+at\s+("
+                  + _NUM + r"):(" + _NUM + r")\s*(am|pm)\s+and\s+"
+                  r"(?:reaches|arrives|reached)\s+(?:at\s+)?("
+                  + _NUM + r"):(" + _NUM + r")\s*(am|pm)", q)
+    if m:
+        def _mins(h, mi, ap):
+            h, mi = int(h), int(mi)
+            if ap == "pm" and h != 12:
+                h += 12
+            if ap == "am" and h == 12:
+                h = 0
+            return h * 60 + mi
+        start = _mins(m.group(1), m.group(2), m.group(3))
+        end = _mins(m.group(4), m.group(5), m.group(6))
+        if end <= start:
+            end += 24 * 60
+        dur = end - start
+        if "minute" in q:
+            return {"type": "applied", "op": "clock_duration",
+                    "answer": fmt_num(dur), "value": float(dur),
+                    "steps": [f"From {m.group(1)}:{m.group(2)} "
+                              f"{m.group(3)} to {m.group(4)}:"
+                              f"{m.group(5)} {m.group(6)} is "
+                              f"{fmt_num(dur)} minutes"]}
+        hrs = dur / 60
+        return {"type": "applied", "op": "clock_duration",
+                "answer": fmt_num(hrs), "value": float(hrs),
+                "steps": [f"Duration = {fmt_num(dur)} minutes "
+                          f"= {fmt_num(hrs)} hours"]}
+    # --- Fencing cost ----------------------------------------------
+    m = re.search(r"(" + _NUM + r")\s*m?\s*(?:long|in\s+length)"
+                  r"[^.]{0,40}?(" + _NUM + r")\s*m?\s*(?:wide|"
+                  r"in\s+width)[^.]{0,90}?fencing[^.]{0,50}?("
+                  + _NUM + r")\s*(?:rs|rupees)", q)
+    if m:
+        ln, wd, rate = (_num(m.group(i)) for i in (1, 2, 3))
+        per = 2 * (ln + wd)
+        cost = per * rate
+        return {"type": "applied", "op": "fencing_cost",
+                "answer": fmt_num(cost), "value": float(cost),
+                "steps": [
+                    f"Perimeter = 2 × ({fmt_num(ln)} + "
+                    f"{fmt_num(wd)}) = {fmt_num(per)} m",
+                    f"Fencing cost = {fmt_num(per)} × "
+                    f"{fmt_num(rate)} = {fmt_num(cost)}"]}
+    # --- Dozen cost -> cost of one ----------------------------------
+    m = re.search(r"dozen\s+[a-z]+\s+cost\s+(" + _NUM + r")"
+                  r"[\s\S]{0,50}?cost\s+of\s+one", q)
+    if m:
+        total = _num(m.group(1))
+        one = total / 12
+        return {"type": "applied", "op": "dozen_cost_one",
+                "answer": fmt_num(one), "value": float(one),
+                "steps": [
+                    f"A dozen is 12, so one costs "
+                    f"{fmt_num(total)} / 12 = {fmt_num(one)}"]}
+    # --- Fraction of a number ---------------------------------------
+    m = re.search(r"(" + _NUM + r")/(" + _NUM + r")\s+of\s+a\s+"
+                  r"number\s+is\s+(" + _NUM + r")", q)
+    if m:
+        num_, den, val = (_num(m.group(i)) for i in (1, 2, 3))
+        if num_:
+            x = val * den / num_
+            return {"type": "applied", "op": "fraction_of_number",
+                    "answer": fmt_num(x), "value": float(x),
+                    "steps": [
+                        f"The number = {fmt_num(val)} × "
+                        f"{fmt_num(den)}/{fmt_num(num_)} = "
+                        f"{fmt_num(x)}"]}
+    # --- Times a number ------------------------------------------------
+    m = re.search(r"(twice|thrice|(" + _NUM + r")\s+times)\s+a\s+"
+                  r"number\s*(?:(plus|minus|added|less)\s+("
+                  + _NUM + r"))?\s*(?:equals?|is)\s+(" + _NUM
+                  + r")", q)
+    if m:
+        k = {"twice": 2, "thrice": 3}.get(m.group(1)) or \
+            _num(m.group(2))
+        b = _num(m.group(4)) if m.group(4) else 0
+        c = _num(m.group(5))
+        if m.group(3) in ("plus", "added"):
+            x = (c - b) / k
+        elif m.group(3) in ("minus", "less"):
+            x = (c + b) / k
+        else:
+            x = c / k
+        return {"type": "applied", "op": "times_number",
+                "answer": fmt_num(x), "value": float(x),
+                "steps": [
+                    f"Let the number be x: {fmt_num(k)}x"
+                    + (f" {'+' if m.group(3) in ('plus', 'added') else '-'} {fmt_num(b)}" if m.group(4) else "")
+                    + f" = {fmt_num(c)}",
+                    f"x = {fmt_num(x)}"]}
+    # --- Pass marks ------------------------------------------------------
+    m = re.search(r"needs?\s+(" + _NUM + r")%\s*(?:marks?\s+)?to"
+                  r"\s+pass[\s\S]{0,80}?gets?\s+(" + _NUM + r")"
+                  r"\s+marks?[\s\S]{0,40}?fails?\s+by\s+(" + _NUM
+                  + r")", q)
+    if m:
+        pct, got, short = (_num(m.group(i)) for i in (1, 2, 3))
+        if pct:
+            mx = (got + short) / (pct / 100)
+            return {"type": "applied", "op": "pass_marks",
+                    "answer": fmt_num(mx), "value": float(mx),
+                    "steps": [
+                        f"Passing marks = {fmt_num(got)} + "
+                        f"{fmt_num(short)} = "
+                        f"{fmt_num(got + short)}, and that is "
+                        f"{fmt_num(pct)}% of the maximum",
+                        f"Maximum marks = {fmt_num(got + short)}"
+                        f" / {fmt_num(pct / 100)} = "
+                        f"{fmt_num(mx)}"]}
+    # --- "costs N rupees, sold at a discount of D%" ----------------
+    m = re.search(r"(?:costs|price\s+is|marked\s+at)\s+(" + _NUM +
+                  r")\s*(?:rs|rupees)?[^.]{0,50}?discount\s+of"
+                  r"\s+(" + _NUM + r")%", q)
+    if m and "selling price" in q:
+        mp_, d_ = _num(m.group(1)), _num(m.group(2))
+        sp_ = mp_ * (1 - d_ / 100)
+        return {"type": "applied", "op": "discount_story65",
+                "answer": fmt_num(sp_), "value": float(sp_),
+                "steps": [
+                    f"Discount = {fmt_num(d_)}% of "
+                    f"{fmt_num(mp_)} = "
+                    f"{fmt_num(mp_ * d_ / 100)}",
+                    f"Selling price = {fmt_num(mp_)} - "
+                    f"{fmt_num(mp_ * d_ / 100)} = "
+                    f"{fmt_num(sp_)}"]}
+    # --- Terse train speed: "train 756 km 9 hours speed?" --------
+    m = re.search(r"train[^.]{0,20}?(" + _NUM + r")\s*km\s+(" +
+                  _NUM + r")\s*hours?\b[^.]{0,20}?speed", q)
+    if m:
+        d_, t_ = _num(m.group(1)), _num(m.group(2))
+        if t_:
+            v_ = d_ / t_
+            return {"type": "applied", "op": "sdt_terse65",
+                    "answer": fmt_num(v_), "value": float(v_),
+                    "steps": [
+                        f"Speed = distance / time = "
+                        f"{fmt_num(d_)} / {fmt_num(t_)}",
+                        f"Speed = {fmt_num(v_)} km/h"]}
+    # --- Terse / scrambled simple interest -------------------------
+    m = re.search(r"(?:on\s+)?(" + _NUM + r")\s*(?:rs|rupees)"
+                  r"\s+at\s+(" + _NUM + r")\s*(?:%|percent)"
+                  r"\s+for\s+(" + _NUM + r")\s+years?", q)
+    if m is None:
+        m = re.search(r"(" + _NUM + r")\s+at\s+(" + _NUM +
+                      r")%\s+(" + _NUM + r")\s+years?", q)
+    if m and "interest" in q and "compound" not in q:
+        p_, r_, t_ = (_num(m.group(1)), _num(m.group(2)),
+                      _num(m.group(3)))
+        si_ = p_ * r_ * t_ / 100
+        return {"type": "applied", "op": "si_terse65",
+                "answer": fmt_num(si_), "value": float(si_),
+                "steps": [
+                    f"SI = P × R × T / 100 = {fmt_num(p_)} × "
+                    f"{fmt_num(r_)} × {fmt_num(t_)} / 100",
+                    f"SI = {fmt_num(si_)}"]}
+    # --- Consecutive even / odd pairs --------------------------------
+    m = re.search(r"two\s+consecutive\s+(even|odd)\s+numbers"
+                  r"[^.]{0,50}?sum\s+(?:is\s+)?(" + _NUM + r")",
+                  q)
+    if m:
+        s = _num(m.group(2))
+        smaller = s / 2 - 1
+        bigger = s / 2 + 1
+        return {"type": "applied", "op": "consecutive_pair65",
+                "answer": fmt_num(smaller),
+                "value": float(smaller),
+                "steps": [
+                    f"Let the numbers be x and x + 2: "
+                    f"2x + 2 = {fmt_num(s)}",
+                    f"x = {fmt_num(smaller)}, so the numbers "
+                    f"are {fmt_num(smaller)} and "
+                    f"{fmt_num(bigger)}"]}
+    # --- k times as old ----------------------------------------------------
+    m = re.search(r"(" + _NUM + r")\s+times\s+as\s+old\s+as"
+                  r"[\s\S]{0,80}?(?:sum|together)[\s\S]{0,30}?("
+                  + _NUM + r")", q)
+    if m:
+        k, s = _num(m.group(1)), _num(m.group(2))
+        younger = s / (k + 1)
+        older = s - younger
+        if "son" in q or "younger" in q or "daughter" in q:
+            return {"type": "applied", "op": "ages_times",
+                    "answer": fmt_num(younger),
+                    "value": float(younger),
+                    "steps": [
+                        f"Ages are {fmt_num(k)}x and x, and "
+                        f"{fmt_num(k)}x + x = {fmt_num(s)}",
+                        f"x = {fmt_num(s)} / {fmt_num(k + 1)} "
+                        f"= {fmt_num(younger)}"]}
+        return {"type": "applied", "op": "ages_times",
+                "answer": fmt_num(older), "value": float(older),
+                "steps": [
+                    f"Ages are {fmt_num(k)}x and x, and "
+                    f"{fmt_num(k)}x + x = {fmt_num(s)}",
+                    f"Older age = {fmt_num(k)} × "
+                    f"{fmt_num(younger)} = {fmt_num(older)}"]}
+    return None
+
+
 _FAMILIES = (_hindi_word_problems,
              _ratio, _unitary_cost, _simple_interest,
              _simple_interest_hindi, _profit_loss,
@@ -4619,7 +5389,10 @@ _FAMILIES = (_hindi_word_problems,
              _consecutive_sum, _item_cost, _fraction_word,
              _percent_change, _growth_decay, _si_doubles,
              _angle_word, _temperature, _hindi_schemas,
-             _hinglish_schemas)
+             _hinglish_schemas,
+             # Wave 65: trilingual word-schema net (gated
+             # phrasings only; see _wave65_schemas).
+             _wave65_schemas)
 
 
 def solve_applied(question: str):

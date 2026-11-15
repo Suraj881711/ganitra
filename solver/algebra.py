@@ -1196,6 +1196,10 @@ def solve_algebra(question: str):
         _expr_text = re.split(
             r"\s+and\s+(?:verify|check|show)\b", _expr_text)[0]\
             .strip()
+        # Wave 65: statement form — "the zeroes of x^2 - 2x
+        # - 35 are?" leaves a trailing "are" on the capture.
+        _expr_text = re.sub(r"\s+(?:are|is)\s*\??\s*$", "",
+                            _expr_text).strip()
         if _expr_text:
             try:
                 _res = _solve_single_equation(_expr_text + " = 0")
@@ -1208,6 +1212,36 @@ def solve_algebra(question: str):
             except Exception:
                 pass
 
+    # Wave 65: "factorise <poly> and give the repeated root"
+    # — a repeated root exists exactly when the discriminant
+    # is 0; answer it directly instead of letting the whole
+    # tail poison the factor parse.
+    _mrr = re.match(
+        r"\s*(?:factorise|factorize|factor)\b[:\s]*(.+?)\s+"
+        r"and\s+give\s+the\s+repeated\s+root\s*\??\s*$", q,
+        re.I)
+    if _mrr:
+        try:
+            _expr65 = parse_expression(_mrr.group(1))
+            _syms65 = sorted(_expr65.free_symbols,
+                             key=lambda s: s.name)
+            if len(_syms65) == 1:
+                _roots65 = sp.solve(_expr65, _syms65[0])
+                if len(_roots65) == 1 or (
+                        len(_roots65) == 2
+                        and _roots65[0] == _roots65[1]):
+                    _r65 = _roots65[0]
+                    return {
+                        "type": "algebra", "op": "repeated_root",
+                        "answer": fmt(_r65),
+                        "steps": [
+                            f"{fmt(_expr65)} = "
+                            f"{fmt(sp.factor(_expr65))} — a "
+                            f"perfect square, so both roots "
+                            f"coincide.",
+                            f"Repeated root = {fmt(_r65)}"]}
+        except Exception:
+            pass
     # factor / expand / simplify commands
     m = re.match(r"\s*(factorise|factorize|factor)\b[:\s]*(.+)$", q, re.I)
     if m:

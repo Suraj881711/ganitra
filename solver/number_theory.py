@@ -212,6 +212,90 @@ def solve_number_theory(question: str):
             return {"type": "number_theory", "op": "lcm",
                     "answer": str(l), "value": l, "steps": steps}
 
+    # Wave 65: prime COUNTING and friends. The prime check
+    # below reads the first integer as the number to test,
+    # so "how many prime numbers are there between 40 and
+    # 60?" answered "40 is not prime". These gated forms
+    # run first.
+    _mb65 = re.search(r"between\s+(\d+)\s+and\s+(\d+)", q)
+    if "prime" in q and _mb65 and ("how many" in q
+                                   or "count" in q):
+        _a65, _b65 = int(_mb65.group(1)), int(_mb65.group(2))
+        _lo65, _hi65 = min(_a65, _b65), max(_a65, _b65)
+        _ps65 = [n for n in range(_lo65 + 1, _hi65)
+                 if isprime(n)]
+        return {"type": "number_theory", "op": "prime_count",
+                "answer": str(len(_ps65)), "value": len(_ps65),
+                "steps": [
+                    f"Prime numbers between {_lo65} and "
+                    f"{_hi65}: "
+                    + (", ".join(str(p) for p in _ps65)
+                       or "none"),
+                    f"Count = {len(_ps65)}"]}
+    if "smallest factor" in q:
+        n = _first_int(question)
+        if n is not None and n >= 2:
+            _f65 = min(factorint(n)) if not isprime(n) else n
+            return {"type": "number_theory",
+                    "op": "smallest_factor",
+                    "answer": str(_f65), "value": _f65,
+                    "steps": [
+                        f"{n} = {_f65} × {n // _f65}, and no "
+                        f"smaller factor (other than 1) divides"
+                        f" it" if not isprime(n) else
+                        f"{n} is prime, so its smallest factor "
+                        f"other than 1 is {n} itself"]}
+    if "smallest prime" in q and "factor" not in q:
+        return {"type": "number_theory", "op": "smallest_prime",
+                "answer": "2", "value": 2,
+                "steps": ["2 is the smallest prime number — "
+                          "and the only even one"]}
+    # Remainder: "find the remainder when 859 is divided
+    # by 11" (and the Roman-Hindi translation canonical).
+    _mr65 = re.search(r"remainder[^0-9]{0,40}?(\d+)\s+"
+                      r"(?:is\s+)?divided\s+by\s+(\d+)", q) or \
+        re.search(r"(\d+)\s+divided\s+by\s+(\d+)[^.]{0,40}?"
+                  r"remainder", q)
+    if _mr65:
+        _a65, _b65 = int(_mr65.group(1)), int(_mr65.group(2))
+        if _b65:
+            return {"type": "number_theory", "op": "remainder",
+                    "answer": str(_a65 % _b65),
+                    "value": _a65 % _b65,
+                    "steps": [
+                        f"{_a65} = {_b65} × {_a65 // _b65} + "
+                        f"{_a65 % _b65}",
+                        f"Remainder = {_a65 % _b65}"]}
+    # Smallest number divisible by both A and B = LCM.
+    _ml65 = re.search(r"smallest\s+number\s+divisible\s+by\s+"
+                      r"(?:both\s+)?(\d+)\s+and\s+(\d+)", q)
+    if _ml65:
+        import math
+        _a65, _b65 = int(_ml65.group(1)), int(_ml65.group(2))
+        _l65 = _a65 * _b65 // math.gcd(_a65, _b65)
+        return {"type": "number_theory", "op": "lcm_smallest",
+                "answer": str(_l65), "value": _l65,
+                "steps": [
+                    f"The smallest number divisible by both "
+                    f"is their LCM",
+                    f"LCM({_a65}, {_b65}) = {_l65}"]}
+    # Smallest k-digit number divisible by d.
+    _mk65 = re.search(r"smallest\s+(\d+)\s*-\s*digit\s+number"
+                      r"\s+divisible\s+by\s+(\d+)", q)
+    if _mk65:
+        _k65, _d65 = int(_mk65.group(1)), int(_mk65.group(2))
+        _base65 = 10 ** (_k65 - 1)
+        _v65 = -(-_base65 // _d65) * _d65
+        return {"type": "number_theory",
+                "op": "smallest_k_digit_divisible",
+                "answer": str(_v65), "value": _v65,
+                "steps": [
+                    f"The smallest {_k65}-digit number is "
+                    f"{_base65}; {_base65} / {_d65} leaves "
+                    f"remainder {_base65 % _d65}",
+                    f"Add {_d65 - _base65 % _d65 if _base65 % _d65 else 0}"
+                    f" to reach {_v65}"]}
+
     # Prime check
     if "prime" in q:
         n = _first_int(question)

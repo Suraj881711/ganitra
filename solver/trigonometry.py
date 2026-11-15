@@ -129,6 +129,27 @@ def _heights_distances56(q, qlow):
                 f"Height = {fmt_num(s)} × tan "
                 f"{fmt_num(t)}° = {fmt_num(round(val, 3))} m",
             ], "Height")
+        # Wave 65: the reverse ask — height AND shadow both
+        # given, the sun's angle of elevation asked ("a pole
+        # 12 m high casts a shadow 12 m long. angle of
+        # elevation of the sun?"). It used to fall out of
+        # this block with no angle to read and fail.
+        if m and "angle of elevation" in qlow:
+            mh = re.search(num + r"\s*m(?:etres?|eters?)?\s+"
+                           r"(?:high|tall)", qlow) or \
+                re.search(r"height\s+(?:is\s+)?" + num, qlow)
+            if mh:
+                s = float(m.group(1))
+                h = float(mh.group(1))
+                if s:
+                    val = math.degrees(math.atan2(h, s))
+                    return _r(round(val, 2), [
+                        f"tan(angle of elevation) = height "
+                        f"/ shadow = {fmt_num(h)} / "
+                        f"{fmt_num(s)} = {fmt_num(h / s)}",
+                        f"Angle of elevation = "
+                        f"{fmt_num(round(val, 2))}°",
+                    ], "Angle of elevation")
         return None
     # Two poles: heights h1, h2, feet D apart -> distance
     # between the tops = sqrt(D^2 + (h2 - h1)^2).
@@ -945,7 +966,8 @@ def solve_trigonometry(question: str):
             r"\b(sin|cos|tan|sec|csc|cot)\s+"
             r"(\d+(?:\.\d+)?)\s*degrees?",
             r"\1(\2*pi/180)", _t)
-        _t = re.sub(r"\b(evaluate|find|value of|calculate)\b",
+        _t = re.sub(r"\b(what is the|what is|evaluate|find|"
+                    r"value of|calculate)\b",
                     "", _t).strip(" ?.=")
         try:
             _expr = parse_expression(_t)

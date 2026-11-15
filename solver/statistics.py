@@ -457,6 +457,123 @@ def _probability(q: str):
     if _hindi is not None:
         return _hindi
 
+    # Wave 65: card / coin / dice / lottery / bag families in
+    # plain phrasings the older patterns missed (they fell
+    # to the probability CONCEPT answer). All gated on the
+    # experiment's own words. Union ("or") and complement
+    # ("not") asks stay with the older general machinery
+    # below — this block answers only the single-event forms.
+    if ("probability" in ql or "chance" in ql) \
+            and not re.search(r"\bnot\b|\bor\b", ql):
+        # --- cards from a 52 pack --------------------------
+        if re.search(r"\b52\b", ql) and ("card" in ql
+                                        or "pack" in ql
+                                        or "deck" in ql):
+            _specific = re.search(
+                r"\b(king|queen|jack|ace)\s+of\s+"
+                r"(hearts|diamonds|spades|clubs)\b", ql)
+            if _specific:
+                return _prob_answer(Fraction(1, 52), [
+                    f"There is exactly one {_specific.group(1)}"
+                    f" of {_specific.group(2)} in a pack of "
+                    f"52 cards"])
+            _combo = re.search(
+                r"\b(red|black)\s+(king|queen|jack|ace)\b", ql)
+            if _combo:
+                return _prob_answer(Fraction(2, 52), [
+                    f"There are exactly 2 {_combo.group(1)} "
+                    f"{_combo.group(2)}s in a pack of 52 "
+                    f"cards"])
+            if "face card" in ql:
+                return _prob_answer(Fraction(12, 52), [
+                    "A pack has 12 face cards (4 jacks, 4 "
+                    "queens, 4 kings) out of 52"])
+            for _face, _nm in (("king", "kings"),
+                               ("queen", "queens"),
+                               ("jack", "jacks"),
+                               ("ace", "aces")):
+                if re.search(r"\b" + _face + r"\b", ql):
+                    return _prob_answer(Fraction(4, 52), [
+                        f"A pack of 52 cards has 4 {_nm}"])
+            if "black card" in ql:
+                return _prob_answer(Fraction(26, 52), [
+                    "26 of the 52 cards are black (spades "
+                    "and clubs)"])
+            if "red card" in ql:
+                return _prob_answer(Fraction(26, 52), [
+                    "26 of the 52 cards are red (hearts and "
+                    "diamonds)"])
+        # --- coins: all heads / no heads -------------------
+        _cn = re.search(r"(\d+)\s+(?:coins?|times)", ql)
+        if ("coin" in ql or "toss" in ql) and _cn:
+            _n = int(_cn.group(1))
+            if 1 <= _n <= 10 and ("all head" in ql
+                                  or "every time head" in ql
+                                  or re.search(
+                                      r"all\s+(?:\d+\s+)?heads",
+                                      ql)):
+                return _prob_answer(Fraction(1, 2 ** _n), [
+                    f"Each toss is independent with P(head) "
+                    f"= 1/2, so P(all {_n} heads) = "
+                    f"(1/2)^{_n}"])
+            if 1 <= _n <= 10 and ("no head" in ql
+                                  or "not a single head" in ql
+                                  or "ek bhi" in ql):
+                return _prob_answer(Fraction(1, 2 ** _n), [
+                    f"No head means all tails: "
+                    f"(1/2)^{_n}"])
+        # --- a die rolled twice, both the same face --------
+        if ("die" in ql or "dice" in ql) and "twice" in ql:
+            _db = re.search(r"both\s+(?:show\s+|are\s+)?"
+                            r"(\d)", ql)
+            if _db:
+                return _prob_answer(Fraction(1, 36), [
+                    "Two rolls give 36 equally likely "
+                    "outcomes; only one of them is "
+                    f"({_db.group(1)}, {_db.group(1)})"])
+        # --- lottery ----------------------------------------
+        _lot = re.search(r"(\d+)\s+tickets?[^.]{0,50}?"
+                         r"(\d+)\s+prizes?", ql)
+        if _lot and "lottery" in ql:
+            _tk, _pz = int(_lot.group(1)), int(_lot.group(2))
+            if _tk >= 1:
+                return _prob_answer(Fraction(_pz, _tk), [
+                    f"Favourable tickets = {_pz} prizes out "
+                    f"of {_tk} tickets"])
+        # --- bag of named colours ---------------------------
+        _colours = ("red|blue|green|yellow|black|white|"
+                    "orange|pink|purple|brown")
+        _pairs = re.findall(
+            r"(\d+)\s+(" + _colours + r")\s*(?:balls?|"
+            r"marbles?|pens?|beads?|counters?)?", ql)
+        if len(_pairs) >= 2 and ("bag" in ql or "box" in ql
+                                 or "urn" in ql):
+            _counts = {}
+            for _n, _c in _pairs:
+                _counts[_c] = _counts.get(_c, 0) + int(_n)
+            _total = sum(_counts.values())
+            _ask = re.search(
+                r"(?:probability of|getting|drawing|picking|"
+                r"drawn|picked)\s+(?:a\s+|an\s+|the\s+)?("
+                + _colours + r")", ql)
+            if _ask and _ask.group(1) in _counts:
+                _c = _ask.group(1)
+                return _prob_answer(
+                    Fraction(_counts[_c], _total), [
+                        f"Total = {_total}; {_c} count = "
+                        f"{_counts[_c]}"])
+        _sub = re.search(
+            r"(\d+)\s+(?:balls?|marbles?|pens?)\b[^.]{0,60}?"
+            r"(\d+)\s+(?:of\s+(?:them|which)\s+)?(?:are\s+)?("
+            + _colours + r")", ql)
+        if _sub and ("bag" in ql or "box" in ql):
+            _total, _cnt, _c = (int(_sub.group(1)),
+                                int(_sub.group(2)),
+                                _sub.group(3))
+            if _total >= 1:
+                return _prob_answer(Fraction(_cnt, _total), [
+                    f"Total = {_total}; {_c} count = {_cnt}"])
+
     # Wave 59: "a number is chosen from 1 to N, find the
     # probability that it is a multiple of K / divisible by K".
     _mch = re.search(r"from\s+1\s+to\s+(\d+)", ql)
@@ -1641,8 +1758,9 @@ def solve_statistics(question: str):
     # below averaged every number in the sentence — count and
     # mean included — and answered 17.5 for that question.
     _mm = re.search(
-        r"mean\s+of\s+(\d+)\s+(?:numbers|observations|items|"
-        r"values)\s+is\s+(\d+(?:\.\d+)?)", ql)
+        r"(?:mean|average)\s+of\s+(\d+)\s+(?:numbers|"
+        r"observations|items|values|people|students)"
+        r"\s+is\s+(\d+(?:\.\d+)?)", ql)
     if _mm:
         _n = int(_mm.group(1))
         _mean_v = float(_mm.group(2))
@@ -1670,8 +1788,9 @@ def solve_statistics(question: str):
     # this form gives only the two means, and the raw-list
     # mean answered 11.6667 for it.
     _mx2 = re.search(
-        r"mean\s+of\s+(\d+)\s+(?:numbers|observations|items|"
-        r"values)\s+is\s+(\d+(?:\.\d+)?)", ql)
+        r"(?:mean|average)\s+of\s+(\d+)\s+(?:numbers|"
+        r"observations|items|values|people|students)"
+        r"\s+is\s+(\d+(?:\.\d+)?)", ql)
     if _mx2 and ("exclud" in ql or "remov" in ql):
         _n2 = int(_mx2.group(1))
         _mean2 = float(_mx2.group(2))
@@ -1694,6 +1813,85 @@ def solve_statistics(question: str):
                     "op": "mean_excluded",
                     "answer": fmt_num(_excl),
                     "value": float(_excl), "steps": steps}
+
+    # Wave 65: the TOTAL behind a stated mean — "the mean
+    # of 6 numbers is 15, find their total" / "the average
+    # age of 8 people is 35, find the total of their ages".
+    # The generic paths averaged the count and the mean
+    # themselves ((6 + 15) / 2 = 10.5). Runs after the
+    # missing/excluded blocks above, which own the forms
+    # that also state a list or a second mean.
+    _mt65 = re.search(
+        r"(?:mean|average)(?:\s+age)?\s+of\s+(\d+)\s+(?:"
+        r"numbers|observations|items|values|people|students|"
+        r"persons)\s+is\s+(\d+(?:\.\d+)?)", ql)
+    if _mt65 and ("total" in ql or re.search(r"\bsum\b", ql)) \
+            and "exclud" not in ql and "remov" not in ql:
+        _n65 = int(_mt65.group(1))
+        _mean65 = float(_mt65.group(2))
+        _tot65 = _n65 * _mean65
+        return {"type": "statistics", "op": "mean_total",
+                "answer": fmt_num(_tot65),
+                "value": float(_tot65),
+                "steps": [
+                    f"Total = mean × count = "
+                    f"{fmt_num(_mean65)} × {_n65} = "
+                    f"{fmt_num(_tot65)}"]}
+
+    # Wave 65: mean / median of the first N prime numbers
+    # and of the first N multiples of M — closed families
+    # the generic paths could only fail or concept-fallback.
+    _wn65 = {"one": 1, "two": 2, "three": 3, "four": 4,
+             "five": 5, "six": 6, "seven": 7, "eight": 8,
+             "nine": 9, "ten": 10, "eleven": 11, "twelve": 12}
+    _fp65 = re.search(r"first\s+(\d+|one|two|three|four|five|"
+                      r"six|seven|eight|nine|ten|eleven|"
+                      r"twelve)\s+prime\s+numbers?", ql)
+    if _fp65 and ("median" in ql or "mean" in ql
+                  or "average" in ql):
+        _n65 = int(_fp65.group(1)) if _fp65.group(1).isdigit() \
+            else _wn65[_fp65.group(1)]
+        _primes65 = []
+        _cand65 = 2
+        while len(_primes65) < _n65:
+            if all(_cand65 % p for p in _primes65
+                   if p * p <= _cand65):
+                _primes65.append(_cand65)
+            _cand65 += 1
+        if "median" in ql:
+            _s65 = sorted(_primes65)
+            _v65 = _s65[_n65 // 2] if _n65 % 2 else \
+                (_s65[_n65 // 2 - 1] + _s65[_n65 // 2]) / 2
+            _what65 = "Median"
+        else:
+            _v65 = sum(_primes65) / _n65
+            _what65 = "Mean"
+        return {"type": "statistics", "op": "first_primes_stat",
+                "answer": fmt_num(_v65), "value": float(_v65),
+                "steps": [
+                    f"The first {_n65} prime numbers are "
+                    + ", ".join(str(p) for p in _primes65),
+                    f"{_what65} = {fmt_num(_v65)}"]}
+    _fm65 = re.search(r"first\s+(\d+|one|two|three|four|five|"
+                      r"six|seven|eight|nine|ten|eleven|"
+                      r"twelve)\s+multiples?\s+of\s+"
+                      r"(\d+(?:\.\d+)?)", ql)
+    if _fm65 and ("mean" in ql or "average" in ql
+                  or "median" in ql):
+        _n65 = int(_fm65.group(1)) if _fm65.group(1).isdigit() \
+            else _wn65[_fm65.group(1)]
+        _m65 = float(_fm65.group(2))
+        _v65 = _m65 * (_n65 + 1) / 2
+        return {"type": "statistics",
+                "op": "first_multiples_mean",
+                "answer": fmt_num(_v65), "value": float(_v65),
+                "steps": [
+                    f"The first {_n65} multiples of "
+                    f"{fmt_num(_m65)} run from {fmt_num(_m65)} "
+                    f"to {fmt_num(_m65 * _n65)} in an AP, so "
+                    f"the mean is the middle value",
+                    f"Mean = {fmt_num(_m65)} × ({_n65} + 1) / "
+                    f"2 = {fmt_num(_v65)}"]}
 
     # Wave 59: combined mean of two groups ("the mean of 10
     # numbers is 12 and the mean of 20 numbers is 18, find

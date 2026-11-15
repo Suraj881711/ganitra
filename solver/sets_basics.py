@@ -51,9 +51,35 @@ def _cardinality56(q: str):
                         f"set = 2^{n} = {2 ** n}"]}
         return None
     # Two-activity class form.
-    m = re.search(r"class\s+of\s+(\d+)", q)
-    mp = re.findall(r"(\d+)\s+play\s+([a-z]+)", q)
-    mb = re.search(r"(\d+)\s+play\s+both", q)
+    # Wave 65: the group need not be a "class" and the verb
+    # need not be "play" ("in a group of 60 people, 38 like
+    # tea, 27 like coffee and 15 like both"); and the ask
+    # check order matters — "how many play at least one
+    # game?" contains the words "both" and "how many" (in
+    # the givens), and used to be answered with the BOTH
+    # count. "At least one" is checked FIRST now.
+    m = re.search(r"(?:class|group|survey|school|town)\s+of\s+"
+                  r"(\d+)", q) or \
+        re.search(r"\b(\d+)\s+(?:people|students|persons)\b", q)
+    mp = [(n, w) for n, w in re.findall(
+        r"(\d+)\s+(?:play|plays|like|likes|prefer|prefers|"
+        r"watch|read|speak)\s+([a-z]+)", q) if w != "both"]
+    mb = re.search(r"(\d+)\s+(?:play\s+|like\s+|likes\s+)?both",
+                   q)
+    # Wave 65: the union ask needs no total ("30 play
+    # cricket, 25 play football and 12 play both — how many
+    # play at least one game?"); only "neither" does.
+    if m is None and len(mp) >= 2 and mb \
+            and "at least one" in q:
+        both = int(mb.group(1))
+        a, b = int(mp[0][0]), int(mp[1][0])
+        union = a + b - both
+        return {"type": "sets", "op": "play_union",
+                "answer": str(union), "value": union,
+                "steps": [
+                    f"Playing at least one game = {a} + {b} "
+                    f"- {both} (the {both} who play both "
+                    f"were counted twice) = {union}."]}
     if m and len(mp) >= 2 and mb:
         total, both = int(m.group(1)), int(mb.group(1))
         a, b = int(mp[0][0]), int(mp[1][0])
@@ -71,7 +97,11 @@ def _cardinality56(q: str):
             return {"type": "sets", "op": "play_neither",
                     "answer": str(val), "value": val,
                     "steps": steps}
-        if "both" in q and "how many" in q:
+        if "at least one" in q:
+            return {"type": "sets", "op": "play_union",
+                    "answer": str(union), "value": union,
+                    "steps": steps}
+        if re.search(r"how\s+many[^.]*\bboth\b", q):
             return {"type": "sets", "op": "play_both",
                     "answer": str(both), "value": both,
                     "steps": steps}

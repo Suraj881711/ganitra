@@ -1569,11 +1569,354 @@ def _mensuration_hindi(q: str):
     return None
 
 
+def _wave65_geometry(q):
+    """Wave 65: mensuration / coordinate forms the trilingual
+    batteries exposed — each gated on its own ask phrase
+    (slant height, one revolution, other side, ...), running
+    before the solid-volume paths that used to steal the
+    cone slant ask and answer a volume instead."""
+    N = r"(-?\d+(?:\.\d+)?)"
+
+    def _res(op, answer, value, steps):
+        # solve_geometry's chain carries (op, answer, steps)
+        # tuples; the numeric value rides in the answer text.
+        return (op, answer, steps)
+
+    # Sentence form: "the length of a rectangle is L and
+    # its width/breadth is B, find the perimeter/area".
+    m = re.search(r"length\s+of\s+a\s+rectangle\s+is\s+" + N +
+                  r"\s*(?:cm|m)?\s+and\s+(?:its\s+)?"
+                  r"(?:width|breadth)\s+is\s+" + N, q)
+    if m:
+        _l, _b = float(m.group(1)), float(m.group(2))
+        if "perimeter" in q:
+            _p = 2 * (_l + _b)
+            return _res("rectangle_perimeter_sentence",
+                        fmt_num(_p), _p,
+                        [f"Perimeter = 2 × ({fmt_num(_l)} + "
+                         f"{fmt_num(_b)}) = {fmt_num(_p)}"])
+        if "area" in q:
+            _a = _l * _b
+            return _res("rectangle_area_sentence",
+                        fmt_num(_a), _a,
+                        [f"Area = {fmt_num(_l)} × "
+                         f"{fmt_num(_b)} = {fmt_num(_a)}"])
+    # Radius from a stated diameter.
+    m = re.search(r"diameter\s+(?:of\s+(?:a|the)\s+\w+\s+)?"
+                  r"is\s+" + N, q)
+    if m and "radius" in q and "area" not in q \
+            and "circumference" not in q:
+        d = float(m.group(1))
+        return _res("radius_from_diameter", fmt_num(d / 2),
+                    d / 2,
+                    [f"Radius = diameter / 2 = {fmt_num(d)} "
+                     f"/ 2 = {fmt_num(d / 2)}"])
+    # Cone slant height: l = sqrt(r^2 + h^2). Only when the
+    # slant height is the ASK: a surface-area question hands
+    # it over as data, and its "slant height N" must not be
+    # re-read as the vertical height.
+    if "slant height" in q and "cone" in q \
+            and "surface area" not in q:
+        mr = re.search(r"radius\s+(?:is\s+)?" + N, q)
+        mh = re.search(r"(?<!slant )height\s+(?:is\s+)?" + N,
+                       q)
+        if mr and mh:
+            r, h = float(mr.group(1)), float(mh.group(1))
+            ln = math.hypot(r, h)
+            return _res("cone_slant_height", fmt_num(ln), ln,
+                        [f"Slant height l = √(r² + h²) = "
+                         f"√({fmt_num(r)}² + {fmt_num(h)}²) = "
+                         f"√{fmt_num(r * r + h * h)} = "
+                         f"{fmt_num(ln)}"])
+    # Ladder against a wall (Pythagoras, either leg asked).
+    m = re.search(r"ladder\s+(?:is\s+)?" + N + r"\s*(?:m|cm|"
+                  r"metres?|meters?|ft)?\s*long", q)
+    if m:
+        lad = float(m.group(1))
+        mh = re.search(r"(?:reaching|at)\s+(?:a\s+)?height\s+"
+                       r"(?:of\s+)?" + N, q) or \
+            re.search(N + r"\s*(?:m|cm|metres?|meters?)?\s+"
+                      r"high\b", q)
+        mf = re.search(r"foot\s+(?:is\s+)?" + N +
+                       r"\s*(?:m|cm)?\s*(?:away\s+)?from\s+the"
+                       r"\s+wall", q)
+        if mh and ("foot" in q or "distance" in q):
+            h = float(mh.group(1))
+            foot = math.sqrt(max(lad * lad - h * h, 0))
+            return _res("ladder_foot", fmt_num(foot), foot,
+                        [f"The ladder is the hypotenuse: "
+                         f"foot² = {fmt_num(lad)}² - "
+                         f"{fmt_num(h)}² = "
+                         f"{fmt_num(lad * lad - h * h)}",
+                         f"Foot from the wall = {fmt_num(foot)}"])
+        if mf and ("height" in q or "reach" in q):
+            fd = float(mf.group(1))
+            h = math.sqrt(max(lad * lad - fd * fd, 0))
+            return _res("ladder_height", fmt_num(h), h,
+                        [f"Height² = {fmt_num(lad)}² - "
+                         f"{fmt_num(fd)}² = "
+                         f"{fmt_num(lad * lad - fd * fd)}",
+                         f"Height reached = {fmt_num(h)}"])
+    # Rectangle: diagonal and one side -> the other side.
+    m = re.search(r"diagonal\s+of\s+a\s+rectangle\s+is\s+" + N,
+                  q)
+    ms = re.search(r"(?:one\s+side|length|breadth|width)\s+"
+                   r"(?:is\s+)?" + N, q)
+    if m and ms and ("other side" in q or "other" in q):
+        dg, sd = float(m.group(1)), float(ms.group(1))
+        other = math.sqrt(max(dg * dg - sd * sd, 0))
+        return _res("rectangle_other_side", fmt_num(other),
+                    other,
+                    [f"Other side = √(diagonal² - side²) = "
+                     f"√({fmt_num(dg)}² - {fmt_num(sd)}²) = "
+                     f"√{fmt_num(dg * dg - sd * sd)} = "
+                     f"{fmt_num(other)}"])
+    # Cube side from its volume.
+    m = re.search(r"volume\s+of\s+a\s+cube\s+is\s+" + N, q)
+    if m and "side" in q:
+        v = float(m.group(1))
+        k = round(v ** (1 / 3))
+        side = float(k) if k ** 3 == v else round(
+            v ** (1 / 3), 2)
+        return _res("cube_side_from_volume", fmt_num(side),
+                    side,
+                    [f"Side = ∛(volume) = ∛{fmt_num(v)} = "
+                     f"{fmt_num(side)}"])
+    # Radius from a stated circumference.
+    m = re.search(r"circumference\s+of\s+a\s+circle\s+is\s+"
+                  + N, q)
+    if m and "radius" in q:
+        c = float(m.group(1))
+        r = c / (2 * PI)
+        return _res("radius_from_circumference", fmt_num(r), r,
+                    [f"C = 2πr, so r = C / (2π) = "
+                     f"{fmt_num(c)} / {fmt_num(2 * PI)} = "
+                     f"{fmt_num(r)}"])
+    # Rectangle: breadth (or length) from area and one side.
+    if "rectangle" in q and "area" in q:
+        ma = re.search(r"area\s+(?:is\s+|of\s+)?" + N, q)
+        ml = re.search(r"length\s+(?:is\s+)?" + N, q)
+        mb = re.search(r"breadth\s+(?:is\s+)?" + N, q)
+        if ma and ml and "breadth" in q.split("find")[-1] \
+                and not mb:
+            a, ln = float(ma.group(1)), float(ml.group(1))
+            if ln:
+                return _res("breadth_from_area",
+                            fmt_num(a / ln), a / ln,
+                            [f"Breadth = area / length = "
+                             f"{fmt_num(a)} / {fmt_num(ln)} = "
+                             f"{fmt_num(a / ln)}"])
+        if ma and mb and "length" in q.split("find")[-1] \
+                and not ml:
+            a, bd = float(ma.group(1)), float(mb.group(1))
+            if bd:
+                return _res("length_from_area",
+                            fmt_num(a / bd), a / bd,
+                            [f"Length = area / breadth = "
+                             f"{fmt_num(a)} / {fmt_num(bd)} = "
+                             f"{fmt_num(a / bd)}"])
+    # Area scale when the radius is multiplied.
+    m = re.search(r"radius\s+of\s+a\s+circle\s+is\s+"
+                  r"(doubled|tripled|quadrupled|halved)", q)
+    if m and "area" in q and "how many times" in q:
+        k = {"doubled": 2, "tripled": 3, "quadrupled": 4,
+             "halved": 0.5}[m.group(1)]
+        return _res("area_scale", fmt_num(k * k), float(k * k),
+                    [f"Area grows with the SQUARE of the "
+                     f"radius: {fmt_num(k)}² = "
+                     f"{fmt_num(k * k)} times"])
+    # A wheel's one revolution = its circumference.
+    m = re.search(r"diameter\s+of\s+(?:a|the)\s+wheel\s+is\s+"
+                  + N, q) or re.search(
+        r"wheel[^.]{0,30}?diameter\s+(?:is\s+)?" + N, q)
+    if m and "revolution" in q:
+        d = float(m.group(1))
+        dist = PI * d
+        return _res("wheel_revolution", fmt_num(dist), dist,
+                    [f"In one revolution the wheel covers "
+                     f"its circumference = π × d = π × "
+                     f"{fmt_num(d)} = {fmt_num(dist)}"])
+    m = re.search(r"radius\s+of\s+(?:a|the)\s+wheel\s+is\s+"
+                  + N, q)
+    if m and "revolution" in q:
+        r = float(m.group(1))
+        dist = 2 * PI * r
+        return _res("wheel_revolution", fmt_num(dist), dist,
+                    [f"In one revolution the wheel covers "
+                     f"2πr = 2π × {fmt_num(r)} = "
+                     f"{fmt_num(dist)}"])
+    # Equilateral triangle perimeter from its side.
+    if "equilateral" in q and "perimeter" in q:
+        m = re.search(r"side[^0-9]{0,40}?" + N, q) or \
+            re.search(N, q)
+        if m:
+            s = float(m.group(1))
+            return _res("equilateral_perimeter",
+                        fmt_num(3 * s), 3 * s,
+                        [f"All three sides are equal: "
+                         f"perimeter = 3 × {fmt_num(s)} = "
+                         f"{fmt_num(3 * s)}"])
+    # Cuboid given as "A cm by B cm by C cm".
+    m = re.search(r"cuboid\s+" + N + r"\s*(?:cm|m)?\s*by\s+"
+                  + N + r"\s*(?:cm|m)?\s*by\s+" + N, q)
+    if m:
+        ln, bd, ht = (float(m.group(i)) for i in (1, 2, 3))
+        if "surface area" in q:
+            tsa = 2 * (ln * bd + bd * ht + ht * ln)
+            return _res("cuboid_tsa_by", fmt_num(tsa), tsa,
+                        [f"TSA = 2(lb + bh + hl) = 2("
+                         f"{fmt_num(ln * bd)} + "
+                         f"{fmt_num(bd * ht)} + "
+                         f"{fmt_num(ht * ln)}) = "
+                         f"{fmt_num(tsa)}"])
+        if "volume" in q:
+            v = ln * bd * ht
+            return _res("cuboid_volume_by", fmt_num(v), v,
+                        [f"Volume = l × b × h = {fmt_num(v)}"])
+    # Square: area from its perimeter.
+    m = re.search(r"perimeter\s+of\s+a\s+square\s+is\s+" + N,
+                  q) or re.search(r"same\s+perimeter\s+(?:is\s+)?"
+                                  + N, q)
+    if m and "square" in q and "area" in q:
+        p = float(m.group(1))
+        side = p / 4
+        return _res("square_area_from_perimeter",
+                    fmt_num(side * side), side * side,
+                    [f"Side of the square = {fmt_num(p)} / 4 "
+                     f"= {fmt_num(side)}",
+                     f"Area = {fmt_num(side)}² = "
+                     f"{fmt_num(side * side)}"])
+    # Square: area from its diagonal (A = d^2 / 2).
+    m = re.search(r"diagonal\s+of\s+a\s+square\s+is\s+" + N, q)
+    if m and "area" in q:
+        d = float(m.group(1))
+        return _res("square_area_from_diagonal",
+                    fmt_num(d * d / 2), d * d / 2,
+                    [f"Area of a square = diagonal² / 2 = "
+                     f"{fmt_num(d)}² / 2 = "
+                     f"{fmt_num(d * d / 2)}"])
+    # Trapezium from its parallel sides and height.
+    if "trapezium" in q or "trapezoid" in q:
+        m = re.search(r"parallel\s+sides\s+(?:are\s+)?" + N +
+                      r"\s*(?:cm|m)?\s+and\s+" + N, q)
+        mh = re.search(r"height\s+(?:is\s+)?" + N, q)
+        if m and mh and "area" in q:
+            a, b = float(m.group(1)), float(m.group(2))
+            h = float(mh.group(1))
+            ar = 0.5 * (a + b) * h
+            return _res("trapezium_area", fmt_num(ar), ar,
+                        [f"Area = ½ × (sum of parallel sides)"
+                         f" × height = ½ × ({fmt_num(a)} + "
+                         f"{fmt_num(b)}) × {fmt_num(h)} = "
+                         f"{fmt_num(ar)}"])
+    # A dug well's earth = cylinder volume.
+    if "well" in q and "volume" in q or ("well" in q
+                                         and "earth" in q):
+        md = re.search(N + r"\s*(?:m|metres?|meters?)?\s*deep",
+                       q)
+        mr = re.search(r"radius\s+(?:is\s+)?" + N, q) or \
+            re.search(N + r"\s*(?:m\s+)?in\s+radius", q)
+        if md and mr:
+            dep, r = float(md.group(1)), float(mr.group(1))
+            v = PI * r * r * dep
+            return _res("well_volume", fmt_num(v), v,
+                        [f"The well is a cylinder: V = πr²h "
+                         f"= π × {fmt_num(r)}² × "
+                         f"{fmt_num(dep)} = {fmt_num(v)}"])
+    # Right triangle from its legs -> area.
+    m = re.search(r"legs?\s+(?:of\s+)?" + N + r"\s*(?:cm|m)?"
+                  r"\s+and\s+" + N, q)
+    if m and "triangle" in q and "area" in q:
+        a, b = float(m.group(1)), float(m.group(2))
+        return _res("right_triangle_legs_area",
+                    fmt_num(a * b / 2), a * b / 2,
+                    [f"The legs are the base and height: "
+                     f"area = ½ × {fmt_num(a)} × "
+                     f"{fmt_num(b)} = {fmt_num(a * b / 2)}"])
+    # Rectangle whose length is k times its breadth.
+    m = re.search(r"length\s+of\s+a\s+rectangle\s+is\s+" + N +
+                  r"\s+times\s+its\s+breadth", q)
+    mb = re.search(r"breadth\s+is\s+" + N, q)
+    if m and mb and "area" in q:
+        k, bd = float(m.group(1)), float(mb.group(1))
+        ln = k * bd
+        return _res("rectangle_times_breadth_area",
+                    fmt_num(ln * bd), ln * bd,
+                    [f"Length = {fmt_num(k)} × breadth = "
+                     f"{fmt_num(k)} × {fmt_num(bd)} = "
+                     f"{fmt_num(ln)}",
+                     f"Area = {fmt_num(ln)} × {fmt_num(bd)} "
+                     f"= {fmt_num(ln * bd)}"])
+    # A point with one unknown coordinate at a given
+    # distance from a fixed point.
+    m = re.search(r"\(\s*x\s*,\s*" + N + r"\s*\)\s+is\s+at\s+"
+                  r"(?:a\s+)?distance\s+" + N + r"\s+from\s+"
+                  r"\(\s*" + N + r"\s*,\s*" + N + r"\s*\)", q)
+    if m:
+        y0, dist = float(m.group(1)), float(m.group(2))
+        cx, cy = float(m.group(3)), float(m.group(4))
+        rem = dist * dist - (y0 - cy) ** 2
+        if rem >= 0:
+            root = math.sqrt(rem)
+            r1, r2 = cx + root, cx - root
+            steps = [
+                f"(x - {fmt_num(cx)})² + ({fmt_num(y0)} - "
+                f"{fmt_num(cy)})² = {fmt_num(dist)}², so "
+                f"(x - {fmt_num(cx)})² = {fmt_num(rem)}",
+                f"x = {fmt_num(r1)} or x = {fmt_num(r2)}"]
+            if "positive" in q:
+                pos = r1 if r1 > 0 else r2
+                return _res("coord_unknown_point",
+                            fmt_num(pos), pos, steps)
+            return _res("coord_unknown_point",
+                        f"{fmt_num(r1)} and {fmt_num(r2)}",
+                        [r1, r2], steps)
+    # Angle of elevation from a height and its shadow.
+    if "angle of elevation" in q and "shadow" in q:
+        mh = re.search(N + r"\s*(?:m|cm)?\s*(?:high|tall)", q)
+        ms = re.search(r"shadow\s+(?:is\s+)?" + N, q)
+        if mh and ms:
+            h, s = float(mh.group(1)), float(ms.group(1))
+            if s:
+                ang = math.degrees(math.atan2(h, s))
+                return _res("elevation_from_shadow",
+                            fmt_num(round(ang, 2)), ang,
+                            [f"tan(angle) = height / shadow = "
+                             f"{fmt_num(h)} / {fmt_num(s)} = "
+                             f"{fmt_num(h / s)}",
+                             f"Angle = {fmt_num(round(ang, 2))}°"])
+    # Polygon diagonals from the shape's name / side count.
+    if "diagonal" in q:
+        names = {"triangle": 3, "quadrilateral": 4,
+                 "pentagon": 5, "hexagon": 6, "heptagon": 7,
+                 "octagon": 8, "nonagon": 9, "decagon": 10}
+        for nm, n in names.items():
+            if nm in q and "diagonal" in q:
+                dv = n * (n - 3) // 2
+                return _res("polygon_diagonals", str(dv),
+                            float(dv),
+                            [f"A {nm} has {n} sides; diagonals "
+                             f"= n(n - 3)/2 = {n} × {n - 3}/2 "
+                             f"= {dv}"])
+    # Sides of a polygon from its interior-angle sum.
+    m = re.search(r"interior\s+angles?\s+sum\s+to\s+" + N, q)
+    if m and ("sides" in q or "polygon" in q):
+        tot = float(m.group(1))
+        n = tot / 180 + 2
+        return _res("polygon_sides_from_sum", fmt_num(n), n,
+                    [f"Interior-angle sum = (n - 2) × 180°, "
+                     f"so n = {fmt_num(tot)} / 180 + 2 = "
+                     f"{fmt_num(n)}"])
+    return None
+
+
 def solve_geometry(question: str):
     q = question.lower()
     # Wave 57 (merge-3): Devanagari mensuration first, as in
     # the Wave 57 tree; disjoint from Wave 56's vectors.
     out = _mensuration_hindi(q)
+    if out is None:
+        out = _wave65_geometry(q)
     if out is None:
         out = _vectors56(q)
     if out is None:

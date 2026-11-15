@@ -87,8 +87,103 @@ def _from_celsius(v, u):
     return v
 
 
+def _wave65_units(q):
+    """Wave 65: unit asks in the shapes the trilingual
+    batteries used — "how many grams are there in 4.25 kg"
+    (the are-there form), composite times ("2 hours 30
+    minutes in seconds"), bare unit facts ("how many
+    minutes in an hour"), dozens, and a time stated as a
+    fraction of a day."""
+    import re as _re
+    from fractions import Fraction as _F
+    N = r"(\d+(?:\.\d+)?)"
+    # Composite time -> seconds.
+    m = _re.search(N + r"\s*hours?\s+(?:and\s+)?" + N +
+                   r"\s*minutes?\s+(?:in|to|into)\s+seconds",
+                   q, _re.I)
+    if m:
+        total = float(m.group(1)) * 3600 + float(m.group(2)) * 60
+        total = int(total) if total == int(total) else total
+        return {"type": "units", "op": "time_composite",
+                "answer": f"{fmt_num(total)} seconds",
+                "value": float(total),
+                "steps": [
+                    f"{m.group(1)} hours = "
+                    f"{fmt_num(float(m.group(1)) * 3600)} "
+                    f"seconds and {m.group(2)} minutes = "
+                    f"{fmt_num(float(m.group(2)) * 60)} seconds",
+                    f"Total = {fmt_num(total)} seconds"]}
+    # "how many X are there in N Y" (are-there form).
+    m = _re.search(r"how\s+many\s+([a-z]+)\s+(?:are\s+there\s+"
+                   r")?in\s+" + N + r"\s*([a-z]+)", q, _re.I)
+    if m:
+        to_u, val, from_u = _norm_unit(m.group(1)), \
+            float(m.group(2)), _norm_unit(m.group(3))
+        cat, table = _find_category(from_u, to_u)
+        if cat is not None:
+            out = val * table[from_u] / table[to_u]
+            return {"type": "units", "op": cat,
+                    "answer": f"{fmt_num(out)} {to_u}",
+                    "value": out,
+                    "steps": [
+                        f"{fmt_num(val)} {from_u} = "
+                        f"{fmt_num(out)} {to_u}"]}
+    # Bare unit facts: "how many minutes in an hour".
+    m = _re.search(r"how\s+many\s+([a-z]+)\s+(?:are\s+there\s+"
+                   r")?in\s+(?:an?|one)\s+([a-z]+)", q, _re.I)
+    if m:
+        facts = {("minutes", "hour"): 60, ("seconds", "hour"):
+                 3600, ("hours", "day"): 24,
+                 ("minutes", "day"): 1440,
+                 ("seconds", "day"): 86400,
+                 ("seconds", "minute"): 60,
+                 ("hours", "week"): 168, ("days", "week"): 7,
+                 ("minutes", "week"): 10080}
+        key = (_norm_unit(m.group(1)), _norm_unit(m.group(2)))
+        if key in facts:
+            v = facts[key]
+            return {"type": "units", "op": "unit_fact",
+                    "answer": f"{v} {key[0]}", "value": float(v),
+                    "steps": [
+                        f"1 {key[1]} = {v} {key[0]}"]}
+    # Dozens: "how many bananas in 5 dozen" / "5 dozen eggs,
+    # how many eggs".
+    m = _re.search(r"how\s+many\s+([a-z]+)\s+(?:are\s+there\s+"
+                   r")?in\s+" + N + r"\s*dozen", q, _re.I)
+    n = float(m.group(2)) if m else None
+    if m is None:
+        m = _re.search(N + r"\s*dozen\s+([a-z]+)", q, _re.I)
+        if m:
+            n = float(m.group(1))
+    if m and n is not None and ("how many" in q.lower()
+                                or "total" in q.lower()
+                                or "kitne" in q.lower()):
+        cnt = n * 12
+        cnt = int(cnt) if cnt == int(cnt) else cnt
+        return {"type": "units", "op": "dozen_count",
+                "answer": str(cnt), "value": float(cnt),
+                "steps": [
+                    f"1 dozen = 12, so {fmt_num(n)} dozen = "
+                    f"{fmt_num(n)} × 12 = {cnt}"]}
+    # Minutes as a fraction of a day.
+    m = _re.search(N + r"\s*minutes?\s+as\s+a\s+fraction\s+of"
+                   r"\s+a\s+day", q, _re.I)
+    if m:
+        fr = _F(int(float(m.group(1))), 1440)
+        return {"type": "units", "op": "fraction_of_day",
+                "answer": f"{fr} ≈ {float(fr):.4f}",
+                "value": float(fr),
+                "steps": [
+                    f"A day has 1440 minutes, so the fraction "
+                    f"is {m.group(1)}/1440 = {fr}"]}
+    return None
+
+
 def solve_units(question: str):
     q = question.strip()
+    _w65 = _wave65_units(q)
+    if _w65 is not None:
+        return _w65
     # Wave 13: "5 kg = how many grams" — value first, question
     # form second (the two patterns below cannot see this shape).
     # Wave 57: anaphoric form — "a rope is 3 metres long, how

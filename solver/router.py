@@ -127,6 +127,17 @@ _EN_TYPOS = {
     "dimeter": "diameter", "radias": "radius",
     "substraction": "subtraction",
     "addtion": "addition", "quadretic": "quadratic",
+    # Wave 65: more attested chat-spelling slips (each seen in
+    # the Wave 65 English battery's hand-written items).
+    "percant": "percent", "aera": "area", "bredth": "breadth",
+    "triangl": "triangle", "heigth": "height", "raduis": "radius",
+    "circumfrance": "circumference", "medain": "median",
+    "dise": "dice", "numbr": "number", "geting": "getting",
+    "avrege": "average", "perimter": "perimeter", "slop": "slope",
+    "lenght": "length", "pls": "",
+    "rectanguler": "rectangular", "simlify": "simplify",
+    "volme": "volume", "calulate": "calculate",
+    "deterime": "determine", "probabillity": "probability",
 }
 
 # Words an rn->m or 1->l OCR repair may land on.
@@ -450,7 +461,36 @@ def _normalize_spelling(question: str) -> str:
                       r"\1^\2", text)
         text = re.sub(r"(?<![A-Za-z])(\d)([a-z])([23])(?![0-9])",
                       r"\1\2^\3", text)
+    # Wave 65: Devanagari spelling slips seen in the Wave 65
+    # Hindi battery (matra/conjunct drops) folded back to the
+    # canonical word, token by token. Only whole-token matches
+    # change; correct spellings pass through untouched.
+    text = re.sub(r"[ऀ-ॿ]+",
+                  lambda m: _DEV_VARIANTS.get(m.group(0),
+                                              m.group(0)), text)
+    # Wave 65: word-form powers — "15 squared", "4 cubed",
+    # "2 to the power 10" — the expression parser wants ^.
+    # (Before this, only the FIRST "squared" was ever picked
+    # up downstream, so "15 squared minus 9 squared" answered
+    # 225.) Digits only: letter powers ("x squared") are the
+    # algebra parser's own forms.
+    text = re.sub(r"(\d+(?:\.\d+)?)\s+squared\b", r"\1^2", text)
+    text = re.sub(r"(\d+(?:\.\d+)?)\s+cubed\b", r"\1^3", text)
+    text = re.sub(r"(\d+(?:\.\d+)?)\s+to\s+the\s+power\s+"
+                  r"(\d+(?:\.\d+)?)\b", r"\1^\2", text)
     return text
+
+
+# Wave 65: Devanagari mis-spellings -> canonical spellings.
+# Every key is a slip attested in the Wave 65 Hindi battery;
+# held-out spellings are deliberately NOT listed (they test
+# whether the schemas, not the map, carry the question).
+_DEV_VARIANTS = {
+    "क्षेतरफल": "क्षेत्रफल", "त्रिजिया": "त्रिज्या",
+    "आयत्न": "आयतन", "प्रयिकता": "प्रायिकता",
+    "परिमप": "परिमाप", "दिघात": "द्विघात",
+    "माधयक": "माध्यक", "समांतर": "समान्तर",
+}
 
 
 def normalize_hinglish(question: str) -> str:
@@ -482,6 +522,29 @@ def normalize_hinglish(question: str) -> str:
             ql = " " + ql.rsplit("chhodo", 1)[0].strip(" ,:—") \
                 + " " + _tail + " "
         q = ql
+
+    # Wave 65 (top priority): three shapes an early generic
+    # rule below answers WRONGLY — the "ko bhaag dene par
+    # shesh" ask becomes a plain division, "ek sankhya ka
+    # N guna M hai" becomes the product N × M, and a
+    # lambai/chaudai/unchai cuboid becomes a rectangle area.
+    _p = re.search(r"(\d+(?:\.\d+)?)\s+ko\s+(\d+(?:\.\d+)?)"
+                   r"\s+se\s+bhaag\s+dene\s+par\s+shesh", ql)
+    if _p:
+        return (f"find the remainder when {_p.group(1)} is "
+                f"divided by {_p.group(2)}")
+    _p = re.search(r"ek\s+sankhya\s+ka\s+(\d+(?:\.\d+)?)"
+                   r"\s+guna\s+(\d+(?:\.\d+)?)\s+hai", ql)
+    if _p:
+        return (f"{_p.group(1)} times a number is "
+                f"{_p.group(2)}")
+    _p = re.search(r"lambai\s+(\d+(?:\.\d+)?)[^0-9]{0,16}?"
+                   r"chaudai\s+(\d+(?:\.\d+)?)[^0-9]{0,16}?"
+                   r"unchai\s+(\d+(?:\.\d+)?)", ql)
+    if _p and ("aayatan" in ql or "volume" in ql):
+        return (f"volume of a cuboid with length "
+                f"{_p.group(1)}, breadth {_p.group(2)} and "
+                f"height {_p.group(3)}")
 
     # Percentage: "240 ka 15 pratishat (kitna hoga)" -> "15% of 240"
     # (Wave 57: the English word "percent" in the same slot too.
@@ -761,6 +824,27 @@ def normalize_hinglish(question: str) -> str:
     if m:
         return (f"marked price is {m.group(1)}, discount of "
                 f"{m.group(2)}%")
+
+    # Wave 65 (priority): "koi rakam R% dar se T saal me A rs
+    # ho jati hai, mool rakam batao" — the scattered-SI rule
+    # below would read the AMOUNT as the principal and answer
+    # the interest on it; the principal-reverse ask must be
+    # claimed first.
+    if "mool rakam" in ql and "ho jati hai" in ql:
+        _p = re.search(r"(\d+(?:\.\d+)?)\s*%\s*(?:salana\s+)?"
+                       r"dar\s+se\s+(\d+(?:\.\d+)?)\s*saal\s+"
+                       r"me\s+(\d+(?:\.\d+)?)\s*(?:rs|rupaye)",
+                       q)
+        if _p:
+            return (f"a sum of money amounts to {_p.group(3)} "
+                    f"rs in {_p.group(2)} years at "
+                    f"{_p.group(1)}% simple interest. find "
+                    f"the principal")
+    # (The three theft-prone Wave 65 priority rules —
+    # remainder, "sankhya ka guna", cuboid — sit at the very
+    # top of this function, above the generic multiply and
+    # rectangle rules that would otherwise answer them
+    # wrongly.)
 
     # ==================================================================
     # Wave 59: Hinglish deep training — whole-question translations
@@ -1482,6 +1566,12 @@ def normalize_hinglish(question: str) -> str:
                         r"(?:king|queen)\s+or\s+(?:a\s+)?"
                         r"(?:queen|king)", ql):
                 return _deck + "a king or a queen"
+            # Wave 65: "red king" used to fall into the
+            # plain-king branch below and lose its colour
+            # (answered 4/52 instead of 2/52).
+            if "red king" in ql or "laal raja" in ql \
+                    or "lal raja" in ql:
+                return _deck + "a red king"
             if "red queen" in ql or "laal rani" in ql \
                     or "lal rani" in ql:
                 return _deck + "a red queen"
@@ -1765,6 +1855,804 @@ def normalize_hinglish(question: str) -> str:
                     f"distance of {_mk.group(1)} cm from the "
                     f"centre of a circle of radius "
                     f"{_mtr2.group(1)} cm")
+
+    # ==================================================================
+    # Wave 65: trilingual deep training — whole-question
+    # translations for the phrasing families the batteries
+    # exposed (Roman Hindi + Devanagari). Same contract as
+    # Wave 59: every rule emits the canonical English form an
+    # existing solver accepts; a rule that does not fully
+    # match changes nothing.
+    # ==================================================================
+    # --- Roman: powers written as words ------------------------------
+    m = re.search(r"" + _N + r"\s+ka\s+varg\s+aur\s+" + _N +
+                  r"\s+ka\s+ghan\s+jodkar", ql)
+    if m:
+        return f"{m.group(1)}^2 + {m.group(2)}^3"
+    m = re.search(r"" + _N + r"\s+ki\s+(?:ghaat|ghata)\s+" + _N + r"",
+                  ql)
+    if m:
+        return f"{m.group(1)}^{m.group(2)}"
+    m = re.search(r"" + _N + r"\s+ka\s+ghan\b", ql)
+    if m and ("batao" in ql or "kitna" in ql or "nikalo" in ql):
+        return f"{m.group(1)}^3"
+    # --- Roman: yog / antar on plain numbers --------------------------
+    m = re.search(r"" + _N + r"\s+aur\s+" + _N + r"\s+ka\s+"
+                  r"(yog|antar|jod)", ql)
+    if m and len(re.findall(r"\d", ql)) <= 8:
+        if m.group(3) == "antar":
+            return f"{m.group(1)} - {m.group(2)}"
+        return f"{m.group(1)} + {m.group(2)}"
+    # --- Roman: fraction operations ------------------------------------
+    m = re.search(r"bhinn\s+(\d+/\d+)\s+aur\s+(\d+/\d+)\s+"
+                  r"(?:ko|ka)\s+(jod|ghata|guna|bhaag)", ql)
+    if m:
+        op65 = {"jod": "+", "ghata": "-", "guna": "*",
+                "bhaag": "/"}[m.group(3)]
+        if op65 == "/":
+            return f"({m.group(1)}) / ({m.group(2)})"
+        return f"{m.group(1)} {op65} {m.group(2)}"
+    m = re.search(r"bhinn\s+(\d+/\d+)\s+aur\s+(\d+/\d+)\s+ka\s+"
+                  r"(jod|yog)", ql)
+    if m:
+        return f"{m.group(1)} + {m.group(2)}"
+    # --- Roman: percent-of with feesadi --------------------------------
+    m = re.search(r"" + _N + r"\s+ka\s+" + _N + r"\s+"
+                  r"feesadi", ql)
+    if m:
+        return f"{m.group(2)}% of {m.group(1)}"
+    # --- Roman: discount stories ----------------------------------------
+    m = re.search(r"" + _N + r"\s*(?:rs|rupaye)\s+likh[ai]\s+(?:hai|h|he)\b"
+                  r"[^0-9%]{0,40}?" + _N + r"%\s*ki\s*chhu?t",
+                  ql)
+    if m:
+        return (f"marked price is {m.group(1)}, discount of "
+                f"{m.group(2)}%, find the selling price")
+    m = re.search(r"" + _N + r"\s*(?:rs|rupaye)\s+wali\s+"
+                  r"[^0-9%]{0,40}?" + _N + r"%\s*(?:ki\s*)?"
+                  r"chhu?t", ql)
+    if m:
+        return (f"marked price is {m.group(1)}, discount of "
+                f"{m.group(2)}%, find the selling price")
+    m = re.search(r"" + _N + r"\s*(?:rs|rupaye)\s+(?:liye|"
+                  r"diye)\s+aur[^0-9%]{0,60}?" + _N +
+                  r"%\s*wapas", ql)
+    if m:
+        return (f"marked price is {m.group(1)}, discount of "
+                f"{m.group(2)}%, find the selling price")
+    # --- Roman: buy/sell at a profit or loss percent --------------------
+    m = re.search(r"" + _N + r"\s*(?:rs|rupaye)\s+me\s+"
+                  r"[^0-9%]{0,50}?" + _N + r"%\s*"
+                  r"(munafa|munafe|ghata|ghate)\s+par\s+bech",
+                  ql)
+    if m:
+        kind65 = "profit" if m.group(3).startswith("munaf") \
+            else "loss"
+        return (f"cost price is {m.group(1)}, {kind65} is "
+                f"{m.group(2)}%, find the selling price")
+    # --- Roman: profit percent from buy and sell prices ------------------
+    m = re.search(r"" + _N + r"\s*(?:rs|rupaye)\s+ki\s+cheez"
+                  r"\s+" + _N + r"\s*(?:rs|rupaye)\s+me\s+"
+                  r"bechi[^0-9]{0,30}?%?\s*(munafa|munafaa)", ql)
+    if m:
+        return (f"an article is bought for {m.group(1)} rs "
+                f"and sold for {m.group(2)} rs. find the "
+                f"profit percent")
+    # --- Roman: sold at a profit/loss percent, cost price asked ----------
+    m = re.search(r"" + _N + r"\s*(?:rs|rupaye)\s+me\s+bechne"
+                  r"\s+par\s+" + _N + r"%\s*(?:ka\s*)?"
+                  r"(munafa|ghata)\s+hua", ql)
+    if m:
+        kind65 = "profit" if m.group(3) == "munafa" else "loss"
+        return (f"an article is sold for {m.group(1)} rs at "
+                f"a {kind65} of {m.group(2)}%. find the cost "
+                f"price")
+    # --- Roman: simple-interest rate from the interest -------------------
+    m = re.search(r"" + _N + r"\s*(?:rs|rupaye)\s+me\s+" +
+                  _N + r"\s*saal\s+me\s+" + _N + r"\s*"
+                  r"(?:rs|rupaye)\s+byaa?j\s+mila", ql)
+    if m and "dar" in ql:
+        return (f"simple interest on {m.group(1)} for "
+                f"{m.group(2)} years is {m.group(3)}. find "
+                f"the rate")
+    # --- Roman: speed with raftaar, either number order -------------------
+    if "raftaar" in ql or "raftar" in ql:
+        _d = re.search(r"" + _N + r"\s*km\b", ql)
+        _h = re.search(r"" + _N + r"\s*ghante?\b", ql)
+        if _d and _h:
+            return (f"a train travels {_d.group(1)} km in "
+                    f"{_h.group(1)} hours, find its speed")
+    # --- Roman: distance to cover, "jana h" -------------------------------
+    m = re.search(r"" + _N + r"\s*km\s+jana\s+(?:hai|h|he)"
+                  r"\b[^0-9]{0,40}?" + _N + r"\s*km/h", ql)
+    if m and ("time" in ql or "samay" in ql or "lagega" in ql):
+        return (f"how long does a train take to travel "
+                f"{m.group(1)} km at {m.group(2)} km/h")
+    # --- Roman: rectangle perimeter with lambai/chaudai -------------------
+    m = re.search(r"(?:rectangle|aayat)\s+ki\s+lambai\s+" +
+                  _N + r"[^0-9]{0,20}?chaudai\s+" + _N + r"",
+                  ql)
+    if m and "parimap" in ql:
+        return (f"find the perimeter of a rectangle with "
+                f"length {m.group(1)} and breadth "
+                f"{m.group(2)}")
+    # --- Roman: field area -------------------------------------------------
+    m = re.search(r"khet\s+" + _N + r"\s*m\s+lamba\s+aur\s+"
+                  r"" + _N + r"\s*m\s+chauda", ql)
+    if m and "kshetrafal" in ql:
+        return (f"area of a rectangle with length "
+                f"{m.group(1)} and breadth {m.group(2)}")
+    # --- Roman: cuboid volume (tank) ----------------------------------------
+    m = re.search(r"length\s+" + _N + r"[^0-9]{0,16}?"
+                  r"breadth\s+" + _N + r"[^0-9]{0,16}?"
+                  r"height\s+" + _N + r"", ql)
+    if m and ("volume" in ql or "paani" in ql):
+        return (f"volume of a cuboid with length "
+                f"{m.group(1)}, breadth {m.group(2)} and "
+                f"height {m.group(3)}")
+    # --- Roman: surface areas ------------------------------------------------
+    m = re.search(r"(?:ghan|ghhan)\s+ki\s+bhuja\s+" + _N +
+                  r"", ql)
+    if m and "prishtiya kshetrafal" in ql:
+        return (f"find the total surface area of a cube "
+                f"with side {m.group(1)}")
+    m = re.search(r"gole\s+ki\s+trijya\s+" + _N + r"", ql)
+    if m and "prishtiya kshetrafal" in ql:
+        return (f"find the total surface area of a sphere "
+                f"of radius {m.group(1)}")
+    # --- Roman: midpoint -------------------------------------------------------
+    m = re.search(r"bindu\w*\s*\(\s*(-?" + _N + r")\s*,\s*"
+                  r"(-?" + _N + r")\s*\)\s*aur\s*\(\s*(-?" +
+                  _N + r")\s*,\s*(-?" + _N + r")\s*\)\s*ka\s+"
+                  r"madhy\w*\s*bindu", ql)
+    if m:
+        return (f"find the midpoint of ({m.group(1)}, "
+                f"{m.group(3)}) and ({m.group(5)}, "
+                f"{m.group(7)})")
+    # --- Roman: zeroes of a polynomial -----------------------------------------
+    m = re.search(r"bahupad\s+(.+?)\s*ke\s+shunyako\s+ka\s+"
+                  r"(yog|gunanfal|gunanphal)", ql)
+    if m:
+        poly65 = re.sub(r"([a-z])(\d)", r"\1^\2",
+                        m.group(1).replace("^", ""))
+        what65 = "sum" if m.group(2) == "yog" else "product"
+        return (f"find the {what65} of the zeroes of the "
+                f"polynomial {poly65}")
+    # --- Roman: linear stories --------------------------------------------------
+    m = re.search(r"sankhya\s+ke\s+" + _N + r"\s+gun[ae]\s+me"
+                  r"\s+se\s+" + _N + r"\s+ghatn[ae]\s+par\s+"
+                  r"" + _N + r"\s+milta", ql)
+    if m:
+        return (f"{m.group(1)} times a number minus "
+                f"{m.group(2)} is {m.group(3)}")
+    m = re.search(r"ek\s+sankhya\s+ka\s+" + _N + r"\s+guna"
+                  r"\s+" + _N + r"\s+hai", ql)
+    if m:
+        return f"{m.group(1)} times a number is {m.group(2)}"
+    # --- Roman: ratio parts with a sum -------------------------------------------
+    m = re.search(r"anupaa?t\s+" + _N + r"\s*:\s*" + _N +
+                  r"[^0-9]{0,30}?yog\s+" + _N + r"", ql)
+    if m and ("chhoti" in ql or "badi" in ql):
+        which65 = "smaller" if "chhoti" in ql else "larger"
+        return (f"two numbers are in the ratio {m.group(1)}:"
+                f"{m.group(2)} and their sum is {m.group(3)}. "
+                f"find the {which65} number")
+    # --- Roman: work together -----------------------------------------------------
+    m = re.search(r"(\w+)\s+" + _N + r"\s+din\s+me\s+karta"
+                  r"\s+hai,?\s+(\w+)\s+" + _N + r"\s+din"
+                  r"\s+me", ql)
+    if m and "dono milkar" in ql:
+        return (f"a can finish a job in {m.group(2)} days "
+                f"and b in {m.group(4)} days. in how many "
+                f"days can they finish it together?")
+    # --- Roman: taps ----------------------------------------------------------------
+    m = re.search(r"nali\s+tanki\s+ko\s+" + _N + r"\s+"
+                  r"ghante\s+me\s+bharti\s+hai,?\s+" + _N +
+                  r"\s+naliyan", ql)
+    if m:
+        return (f"one tap fills a tank in {m.group(1)} "
+                f"hours. how long will {m.group(2)} such "
+                f"taps take?")
+    # --- Roman: train and pole ---------------------------------------------------------
+    m = re.search(r"train\s+ki\s+lambai\s+" + _N + r"\s*m"
+                  r"\s+hai[^0-9]{0,40}?" + _N + r"\s*km/h"
+                  r"\s+se\s+ek\s+khambhe", ql)
+    if m:
+        return (f"a train {m.group(1)} m long runs at "
+                f"{m.group(2)} km/h. time to cross a pole?")
+    # --- Roman: population increase ------------------------------------------------------
+    m = re.search(r"jansankhya\s+" + _N + r"\s+hai[^0-9%]"
+                  r"{0,20}?" + _N + r"%\s+badh\s+gayi", ql)
+    if m:
+        return (f"the population is {m.group(1)}. it "
+                f"increases by {m.group(2)}%. find the new "
+                f"population")
+    # --- Roman: remainder ------------------------------------------------------------------
+    m = re.search(r"" + _N + r"\s+ko\s+" + _N + r"\s+se"
+                  r"\s+bhaag\s+dene\s+par\s+shesh", ql)
+    if m:
+        return (f"find the remainder when {m.group(1)} is "
+                f"divided by {m.group(2)}")
+    # --- Roman: prime counting / smallest prime ----------------------------------------------
+    m = re.search(r"" + _N + r"\s+aur\s+" + _N + r"\s+ke"
+                  r"\s+beech\s+kitni\s+abhaajya", ql)
+    if m:
+        return (f"how many prime numbers are there between "
+                f"{m.group(1)} and {m.group(2)}?")
+    if "sabse chhoti abhaajya sankhya" in ql:
+        return "what is the smallest prime number?"
+    # --- Roman: sets, no total (union) and with total (neither) --------------------------------
+    m = re.search(r"" + _N + r"\s+(?:bacche|students?)\s+"
+                  r"cricket\s+khelte[^0-9]{0,30}?" + _N +
+                  r"\s+football[^0-9]{0,30}?" + _N + r""
+                  r"\s+dono", ql)
+    if m and "kam se kam ek" in ql:
+        return (f"{m.group(1)} play cricket, {m.group(2)} "
+                f"play football and {m.group(3)} play both. "
+                f"how many play at least one game?")
+    m = re.search(r"" + _N + r"\s+me\s+se\s+" + _N + r""
+                  r"\s+ko\s+chai\s+pasand[^0-9]{0,30}?" + _N +
+                  r"\s+ko\s+coffee[^0-9]{0,30}?" + _N + r""
+                  r"\s+ko\s+dono", ql)
+    if m and "kuch nahi" in ql:
+        return (f"in a group of {m.group(1)} people, "
+                f"{m.group(2)} like tea, {m.group(3)} like "
+                f"coffee and {m.group(4)} like both. how "
+                f"many like neither?")
+    # Structural twin of the chai/coffee rule above: the
+    # two activity words are matched as bare words because
+    # the spelling fold rewrites them unpredictably
+    # (gana -> guna, naach -> unchai).
+    m = re.search(r"" + _N + r"\s+logo\s+me\s+se\s+" + _N +
+                  r"\s+ko\s+\w+\s+pasand[^0-9]{0,30}?" +
+                  _N + r"\s+ko\s+\w+[^0-9]{0,30}?" + _N +
+                  r"\s+ko\s+dono", ql)
+    if m and "kuch nahi" in ql:
+        return (f"in a group of {m.group(1)} people, "
+                f"{m.group(2)} like music, {m.group(3)} like "
+                f"dance and {m.group(4)} like both. how "
+                f"many like neither?")
+    # --- Roman: probability -----------------------------------------------------------------------
+    m = re.search(r"bag\s+me\s+" + _N + r"\s+red\s+balls?"
+                  r"\s+aur\s+" + _N + r"\s+blue\s+balls?",
+                  ql)
+    if m and "probability" in ql:
+        return (f"a bag contains {m.group(1)} red balls "
+                f"and {m.group(2)} blue balls. find the "
+                f"probability of getting a red ball")
+    m = re.search(r"bag\s+me\s+" + _N + r"\s+gende\s+hain"
+                  r"\s+jinme\s+" + _N + r"\s+kaali\s+hain",
+                  ql)
+    if m:
+        return (f"a bag has {m.group(1)} balls, "
+                f"{m.group(2)} of which are black. find the "
+                f"probability of getting a black ball")
+    m = re.search(r"sika\s+" + _N + r"\s+baar\s+uchala",
+                  ql)
+    if m and "chit" in ql:
+        return (f"a coin is tossed {m.group(1)} times, "
+                f"find the probability of getting all heads")
+    if re.search(r"do\s+sikk\w+", ql) and "chit na" in ql:
+        return ("two coins are tossed, find the probability "
+                "of getting no heads")
+    m = re.search(r"52\s+patto[^0-9]{0,40}?laal\s+raja", ql)
+    if m:
+        return ("find the probability of getting a red "
+                "king from a pack of 52 cards")
+    m = re.search(r"52\s+patto[^0-9]{0,40}?raja\s+nikalne",
+                  ql)
+    if m:
+        return ("find the probability of getting a king "
+                "from a pack of 52 cards")
+    m = re.search(r"52\s+patto[^0-9]{0,40}?kaala\s+patta",
+                  ql)
+    if m:
+        return ("find the probability of getting a black "
+                "card from a pack of 52 cards")
+    # --- Roman: ladder / slant / height-angle / pythagoras ----------------------------------------------
+    m = re.search(r"sidhi\s+" + _N + r"\s*m\s+lamb[ai][^0-9]"
+                  r"{0,60}?" + _N + r"\s*m\s+unchai", ql)
+    if m and "paon" in ql:
+        return (f"a ladder {m.group(1)} m long leans "
+                f"against a wall reaching a height of "
+                f"{m.group(2)} m. how far is its foot from "
+                f"the wall?")
+    m = re.search(r"shanku\s+ki\s+trijya\s+" + _N + r""
+                  r"[^0-9]{0,20}?unchai\s+" + _N + r"", ql)
+    if m and "tiryak" in ql:
+        return (f"find the slant height of a cone with "
+                f"radius {m.group(1)} cm and height "
+                f"{m.group(2)} cm")
+    m = re.search(r"minaar\s+ki\s+unchai\s+" + _N + r"\s*m"
+                  r"[^0-9]{0,30}?parchhai\s+" + _N + r"\s*m",
+                  ql)
+    if m and "unnayan" in ql:
+        return (f"a tower {m.group(1)} m high casts a "
+                f"shadow {m.group(2)} m long. angle of "
+                f"elevation of the sun?")
+    m = re.search(r"right\s+triangle\s+ki\s+do\s+bhuja\s+" +
+                  _N + r"\s+aur\s+" + _N + r"", ql)
+    if m and "karn" in ql:
+        return (f"the legs of a right triangle are "
+                f"{m.group(1)} and {m.group(2)}. find the "
+                f"hypotenuse")
+    m = re.search(r"sin\s+a\s*=\s*(\d+/\d+)\s+hai\s+to\s+"
+                  r"cos\s+a", ql)
+    if m:
+        return f"if sin a = {m.group(1)}, find cos a"
+    # --- Roman: fraction of a number / decimal to fraction --------------------------------------------
+    m = re.search(r"(\d+/\d+)\s+of\s+a\s+number\s+is\s+" +
+                  _N + r"", ql)
+    if m:
+        return f"{m.group(1)} of a number is {m.group(2)}, find the number"
+    m = re.search(r"" + _N + r"\s+ko\s+bhinn\s+me\s+badlo",
+                  ql)
+    if m and "." in m.group(1):
+        return (f"express {m.group(1)} as a fraction in "
+                f"lowest terms")
+    # --- Roman: unit facts and conversions ---------------------------------------------------------------
+    if "ek ghante" in ql and "kitne minute" in ql:
+        return "how many minutes are there in an hour?"
+    if "ek hafte" in ql and "kitne ghante" in ql:
+        return "how many hours are there in a week?"
+    if "ek ghante" in ql and "kitne second" in ql:
+        return "how many seconds are there in an hour?"
+    m = re.search(r"" + _N + r"\s+darjan\s+\w+\s+matlab\s+"
+                  r"kitne", ql)
+    if m:
+        return (f"how many pens are there in {m.group(1)} "
+                f"dozen?")
+    m = re.search(r"" + _N + r"\s+gram[^0-9]{0,20}?" + _N +
+                  r"\s+pudi", ql)
+    if m and "kg" in ql:
+        tot65 = float(m.group(1)) * float(m.group(2))
+        tot65 = int(tot65) if tot65 == int(tot65) else tot65
+        return f"convert {tot65} grams to kilograms"
+    m = re.search(r"" + _N + r"\s+gram[^0-9]{0,16}?kilo\s+"
+                  r"me\s+kitna", ql)
+    if m:
+        return f"convert {m.group(1)} grams to kilograms"
+    m = re.search(r"raftaar\s+" + _N + r"\s*km/h[^0-9]{0,30}"
+                  r"?meter\s+per\s+second", ql)
+    if m:
+        return f"{m.group(1)} km/h in m/s"
+    # --- Roman: one-line money / measure stories ---------------------------------------------------------------
+    m = re.search(r"" + _N + r"\s+bacche[^0-9]{0,30}?"
+                  r"har\s+bacche\s+se\s+" + _N + r"\s*"
+                  r"(?:rs|rupaye)", ql)
+    if m:
+        return f"{m.group(1)} * {m.group(2)}"
+    m = re.search(r"" + _N + r"\s+kilo\s+\w+\s+" + _N +
+                  r"\s*(?:rs|rupaye)\s+kilo\s+ke\s+hisaab",
+                  ql)
+    if m:
+        return f"{m.group(1)} * {m.group(2)}"
+    m = re.search(r"ek\s+litr\s+doodh\s+" + _N + r"\s*"
+                  r"(?:rs|rupaye)\s+ka\s+hai,?\s+" + _N +
+                  r"\s+litr", ql)
+    if m:
+        return f"{m.group(1)} * {m.group(2)}"
+    m = re.search(r"" + _N + r"\s+pankhe[^0-9]{0,30}?har"
+                  r"\s+pankha\s+" + _N + r"\s+watt", ql)
+    if m and "kul" in ql:
+        return f"{m.group(1)} * {m.group(2)}"
+    m = re.search(r"ka\s+wazan\s+" + _N + r"\s*kg\s+hai"
+                  r"\s+aur\s+\w+\s+ka\s+" + _N + r"\s*kg",
+                  ql)
+    if m:
+        return f"{m.group(1)} + {m.group(2)}"
+    m = re.search(r"kul\s+" + _N + r"\s*(?:rs|rupaye)\s+"
+                  r"kharch", ql)
+    if m and ("per aadmi" in ql or "har bacche par" in ql
+              or "har ek par" in ql or "per baccha" in ql):
+        _ppl = re.search(r"" + _N + r"\s+(?:dost|aadmi|log|logo|"
+                         r"bacche|students?)", ql)
+        if _ppl:
+            return f"{m.group(1)} / {_ppl.group(1)}"
+    m = re.search(r"auto\s+(?:wala\s+)?" + _N + r"\s*km\s+"
+                  r"ke\s+" + _N + r"\s*(?:rs|rupaye)\s+leta"
+                  r"[^0-9]{0,30}?per\s+km", ql)
+    if m:
+        return f"{m.group(2)} / {m.group(1)}"
+    m = re.search(r"do\s+sankhyaon\s+ka\s+guna\s+" + _N +
+                  r"\s+hai\s+aur\s+ek\s+sankhya\s+" + _N +
+                  r"\s+hai", ql)
+    if m:
+        return f"{m.group(1)} / {m.group(2)}"
+    m = re.search(r"" + _N + r"\s+over\s+me\s+" + _N +
+                  r"\s+run[\s\S]{0,40}?per\s+over\s+ausat",
+                  ql)
+    if m:
+        return f"{m.group(2)} / {m.group(1)}"
+    m = re.search(r"" + _N + r"\s+(?:bje|byaj)\s+khulta\s+"
+                  r"hai\s+aur\s+(?:\w+\s+)?" + _N +
+                  r"\s+(?:bje|byaj)\s+band", ql)
+    if m:
+        _a = float(m.group(1))
+        _b = float(m.group(2))
+        if _b <= _a:
+            _b += 12
+        _b = int(_b) if _b == int(_b) else _b
+        _a = int(_a) if _a == int(_a) else _a
+        return f"{_b} - {_a}"
+    m = re.search(r"umar\s+" + _N + r"\s+saal[^0-9]{0,40}?"
+                  r"meri\s+(?:umar\s+)?" + _N, ql)
+    if m and "kitni guna" in ql:
+        return f"{m.group(1)} / {m.group(2)}"
+    # --- Roman: clock-to-clock journey speed ------------------------------------------------------------
+    m = None
+    if "chali" in ql and ("pahunchi" in ql or "pahuchi" in ql) \
+            and ("speed" in ql or "raftaar" in ql
+                 or "chaal" in ql):
+        _st = re.search(r"(shaam|subah|raat|dopahar)\s+" + _N +
+                        r"\s+(?:bje|byaj)\s+chali", ql)
+        _en = re.search(r"(shaam|subah|raat|dopahar)\s+" + _N +
+                        r"\s+(?:bje|byaj)\s+(?:pahunchi|pahuchi)",
+                        ql)
+        _kd = re.search(r"" + _N + r"\s*km\b", ql)
+        if _st and _en and _kd:
+            m = (_kd.group(1), _st.group(1), _st.group(2),
+                 _en.group(1), _en.group(2))
+    if m:
+        def _hr65(period, hh):
+            hh = float(hh)
+            if period in ("shaam", "raat") and hh < 12:
+                hh += 12
+            return hh
+        _dur = _hr65(m[3], m[4]) - _hr65(m[1], m[2])
+        if _dur <= 0:
+            _dur += 24
+        _dur = int(_dur) if _dur == int(_dur) else _dur
+        return (f"a train travels {m[0]} km in "
+                f"{_dur} hours, find its speed")
+    # --- Roman: boys/girls percentage --------------------------------------
+    m = re.search(r"" + _N + r"\s+ladke\s+aur\s+" + _N +
+                  r"\s+ladkiya", ql)
+    if m and "pratishat" in ql:
+        _a65, _b65 = float(m.group(1)), float(m.group(2))
+        return f"{m.group(1)} / {_a65 + _b65:g} * 100"
+    # --- Roman: speed conversion, number before raftaar ---------------------
+    m = re.search(r"" + _N + r"\s*km/h\s+ki\s+raftaar", ql)
+    if m and "meter per second" in ql:
+        return f"{m.group(1)} km/h in m/s"
+    # --- Roman: dozen of a named thing ----------------------------------------
+    m = re.search(r"" + _N + r"\s+darjan\s+(\w+)", ql)
+    if m and "kitne" in ql and "matlab" not in ql:
+        return (f"how many {m.group(2)} are there in "
+                f"{m.group(1)} dozen?")
+    # --- Roman: three consecutive numbers, middle asked -------------------------
+    m = re.search(r"(?:teen|3|three)\s+lagatar\s+sankhyaon"
+                  r"\s+ka\s+yog\s+" + _N, ql)
+    if m and "beech wali" in ql:
+        return (f"the sum of three consecutive numbers is "
+                f"{m.group(1)}. find the middle number")
+    # --- Roman: a fraction-share (hissa) of a number ------------------------------
+    m = re.search(r"sankhya\s+ka\s+(\d+/\d+)\s+hissa\s+" +
+                  _N + r"\s+hai", ql)
+    if m:
+        return (f"{m.group(1)} of a number is {m.group(2)}, "
+                f"find the number")
+    # --- Roman: divide money in a ratio (baanto) -------------------------------------
+    m = re.search(r"" + _N + r"\s*(?:rs|rupaye)\s+ko\s+" +
+                  _N + r"\s*:\s*" + _N + r"\s+me\s+(?:baanto|banto)",
+                  ql)
+    if m and ("chhote" in ql or "bade" in ql):
+        which65 = "smaller" if "chhote" in ql else "larger"
+        return (f"divide {m.group(1)} in the ratio "
+                f"{m.group(2)}:{m.group(3)}, find the "
+                f"{which65} share")
+    # --- Roman: trig value, chat form ---------------------------------------------------
+    m = re.search(r"\b(sin|cos|tan)\s+" + _N + r"\s+ki\s+"
+                  r"value", ql)
+    if m:
+        return (f"what is the value of {m.group(1)} "
+                f"{m.group(2)} degrees?")
+    # --- Roman: rectangle area from two bare dimensions --------------------------------------
+    # Structural on purpose: the dimension WORDS may carry
+    # held-out misspellings, so only the shape words
+    # (rectangle + aur + area) and the two numbers are used.
+    m = re.search(r"(?:rectangle|aayat)\s+ki\s+\w+\s+" + _N +
+                  r"\s*(?:cm|m)?\s+aur\s+\w+\s+" + _N, ql)
+    if m and "area" in ql:
+        return (f"area of a rectangle with length "
+                f"{m.group(1)} and breadth {m.group(2)}")
+    # --- Roman: fencing cost ----------------------------------------------------------------------
+    m = re.search(r"lambai\s+" + _N + r"\s*(?:m|meter)\s+"
+                  r"(?:aur\s+)?chaudai\s+" + _N +
+                  r"\s*(?:m|meter)"
+                  r"[^0-9]{0,60}?baad\s+lagane\s+ka\s+kharcha"
+                  r"\s+" + _N + r"\s*(?:rs|rupaye)\s+per\s+"
+                  r"meter", ql)
+    if m:
+        return (f"a rectangular garden is {m.group(1)} m "
+                f"long and {m.group(2)} m wide, find cost of "
+                f"fencing at {m.group(3)} rs per metre")
+
+    # --- Devanagari: speed / distance / train conditional ----------------
+    if any(w in q for w in ("किलोमीटर", "रेलगाड़ी", "ट्रेन",
+                            "km")):
+        _cond = re.search(
+            r"" + _N + r"\s*(?:किलोमीटर|km)(?:\s+की\s+दूरी)?"
+            r"[^0-9]{0,80}?चाल\s+" + _N + r"\s*(?:किलोमीटर"
+            r"\s+प्रति\s+घंट[ाे]|km/h)\s+अधिक\s+होती[^0-9]"
+            r"{0,40}?" + _N + r"\s*घंट[ाे]\s+कम", q)
+        if _cond:
+            return (f"a train travels {_cond.group(1)} km. "
+                    f"if its speed is increased by "
+                    f"{_cond.group(2)} km/h, it takes "
+                    f"{_cond.group(3)} hour less. find its "
+                    f"original speed")
+        _tm = re.search(r"" + _N + r"\s*घंट[ाे]", q)
+        _sm = re.search(r"चाल\s+" + _N + r"\s*(?:किलोमीटर"
+                        r"\s+प्रति\s+घंट[ाे]|km/h)", q) or \
+            re.search(r"" + _N + r"\s*किलोमीटर\s+प्रति\s+"
+                      r"घंट[ाे]\s+की\s+चाल", q)
+        # A stated speed + a time + a distance ask is the
+        # DISTANCE family; it must be claimed before the
+        # plain speed rule can misread the speed as a
+        # distance.
+        if _sm and _tm and ("दूरी" in q or "रास्ता" in q):
+            return (f"a train travels at {_sm.group(1)} "
+                    f"km/h for {_tm.group(1)} hours, find "
+                    f"the distance")
+        _dm = re.search(r"" + _N + r"\s*किलोमीटर"
+                        r"(?!\s+प्रति)", q) or re.search(
+            r"" + _N + r"\s*km\b", q)
+        if _dm and _tm and ("चाल" in q or "गति" in q
+                            or "रफ़्तार" in q or "speed" in ql
+                            or ("दूरी" in q and "तय" in q)) \
+                and "यदि" not in q and "अधिक" not in q:
+            return (f"a train travels {_dm.group(1)} km in "
+                    f"{_tm.group(1)} hours, find its speed")
+    # --- Devanagari: shadow and angle of elevation -------------------------
+    _sh = re.search(r"छाया\s+" + _N + r"\s*(?:मीटर|m)\b", q)
+    _el = re.search(r"उन्नयन\s+कोण\s+" + _N + r"\s*°", q)
+    if _sh and _el and "ऊँचाई" in q:
+        return (f"a tree casts a shadow {_sh.group(1)} m "
+                f"long and the angle of elevation of the sun "
+                f"is {_el.group(1)} degrees. find the height "
+                f"of the tree")
+    # --- Devanagari: cricket run rate -----------------------------------
+    _ck = re.search(r"" + _N + r"\s+रन\s+" + _N +
+                    r"\s+ओवर\s+में\s+बनाए", q)
+    if _ck and "औसत" in q:
+        return f"{_ck.group(1)} / {_ck.group(2)}"
+    # --- Devanagari: discount ----------------------------------------------
+    m = re.search(r"अंकित\s+मूल्य\s+" + _N + r"\s*रुपये"
+                  r"[^0-9%]{0,30}?" + _N + r"%\s*(?:की\s+)?"
+                  r"छूट", q) or re.search(
+        r"" + _N + r"\s*रुपय[ेा]\s+क[ीाे]\s+[^0-9%]{0,30}?"
+        r"" + _N + r"%\s*(?:की\s+)?छूट", q) or re.search(
+        r"" + _N + r"\s*रुपय[ेा]\s+क[ाी]\s+है[^0-9%]{0,30}?"
+        r"" + _N + r"%\s*छूट", q)
+    if m:
+        return (f"marked price is {m.group(1)}, discount of "
+                f"{m.group(2)}%, find the selling price")
+    # --- Devanagari: profit / loss percent on a cost price -------------------
+    m = re.search(r"" + _N + r"\s*रुपये\s+में[^0-9%]{0,40}?"
+                  r"" + _N + r"%\s*(लाभ|हानि)\s+पर\s+बेच",
+                  q) or re.search(
+        r"" + _N + r"\s*रुपये\s+का\s+सामान[^0-9%]{0,30}?"
+        r"" + _N + r"%\s*(लाभ|हानि)\s+पर\s+बेच", q) or \
+        re.search(r"वस्तु\s+" + _N + r"\s*रुपये\s+में\s+"
+                  r"खरीदी[^0-9%]{0,30}?" + _N + r"%\s*"
+                  r"(लाभ|हानि)\s+पर\s+बेची", q)
+    if m:
+        kind65 = "profit" if m.group(3) == "लाभ" else "loss"
+        return (f"cost price is {m.group(1)}, {kind65} is "
+                f"{m.group(2)}%, find the selling price")
+    # --- Devanagari: sold at a profit percent, cost price asked ----------------
+    m = re.search(r"" + _N + r"\s*रुपये\s+में\s+बेचने\s+पर"
+                  r"\s+" + _N + r"%\s*(लाभ|हानि)\s+हुआ[^0-9]"
+                  r"{0,20}?क्रय\s+मूल्य", q)
+    if m:
+        kind65 = "profit" if m.group(3) == "लाभ" else "loss"
+        return (f"an article is sold for {m.group(1)} rs at "
+                f"a {kind65} of {m.group(2)}%. find the cost "
+                f"price")
+    # --- Devanagari: compound interest --------------------------------------------
+    m = re.search(r"" + _N + r"\s*रुपये\s+का\s+" + _N +
+                  r"%\s*वार्षिक\s+दर\s+से\s+" + _N + r"\s*"
+                  r"वर्ष\s+का\s+चक्रवृद्धि\s+ब्याज", q)
+    if m:
+        return (f"compound interest on {m.group(1)} at "
+                f"{m.group(2)}% for {m.group(3)} years")
+    # --- Devanagari: length + breadth shapes ------------------------------------------
+    if "ऊँचाई" not in q and "गहराई" not in q \
+            and "आयतन" not in q:
+        m = re.search(r"(?:लंबाई|लम्बाई)\s+" + _N + r"[^0-9]{0,20}?"
+                      r"चौड़ाई\s+" + _N + r"", q)
+        if m:
+            if "परिमाप" in q or "बाड़" in q:
+                return (f"find the perimeter of a rectangle "
+                        f"with length {m.group(1)} and "
+                        f"breadth {m.group(2)}")
+            return (f"area of a rectangle with length "
+                    f"{m.group(1)} and breadth {m.group(2)}")
+    m = re.search(r"" + _N + r"\s*मीटर\s+लंब[ीा]?[^0-9]"
+                  r"{0,20}?" + _N + r"\s*मीटर\s+चौड़[ीा]?",
+                  q)
+    if m:
+        if "परिमाप" in q:
+            return (f"find the perimeter of a rectangle "
+                    f"with length {m.group(1)} and breadth "
+                    f"{m.group(2)}")
+        return (f"area of a rectangle with length "
+                f"{m.group(1)} and breadth {m.group(2)}")
+    # --- Devanagari: cuboid volume ----------------------------------------------------------
+    m = re.search(r"(?:लंबाई|लम्बाई)\s+" + _N + r"[^0-9]{0,16}?चौड़ाई"
+                  r"\s+" + _N + r"[^0-9]{0,16}?(?:गहराई|"
+                  r"ऊँचाई)\s+" + _N + r"", q)
+    if m and "आयतन" in q:
+        return (f"volume of a cuboid with length "
+                f"{m.group(1)}, breadth {m.group(2)} and "
+                f"height {m.group(3)}")
+    # --- Devanagari: cube volume ----------------------------------------------------------------
+    m = re.search(r"घन\s+की\s+भुजा\s+" + _N + r"", q)
+    if m and "आयतन" in q:
+        return f"volume of a cube with side {m.group(1)}"
+    # --- Devanagari: circumference -----------------------------------------------------------------
+    m = re.search(r"त्रिज्या\s+" + _N + r"", q)
+    if m and "परिधि" in q:
+        return (f"circumference of a circle with radius "
+                f"{m.group(1)}")
+    # --- Devanagari: trapezium ------------------------------------------------------------------------
+    m = re.search(r"(?:समांतर|समान्तर)\s+भुजाएँ\s+" + _N +
+                  r"\s*(?:cm|m)?\s+और\s+" + _N +
+                  r"\s*(?:cm|m)?[^0-9]{0,20}?ऊँचाई\s+" +
+                  _N + r"", q)
+    if m and "समलंब" in q:
+        return (f"area of a trapezium with parallel sides "
+                f"{m.group(1)} and {m.group(2)} and height "
+                f"{m.group(3)}")
+    # --- Devanagari: mean of a comma list ------------------------------------------------------------------
+    if "औसत" in q or ("माध्य" in q and "माध्यक" not in q
+                      and "माध्यिका" not in q):
+        _lst = re.search(r"(\d+(?:\s*,\s*\d+){2,}(?:\s*और\s*"
+                         r"\d+)?)", q)
+        if _lst:
+            nums65 = re.findall(r"\d+", _lst.group(1))
+            return "mean of " + ", ".join(nums65)
+    # --- Devanagari: median / range of a data list --------------------------------------------------------------
+    _lst = re.search(r"(\d+(?:\s*,\s*\d+){2,}(?:\s*और\s*\d+)?)",
+                     q)
+    if _lst and "माध्यक" in q:
+        nums65 = re.findall(r"\d+", _lst.group(1))
+        return "find the median of " + ", ".join(nums65)
+    if _lst and "परिसर" in q:
+        nums65 = re.findall(r"\d+", _lst.group(1))
+        return "find the range of " + ", ".join(nums65)
+    # --- Devanagari: sum and difference pair ------------------------------------------------------------------------------
+    m = re.search(r"योग\s+" + _N + r"(?:\s*वर्ष)?\s+और\s+"
+                  r"अंतर\s+" + _N + r"", q)
+    if m and ("संख्याओं" in q or "आयु" in q):
+        return (f"sum is {m.group(1)} and difference is "
+                f"{m.group(2)}")
+    # --- Devanagari: fraction operations ---------------------------------------------------------------------------------------
+    m = re.search(r"भिन्न\s+(\d+/\d+)\s+और\s+(\d+/\d+)\s+का"
+                  r"\s+(योग|अंतर|गुणनफल|भागफल)", q)
+    if m:
+        op65 = {"योग": "+", "अंतर": "-", "गुणनफल": "*",
+                "भागफल": "/"}[m.group(3)]
+        if op65 == "/":
+            return f"({m.group(1)}) / ({m.group(2)})"
+        return f"{m.group(1)} {op65} {m.group(2)}"
+    m = re.search(r"भिन्न\s+(\d+/\d+)\s+में\s+से\s+(\d+/\d+)"
+                  r"\s+घटान", q)
+    if m:
+        return f"{m.group(1)} - {m.group(2)}"
+    # --- Devanagari: trig values --------------------------------------------------------------------------------------------------
+    m = re.search(r"(sin|cos|tan)\s+" + _N + r"°?\s*का\s+"
+                  r"मान", q)
+    if m:
+        return (f"what is the value of {m.group(1)} "
+                f"{m.group(2)} degrees?")
+    # --- Devanagari: midpoint --------------------------------------------------------------------------------------------------------
+    m = re.search(r"बिंदुओं\s*\(\s*(-?" + _N + r")\s*,\s*"
+                  r"(-?" + _N + r")\s*\)\s*और\s*\(\s*(-?" +
+                  _N + r")\s*,\s*(-?" + _N + r")\s*\)\s*का"
+                  r"\s+मध्य\s*बिंदु", q)
+    if m:
+        return (f"find the midpoint of ({m.group(1)}, "
+                f"{m.group(3)}) and ({m.group(5)}, "
+                f"{m.group(7)})")
+    # --- Devanagari: zeroes of a polynomial --------------------------------------------------------------------------------------------
+    m = re.search(r"बहुपद\s+(.+?)\s*के\s+शून्यकों\s+का\s+"
+                  r"(योग|गुणनफल)", q)
+    if m:
+        what65 = "sum" if m.group(2) == "योग" else "product"
+        return (f"find the {what65} of the zeroes of the "
+                f"polynomial {m.group(1).strip()}")
+    # --- Devanagari: primes between -----------------------------------------------------------------------------------------------------
+    m = re.search(r"" + _N + r"\s+और\s+" + _N + r"\s+के"
+                  r"\s+बीच\s+कितनी\s+अभाज्य", q)
+    if m:
+        return (f"how many prime numbers are there between "
+                f"{m.group(1)} and {m.group(2)}?")
+    # --- Devanagari: percent of marks ---------------------------------------------------------------------------------------------------------
+    m = re.search(r"" + _N + r"\s+में\s+से\s+" + _N +
+                  r"\s+अंक\s+मिले", q)
+    if m and "प्रतिशत" in q:
+        return (f"a student scored {m.group(2)} out of "
+                f"{m.group(1)}. find the percentage of marks")
+    # --- Devanagari: population increase -------------------------------------------------------------------------------------------------------------
+    m = re.search(r"जनसंख्या\s+" + _N + r"[^0-9%]{0,30}?"
+                  r"" + _N + r"%\s*की\s*वृद्धि", q)
+    if m:
+        return f"{m.group(1)} increased by {m.group(2)}%"
+    # --- Devanagari: work and taps ----------------------------------------------------------------------------------------------------------------
+    m = re.search(r"काम\s+" + _N + r"\s+दिन\s+में[^0-9]"
+                  r"{0,40}?" + _N + r"\s+मज़दूर", q)
+    if m:
+        return (f"one man can do a work in {m.group(1)} "
+                f"days. how many days will {m.group(2)} men "
+                f"take?")
+    m = re.search(r"नल\s+टंकी\s+को\s+" + _N + r"\s+घंटे"
+                  r"\s+में\s+भरता\s+है[^0-9]{0,20}?" + _N +
+                  r"\s+(?:ऐसे\s+ही\s+)?नल", q)
+    if m:
+        return (f"one tap fills a tank in {m.group(1)} "
+                f"hours. how long will {m.group(2)} such "
+                f"taps take?")
+    # --- Devanagari: bells together (LCM) --------------------------------------------------------------------------------------------------------------
+    m = re.search(r"क्रमशः\s+([0-9,\sऔर]+?)\s*सेकंड\s+के\s+"
+                  r"अंतराल", q)
+    if m and "एक साथ" in q:
+        nums65 = re.findall(r"\d+", m.group(1))
+        if len(nums65) >= 3:
+            return "find the lcm of " + ", ".join(nums65)
+    # --- Devanagari: ratio share ----------------------------------------------------------------------------------------------------------------------------
+    m = re.search(r"" + _N + r"\s*रुपये\s+को\s+" + _N +
+                  r"\s*:\s*" + _N + r"\s+के\s+अनुपात\s+में",
+                  q)
+    if m:
+        which65 = "smaller" if "छोटे भाग" in q else "larger"
+        return (f"divide {m.group(1)} in the ratio "
+                f"{m.group(2)}:{m.group(3)}, find the "
+                f"{which65} share")
+    # --- Devanagari: probability --------------------------------------------------------------------------------------------------------------
+    m = re.search(r"52\s+पत्तों\s+में\s+से\s+राजा\s+आने\s+"
+                  r"की\s+प्रायिकता", q)
+    if m:
+        return ("find the probability of getting a king "
+                "from a pack of 52 cards")
+    m = re.search(r"सिक्का\s+तीन\s+बार\s+उछाला[^0-9]{0,40}?"
+                  r"तीनों\s+बार\s+चित", q)
+    if m:
+        return ("a coin is tossed 3 times, find the "
+                "probability of getting all heads")
+    # --- Devanagari: one-line stories --------------------------------------------------------------------------------------------------------------------
+    m = re.search(r"" + _N + r"\s+और\s+" + _N + r"\s+का"
+                  r"\s+योग", q)
+    if m:
+        return f"{m.group(1)} + {m.group(2)}"
+    m = re.search(r"" + _N + r"\s+अउर\s+" + _N + r"\s+का"
+                  r"\s+योग", q)
+    if m:
+        return f"{m.group(1)} + {m.group(2)}"
+    m = re.search(r"टंकी\s+में\s+" + _N + r"\s*(?:litre|"
+                  r"लीटर)\s+पानी\s+है[^0-9]{0,20}?" + _N +
+                  r"\s*(?:litre|लीटर)\s+और\s+डाल", q)
+    if m:
+        return f"{m.group(1)} + {m.group(2)}"
+    m = re.search(r"" + _N + r"\s+किलो[^0-9]{0,20}?" +
+                  _N + r"\s*रुपये\s+किलो\s+के\s+भाव", q)
+    if m:
+        return f"{m.group(1)} * {m.group(2)}"
+    m = re.search(r"रोज़\s+" + _N + r"\s*रुपये\s+कमाता"
+                  r"[^0-9]{0,40}?" + _N + r"\s+दिन\s+काम",
+                  q)
+    if m:
+        return f"{m.group(1)} * {m.group(2)}"
+    m = re.search(r"" + _N + r"\s+लीटर[^0-9]{0,20}?" +
+                  _N + r"\s*रुपये\s+प्रति\s+लीटर", q)
+    if m:
+        return f"{m.group(1)} * {m.group(2)}"
+    m = re.search(r"" + _N + r"\s+रन\s+बनाए\s+और\s+" +
+                  _N + r"\s+ओवर[^0-9]{0,30}?प्रति\s+ओवर"
+                  r"\s+औसत", q)
+    if m:
+        return f"{m.group(1)} / {m.group(2)}"
 
     # "ka maan (nikalo)" = "the value of": strip it and route normally.
     t = re.sub(r"\s+ka\s+maan\b.*$", "", ql).strip()
@@ -2421,6 +3309,18 @@ def _solve_question_uncached(question: str):
             or (re.search(r"\bplay\s+(?:both|neither)\b",
                           working, re.I)
                 and re.search(r"\bclass\s+of\s+\d+", working,
+                              re.I)) \
+            or (re.search(r"\b(?:class|group|survey|school|"
+                          r"town)\s+of\s+\d+", working, re.I)
+                and re.search(r"\d+\s+(?:play|plays|like|likes|"
+                              r"prefer|prefers)\s+[a-z]+",
+                              working, re.I)
+                and re.search(r"\bboth\b|\bneither\b|"
+                              r"at\s+least\s+one", working,
+                              re.I)) \
+            or (re.search(r"\d+\s+play\s+[a-z]+", working, re.I)
+                and "at least one" in working.lower()
+                and re.search(r"\d+\s+play\s+both", working,
                               re.I)):
         try:
             out = solve_sets(working)
@@ -2439,7 +3339,7 @@ def _solve_question_uncached(question: str):
     # solve_statistics implements range. Try statistics
     # first for the shape, accepting only its range op.
     if re.search(r"\brange\s+of\s+(?:the\s+)?(?:data|"
-                 r"following)", working, re.I):
+                 r"following|\d)", working, re.I):
         try:
             out = solve_statistics(working)
         except Exception:
@@ -2622,6 +3522,83 @@ def _solve_question_uncached(question: str):
         except Exception:
             out = None
         if out is not None and out.get("op") == "factor_count":
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 65: two more misrouted families. (a) "The average
+    # of 5 numbers is 27..." / "average age of 8 people..."
+    # route to arithmetic (route_intent keys statistics on
+    # "mean", not "average"), so statistics' mean-total /
+    # mean-excluded patterns never saw them. (b) "Find the
+    # remainder when A is divided by B" also routes to
+    # arithmetic; number_theory's remainder patterns own it.
+    # Both gates accept ONLY their own ops and fall through
+    # unchanged otherwise.
+    if re.search(r"(?:mean|average)(?:\s+age)?\s+of\s+\d+\s+"
+                 r"(?:numbers|observations|items|values|"
+                 r"people|students|persons)\s+is\s+\d", _wl) \
+            or re.search(r"first\s+(?:\d+|five|seven|ten)\s+"
+                         r"(?:prime\s+numbers|multiples)", _wl):
+        try:
+            out = solve_statistics(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") in (
+                "mean_total", "mean_missing", "mean_excluded",
+                "first_primes_stat", "first_multiples_mean"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+    if "remainder" in _wl and "divided by" in _wl:
+        try:
+            out = solve_number_theory(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") in (
+                "remainder", "modulo"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+    # Wave 65: unit asks the units gate never sees (it only
+    # fires on "convert" / "how many") and the dozen-cost
+    # story, which no intent claims.
+    if "fraction of a day" in _wl:
+        try:
+            out = solve_units(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") == \
+                "fraction_of_day":
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+    if "dozen" in _wl and "cost" in _wl:
+        try:
+            out = solve_applied(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") == \
+                "dozen_cost_one":
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+    # Wave 65: three geometry shapes other intents steal —
+    # "ladder" routes to trigonometry, "(x, 4) is at
+    # distance..." and "interior angles sum to..." route to
+    # arithmetic; geometry's patterns own all three.
+    if ("ladder" in _wl
+            or re.search(r"\(\s*x\s*,[^)]*\)\s+is\s+at\s+"
+                         r"(?:a\s+)?distance", _wl)
+            or "interior angle" in _wl):
+        try:
+            out = solve_geometry(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") in (
+                "ladder_foot", "ladder_height",
+                "coord_unknown_point",
+                "polygon_sides_from_sum"):
             if was_translated:
                 out["interpreted_as"] = translated
             return out

@@ -53,9 +53,112 @@ def _ordinal(n):
     return f"{n}" + {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
 
 
+def _wave65_sequences(q):
+    """Wave 65: AP/GP forms the trilingual battery exposed —
+    a GP term given backwards to its first term, the AP
+    term-count behind a stated sum, the slot-stated AP
+    ("first term 5, common difference 3 and 10 terms") asked
+    for its last term, and an nth-term formula evaluated at
+    a stated n. Each is gated on its full phrasing."""
+    N = r"(-?\d+(?:\.\d+)?)"
+    # GP: nth term and ratio given, first term asked.
+    m = re.search(r"(\d+)(?:st|nd|rd|th)\s+term\s+of\s+(?:a\s+"
+                  r"|the\s+)?gp\s+is\s+" + N, q)
+    mr = re.search(r"common\s+ratio\s+(?:is\s+)?" + N, q)
+    if m and mr and "first term" in q:
+        n, tn, r = int(m.group(1)), float(m.group(2)), \
+            float(mr.group(1))
+        if r:
+            a = tn / r ** (n - 1)
+            a = int(a) if a == int(a) else a
+            return {"type": "sequences", "op": "gp_first_term",
+                    "answer": fmt_num(a), "value": a,
+                    "steps": [
+                        f"The {_ordinal(n)} term of a GP is "
+                        f"a × r^{n - 1}, so a = {fmt_num(tn)} "
+                        f"/ {fmt_num(r)}^{n - 1}",
+                        f"a = {fmt_num(tn)} / "
+                        f"{fmt_num(r ** (n - 1))} = "
+                        f"{fmt_num(a)}"]}
+    # AP: how many terms make the stated sum.
+    if "how many terms" in q and "ap" in q:
+        terms = _parse_series(q)
+        kind, d = _classify(terms) if terms else (None, None)
+        ms = re.search(r"(?:to\s+get|sum\s+(?:is|of)|added\s+"
+                       r"to\s+get|make)\s+" + N, q)
+        if kind == "AP" and ms and d:
+            a, target = terms[0], float(ms.group(1))
+            # n/2 * (2a + (n-1)d) = target
+            import sympy as _sp
+            n = _sp.symbols("n", positive=True)
+            sol = _sp.solve(
+                n / 2 * (2 * a + (n - 1) * d) - target, n)
+            good = [s for s in sol
+                    if s.is_real and float(s) > 0
+                    and abs(float(s) - round(float(s))) < 1e-9]
+            if good:
+                nv = int(round(float(good[0])))
+                return {"type": "sequences",
+                        "op": "ap_terms_for_sum",
+                        "answer": str(nv), "value": nv,
+                        "steps": [
+                            f"S_n = n/2 × (2a + (n - 1)d) "
+                            f"with a = {fmt_num(a)}, d = "
+                            f"{fmt_num(d)}",
+                            f"Solving S_n = {fmt_num(target)} "
+                            f"gives n = {nv}"]}
+    # AP slot form: first term, common difference, term
+    # count all stated; last term asked.
+    mf = re.search(r"first\s+term\s+(?:is\s+)?" + N, q)
+    md = re.search(r"common\s+difference\s+(?:is\s+)?" + N, q)
+    mn = re.search(r"(\d+)\s+terms\b", q)
+    if mf and md and mn and "last term" in q and "ap" in q:
+        a, d, n = float(mf.group(1)), float(md.group(1)), \
+            int(mn.group(1))
+        last = a + (n - 1) * d
+        last = int(last) if last == int(last) else last
+        return {"type": "sequences", "op": "ap_last_term",
+                "answer": fmt_num(last), "value": last,
+                "steps": [
+                    f"Last term = a + (n - 1)d = "
+                    f"{fmt_num(a)} + ({n} - 1) × "
+                    f"{fmt_num(d)} = {fmt_num(last)}"]}
+    # nth-term formula evaluated at a stated n.
+    m = re.search(r"nth\s+term\s+of\s+an?\s+ap\s+is\s+"
+                  r"([0-9n\s\+\-\*/\(\)\.]+?)(?:\.|,|\bfind\b|$)",
+                  q)
+    mk = re.search(r"(\d+)(?:st|nd|rd|th)\s+term", q)
+    if m and mk and "first term" not in q:
+        expr = m.group(1).strip()
+        k = int(mk.group(1))
+        # The formula is linear in n in this family
+        # ("3n + 5"); read A and B directly — plain sympify
+        # rejects the implicit multiplication in "3n".
+        _lm = re.fullmatch(
+            r"(\d+(?:\.\d+)?)?\s*n\s*(?:([\+\-])\s*"
+            r"(\d+(?:\.\d+)?))?", expr.replace(" ", ""))
+        if _lm:
+            _a = float(_lm.group(1)) if _lm.group(1) else 1.0
+            _b = float(_lm.group(3)) if _lm.group(3) else 0.0
+            if _lm.group(2) == "-":
+                _b = -_b
+            val = _a * k + _b
+            val = int(val) if val == int(val) else val
+            return {"type": "sequences", "op": "ap_nth_formula",
+                    "answer": fmt_num(val), "value": val,
+                    "steps": [
+                        f"a_n = {expr}; putting n = {k}",
+                        f"a_{k} = {fmt_num(val)}"]}
+    return None
+
+
 def solve_sequences(question: str):
     q = question.lower()
     params = _get_params(q)
+
+    _w65 = _wave65_sequences(q)
+    if _w65 is not None:
+        return _w65
 
     # --- Wave 42: Hindi / Hinglish AP phrasing + next term ----
     # Wave 33 covered Hindi probability but left Hindi AP
