@@ -72,6 +72,11 @@
     {% endfor %}
 
     <p class="no-print" style="margin-top: 28px;">
+      {# Wave 60: this standalone print view opens in its own
+         tab from the paper generator; give it the same way
+         back as every other page (never printed — .no-print). #}
+      <a class="print-btn" href="/papers"
+         style="display: inline-block; text-decoration: none; margin-right: 10px;">← {{ t.nav_back }}</a>
       <button class="print-btn" onclick="window.print()">{{ t.print_btn }}</button>
     </p>
 

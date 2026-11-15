@@ -1,4 +1,19 @@
 {% extends "base.html" %}
+{% block backnav %}
+  {# Wave 60: this page IS a timed test in progress (the form
+     below auto-submits when the timer ends), so its back bar
+     cannot come from the path map — the fallback is this
+     chapter's page (template data), and the confirmation is
+     always on while questions are on screen: leaving loses
+     the typed answers. With no questions there is nothing to
+     lose and the plain bar shows. #}
+  <nav class="backnav">
+    <button type="button" class="backnav-btn" data-backnav
+            data-fallback="/board/{{ class_num }}/{{ chapter.slug }}"
+            {% if test.questions %}data-confirm-msg="{{ t.nav_back_test_confirm }}"{% endif %}
+            aria-label="{{ t.nav_back }}"><span aria-hidden="true">←</span> {{ t.nav_back }}</button>
+  </nav>
+{% endblock %}
 {% block content %}
   <div class="card">
     <h2>{{ t.board_test_heading }}</h2>

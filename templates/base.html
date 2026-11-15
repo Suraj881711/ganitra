@@ -42,8 +42,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;600;700&family=Kalam:wght@400;700&family=Caveat:wght@500;700&display=swap"
           rel="stylesheet" />
     {# Wave 26: the stylesheet URL carries a version query
-       (?v=32 — Wave 43 bumped it to 30, merge-2 to 31, Wave 55 to 32 for
-       Wave 49's chat-box CSS). PythonAnywhere serves /static/ with
+       (?v=33 — Wave 43 bumped it to 30, merge-2 to 31, Wave 55 to 32 for
+       Wave 49's chat-box CSS, Wave 60 to 33 for the back bar).
+       PythonAnywhere serves /static/ with
        "Cache-Control: public, max-age=86400", so the plain
        URL could be replayed from a browser's HTTP cache for
        a full day after a deploy — Waves 23-25's new CSS
@@ -53,7 +54,7 @@
        brand-new cache key everywhere, so this deploy's CSS
        lands on the very next page load. BUMP THE NUMBER on
        every future style.css change. #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='32') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='33') }}" />
     {% block head_extra %}{% endblock %}
     <style>
       .lang-switch { display: inline-flex; align-items: center; gap: .45rem;
@@ -102,6 +103,26 @@
     </header>
     {% endblock %}
     <main class="{% block main_class %}{% endblock %}">
+      {% block backnav %}
+      {# Wave 60: the ONE back system (Suraj: "Ganitra ke andar
+         back system nahi hai"). The same top-left "← Back" bar
+         on every inner page; the chat home and sign-in gate
+         ("/") get none. The `backnav` context var comes from
+         app.py's inject_backnav (path map in _backnav_for_path):
+         the button goes back in history when the student came
+         from inside the app, and uses data-fallback (the parent
+         page) when there is no in-app history. A page whose
+         fallback needs template data (the Board chapter test)
+         overrides this block with the same markup. #}
+      {% if backnav %}
+      <nav class="backnav">
+        <button type="button" class="backnav-btn" data-backnav
+                data-fallback="{{ backnav.fallback }}"
+                {% if backnav.confirm_if %}data-confirm-if="{{ backnav.confirm_if }}" data-confirm-msg="{{ backnav.confirm_msg }}"{% endif %}
+                aria-label="{{ t.nav_back }}"><span aria-hidden="true">←</span> {{ t.nav_back }}</button>
+      </nav>
+      {% endif %}
+      {% endblock %}
       {% with messages = get_flashed_messages() %}
         {% if messages %}
           <div class="flash">
@@ -204,6 +225,46 @@
             .catch(function () {});
         });
       }
+    </script>
+    <script>
+      /* Wave 60: the back button's behaviour. Prefer the real
+         history when the student arrived from inside the app
+         (same-origin referrer) — that returns them to exactly
+         where they were, chat included, with nothing lost.
+         Otherwise (fresh tab, installed-app launch, deep link)
+         go to the button's parent-page fallback. When the
+         button carries data-confirm-msg, ask first: with
+         data-confirm-if, only while that timed-test element is
+         actually on screen; without it, always. Declining the
+         confirmation simply stays on the page. */
+      (function () {
+        document.addEventListener("click", function (ev) {
+          var btn = ev.target && ev.target.closest
+            ? ev.target.closest("[data-backnav]") : null;
+          if (!btn) return;
+          var msg = btn.getAttribute("data-confirm-msg");
+          var gate = btn.getAttribute("data-confirm-if");
+          if (msg && gate) {
+            var el = document.querySelector(gate);
+            if (!el || el.hidden || el.offsetParent === null) {
+              msg = null;
+            }
+          }
+          if (msg && !window.confirm(msg)) return;
+          var sameOrigin = false;
+          try {
+            sameOrigin = !!document.referrer &&
+              new URL(document.referrer).origin ===
+                window.location.origin;
+          } catch (e) { /* no usable referrer: use fallback */ }
+          if (sameOrigin && window.history.length > 1) {
+            window.history.back();
+          } else {
+            window.location.href =
+              btn.getAttribute("data-fallback") || "/";
+          }
+        });
+      })();
     </script>
   </body>
 </html>
