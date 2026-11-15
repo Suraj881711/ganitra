@@ -52,10 +52,12 @@ guard in i18n only fires for type arithmetic/algebra with
 op == "simplify", which no fallback result ever uses.
 """
 import re
+from fractions import Fraction
 
 from concepts import find_concept
 from i18n import solve_failed
-from solver.router import has_science_signal, solve_question
+from solver.router import has_science_signal, normalize_spelling, \
+    solve_question
 
 # ---------------------------------------------------------------------------
 # Detectors for "the solver did not really answer"
@@ -85,19 +87,90 @@ _SYMBOLIC_COMMANDS = ("simplify", "expand", "factor", "factorise",
                       "factorize", "collect")
 
 
+def _single_letter_factors(text):
+    """Distinct single-letter factors of the *-products in a
+    text, in ANY script: split on * and ·, strip the exponent
+    off each factor (\"ए**2\" -> \"ए\") and keep the factors
+    that are exactly one letter (\"c\", \"m\", \"क\", \"ा\").
+    Latin-only counting missed the Devanagari letter-soup —
+    the Wave 35 audit's 22 Hindi WRONGs are products of the
+    question's own Devanagari letters (Wave 52)."""
+    out = set()
+    for fac in re.split(r"[*·]", str(text or "")):
+        f = fac.strip().strip("()")
+        f = re.sub(r"(?:\*\*|\^)\s*\d+(?:\.\d+)?$", "", f).strip()
+        if len(f) == 1 and f.isalpha():
+            out.add(f)
+    return out
+
+
+def _single_letter_factors(ans):
+    """Distinct single-character letter/mark factors of a product
+    answer, in ANY script. Wave 58: the old detector counted only
+    Latin [a-z] singles, so Devanagari soup ("12*c*m*इ*ए**2*क**4…")
+    — two Latin letters and a dozen Devanagari ones, vowel signs
+    included — sailed through as a genuine answer."""
+    import unicodedata
+    t = str(ans).replace("·", "*").replace(" ", "")
+    t = re.sub(r"\*\*\d+", "", t)
+    out = set()
+    for fac in t.split("*"):
+        fac = fac.strip("()")
+        if len(fac) == 1 and unicodedata.category(fac)[0] in ("L", "M"):
+            out.add(fac)
+    return out
+
+
 def _is_junk(question, result):
     """Letter-soup detection: sympy turned the question's words
     into a product of single letters ("what is pythagoras
     theorem" -> a**2*e**2*g*h**2*...). A genuine symbolic answer
     almost never mentions 4+ DISTINCT single letters, and real
-    simplify/expand/factor asks are excluded up front."""
+    simplify/expand/factor asks are excluded up front.
+
+    Wave 52: the letter count now covers every script (the
+    Hindi questions' soup is Devanagari: "12*c*m*इ*ए**2*क**4*…"
+    carries only 2 Latin letters but a dozen Devanagari ones),
+    and a bare *-chain of 5+ distinct single letters is soup
+    even without an exponent mark ("Find the square of 15"
+    salvaged to "15*a*e*q*r*s*u" — the word "square" itself,
+    letter-multiplied)."""
     q = str(question or "").lower()
     if any(cmd in q for cmd in _SYMBOLIC_COMMANDS):
         return False
     ans = _answer_text(result)
     letters = set(re.findall(r"(?<![A-Za-z])[a-z](?![A-Za-z])", ans))
+    factors = _single_letter_factors(ans)
     if any(mark in ans for mark in ("**", "·", "^")):
-        return len(ans) >= 8 and len(letters) >= 4
+        if len(ans) >= 8 and len(letters | factors) >= 4:
+            return True
+        # Wave 57 (merge-3 hand-merge into Wave 52's branch):
+        # a SHORT whole-answer product of single letters is
+        # soup too — it slipped under the length threshold
+        # ("what is HCF" -> "C·F·H", three distinct letters).
+        compact0 = ans.replace(" ", "").replace("·", "*")
+        if re.fullmatch(r"[A-Za-z](\*\*\d+)?"
+                        r"(\*[A-Za-z](\*\*\d+)?)+", compact0):
+            if len(set(re.findall(r"[A-Za-z]",
+                                  compact0))) >= 3:
+                return True
+        # Wave 57: Devanagari letter-soup fragments — a
+        # product with 4+ short non-Latin fragments is sympy
+        # multiplying Hindi words letter-wise (catches the
+        # shapes whose factor count stays under the rules
+        # above, e.g. two-codepoint fragments).
+        parts = re.split(r"[*·]", ans)
+        frags = 0
+        for part in parts:
+            core = re.sub(r"\*\*\d+$", "", part.strip()) \
+                .strip("()")
+            if 1 <= len(core) <= 2 and \
+                    any(ord(c) > 127 for c in core):
+                frags += 1
+        if len(parts) >= 4 and frags >= 4:
+            return True
+    if ("*" in ans or "·" in ans) and len(factors) >= 5:
+        return True
     # Plain-product form: "a*b*d*m*o*s" — the whole answer is
     # single letters multiplied together, 5+ distinct letters.
     compact = ans.replace(" ", "").replace("·", "*")
@@ -186,6 +259,16 @@ def _is_nonmaths(question):
     if any(ch.isdigit() for ch in q) and any(
             ch in q for ch in "+-*/^=%"):
         return False  # an actual calculation rides along; not ours
+    # Wave 56: set-counting word problems legitimately talk
+    # about games — "30 play cricket and 25 play football.
+    # If 12 play both, how many play neither?" is a Class
+    # 10 sets question with real numbers, not a sports
+    # question. The counting shape (digits + play
+    # both/neither, or the power-set ask) is maths.
+    if any(ch.isdigit() for ch in q) and (
+            "play both" in q or "play neither" in q
+            or "power set" in q):
+        return False
     return any(kw in q for kw in _NONMATHS_KEYWORDS)
 
 
@@ -460,11 +543,99 @@ def _candidates(question):
     return out
 
 
+_FRAC52 = r"\d+\s*/\s*\d+"
+
+
+def _fraction_ask_value(question):
+    """Wave 52 (audit #15): the exact value a two-fraction
+    Add/Subtract question asks for, or None. Salvage used to
+    "solve" these by solving ONE operand — 'Add 2/3 and 3/4'
+    came back as '2/3', the first fraction echoed (31 of 52
+    salvage answers in the Wave 35 audit carried a wrong
+    value, and the fraction echo was the flagship case). The
+    primary solver owns these asks now (solver/arithmetic.py);
+    this is the salvage-side guard for any phrasing variant
+    that still slips past it: a salvaged result for such a
+    question is only believable if its value IS the sum /
+    difference."""
+    from fractions import Fraction
+    q = str(question or "").lower()
+    fracs = re.findall(_FRAC52, q)
+    if len(fracs) < 2:
+        return None
+    first = Fraction(fracs[0].replace(" ", ""))
+    second = Fraction(fracs[1].replace(" ", ""))
+    if re.search(r"\bsubtract\b", q):
+        # "Subtract A from B": the first fraction named is
+        # the one taken away.
+        return second - first
+    if re.search(r"\badd\b|\bsum\b", q):
+        return first + second
+    return None
+
+
+def _result_value(result):
+    """Best-effort numeric value of a result's answer: the
+    structured value/numeric fields first, then a fraction
+    or decimal read out of the answer text."""
+    for key in ("value", "numeric"):
+        v = (result or {}).get(key)
+        if isinstance(v, (int, float)):
+            return float(v)
+    ans = _answer_text(result)
+    m = re.search(r"(-?\d+)\s*/\s*(\d+)", ans)
+    if m and int(m.group(2)):
+        return int(m.group(1)) / int(m.group(2))
+    m = re.search(r"-?\d+(?:\.\d+)?", ans)
+    return float(m.group(0)) if m else None
+
+
+def _fraction_echo(question, result):
+    """Wave 58 guard: for a two-fraction add/subtract ASK, a
+    salvaged answer that merely repeats one of the OPERANDS
+    (and is not the asked sum/difference) is an echo, never a
+    solution — reject the candidate. With the primary word
+    patterns in arithmetic.py this is defence in depth for
+    rewordings they do not cover."""
+    ql = str(question).lower()
+    if not re.search(r"\b(add|subtract|sum|difference|plus|"
+                     r"minus)\b", ql):
+        return False
+    fr = []
+    for a, b in re.findall(r"(\d+)\s*/\s*(\d+)", str(question)):
+        if int(b) != 0:
+            fr.append(Fraction(int(a), int(b)))
+    if len(fr) != 2:
+        return False
+    val = result.get("numeric", result.get("value"))
+    if isinstance(val, (list, tuple)):
+        return False
+    if val is None:
+        m = re.match(r"\s*(-?\d+)\s*/\s*(\d+)\s*$",
+                     str(result.get("answer", "")))
+        if m:
+            val = Fraction(int(m.group(1)), int(m.group(2)))
+        else:
+            try:
+                val = Fraction(
+                    str(result.get("answer", "")).strip())
+            except Exception:
+                return False
+    try:
+        fv = Fraction(val).limit_denominator(10 ** 6)
+    except Exception:
+        return False
+    if fv in (fr[0] + fr[1], fr[0] - fr[1], fr[1] - fr[0]):
+        return False
+    return fv in fr
+
+
 def _salvage(question, hindi):
     # Wave 20: never salvage a science question — its numbers
     # are not a maths sum hiding in the text (see Layer 0c).
     if has_science_signal(question):
         return None
+    _want52 = _fraction_ask_value(question)
     for cand in _candidates(question):
         if cand.strip().lower() == str(question).strip().lower():
             continue  # identical to the original: already failed
@@ -473,6 +644,11 @@ def _salvage(question, hindi):
         except Exception:
             continue
         if _is_real(cand, result):
+            if _want52 is not None:
+                _got52 = _result_value(result)
+                if _got52 is None or abs(
+                        _got52 - float(_want52)) > 0.01:
+                    continue  # an echoed operand, not the answer
             note = (f"Solved the maths part of your question: "
                     f"{cand}")
             result = dict(result)
@@ -491,6 +667,13 @@ def _salvage(question, hindi):
 
 def _concept_result(question, hindi):
     entry = find_concept(question)
+    if entry is None:
+        # Wave 57: retry on the spelling-folded text — students
+        # ask "byaj kaise nikalte hai?" / "ausat kaise nikale?"
+        # with spellings the keyword lists are not written in.
+        folded = normalize_spelling(question)
+        if folded != question:
+            entry = find_concept(folded)
     if entry is None:
         return None
     ex = entry["example"]
@@ -561,7 +744,10 @@ _TOPIC_EXAMPLES = (
 
 
 def _similar_result(question, hindi):
-    q = str(question or "").lower()
+    # Wave 57: match topic keywords against the original text AND
+    # its spelling-folded form ("tren wala sawal" -> train topic).
+    q = (str(question or "") + " "
+         + normalize_spelling(question)).lower()
     for keywords, label, example_q, example_solve in _TOPIC_EXAMPLES:
         if any(kw in q for kw in keywords):
             try:

@@ -5184,3 +5184,165 @@ STRINGS["bn"].update(_BN_W40)
 STRINGS["mr"].update(_MR_W40)
 STRINGS["ta"].update(_TA_W40)
 STRINGS["te"].update(_TE_W40)
+
+# ---------------------------------------------------------------------------
+# Wave 53: method labels for the new Wave-53 alternate methods
+# (systems, sequences sums, applied unitary/proportion family,
+# probability complement, trig identity/triangles, mensuration
+# decompositions) as STRINGS keys in all 6 languages, following
+# the Wave-13 discipline — every mm_label_ key exists and is
+# non-empty in every language.
+# ---------------------------------------------------------------------------
+
+_EN_W53 = {
+    "mm_label_elimination": "Elimination method",
+    "mm_label_substitution": "Substitution method",
+    "mm_label_cross_multiplication": "Cross-multiplication method",
+    "mm_label_pairing": "Pairing method",
+    "mm_label_term_addition": "Adding the terms",
+    "mm_label_complement": "Complement method",
+    "mm_label_identity": "Identity method",
+    "mm_label_standard_triangles": "From the standard triangles",
+    "mm_label_position_formula": "Position formula method",
+    "mm_label_division_method": "Division method",
+    "mm_label_euclid_relation": "Using Euclid and the product relation",
+    "mm_label_diameter": "Using the diameter",
+    "mm_label_layers": "Layer method",
+    "mm_label_base_area": "Base area × height method",
+    "mm_label_cone_third": "One-third of the cylinder",
+    "mm_label_grid_counting": "Counting unit squares",
+    "mm_label_side_addition": "Adding all the sides",
+    "mm_label_direct_percent": "Direct percentage method",
+    "mm_label_fraction_of_whole": "Fraction of the whole method",
+}
+
+_HI_W53 = {
+    "mm_label_elimination": "विलोपन विधि (Elimination)",
+    "mm_label_substitution": "प्रतिस्थापन विधि (Substitution)",
+    "mm_label_cross_multiplication": "वज्र-गुणन विधि (Cross-multiplication)",
+    "mm_label_pairing": "जोड़ी विधि (Pairing)",
+    "mm_label_term_addition": "पदों को जोड़कर",
+    "mm_label_complement": "पूरक विधि (Complement)",
+    "mm_label_identity": "सर्वसमिका विधि (Identity)",
+    "mm_label_standard_triangles": "मानक त्रिभुजों से",
+    "mm_label_position_formula": "स्थिति सूत्र विधि",
+    "mm_label_division_method": "भाग विधि (Division)",
+    "mm_label_euclid_relation": "यूक्लिड और गुणन-संबंध से",
+    "mm_label_diameter": "व्यास से निकालना",
+    "mm_label_layers": "परत विधि (Layer)",
+    "mm_label_base_area": "आधार का क्षेत्रफल × ऊँचाई",
+    "mm_label_cone_third": "बेलन का एक-तिहाई",
+    "mm_label_grid_counting": "इकाई वर्ग गिनकर",
+    "mm_label_side_addition": "सभी भुजाएँ जोड़कर",
+    "mm_label_direct_percent": "सीधी प्रतिशत विधि",
+    "mm_label_fraction_of_whole": "पूरे का भिन्न विधि",
+}
+
+_BN_W53 = {
+    "mm_label_elimination": "অপনয়ন পদ্ধতি (Elimination)",
+    "mm_label_substitution": "প্রতিস্থাপন পদ্ধতি (Substitution)",
+    "mm_label_cross_multiplication": "বজ্র-গুণন পদ্ধতি (Cross-multiplication)",
+    "mm_label_pairing": "জোড়া পদ্ধতি (Pairing)",
+    "mm_label_term_addition": "পদগুলো যোগ করে",
+    "mm_label_complement": "পরিপূরক পদ্ধতি (Complement)",
+    "mm_label_identity": "অভেদ পদ্ধতি (Identity)",
+    "mm_label_standard_triangles": "মানক ত্রিভুজ থেকে",
+    "mm_label_position_formula": "অবস্থান সূত্র পদ্ধতি",
+    "mm_label_division_method": "ভাগ পদ্ধতি (Division)",
+    "mm_label_euclid_relation": "ইউক্লিড ও গুণফল সম্পর্ক ব্যবহার করে",
+    "mm_label_diameter": "ব্যাস ব্যবহার করে",
+    "mm_label_layers": "স্তর পদ্ধতি (Layer)",
+    "mm_label_base_area": "ভূমির ক্ষেত্রফল × উচ্চতা",
+    "mm_label_cone_third": "চোঙের এক-তৃতীয়াংশ",
+    "mm_label_grid_counting": "একক বর্গ গুনে",
+    "mm_label_side_addition": "সব বাহু যোগ করে",
+    "mm_label_direct_percent": "সরাসরি শতকরা পদ্ধতি",
+    "mm_label_fraction_of_whole": "সমগ্রের ভগ্নাংশ পদ্ধতি",
+}
+
+_MR_W53 = {
+    "mm_label_elimination": "विलोपन पद्धत (Elimination)",
+    "mm_label_substitution": "प्रतिस्थापन पद्धत (Substitution)",
+    "mm_label_cross_multiplication": "वज्र-गुणाकार पद्धत (Cross-multiplication)",
+    "mm_label_pairing": "जोडी पद्धत (Pairing)",
+    "mm_label_term_addition": "पदे मिळवून",
+    "mm_label_complement": "पूरक पद्धत (Complement)",
+    "mm_label_identity": "सर्वसमिका पद्धत (Identity)",
+    "mm_label_standard_triangles": "मानक त्रिकोणांवरून",
+    "mm_label_position_formula": "स्थान सूत्र पद्धत",
+    "mm_label_division_method": "भागाकार पद्धत (Division)",
+    "mm_label_euclid_relation": "युक्लिड आणि गुणाकार संबंध वापरून",
+    "mm_label_diameter": "व्यास वापरून",
+    "mm_label_layers": "थर पद्धत (Layer)",
+    "mm_label_base_area": "पायाचे क्षेत्रफळ × उंची",
+    "mm_label_cone_third": "दंडगोलाचा एक-तृतीयांश",
+    "mm_label_grid_counting": "एकक चौरस मोजून",
+    "mm_label_side_addition": "सर्व बाजू मिळवून",
+    "mm_label_direct_percent": "थेट टक्केवारी पद्धत",
+    "mm_label_fraction_of_whole": "संपूर्णाचा अपूर्णांक पद्धत",
+}
+
+_TA_W53 = {
+    "mm_label_elimination": "நீக்கல் முறை (Elimination)",
+    "mm_label_substitution": "பதிலீட்டு முறை (Substitution)",
+    "mm_label_cross_multiplication": "குறுக்குப் பெருக்கல் முறை (Cross-multiplication)",
+    "mm_label_pairing": "இணை முறை (Pairing)",
+    "mm_label_term_addition": "உறுப்புகளைக் கூட்டி",
+    "mm_label_complement": "நிரப்பு முறை (Complement)",
+    "mm_label_identity": "முற்றொருமை முறை (Identity)",
+    "mm_label_standard_triangles": "நிலையான முக்கோணங்களிலிருந்து",
+    "mm_label_position_formula": "நிலை சூத்திர முறை",
+    "mm_label_division_method": "வகுத்தல் முறை (Division)",
+    "mm_label_euclid_relation": "யூக்ளிட் மற்றும் பெருக்கல் தொடர்பைப் பயன்படுத்தி",
+    "mm_label_diameter": "விட்டத்தைப் பயன்படுத்தி",
+    "mm_label_layers": "அடுக்கு முறை (Layer)",
+    "mm_label_base_area": "அடிப்பரப்பு × உயரம் முறை",
+    "mm_label_cone_third": "உருளையின் மூன்றில் ஒன்று",
+    "mm_label_grid_counting": "அலகு சதுரங்களை எண்ணி",
+    "mm_label_side_addition": "எல்லா பக்கங்களையும் கூட்டி",
+    "mm_label_direct_percent": "நேரடி சதவீத முறை",
+    "mm_label_fraction_of_whole": "முழுமையின் பின்ன முறை",
+}
+
+_TE_W53 = {
+    "mm_label_elimination": "తొలగింపు పద్ధతి (Elimination)",
+    "mm_label_substitution": "ప్రతిక్షేపణ పద్ధతి (Substitution)",
+    "mm_label_cross_multiplication": "అడ్డ గుణకార పద్ధతి (Cross-multiplication)",
+    "mm_label_pairing": "జత పద్ధతి (Pairing)",
+    "mm_label_term_addition": "పదాలను కూడి",
+    "mm_label_complement": "పూరక పద్ధతి (Complement)",
+    "mm_label_identity": "సర్వసమీకరణ పద్ధతి (Identity)",
+    "mm_label_standard_triangles": "ప్రామాణిక త్రిభుజాల నుండి",
+    "mm_label_position_formula": "స్థాన సూత్ర పద్ధతి",
+    "mm_label_division_method": "భాగహార పద్ధతి (Division)",
+    "mm_label_euclid_relation": "యూక్లిడ్ మరియు గుణకార సంబంధం ఉపయోగించి",
+    "mm_label_diameter": "వ్యాసం ఉపయోగించి",
+    "mm_label_layers": "పొర పద్ధతి (Layer)",
+    "mm_label_base_area": "భూమి వైశాల్యం × ఎత్తు పద్ధతి",
+    "mm_label_cone_third": "స్థూపంలో మూడింట ఒక వంతు",
+    "mm_label_grid_counting": "ఏకాంక చతురస్రాలను లెక్కించి",
+    "mm_label_side_addition": "అన్ని భుజాలను కూడి",
+    "mm_label_direct_percent": "నేరుగా శాతం పద్ధతి",
+    "mm_label_fraction_of_whole": "మొత్తంలో భిన్న పద్ధతి",
+}
+
+STRINGS["en"].update(_EN_W53)
+STRINGS["hi"].update(_HI_W53)
+STRINGS["bn"].update(_BN_W53)
+STRINGS["mr"].update(_MR_W53)
+STRINGS["ta"].update(_TA_W53)
+STRINGS["te"].update(_TE_W53)
+
+# Wave 53 (addendum): single-equivalent-discount label.
+STRINGS["en"].update({
+    "mm_label_equivalent_discount": "Single equivalent discount"})
+STRINGS["hi"].update({
+    "mm_label_equivalent_discount": "एकल समतुल्य छूट (Equivalent discount)"})
+STRINGS["bn"].update({
+    "mm_label_equivalent_discount": "একক সমতুল্য ছাড় (Equivalent discount)"})
+STRINGS["mr"].update({
+    "mm_label_equivalent_discount": "एकल समतुल्य सूट (Equivalent discount)"})
+STRINGS["ta"].update({
+    "mm_label_equivalent_discount": "ஒற்றை சமமான தள்ளுபடி (Equivalent discount)"})
+STRINGS["te"].update({
+    "mm_label_equivalent_discount": "ఒకే సమానమైన తగ్గింపు (Equivalent discount)"})

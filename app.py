@@ -31,6 +31,7 @@ from board_quiz import (CLASSIC_QUESTION_COUNT, display_answer,
                         generate_chapter_questions)
 import papers_data
 import practice_gen
+import topics_data
 from test_mode import (TEST_TIME_LIMIT, TOPIC_LABELS as TEST_TOPICS,
                        check_test_answer, generate_test, worked_steps)
 from solver.answer_cache import get_negative, put_negative
@@ -917,8 +918,26 @@ def create_app():
     def topics():
         """Wave 7: the topic list that used to sit under the chat on
         the homepage now lives on its own simple page — the home
-        page is a pure chat screen (ChatGPT-style), nothing else."""
-        return render_template("topics.html")
+        page is a pure chat screen (ChatGPT-style), nothing else.
+
+        Wave 55: below the original subject cards, the page now
+        also carries the per-class topic directory from
+        topics_data.py — every NCERT chapter for Classes 6-12
+        broken into its teachable sub-topics, each with its method
+        (idea + steps), one verified worked example, and a link to
+        its parent chapter (chapter page + practice + test)."""
+        class_topics = []
+        for class_num in topics_data.CLASS_NUMBERS:
+            rows = []
+            for topic in topics_data.topics_for_class(class_num):
+                chapter = get_chapter(class_num, topic["chapter"])
+                row = dict(topic)
+                row["chapter_title"] = (
+                    chapter["title"] if chapter else topic["chapter"])
+                rows.append(row)
+            class_topics.append(
+                {"class_num": class_num, "topics": rows})
+        return render_template("topics.html", class_topics=class_topics)
 
     @app.post("/solve")
     def solve():
@@ -1843,6 +1862,395 @@ def create_app():
             none = _pm_fmt(Fraction(1, 2 ** p["n"]))
             return [f"P(no head at all) = (1/2)^{p['n']} = {none}",
                     f"P(at least one head) = 1 − {none}"]
+        # ---------------- Wave 54 kinds ----------------
+        if kind == "integer_add_sub":
+            if p["op"] == "add":
+                return [f"({p['a']}) + ({p['b']})"]
+            return [f"({p['a']}) − ({p['b']})"]
+        if kind == "fraction_subtract":
+            num = p["a"] * p["d"] - p["c"] * p["b"]
+            den = p["b"] * p["d"]
+            lines = [f"{p['a']}/{p['b']} − {p['c']}/{p['d']} "
+                     f"= {num}/{den}"]
+            if f"{num}/{den}" != item["answer"]:
+                lines.append(f"{num}/{den} = {item['answer']}")
+            return lines
+        if kind == "fraction_of":
+            return [f"{p['n']}/{p['d']} of {p['quantity']} "
+                    f"= {p['n']} × {p['quantity']} ÷ {p['d']}"]
+        if kind == "fraction_multiply":
+            return [f"Numerators: {p['a']} × {p['c']} "
+                    f"= {p['a'] * p['c']}",
+                    f"Denominators: {p['b']} × {p['d']} "
+                    f"= {p['b'] * p['d']}"]
+        if kind == "fraction_divide":
+            return [f"{p['a']}/{p['b']} ÷ {p['c']}/{p['d']} "
+                    f"= {p['a']}/{p['b']} × {p['d']}/{p['c']}"]
+        if kind == "mixed_fraction_add":
+            top1 = p["w1"] * p["d1"] + p["n1"]
+            top2 = p["w2"] * p["d2"] + p["n2"]
+            return [f"{p['w1']} {p['n1']}/{p['d1']} "
+                    f"= {top1}/{p['d1']} and "
+                    f"{p['w2']} {p['n2']}/{p['d2']} "
+                    f"= {top2}/{p['d2']}",
+                    f"{top1}/{p['d1']} + {top2}/{p['d2']}"]
+        if kind == "decimal_add":
+            return ["Line up the decimal points",
+                    f"{p['a']} + {p['b']}"]
+        if kind == "decimal_multiply":
+            ia = int(p["a"].replace(".", ""))
+            ib = int(p["b"].replace(".", ""))
+            return [f"{ia} × {ib} = {ia * ib}, then place "
+                    f"2 decimal digits"]
+        if kind == "percent_increase":
+            inc = _pm_fmt(Fraction(p["price"] * p["p"], 100))
+            return [f"Increase = {p['p']}% of {p['price']} "
+                    f"= {inc}",
+                    f"New price = {p['price']} + {inc}"]
+        if kind == "discount_price":
+            off = _pm_fmt(Fraction(p["price"] * p["p"], 100))
+            return [f"Discount = {p['p']}% of ₹{p['price']} "
+                    f"= ₹{off}",
+                    f"Selling price = {p['price']} − {off}"]
+        if kind == "find_whole_from_percent":
+            return [f"Number = {p['part']} ÷ {p['p']} × 100"]
+        if kind == "ratio_share":
+            parts = p["a"] + p["b"]
+            each = p["total"] // parts
+            share = p["a"] if p["ask"] == "first" else p["b"]
+            return [f"Total parts = {parts}, each part "
+                    f"= ₹{each}",
+                    f"{p['ask']} part = {share} × {each}"]
+        if kind == "ratio_simplify":
+            g = math.gcd(p["a"], p["b"])
+            return [f"HCF of {p['a']} and {p['b']} is {g}",
+                    f"Divide both numbers by {g}"]
+        if kind == "unitary_method":
+            return [f"Cost of 1 pen = ₹{p['total']} ÷ "
+                    f"{p['n']} = ₹{p['unit']}",
+                    f"Cost of {p['m']} pens = {p['unit']} × "
+                    f"{p['m']}"]
+        if kind == "average":
+            return [f"Sum = {' + '.join(str(x) for x in p['nums'])} "
+                    f"= {sum(p['nums'])}",
+                    f"Average = {sum(p['nums'])} ÷ "
+                    f"{len(p['nums'])}"]
+        if kind == "hcf":
+            x, y = max(p["a"], p["b"]), min(p["a"], p["b"])
+            lines = []
+            while y:
+                lines.append(f"{x} = {x // y} × {y} + {x % y}")
+                x, y = y, x % y
+            return lines
+        if kind == "lcm":
+            g = math.gcd(p["a"], p["b"])
+            return [f"LCM = {p['a']} × {p['b']} ÷ "
+                    f"HCF({p['a']}, {p['b']}) "
+                    f"= {p['a'] * p['b']} ÷ {g}"]
+        if kind == "compound_interest":
+            lines = ["Amount = P × (1 + R/100)^T"]
+            amt = Fraction(p["principal"])
+            for yr in range(1, p["years"] + 1):
+                iy = Fraction(amt * p["rate"], 100)
+                amt += iy
+                lines.append(f"Year {yr}: interest "
+                             f"= {_pm_fmt(iy)}, amount "
+                             f"= {_pm_fmt(amt)}")
+            lines.append(f"Interest = {_pm_fmt(amt)} − "
+                         f"{p['principal']}")
+            return lines
+        if kind == "square_of":
+            return [f"{p['n']}² = {p['n']} × {p['n']}"]
+        if kind == "sqrt_perfect":
+            return [f"{p['root']} × {p['root']} "
+                    f"= {p['number']}"]
+        if kind == "cube_of":
+            return [f"{p['n']}³ = {p['n']} × {p['n']} × "
+                    f"{p['n']}"]
+        if kind == "exponent_value":
+            chain = " × ".join([str(p["base"])] * p["exp"])
+            return [f"{p['base']}^{p['exp']} = {chain}"]
+        if kind == "profit_loss":
+            if p["variant"] == "profit":
+                return [f"Profit = SP − CP = {p['sp']} − "
+                        f"{p['cp']}"]
+            return [f"Loss = CP − SP = {p['cp']} − {p['sp']}"]
+        if kind == "speed_distance_time":
+            if p["variant"] == "speed":
+                return [f"Speed = {p['distance']} ÷ "
+                        f"{p['time']}"]
+            if p["variant"] == "distance":
+                return [f"Distance = {p['speed']} × "
+                        f"{p['time']}"]
+            return [f"Time = {p['distance']} ÷ {p['speed']}"]
+        if kind == "evaluate_quadratic":
+            return [f"Put x = {p['x']}: {p['a']} × "
+                    f"({p['x']})² + {p['b']} × ({p['x']}) "
+                    f"+ {p['c']}",
+                    f"= {p['a'] * p['x'] * p['x']} + "
+                    f"{p['b'] * p['x']} + {p['c']}"]
+        if kind == "evaluate_two_vars":
+            return [f"Put x = {p['x']}, y = {p['y']}: "
+                    f"{p['a']} × {p['x']} + {p['b']} × "
+                    f"{p['y']}",
+                    f"= {p['a'] * p['x']} + "
+                    f"{p['b'] * p['y']}"]
+        if kind == "equation_both_sides":
+            return [f"{p['a']}x − {p['c']}x = {p['d']} − "
+                    f"({p['b']}) = {p['d'] - p['b']}",
+                    f"{p['a'] - p['c']}x = {p['d'] - p['b']}"]
+        if kind == "simultaneous":
+            s = p["x"] + p["y"]
+            d = p["x"] - p["y"]
+            lines = [f"Adding the equations: 2x = {s} + "
+                     f"{d} = {2 * p['x']}",
+                     f"x = {p['x']}"]
+            if p["ask"] == "y":
+                lines.append(f"y = {s} − {p['x']}")
+            return lines
+        if kind == "factorise_quadratic":
+            return [f"Two numbers with sum "
+                    f"{p['a'] + p['b']} and product "
+                    f"{p['a'] * p['b']}: {p['a']} and "
+                    f"{p['b']}"]
+        if kind == "identity_square":
+            return [f"(x + b)² = x² + 2bx + b² with "
+                    f"b = {p['a']}",
+                    f"= x² + {2 * p['a']}x + "
+                    f"{p['a'] * p['a']}"]
+        if kind == "identity_diff_square":
+            return [f"(x + a)(x − a) = x² − a²",
+                    f"= x² − {p['a'] * p['a']}"]
+        if kind == "identity_numeric":
+            if p["variant"] == "square":
+                k = p["n"] - 100
+                if k > 0:
+                    return [f"{p['n']}² = (100 + {k})² "
+                            f"= 10000 + {200 * k} + "
+                            f"{k * k}"]
+                k = -k
+                return [f"{p['n']}² = (100 − {k})² "
+                        f"= 10000 − {200 * k} + {k * k}"]
+            return [f"{p['m'] - p['k']} × {p['m'] + p['k']} "
+                    f"= {p['m']}² − {p['k']}² "
+                    f"= {p['m'] * p['m']} − "
+                    f"{p['k'] * p['k']}"]
+        if kind == "ap_sum":
+            return [f"S{p['n']} = {p['n']}/2 × (2 × "
+                    f"{p['a']} + {p['n'] - 1} × {p['d']})"]
+        if kind == "gp_nth_term":
+            return [f"nth term = {p['a']} × "
+                    f"{p['r']}^{p['n'] - 1}"]
+        if kind == "gp_sum":
+            return [f"S{p['n']} = {p['a']} × "
+                    f"({p['r']}^{p['n']} − 1) ÷ "
+                    f"({p['r']} − 1)"]
+        if kind == "polynomial_add_sub":
+            if p["variant"] == "add":
+                return [f"x terms: {p['a1']}x + {p['a2']}x",
+                        f"Constants: {p['b1']} + "
+                        f"({p['b2']})"]
+            return [f"x terms: {p['a1']}x − {p['a2']}x",
+                    f"Constants: {p['b1']} − ({p['b2']})"]
+        if kind == "simplify_like_terms":
+            return [f"({p['a']} + {p['b']} − {p['c']})x"]
+        if kind == "index_laws":
+            if p["variant"] == "product":
+                return [f"{p['base']}^{p['m']} × "
+                        f"{p['base']}^{p['n']} "
+                        f"= {p['base']}^{p['m'] + p['n']}"]
+            if p["variant"] == "quotient":
+                return [f"{p['base']}^{p['m']} ÷ "
+                        f"{p['base']}^{p['n']} "
+                        f"= {p['base']}^{p['m'] - p['n']}"]
+            return [f"({p['base']}^{p['m']})^{p['n']} "
+                    f"= {p['base']}^{p['m'] * p['n']}"]
+        if kind == "complementary_angle":
+            return ["Complementary angles add to 90°",
+                    f"Other angle = 90° − {p['a']}°"]
+        if kind == "triangle_exterior_angle":
+            if p["variant"] == "exterior":
+                return ["Exterior angle = sum of the two "
+                        "opposite interior angles",
+                        f"= {p['p']}° + {p['q']}°"]
+            return ["Exterior angle = sum of the two "
+                    "opposite interior angles",
+                    f"Other angle = {p['exterior']}° − "
+                    f"{p['p']}°"]
+        if kind == "isosceles_angle":
+            if p["variant"] == "base":
+                return [f"Each base angle = (180° − "
+                        f"{p['vertex']}°) ÷ 2"]
+            return [f"Vertex angle = 180° − 2 × "
+                    f"{p['base']}°"]
+        if kind == "quadrilateral_fourth_angle":
+            rest = p["a"] + p["b"] + p["c"]
+            return ["Angles of a quadrilateral add to 360°",
+                    f"Fourth angle = 360° − {rest}°"]
+        if kind == "parallelogram_angle":
+            if p["variant"] == "opposite":
+                return ["Opposite angles of a parallelogram "
+                        "are equal"]
+            return ["Adjacent angles add to 180°",
+                    f"Adjacent angle = 180° − {p['a']}°"]
+        if kind == "square_area":
+            return [f"Area = side × side = {p['side']} × "
+                    f"{p['side']}"]
+        if kind == "square_perimeter":
+            return [f"Perimeter = 4 × side = 4 × "
+                    f"{p['side']}"]
+        if kind == "rectangle_perimeter":
+            return [f"Perimeter = 2 × ({p['length']} + "
+                    f"{p['breadth']})"]
+        if kind == "triangle_area":
+            return [f"Area = 1/2 × {p['base']} × "
+                    f"{p['height']}"]
+        if kind == "triangle_perimeter":
+            return [f"Perimeter = {p['a']} + {p['b']} + "
+                    f"{p['c']}"]
+        if kind == "rhombus_area":
+            return [f"Area = 1/2 × {p['d1']} × {p['d2']}"]
+        if kind == "trapezium_area":
+            return [f"Area = 1/2 × ({p['a']} + {p['b']}) "
+                    f"× {p['h']}"]
+        if kind == "circle_area":
+            return [f"Area = πr² = 22/7 × {p['r']}²"]
+        if kind == "circle_radius_from_circumference":
+            return [f"r = {p['circumference']} × 7 ÷ 44"]
+        if kind == "polygon_interior_sum":
+            return [f"Sum = ({p['n']} − 2) × 180°"]
+        if kind == "regular_polygon_exterior":
+            return [f"Exterior angle = 360° ÷ {p['n']}"]
+        if kind == "parallel_lines_angle":
+            if p["variant"] == "corresponding":
+                return ["Corresponding angles are equal"]
+            return ["Co-interior angles add to 180°",
+                    f"Angle = 180° − {p['a']}°"]
+        if kind == "pythagoras":
+            if p["variant"] == "hypotenuse":
+                return [f"h² = {p['p']}² + {p['q']}² "
+                        f"= {p['h'] * p['h']}",
+                        f"h = √{p['h'] * p['h']}"]
+            given = p["given_leg"]
+            other = p["q"] if given == p["p"] else p["p"]
+            return [f"Other leg² = {p['h']}² − {given}² "
+                    f"= {other * other}",
+                    f"Other leg = √{other * other}"]
+        if kind == "sector_area":
+            return [f"Area = {p['theta']}/360 × 22/7 × "
+                    f"{p['r']}²"]
+        if kind == "coordinate_distance":
+            if p["variant"] == "axis":
+                return [f"Distance = |{p['x2']} − "
+                        f"({p['x1']})|"]
+            return [f"Distance = √({p['x']}² + "
+                    f"{p['y']}²)"]
+        if kind == "coordinate_midpoint":
+            return [f"Midpoint = (({p['x1']} + "
+                    f"{p['x2']})/2, ({p['y1']} + "
+                    f"{p['y2']})/2)"]
+        if kind == "cube_volume":
+            return [f"Volume = side³ = {p['side']}³"]
+        if kind == "cuboid_surface_area":
+            return [f"TSA = 2 × ({p['length']} × "
+                    f"{p['breadth']} + {p['breadth']} × "
+                    f"{p['height']} + {p['height']} × "
+                    f"{p['length']})"]
+        if kind == "cuboid_lsa":
+            return [f"LSA = 2 × {p['height']} × "
+                    f"({p['length']} + {p['breadth']})"]
+        if kind == "cylinder_csa":
+            return [f"CSA = 2πrh = 2 × 22/7 × {p['r']} × "
+                    f"{p['h']}"]
+        if kind == "cylinder_tsa":
+            return [f"TSA = 2πr(r + h) = 2 × 22/7 × "
+                    f"{p['r']} × ({p['r']} + {p['h']})"]
+        if kind == "sphere_volume":
+            return [f"Volume = 4/3 × 22/7 × {p['r']}³"]
+        if kind == "sphere_surface_area":
+            return [f"Surface area = 4 × 22/7 × "
+                    f"{p['r']}²"]
+        if kind == "hemisphere_volume":
+            return [f"Volume = 2/3 × 22/7 × {p['r']}³"]
+        if kind == "hemisphere_tsa":
+            return [f"TSA = 3 × 22/7 × {p['r']}²"]
+        if kind == "cone_csa":
+            return [f"Slant height l = √({p['r']}² + "
+                    f"{p['h']}²) = {p['l']}",
+                    f"CSA = πrl = 22/7 × {p['r']} × "
+                    f"{p['l']}"]
+        if kind == "fencing_cost":
+            perim = 2 * (p["length"] + p["breadth"])
+            return [f"Perimeter = {perim} m",
+                    f"Cost = {perim} × ₹{p['rate']}"]
+        if kind == "tiling_cost":
+            area = p["length"] * p["breadth"]
+            return [f"Area = {p['length']} × "
+                    f"{p['breadth']} = {area} m²",
+                    f"Cost = {area} × ₹{p['rate']}"]
+        if kind == "litres_capacity":
+            vol = (p["length"] * p["breadth"]
+                   * p["height"])
+            return [f"Volume = {vol} cm³",
+                    f"Litres = {vol} ÷ 1000"]
+        if kind == "bag_three_colours":
+            total = p["red"] + p["blue"] + p["green"]
+            return [f"Total balls = {total}",
+                    f"P({p['ask']}) = {p[p['ask']]}/{total}"]
+        if kind == "die_event":
+            if p["variant"] == "even":
+                listing, count = "2, 4, 6", 3
+            elif p["variant"] == "odd":
+                listing, count = "1, 3, 5", 3
+            elif p["variant"] == "prime":
+                listing, count = "2, 3, 5", 3
+            else:
+                nums = [x for x in range(1, 7)
+                        if x % p["k"] == 0]
+                listing = ", ".join(str(x) for x in nums)
+                count = len(nums)
+            return [f"Favourable outcomes: {listing} — "
+                    f"{count} out of 6",
+                    f"P = {count}/6"]
+        if kind == "coins_exactly_heads":
+            ways = math.comb(p["n"], p["k"])
+            return [f"Total outcomes = {2 ** p['n']}, "
+                    f"favourable = {ways}",
+                    f"P = {ways}/{2 ** p['n']}"]
+        if kind == "card_probability":
+            return [f"Favourable cards "
+                    f"= {p['favourable']} out of 52",
+                    f"P = {p['favourable']}/52"]
+        if kind == "two_dice_sum":
+            s = p["s"]
+            pairs = [(i, s - i) for i in range(1, 7)
+                     if 1 <= s - i <= 6]
+            listing = ", ".join(f"({i}, {j})"
+                                for i, j in pairs)
+            return [f"Outcomes: {listing} — "
+                    f"{len(pairs)} out of 36",
+                    f"P = {len(pairs)}/36"]
+        if kind == "two_draw_probability":
+            total = p["red"] + p["blue"]
+            return [f"P(first red) = {p['red']}/{total}",
+                    f"P(second red) = {p['red'] - 1}/"
+                    f"{total - 1}",
+                    f"P(both) = {p['red']}/{total} × "
+                    f"{p['red'] - 1}/{total - 1}"]
+        if kind == "complement_probability":
+            return [f"P(not E) = 1 − {p['a']}/{p['b']}"]
+        if kind == "word_letter_probability":
+            word = p["word"]
+            if p["variant"] == "vowel":
+                count = sum(1 for ch in word
+                            if ch in "AEIOU")
+                return [f"Vowels in {word}: {count} of "
+                        f"{len(word)} letters",
+                        f"P = {count}/{len(word)}"]
+            count = word.count(p["letter"])
+            return [f"Letter {p['letter']} appears "
+                    f"{count} time(s) in {word}",
+                    f"P = {count}/{len(word)}"]
         return []
 
     def _pm_parse_number(text):
@@ -1863,6 +2271,44 @@ def create_app():
         except (ValueError, ZeroDivisionError):
             return None
 
+    def _pm_poly_coeffs(text):
+        """Parse an expanded quadratic in x into (x^2, x,
+        constant) coefficients, or None (Wave 54 — mirrors
+        test_mode._poly_coeffs for the Practice Mode checker)."""
+        t = str(text).strip().lower().replace(" ", "")
+        t = t.replace("²", "^2").replace("**", "^").replace(
+            "−", "-")
+        if "=" in t:
+            t = t.split("=")[-1]
+        if "x" not in t:
+            return None
+        coeffs = [Fraction(0), Fraction(0), Fraction(0)]
+        for term in re.findall(r"[+-]?[^+-]+", t):
+            if not term:
+                continue
+            sign = 1
+            if term[0] == "+":
+                term = term[1:]
+            elif term[0] == "-":
+                sign = -1
+                term = term[1:]
+            if not term:
+                return None
+            try:
+                if term.endswith("x^2"):
+                    num = term[:-3]
+                    coeffs[0] += sign * (
+                        Fraction(num) if num else Fraction(1))
+                elif term.endswith("x"):
+                    num = term[:-1]
+                    coeffs[1] += sign * (
+                        Fraction(num) if num else Fraction(1))
+                else:
+                    coeffs[2] += sign * Fraction(term)
+            except (ValueError, ZeroDivisionError):
+                return None
+        return tuple(coeffs)
+
     def _pm_check(state, given):
         """Fraction-exact check of a typed answer against the
         generator's answer for the session's current item."""
@@ -1881,6 +2327,61 @@ def create_app():
                 except (ValueError, ZeroDivisionError):
                     pass
             return got == {Fraction(p["r1"]), Fraction(p["r2"])}
+        # Wave 54 text-answer kinds — checked from params,
+        # mirroring test_mode's checkers.
+        kind = state.get("kind")
+        p = state["params"]
+        if kind == "ratio_simplify":
+            g = math.gcd(p["a"], p["b"])
+            m = re.search(r"(\d+)\s*[:/]\s*(\d+)", str(given))
+            return bool(m) and (
+                int(m.group(1)), int(m.group(2))) == (
+                p["a"] // g, p["b"] // g)
+        if kind == "factorise_quadratic":
+            t = str(given).replace("−", "-")
+            found = [int(num) if sign == "+" else -int(num)
+                     for sign, num in
+                     re.findall(r"x\s*([+-])\s*(\d+)", t)]
+            return len(found) == 2 and sorted(found) == sorted(
+                [p["a"], p["b"]])
+        if kind in ("identity_square", "identity_diff_square",
+                    "polynomial_add_sub"):
+            if kind == "identity_square":
+                a = p["a"]
+                expected = (Fraction(1), Fraction(2 * a),
+                            Fraction(a * a))
+            elif kind == "identity_diff_square":
+                a = p["a"]
+                expected = (Fraction(1), Fraction(0),
+                            Fraction(-a * a))
+            else:
+                s = 1 if p["variant"] == "add" else -1
+                expected = (Fraction(0),
+                            Fraction(p["a1"] + s * p["a2"]),
+                            Fraction(p["b1"] + s * p["b2"]))
+            return _pm_poly_coeffs(given) == expected
+        if kind == "simplify_like_terms":
+            total = p["a"] + p["b"] - p["c"]
+            t = str(given).strip().replace(
+                "−", "-").replace(" ", "")
+            m = re.fullmatch(r"([+-]?\d+)x", t)
+            if m:
+                return int(m.group(1)) == total
+            return (t in ("x", "+x") and total == 1) or (
+                t == "-x" and total == -1)
+        if kind == "coordinate_midpoint":
+            expected = [Fraction(p["x1"] + p["x2"], 2),
+                        Fraction(p["y1"] + p["y2"], 2)]
+            found = []
+            for token in re.findall(
+                    r"[+-]?\d+(?:\.\d+)?(?:\s*/\s*\d+)?",
+                    str(given).replace("−", "-")):
+                try:
+                    found.append(Fraction(
+                        token.replace(" ", "")))
+                except (ValueError, ZeroDivisionError):
+                    continue
+            return found == expected
         # expand_binomials: a text answer — compare with spaces
         # and ^2/² spelling normalised.
         def _norm(s):
@@ -1913,12 +2414,17 @@ def create_app():
             return jsonify({"ok": False,
                             "error": "bad-request"}), 400
         previous = (session.get("pm_item") or {}).get("question")
+        previous_kind = (session.get("pm_item") or {}).get("kind")
         item = None
         for _ in range(6):
             item = practice_gen.generate_question(
                 class_num, topic,
                 seed=secrets.randbelow(1 << 30))
-            if item["question"] != previous:
+            # Wave 54: with the 100-template pool, also avoid
+            # serving the same TEMPLATE twice in a row, not
+            # just the same question text.
+            if item["question"] != previous and \
+                    item["kind"] != previous_kind:
                 break
         session["pm_item"] = {
             "class_num": item["class_num"],

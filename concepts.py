@@ -28,7 +28,9 @@ concept-style asks (see fallback.py's gating).
 CONCEPTS = [
     {
         "id": "pythagoras",
-        "keywords": ("pythagoras", "पाइथागोरस", "paithagoras"),
+        "keywords": ("pythagoras", "पाइथागोरस", "paithagoras",
+                     "right angled triangle",
+                     "right angle triangle", "समकोण त्रिभुज"),
         "title": "Pythagoras Theorem",
         "formula": "In a right-angled triangle: (hypotenuse)² = "
                    "(base)² + (perpendicular)², i.e. c² = a² + b²",
@@ -50,7 +52,8 @@ CONCEPTS = [
         "id": "quadratic_formula",
         "keywords": ("quadratic formula", "द्विघात सूत्र",
                      "dvighat sutra", "shridharacharya",
-                     "श्रीधराचार्य"),
+                     "श्रीधराचार्य", "द्विघात समीकरण",
+                     "quadratic equation"),
         "title": "Quadratic Formula",
         "formula": "For ax² + bx + c = 0:  x = (-b ± √(b² - 4ac)) "
                    "/ (2a)",
@@ -136,7 +139,8 @@ CONCEPTS = [
     {
         "id": "area_circle",
         "keywords": ("area of circle", "area of a circle",
-                     "वृत्त का क्षेत्रफल", "vritt ka kshetrafal",
+                     "वृत्त का क्षेत्रफल", "वृत्त के क्षेत्रफल",
+                     "vritt ka kshetrafal",
                      "circle ka area", "circumference",
                      "वृत्त की परिधि", "circle ki paridhi"),
         "title": "Circle: Area & Circumference",
@@ -156,7 +160,7 @@ CONCEPTS = [
         "id": "area_triangle",
         "keywords": ("area of triangle", "area of a triangle",
                      "त्रिभुज का क्षेत्रफल", "tribhuj ka kshetrafal",
-                     "triangle ka area", "heron"),
+                     "triangle ka area", "tribhuj ka area", "heron"),
         "title": "Area of a Triangle",
         "formula": "Area = ½ × base × height",
         "explain": "The height must be the perpendicular distance "
@@ -227,7 +231,7 @@ CONCEPTS = [
         "id": "prime_composite",
         "keywords": ("prime number", "composite number",
                      "अभाज्य संख्या", "भाज्य संख्या",
-                     "abhaajy", "abajya", "abhayj"),
+                     "abhaajy", "abajya", "abhayj", "prime no"),
         "title": "Prime and Composite Numbers",
         "formula": "Prime: a number greater than 1 with exactly "
                    "two factors — 1 and itself. Composite: a "
@@ -267,7 +271,8 @@ CONCEPTS = [
     {
         "id": "simple_interest",
         "keywords": ("simple interest", "साधारण ब्याज",
-                     "sadharan byaj", "saadharan byaaj"),
+                     "sadharan byaj", "saadharan byaaj", "byaj",
+                     "ब्याज"),
         "title": "Simple Interest",
         "formula": "SI = (P × R × T) / 100,  Amount = P + SI",
         "explain": "P = principal (starting money), R = rate % "
@@ -305,7 +310,8 @@ CONCEPTS = [
         "id": "mean_median_mode",
         "keywords": ("mean median mode", "median", "mode kya",
                      "mean kya", "माध्य", "माध्यिका", "बहुलक",
-                     "maadhya", "ausat aur"),
+                     "maadhya", "madhyika", "ausat aur", "ausat",
+                     "औसत"),
         "title": "Mean, Median and Mode",
         "formula": "Mean = (sum of all values) / (number of "
                    "values); Median = middle value after sorting; "
@@ -327,7 +333,7 @@ CONCEPTS = [
     {
         "id": "probability",
         "keywords": ("probability", "प्रायिकता", "prayikta",
-                     "prayekta"),
+                     "prayekta", "संभावना", "sambhavna"),
         "title": "Probability",
         "formula": "Probability = (number of favourable outcomes) "
                    "/ (total number of equally likely outcomes)",
@@ -350,8 +356,9 @@ CONCEPTS = [
         "keywords": ("arithmetic progression",
                      "geometric progression", "nth term",
                      "n-th term", "समांतर श्रेढ़ी", "गुणोत्तर श्रेढ़ी",
+                     "समांतर श्रेणी", "ज्यामितीय श्रेणी",
                      "samaantar shreni", "ap ka formula",
-                     "gp ka formula"),
+                     "gp ka formula", "ap kya hoti", "gp kya hoti"),
         "title": "AP and GP: nth Term",
         "formula": "AP: aₙ = a + (n - 1)d  (same difference d "
                    "added each time).  GP: aₙ = a × r^(n-1)  "
@@ -371,6 +378,7 @@ CONCEPTS = [
         "id": "speed_distance_time",
         "keywords": ("speed distance", "distance speed",
                      "चाल और दूरी", "chaal doori", "chaal aur doori",
+                     "doori samay", "चाल दूरी", "दूरी और समय",
                      "speed ka formula", "distance ka formula"),
         "title": "Speed, Distance and Time",
         "formula": "Distance = Speed × Time;  Speed = Distance / "
@@ -413,7 +421,8 @@ CONCEPTS = [
     {
         "id": "algebra_basics",
         "keywords": ("algebra", "बीजगणित", "beejganit",
-                     "bijganit"),
+                     "bijganit", "samikaran", "गुणनखंड",
+                     "gunaankhand"),
         "title": "Algebra — Letters for Numbers",
         "formula": "In algebra, letters like x stand for unknown "
                    "numbers. An equation like 2x + 3 = 11 stays "
@@ -433,7 +442,7 @@ CONCEPTS = [
     },
     {
         "id": "factorial",
-        "keywords": ("factorial", "फैक्टोरियल"),
+        "keywords": ("factorial", "फैक्टोरियल", "क्रमगुणित"),
         "title": "Factorial",
         "formula": "n! = n × (n - 1) × (n - 2) × ... × 2 × 1, "
                    "and 0! = 1",
