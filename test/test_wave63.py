@@ -39,6 +39,23 @@ FIGURE_COUNTS = {
     # ganitra-wave64-notes.md).
     "cbse-12-2024-hindi": 2, "cbse-12-2023-hindi": 3,
     "cbse-10-2024-hindi": 4, "cbse-10-2022-term2-hindi": 3,
+    # Wave 66: all-boards expansion — census counted from the
+    # rendered sheets (see ganitra-wave66-notes.md). Hindi
+    # counts can differ from the English half of the same
+    # booklet where the Hindi figure-reference phrasing falls
+    # outside the Hindi marker regex (accepted, documented).
+    "rbse-10-2025": 3, "rbse-10-2025-hindi": 2,
+    "rbse-12-2025": 0, "rbse-12-2025-hindi": 0,
+    "cbse-12-2022-term2-hindi": 0,
+    "isc-12-2025": 2, "icse-10-2025": 2,
+    "up-10-2025": 1, "up-10-2025-hindi": 0,
+    "up-12-2025": 0, "up-12-2025-hindi": 0,
+    "hbse-10-2024-hindi": 2, "hbse-12-2024-hindi": 1,
+    "mpbse-10-2025": 2, "mpbse-10-2025-hindi": 0,
+    "bseb-10-2025": 2, "bseb-10-2025-hindi": 2,
+    "mpbse-12-2025": 0, "mpbse-12-2025-hindi": 0,
+    "bseb-12-2025": 0, "bseb-12-2025-hindi": 0,
+    "msbshse-10-2025-algebra": 0,
 }
 
 
@@ -123,11 +140,34 @@ def test_sheet_is_the_complete_typed_paper(client, paper):
 
 
 def test_header_maximum_marks_are_the_real_totals(client):
-    # 80 for every full paper (incl. ones whose transcription
-    # omits a question or two), 40 for the 2022 Term-2 papers.
+    # 80 for every full CBSE/HBSE paper (incl. ones whose
+    # transcription omits a question or two), 40 for the 2022
+    # Term-2 papers. Wave 66: other boards print their own
+    # totals (UP 70/100, MP 75, BSEB 100, Maharashtra 40) and
+    # alternative-section papers carry a max_marks override —
+    # the header must show each paper's own maximum. (For the
+    # original CBSE/HBSE papers the builder's section totals
+    # give the printed 80 even where a transcription omits a
+    # question or two, so the raw stored sum is not the
+    # oracle there.)
+    wave66_ids = {
+        "rbse-10-2025", "rbse-10-2025-hindi", "rbse-12-2025",
+        "rbse-12-2025-hindi", "cbse-12-2022-term2-hindi",
+        "isc-12-2025", "icse-10-2025", "up-10-2025",
+        "up-10-2025-hindi", "up-12-2025", "up-12-2025-hindi",
+        "hbse-10-2024-hindi", "hbse-12-2024-hindi",
+        "mpbse-10-2025", "mpbse-10-2025-hindi", "mpbse-12-2025",
+        "mpbse-12-2025-hindi", "bseb-10-2025",
+        "bseb-10-2025-hindi", "bseb-12-2025",
+        "bseb-12-2025-hindi", "msbshse-10-2025-algebra",
+    }
     for p in papers_data.PAPERS:
         body = _paper_page(client, p["id"])
-        want = 40 if "term2" in p["id"] else 80
+        if p["id"] in wave66_ids:
+            want = p.get("max_marks",
+                         papers_data.paper_total_marks(p))
+        else:
+            want = 40 if "term2" in p["id"] else 80
         label = ("अधिकतम अंक" if p.get("medium") == "hindi"
                  else "Maximum Marks")
         assert f"{label} : {want}" in body, p["id"]
@@ -160,7 +200,7 @@ def test_figure_markers_match_census(client):
         n = body.count("[Figure]")
         assert n == FIGURE_COUNTS[p["id"]], p["id"]
         total += n
-    assert total == 45
+    assert total == 64
 
 
 def test_section_order_and_subjects(client):

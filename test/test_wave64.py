@@ -71,7 +71,8 @@ def test_hindi_papers_complete_and_real():
             assert len(DEV.findall(q["text"])) >= 5
             assert " OR " not in q["text"]
     assert total == 128
-    assert len(papers_data.PAPERS) == 17
+    # Wave 66: library grew from 17 to 39 papers (all boards).
+    assert len(papers_data.PAPERS) == 39
 
 
 def test_hindi_papers_restore_questions_the_english_entries_omit():
@@ -91,8 +92,12 @@ def test_hindi_papers_restore_questions_the_english_entries_omit():
 
 def test_list_labels_every_medium(client):
     body = client.get("/papers").get_data(as_text=True)
-    assert body.count("हिंदी माध्यम · Hindi Medium") == 4
-    assert body.count("English Medium") == 13
+    # Wave 66: the library grew to 39 papers (15 Hindi-medium,
+    # 24 English-medium) across 9 boards. Counted via the chip
+    # markup: two Wave-66 entry notes also contain the words
+    # "English Medium" as plain text.
+    assert body.count("हिंदी माध्यम · Hindi Medium</span>") == 15
+    assert body.count("English Medium</span>") == 24
     for p in papers_data.PAPERS:
         assert p["source_url"] not in body
 
