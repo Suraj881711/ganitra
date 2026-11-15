@@ -32,6 +32,18 @@
         href="{{ url_for('static', filename='scene-tiger.webp', v='29') }}" />
   <link rel="preload" as="image"
         href="{{ url_for('static', filename='scene-boy.webp', v='29') }}" />
+  {# Wave 61: import map for the lazily-loaded 3D Logo Jungle
+     (static/scene3d.js). The map itself is tiny and inert —
+     nothing is fetched until the bootstrap at the end of this
+     page dynamically imports the module, long after first
+     paint. The vendored three.js files ride the service
+     worker's network-first code path like any other script. #}
+  <script type="importmap">
+  {"imports": {
+    "three": "{{ url_for('static', filename='vendor/three.module.js') }}",
+    "three/addons/": "{{ url_for('static', filename='vendor/addons/') }}"
+  }}
+  </script>
 {% endblock %}
 {% block header %}
   {# Wave 7: slim chat top bar — brand, Saathi pill, compact Dhyaan
@@ -108,6 +120,16 @@
                carries while chasing the tiger, then throws away. #}
             <span class="scene-stick" id="scene-stick"
               aria-hidden="true"></span>
+            {# Wave 61: the 3D stage layer. Empty until
+               static/scene3d.js lazily loads the four real
+               models and swaps the stage to 3D (the stage gets
+               .scene-3d-on; CSS then hides the 2D sprites and
+               this layer fades in). Until that moment — and
+               forever on any failure — the 2D scenes above run
+               exactly as before. Absolutely positioned, so it
+               can never move the composer or the cards. #}
+            <div class="scene-3d" id="scene-3d"
+              aria-hidden="true"></div>
           </div>
           {% if saathi_name %}
             <h2 class="empty-greeting">{{ saathi_greeting }}</h2>
@@ -2461,6 +2483,59 @@
       });
 
       schedule(true);
+    })();
+  </script>
+
+  <script>
+    /* ---------- Wave 61: 3D Logo Jungle bootstrap ----------
+       Lazily imports static/scene3d.js (the real-3D version of
+       this stage, ported from the verified prototype) once the
+       page is idle AND the stage is on screen. Until the module
+       has loaded all four models, the Wave 23-28 2D director
+       above runs untouched; if anything here fails — no idle
+       callback, no IntersectionObserver, no dynamic import,
+       reduced motion — the 2D scene simply stays, silently.
+       The chat never waits on any of this. */
+    (function () {
+      try {
+        var stage = document.getElementById("scene-stage");
+        if (!stage) return;
+        try {
+          if (window.matchMedia(
+            "(prefers-reduced-motion: reduce)").matches) return;
+        } catch (e) { /* no matchMedia: proceed */ }
+        var started = false;
+        function start() {
+          if (started) return;
+          started = true;
+          import("/static/scene3d.js").catch(function () {
+            /* stay with the 2D scene */
+          });
+        }
+        function whenIdle(fn) {
+          if ("requestIdleCallback" in window) {
+            window.requestIdleCallback(fn, { timeout: 4000 });
+          } else {
+            window.addEventListener("load", function () {
+              window.setTimeout(fn, 600);
+            });
+          }
+        }
+        if ("IntersectionObserver" in window) {
+          var io = new IntersectionObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+              if (entries[i].isIntersecting) {
+                io.disconnect();
+                whenIdle(start);
+                return;
+              }
+            }
+          }, { rootMargin: "200px" });
+          io.observe(stage);
+        } else {
+          whenIdle(start);
+        }
+      } catch (e) { /* decoration only — never break the page */ }
     })();
   </script>
 {% endblock %}
