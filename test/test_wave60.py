@@ -8,7 +8,7 @@ home, the timed-test confirmation gates (/test while the
 paper is on screen, the classic quiz while its form is on
 screen, the Board chapter test always while questions show),
 the print views' back links, the i18n keys in all six
-languages, the bumped delivery pins (?v=34 / cache v10), and
+languages, the bumped delivery pins (?v=35 / cache v10), and
 that visiting inner pages never disturbs a saved chat.
 """
 from pathlib import Path
@@ -167,7 +167,7 @@ def test_delivery_pins_bumped_for_new_css():
         encoding="utf-8")
     sw = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
     css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
-    assert "v='34'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v11"' in sw
+    assert "v='36'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v13"' in sw
     assert ".backnav-btn" in css
     assert "min-height: 44px" in css

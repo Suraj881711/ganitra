@@ -169,7 +169,8 @@ def test_scene_logic_under_node():
     driver = INDEX[start:end] + r"""
 var out = {};
 out.order = SCENE_ORDER.slice();
-out.ms = [SCENE_MS.eagle, SCENE_MS.tiger, SCENE_MS.chase];
+out.ms = [SCENE_MS.eagle, SCENE_MS.tiger, SCENE_MS.chase,
+          SCENE_MS.lion];
 function draws(prev, n) {
   var seen = {}, bad = 0;
   for (var i = 0; i < n; i++) {
@@ -183,6 +184,7 @@ out.from_null = draws(null, 600);
 out.from_eagle = draws("eagle", 600);
 out.from_tiger = draws("tiger", 600);
 out.from_chase = draws("chase", 600);
+out.from_lion = draws("lion", 600);
 var prev = null, rep = 0;
 for (var k = 0; k < 3000; k++) {
   var nx = pickSceneName(prev);
@@ -212,17 +214,24 @@ console.log(JSON.stringify(out));
     p.write_text(driver, encoding="utf-8")
     r = subprocess.run([node, str(p)], capture_output=True, text=True)
     out = json.loads(r.stdout.strip().splitlines()[-1])
-    assert out["order"] == ["eagle", "tiger", "chase"]
-    assert out["ms"] == [4400, 6900, 9000]
+    # Wave 62: the lion joins the rotation (his scene is
+    # 3D-only — the DOM side keeps him "broken" until the 3D
+    # layer activates; the pure logic here has no broken map,
+    # so all four scenes rotate). The old invariants stand:
+    # no back-to-back repeat, full reachability, same timings.
+    assert out["order"] == ["eagle", "tiger", "chase", "lion"]
+    assert out["ms"] == [4400, 6900, 9000, 6900]
     # No back-to-back repeat, ever, and every other scene is
     # reachable from any previous scene (a real shuffle).
     assert out["repeats"] == 0
-    for key in ("from_null", "from_eagle", "from_tiger", "from_chase"):
+    for key in ("from_null", "from_eagle", "from_tiger",
+                "from_chase", "from_lion"):
         assert out[key]["bad"] == 0
-    assert out["from_null"]["seen"] == ["chase", "eagle", "tiger"]
-    assert out["from_eagle"]["seen"] == ["chase", "tiger"]
-    assert out["from_tiger"]["seen"] == ["chase", "eagle"]
-    assert out["from_chase"]["seen"] == ["eagle", "tiger"]
+    assert out["from_null"]["seen"] == ["chase", "eagle", "lion", "tiger"]
+    assert out["from_eagle"]["seen"] == ["chase", "lion", "tiger"]
+    assert out["from_tiger"]["seen"] == ["chase", "eagle", "lion"]
+    assert out["from_chase"]["seen"] == ["eagle", "lion", "tiger"]
+    assert out["from_lion"]["seen"] == ["chase", "eagle", "tiger"]
     # Randomised gaps 25-75s; randomised first scene 5-15s.
     assert out["delay_min"] == 25000
     assert out["delay_max"] == 74999

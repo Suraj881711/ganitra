@@ -9,7 +9,8 @@ files' hashes (artwork never edited); the stage wiring (3D
 layer div + import map + lazy bootstrap in the served chat
 page, 2D fallback intact); scene3d.js's non-blocking markers;
 the CSS swap rules; and the bumped delivery pins
-(?v=34 / cache ganitra-static-v11, models bypass the SW).
+(?v=36 / cache ganitra-static-v13 — merge-4 reconciled,
+models bypass the SW).
 """
 import hashlib
 import json
@@ -64,9 +65,12 @@ def test_total_model_payload_within_35mb():
 
 
 @pytest.mark.parametrize("name,want", [
-    ("lion.glb", "e1f6d3556f751ae00b9cab3611193cd0"),
+    # Wave 62: lion/tiger gained the authored WalkCycle clip,
+    # appended at GLB level — the model and the original clip
+    # inside are byte-preserved; only the file hash moved.
+    ("lion.glb", "0d68ef98dfefa1647fd5d7426c9a4950"),
     ("boy.glb", "0813eaf3b74561813caf397b6aafc66e"),
-    ("tiger.glb", "d6b6fb6f0f42501465ff7f8d574f911f"),
+    ("tiger.glb", "e125ebd2d1b9cf0c7489da200bc7f3a4"),
 ])
 def test_models_byte_identical_to_prototype(name, want):
     got = hashlib.md5((MODELS / name).read_bytes()).hexdigest()
@@ -128,12 +132,19 @@ def test_stage_wiring_in_template():
 
 def test_scene3d_module_markers():
     s3d = (ROOT / "static" / "scene3d.js").read_text(encoding="utf-8")
-    for marker in ("scene-3d-on", "/static/models/", "logo-full-t.png",
+    # Wave 62B: markers track the current module — "logo-full-t.png"
+    # (plaque texture) -> "logo-g-t.png" (the G itself, no board);
+    # playTiger/playChase/playLion and the 3D writer hook are gone
+    # (eagle only; the writer is the sprite again).
+    for marker in ("scene-3d-on", "/static/models/", "logo-g-t.png",
                    "LOAD_WATCHDOG_MS",
                    "Math.min(window.devicePixelRatio, 2)",
                    "visibilitychange", "IntersectionObserver",
-                   "0.82919", "lionPush", "boyCarry", "tigerPush",
-                   "eagleSwoop", "__friendsReady"):
+                   "0.82919",
+                   # the director's eagle scene, in three performances
+                   "playEagle", "playEaglePerch", "playEagleCarry",
+                   "playEagleKiss", "MutationObserver",
+                   "__sceneEagleOnly3D", "__friendsReady"):
         assert marker in s3d, marker
 
 
@@ -141,14 +152,17 @@ def test_css_swap_rules():
     css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
     assert ".scene-3d {" in css
     assert ".scene-stage.scene-3d-on" in css
-    assert "touch-action: pan-y" in css
+    # Wave 62: no orbit — the layer never takes pointer events,
+    # so the old pan-y touch rule is gone with it.
+    assert "touch-action: pan-y" not in css
+    assert ".boy-writer-3d" in css
 
 
 def test_delivery_pins_wave61():
     base = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
     sw = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
-    assert "v='34'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v11"' in sw
+    assert "v='36'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v13"' in sw
     assert '"/static/models/"' in sw   # models bypass the worker cache
 
 
@@ -166,7 +180,7 @@ def test_served_chat_page_carries_3d_layer(client):
     assert 'id="scene-3d"' in page
     assert 'id="scene-stage"' in page
     assert "vendor/three.module.js" in page
-    assert "style.css?v=34" in page
+    assert "style.css?v=36" in page
 
 
 @pytest.mark.parametrize("url", [
