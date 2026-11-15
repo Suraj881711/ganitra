@@ -149,25 +149,12 @@
             <p class="empty-sub">{{ t.chat_welcome }}</p>
           {% endif %}
 
-          {# Wave 68: tappable example questions on the empty
-             state — four real questions across languages and
-             topics (English algebra, Hinglish percentage, a
-             Hindi word problem, English geometry), so a new
-             student sees at a glance what to ask and in which
-             language. They are content, not UI chrome: the
-             same four show in every UI language, demonstrating
-             that all three ask-styles work. One tap fills the
-             composer and sends (handler in the chat script). #}
-          <div class="example-chips" id="example-chips">
-            <button type="button" class="example-chip"
-              data-q="Solve x² - 5x + 6 = 0">Solve x² - 5x + 6 = 0</button>
-            <button type="button" class="example-chip"
-              data-q="15% of 240 kitna hoga?">15% of 240 kitna hoga?</button>
-            <button type="button" class="example-chip"
-              data-q="एक ट्रेन 360 km की दूरी 4 घंटे में तय करती है। उसकी चाल ज्ञात कीजिए।">एक ट्रेन 360 km की दूरी 4 घंटे में तय करती है। उसकी चाल ज्ञात कीजिए।</button>
-            <button type="button" class="example-chip"
-              data-q="Find the area of a circle with radius 7 cm">Find the area of a circle with radius 7 cm</button>
-          </div>
+          {# Wave 69 (Suraj, 15 Nov 2026): the Wave-68 example-
+             question chips are REMOVED on his order — "chatbox
+             par jo question likhe hai woh hatane hai, aise kuch
+             example nhi rakhane hai". The empty state is logo +
+             greeting only, and the composer stays plain (Wave
+             27). Do not re-add example questions here. #}
 
           {% if saathi_edit or (not saathi_name and not saathi_skipped) %}
             {# Wave 10: a signed-in student's name/class come from
@@ -393,24 +380,6 @@
         // BOTTOM of the screen (Suraj's layout), not under the
         // greeting.
         document.body.classList.add("chat-active");
-      }
-
-      /* ---------- Wave 68: example-question chips ----------
-         One tap on an empty-state example fills the composer
-         with that exact question and sends it through the
-         normal submit path (same as typing it). The chips
-         live inside #chat-empty, so they vanish with it. */
-      var chipsEl = document.getElementById("example-chips");
-      if (chipsEl) {
-        chipsEl.addEventListener("click", function (ev) {
-          var btn = ev.target && ev.target.closest
-            ? ev.target.closest(".example-chip") : null;
-          if (!btn || solving) return;
-          box.value = btn.getAttribute("data-q")
-            || btn.textContent.trim();
-          box.dispatchEvent(new Event("input"));
-          if (form.requestSubmit) form.requestSubmit();
-        });
       }
 
       /* ---------- Wave 11: multi-chat (account threads) ----------
