@@ -1,4 +1,18 @@
 {% extends "base.html" %}
+{% block structured_data %}
+    {# Wave 50 (SEO): the anonymous homepage IS this sign-in page,
+       so it carries the same structured data as the chat home. #}
+    <script type="application/ld+json">
+    {"@context": "https://schema.org",
+     "@type": "WebApplication",
+     "name": "Ganitra",
+     "url": "https://suraj881711.pythonanywhere.com/",
+     "applicationCategory": "EducationalApplication",
+     "operatingSystem": "Web browser",
+     "description": "Free maths help for Classes 6-12: step-by-step solutions, previous-year papers, practice questions and chapter tests.",
+     "offers": {"@type": "Offer", "price": "0", "priceCurrency": "INR"}}
+    </script>
+{% endblock %}
 {% block body_class %}auth-page{% endblock %}
 {% block main_class %}auth-main{% endblock %}
 {% block header %}

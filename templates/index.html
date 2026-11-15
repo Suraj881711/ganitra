@@ -1,4 +1,17 @@
 {% extends "base.html" %}
+{% block structured_data %}
+    {# Wave 50 (SEO): structured data for the homepage only. #}
+    <script type="application/ld+json">
+    {"@context": "https://schema.org",
+     "@type": "WebApplication",
+     "name": "Ganitra",
+     "url": "https://suraj881711.pythonanywhere.com/",
+     "applicationCategory": "EducationalApplication",
+     "operatingSystem": "Web browser",
+     "description": "Free maths help for Classes 6-12: step-by-step solutions, previous-year papers, practice questions and chapter tests.",
+     "offers": {"@type": "Offer", "price": "0", "priceCurrency": "INR"}}
+    </script>
+{% endblock %}
 {% block body_class %}chat-page{% endblock %}
 {% block main_class %}chat-main{% endblock %}
 {% block head_extra %}
@@ -169,6 +182,7 @@
              "bilkul plane": completely plain, empty. The
              language-switch script no longer sets one either. #}
           <textarea id="q" name="question" rows="1"
+            enterkeyhint="send"
             aria-label="{{ t.enter_question }}"
             required></textarea>
           <div class="chat-bar-tools">
@@ -293,7 +307,25 @@
         // the student has scrolled up on purpose.
         if (!force && !stickBottom) return;
         function go() {
-          if (scroller) scroller.scrollTop = scroller.scrollHeight;
+          if (scroller) {
+            /* Wave 49: glide to the newest answer on short
+               hops; jump instantly when the target is far
+               away (a reopened long chat must not sail down
+               the whole page). scroll-behavior is NOT set in
+               CSS, so the explicit behaviour here decides. */
+            var target = scroller.scrollHeight;
+            var dist = target - scroller.scrollTop
+              - scroller.clientHeight;
+            if (scroller.scrollTo) {
+              scroller.scrollTo({
+                top: target,
+                behavior: dist < scroller.clientHeight * 1.5
+                  ? "smooth" : "auto"
+              });
+            } else {
+              scroller.scrollTop = target;
+            }
+          }
           log.scrollTop = log.scrollHeight;
         }
         go();
@@ -1873,6 +1905,10 @@
 
       /* Enter sends, Shift+Enter makes a new line; box auto-grows. */
       box.addEventListener("keydown", function (ev) {
+        /* Wave 49: an Enter that merely confirms an IME
+           composition (Hinglish suggestion keyboards) is not
+           a send — the student is still typing. */
+        if (ev.isComposing || ev.keyCode === 229) return;
         if (ev.key === "Enter" && !ev.shiftKey) {
           ev.preventDefault();
           if (!solving && box.value.trim()) form.requestSubmit();
@@ -1881,6 +1917,18 @@
       box.addEventListener("input", function () {
         box.style.height = "auto";
         box.style.height = Math.min(box.scrollHeight, 160) + "px";
+        /* Wave 49: a taller composer shrinks the thread
+           area — if the student was riding the bottom, keep
+           the newest answer in view (scrollLog itself
+           no-ops when he has scrolled up on purpose). */
+        scrollLog();
+      });
+
+      /* Wave 49: keyboard open/close and rotation resize
+         the thread area; if the student was at the bottom,
+         stay pinned to the newest answer. */
+      window.addEventListener("resize", function () {
+        if (stickBottom) scrollLog(true);
       });
 
       /* ---------- Voice input (Web Speech API, browser-side) ---------- */
