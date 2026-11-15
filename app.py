@@ -1710,6 +1710,239 @@ def create_app():
     def _papers_signed_in():
         return bool(session.get("user_id"))
 
+    # ------------------------------------------------- wave 63 typed papers
+    # Wave 63 (Suraj, 15 Nov 2026): "practice paper kaa link nhi
+    # chahiye" — no external links anywhere in the Previous Papers
+    # flow. Every stored paper now opens INSIDE the app, typed out
+    # like the real exam paper (the sheet partial
+    # templates/_paper_sheet.html, shared by the paper page and
+    # the stored-paper print view). The helpers below build that
+    # sheet from papers_data ONLY:
+    # - question text is never added to, dropped or reworded —
+    #   _paper_q_lines only inserts display line-breaks (internal
+    #   choices, sub-parts, MCQ options) into the stored text;
+    # - a question that leans on a figure printed in the real
+    #   paper (the data holds no figures) gets a neat [Figure]
+    #   marker under its text;
+    # - the header's Maximum Marks and the instruction counts are
+    #   the REAL paper's totals, derived from the stored sections
+    #   plus the omissions the data itself records (numbering
+    #   gaps, and section deficits where a section follows the
+    #   standard pattern's count and marks — e.g. a last
+    #   case-study question the transcription could not keep).
+    #   Time allowed is not in the data, so the header omits it.
+    _FIGURE_REF = re.compile(
+        r"in the (given )?figure|given figure|figure below|in fig\b"
+        r"|in figure\b|as shown in fig|diagram printed in the paper"
+        r"|venn diagram represents|shown in the paper \(figures",
+        re.IGNORECASE)
+    # Wave 64: the same figure-reference test for the Hindi-medium
+    # papers — the printed Hindi phrases that point at a figure the
+    # data does not hold (a labelled diagram / graph / Venn /
+    # matchstick pattern). Draw-it-yourself instructions ("आकृति
+    # खींचिए", "आलेख बनाइए") and decorative photos (which the
+    # question text never leans on) do NOT match, mirroring the
+    # English rule.
+    _FIGURE_REF_HI = re.compile(
+        r"दी गई आकृति|निम्न आकृति|वेन-आकृति|आकृति \d"
+        r"|आकृतियों में प्रयुक्त|नीचे दर्शाया गया")
+
+    def _has_figure(text):
+        return bool(_FIGURE_REF.search(text)
+                    or _FIGURE_REF_HI.search(text))
+
+    def _paper_q_lines(text, or_word="OR", lower_options=False):
+        """Display lines for one stored question text: a list of
+        (kind, text) with kind "or" for the centred OR divider
+        between internal choices, "line" otherwise. Whitespace
+        only — every word of the stored text survives, in order.
+        Wave 64: Hindi-medium papers split on their printed
+        divider "अथवा" (or_word) and their MCQ options may be
+        printed (a)–(d) instead of (A)–(D) (lower_options)."""
+        lines = []
+        if or_word == "अथवा":
+            # Hindi: "अथवा" is also an ordinary word inside some
+            # questions (e.g. the MCQ option "8 अथवा −8" = "8 or
+            # −8"), so it only counts as the internal-choice
+            # divider when a labelled alternative follows —
+            # (क)/(ख)/(A)/(B) or (iii) (…).
+            parts = re.split(
+                r"\s+अथवा\s+(?=\((?:क|ख|A|B)\)|\((?:iii)\))", text)
+        else:
+            parts = text.split(" " + or_word + " ")
+        for i, part in enumerate(parts):
+            if i:
+                lines.append(("or", or_word))
+            for chunk in re.split(
+                    r"(?<=[.;:।])\s+(?=(?:Reason \(R\):|तर्क \(R\) :))",
+                    part):
+                for piece in re.split(
+                        r"(?<=[.;:।])\s+"
+                        r"(?=\((?:i|ii|iii|iv|a|b|क|ख)\))",
+                        chunk):
+                    if "(A)" in piece and " (B) " in piece:
+                        lines.extend(
+                            ("line", opt) for opt in re.split(
+                                r"\s+(?=\([A-D]\)\s)", piece))
+                    elif (lower_options and "(a)" in piece
+                            and " (b) " in piece):
+                        lines.extend(
+                            ("line", opt) for opt in re.split(
+                                r"\s+(?=\([a-d]\)\s)", piece))
+                    else:
+                        lines.append(("line", piece))
+        return lines
+
+    # Wave 64: Hindi-medium sheet chrome — the section names and
+    # descriptive subtitles the Hindi papers themselves print.
+    _HI_SECTION = {"A": "क", "B": "ख", "C": "ग", "D": "घ", "E": "ङ"}
+    _HI_SUBTITLES = {
+        "A": "बहुविकल्पीय प्रश्न तथा अभिकथन-तर्क प्रश्न "
+             "(प्रत्येक 1 अंक)",
+        "B": "अति लघु-उत्तरीय प्रश्न (प्रत्येक 2 अंक)",
+        "C": "लघु-उत्तरीय प्रश्न (प्रत्येक 3 अंक)",
+        "D": "दीर्घ-उत्तरीय प्रश्न (प्रत्येक 5 अंक)",
+        "E": "प्रकरण अध्ययन आधारित प्रश्न (प्रत्येक 4 अंक)",
+    }
+
+    def _paper_sheet(paper):
+        """View-model for the typed exam-paper sheet of one stored
+        paper (Wave 63). See the block comment above for the
+        honesty rules behind every derived number."""
+        hindi = paper.get("medium") == "hindi"
+        stored = paper["questions"]
+        by_section = {}
+        for q in stored:
+            by_section.setdefault(q["section"], []).append(q)
+        stored_numbers = {q["number"] for q in stored}
+        sections = []
+        full_marks = 0
+        full_count = 0
+        for section in papers_data.PAPER_STRUCTURE:
+            qs = by_section.get(section)
+            if not qs:
+                continue
+            qs = sorted(qs, key=lambda q: q["number"])
+            marks_set = {q["marks"] for q in qs}
+            sec_count = len(qs)
+            sec_marks = sum(q["marks"] for q in qs)
+            # Omissions inside the section's number span (the
+            # transcription notes name them; the gap in the
+            # numbering is the in-data trace).
+            for n in range(qs[0]["number"], qs[-1]["number"] + 1):
+                if n not in stored_numbers:
+                    near = min(qs, key=lambda q: abs(q["number"] - n))
+                    sec_count += 1
+                    sec_marks += near["marks"]
+            # Trailing / leading omissions leave no gap in the
+            # span; they show only as a deficit against the
+            # standard pattern, and only where the section's
+            # marks match that pattern exactly.
+            std_count, std_marks = papers_data.PAPER_STRUCTURE[section]
+            if marks_set == {std_marks} and sec_count < std_count:
+                sec_marks += (std_count - sec_count) * std_marks
+                sec_count = std_count
+            title = papers_data.section_title_for(section, qs)
+            subtitle = ""
+            if " — " in title:
+                subtitle = title.split(" — ", 1)[1]
+            elif title.startswith(f"Section {section} ("):
+                subtitle = title[len(f"Section {section} "):]
+            heading = f"SECTION {section}"
+            if hindi:
+                heading = f"खण्ड {_HI_SECTION[section]}"
+                std = papers_data.PAPER_STRUCTURE[section]
+                if (sec_count, qs[0]["marks"]) == std \
+                        and len(marks_set) == 1:
+                    subtitle = _HI_SUBTITLES[section]
+                elif len(marks_set) == 1:
+                    subtitle = (f"{sec_count} प्रश्न "
+                                f"(प्रत्येक {qs[0]['marks']} अंक)")
+                else:
+                    subtitle = f"{sec_count} प्रश्न"
+            sections.append({
+                "section": section,
+                "heading": heading,
+                "subtitle": subtitle,
+                "full_count": sec_count,
+                "marks_each": (qs[0]["marks"]
+                               if len(marks_set) == 1 else None),
+                "questions": [{
+                    "number": q["number"],
+                    "marks": q["marks"],
+                    "lines": _paper_q_lines(
+                        q["text"],
+                        or_word="अथवा" if hindi else "OR",
+                        lower_options=hindi),
+                    "has_figure": _has_figure(q["text"]),
+                } for q in qs],
+            })
+            full_marks += sec_marks
+            full_count += sec_count
+        if hindi:
+            # The same derived facts, in the paper's own language
+            # (mirrors the printed Hindi सामान्य निर्देश).
+            instructions = [
+                f"इस प्रश्न-पत्र में {full_count} प्रश्न हैं। "
+                "सभी प्रश्न अनिवार्य हैं।",
+            ]
+            for sec in sections:
+                name = _HI_SECTION[sec["section"]]
+                if sec["marks_each"] is not None:
+                    instructions.append(
+                        f"खण्ड {name} में {sec['full_count']} प्रश्न "
+                        f"हैं, जिनमें प्रत्येक के "
+                        f"{sec['marks_each']} अंक हैं।")
+                else:
+                    instructions.append(
+                        f"खण्ड {name} में {sec['full_count']} प्रश्न "
+                        "हैं।")
+            if any(" अथवा " in q["text"] for q in stored):
+                instructions.append(
+                    "कुछ प्रश्नों में आंतरिक विकल्प दिया गया है।")
+        else:
+            instructions = [
+                f"This question paper contains {full_count} questions. "
+                "All questions are compulsory.",
+            ]
+            for sec in sections:
+                if sec["marks_each"] is not None:
+                    word = "mark" if sec["marks_each"] == 1 else "marks"
+                    instructions.append(
+                        f"Section {sec['section']} contains "
+                        f"{sec['full_count']} questions of "
+                        f"{sec['marks_each']} {word} each.")
+                else:
+                    instructions.append(
+                        f"Section {sec['section']} contains "
+                        f"{sec['full_count']} questions.")
+            if any(" OR " in q["text"] for q in stored):
+                instructions.append(
+                    "Internal choices are provided in some questions.")
+        subject = paper.get("subject_label") or "Mathematics"
+        if not paper.get("subject_label"):
+            m = re.search(r"Mathematics( \((?:Standard|Basic)\))?",
+                          paper["set_label"])
+            if m:
+                subject = m.group(0)
+        return {
+            "set_label": paper["set_label"],
+            "subject": subject,
+            "class_num": paper["class_num"],
+            "board": paper["board"],
+            "year": paper["year"],
+            "full_marks": full_marks,
+            "full_count": full_count,
+            "instructions": instructions,
+            "instructions_title": ("सामान्य निर्देश :"
+                                   if hindi else
+                                   "General Instructions:"),
+            "marks_label": ("अधिकतम अंक" if hindi
+                            else "Maximum Marks"),
+            "class_label": "कक्षा" if hindi else "Class",
+            "sections": sections,
+        }
+
     @app.get("/papers")
     def papers_home():
         if not _papers_signed_in():
@@ -1734,26 +1967,13 @@ def create_app():
         paper = papers_data.get_paper(paper_id)
         if paper is None:
             return redirect(url_for("papers_home"))
-        sections = []
-        for section in papers_data.PAPER_STRUCTURE:
-            qs = [q for q in paper["questions"]
-                  if q["section"] == section]
-            if qs:
-                sections.append({
-                    "section": section,
-                    # Wave 44 merge fix: Term-2 / 2020 papers carry
-                    # different per-section marks than the current
-                    # pattern — title from the stored data.
-                    "title": papers_data.section_title_for(section, qs),
-                    "questions": qs,
-                })
-        chapters = {q["chapter"]: papers_data.chapter_title(
-            paper["class_num"], q["chapter"])
-            for q in paper["questions"]}
+        # Wave 63: the page IS the paper — the typed exam-paper
+        # sheet (header, instructions, sections, every stored
+        # question in full). Chapter tags moved off this page;
+        # they live in the pattern analysis now.
         return render_template(
-            "paper_view.html", paper=paper, sections=sections,
-            chapters=chapters,
-            total_marks=papers_data.paper_total_marks(paper))
+            "paper_view.html", paper=paper,
+            sheet=_paper_sheet(paper))
 
     @app.get("/papers/analysis")
     def papers_analysis():
@@ -1801,9 +2021,20 @@ def create_app():
     def papers_print():
         """Print/PDF-friendly view of the last generated practice
         paper (same standalone-serif approach as /solution/print:
-        the browser's Print -> Save as PDF makes the PDF)."""
+        the browser's Print -> Save as PDF makes the PDF).
+
+        Wave 63: ?paper=<id> prints a STORED previous paper in
+        the same typed exam-paper layout as its in-app page, so
+        printing gives the real paper — no external links."""
         if not _papers_signed_in():
             return redirect(url_for("index"))
+        stored_id = request.args.get("paper", "")
+        stored = (papers_data.get_paper(stored_id)
+                  if stored_id else None)
+        if stored is not None:
+            return render_template(
+                "papers_print.html", paper=None, stored=stored,
+                sheet=_paper_sheet(stored))
         ref = session.get("practice_paper_ref") or {}
         paper = None
         if ref.get("class_num") in papers_data.CLASSES_WITH_PAPERS:

@@ -382,12 +382,14 @@ TPL = open(os.path.join("templates", "base.html"),
 SW = open(os.path.join("static", "sw.js"),
           encoding="utf-8").read()
 # Merge-3: Wave 55 legitimately bumped the pins to
-# ?v=34 / ganitra-static-v11 (its CSS block); assertions
+# ?v=35 / ganitra-static-v13 (its CSS block); assertions
 # updated to the merged pins.
-check("stylesheet pin (?v=34 after Wave 55)",
-      "stylesheet?v=34" in TPL or "?v=34" in TPL)
+# Merge-4: pins reconciled to ?v=36 / ganitra-static-v13
+# (Wave 64's CSS is the newest); assertion updated.
+check("stylesheet pin (?v=36 after Wave 64)",
+      "stylesheet?v=36" in TPL or "?v=36" in TPL)
 check("sw cache pin (v9 after Wave 55)",
-      'GANITRA_CACHE = "ganitra-static-v11"' in SW)
+      'GANITRA_CACHE = "ganitra-static-v13"' in SW)
 for _name, _want in (
         ("logo-full.png", "07009560"),
         ("logo-mark-t.png", "01aa3d23"),

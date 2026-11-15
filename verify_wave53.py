@@ -262,11 +262,11 @@ TPL = open(os.path.join("templates", "base.html"),
 SW = open(os.path.join("static", "sw.js"),
           encoding="utf-8").read()
 # Merge-3: Wave 55 legitimately bumped the pins to
-# ?v=34 / ganitra-static-v11; assertions updated.
-check("stylesheet pin after Wave 55 (?v=34)",
-      "stylesheet?v=34" in TPL or "?v=34" in TPL)
+# ?v=35 / ganitra-static-v13; assertions updated.
+check("stylesheet pin after Wave 55 (?v=35)",
+      "stylesheet?v=35" in TPL or "?v=35" in TPL)
 check("sw cache pin after Wave 55 (v9)",
-      'GANITRA_CACHE = "ganitra-static-v11"' in SW)
+      'GANITRA_CACHE = "ganitra-static-v13"' in SW)
 for _name, _want in (
         ("logo-full.png", "07009560"),
         ("logo-mark-t.png", "01aa3d23"),

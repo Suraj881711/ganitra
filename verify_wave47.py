@@ -250,10 +250,14 @@ TPL = open(os.path.join("templates", "base.html"),
            encoding="utf-8").read()
 SW = open(os.path.join("static", "sw.js"),
           encoding="utf-8").read()
-check("stylesheet pin at Wave 55 reconciliation (?v=34)",
-      "stylesheet?v=34" in TPL or "?v=34" in TPL)
+# Merge-4: pins reconciled to ?v=36 / ganitra-static-v13
+# (Wave 64's patch updated the SW assertion below but left
+# this stylesheet assertion at ?v=35; updated here, same
+# convention as the merge-3 reconciliation in wave52/56/58.)
+check("stylesheet pin at merge-4 reconciliation (?v=36)",
+      "stylesheet?v=36" in TPL or "?v=36" in TPL)
 check("sw cache pin at merge-2 reconciliation (v8)",
-      'GANITRA_CACHE = "ganitra-static-v11"' in SW)
+      'GANITRA_CACHE = "ganitra-static-v13"' in SW)
 for _name, _want in (
         ("logo-full.png", "07009560"),
         ("logo-mark-t.png", "01aa3d23"),

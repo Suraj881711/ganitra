@@ -25,11 +25,25 @@ scenes have always used — #scene-stage in the chat empty state:
 3. The logo on the 3D plaque is the app's own
    /static/logo-full-t.png, byte-for-byte the file it has
    always been (hashes asserted below).
-4. Service worker: cache ganitra-static-v11; /static/models/
+4. Service worker: cache ganitra-static-v13; /static/models/
    bypasses the worker cache (HTTP cache + the ?v=61 pin in
-   scene3d.js govern freshness). Stylesheet pin ?v=34.
+   scene3d.js govern freshness). Stylesheet pin ?v=36.
 
 No solver file changed; answer behaviour is untouched.
+
+WAVE 62B ADDENDUM (15 Nov 2026, Suraj's final scene spec):
+the scene this script verifies has since been re-scoped —
+only the eagle performs, on the G itself (no plaque), and
+the boy writer is the 2D sprite again. The model files, logo
+files, pins and wiring asserted below are unchanged by 62B;
+the §4 scene3d.js marker list was updated to the 62B markers
+(the four-friends markers it replaces are named in the
+comment there). Wave 62B's own assertions live in
+verify_wave62b.py.
+
+MERGE-4 (Waves 62B+63+64+65): the pin checks below were
+reconciled to the merged pins — stylesheet ?v=36, cache
+ganitra-static-v13 (Wave 64's Hindi-papers CSS is the newest).
 
 Run:  python3 verify_wave61.py
 """
@@ -89,10 +103,13 @@ for name, cap in CAPS.items():
     check(f"{name} is a valid GLB header", len(data) == size)
 check(f"total payload <= 35 MB ({total/1e6:.2f} MB)", total <= 35 * 10**6)
 
-# Prototype-identical copies for lion/boy/tiger (md5 recorded at build).
-for name, want in [("lion.glb", "e1f6d3556f751ae00b9cab3611193cd0"),
+# Prototype-identical copies (md5 recorded at build). Wave 62:
+# lion/tiger hashes moved — each gained an authored WalkCycle
+# clip appended at GLB level; model + original clip inside are
+# byte-preserved (proof in ganitra-wave62-notes.md).
+for name, want in [("lion.glb", "0d68ef98dfefa1647fd5d7426c9a4950"),
                    ("boy.glb", "0813eaf3b74561813caf397b6aafc66e"),
-                   ("tiger.glb", "d6b6fb6f0f42501465ff7f8d574f911f")]:
+                   ("tiger.glb", "e125ebd2d1b9cf0c7489da200bc7f3a4")]:
     got = hashlib.md5((MODELS / name).read_bytes()).hexdigest()
     check(f"{name} byte-identical to the prototype copy", got == want, got)
 
@@ -154,26 +171,35 @@ check("lazy bootstrap (idle + intersection + reduced motion)",
       and "prefers-reduced-motion" in index)
 
 s3d = (ROOT / "static" / "scene3d.js").read_text(encoding="utf-8")
-for marker in ["scene-3d-on", "/static/models/", "logo-full-t.png",
+# Wave 62B: the marker list tracks the CURRENT scene3d.js.
+# Replaced Wave 61/62 markers: "logo-full-t.png" (the plaque
+# texture — now the G-only "logo-g-t.png", and there is no
+# plaque), "fitMode: 'skinned'" (the tiger's fit — he is
+# parked, never loaded), "playTiger"/"playChase"/"playLion"
+# (routines removed — eagle only) and "__ganitraBoyWriter3D"
+# (the 3D writer, retired — the sprite writer serves again).
+for marker in ["scene-3d-on", "/static/models/", "logo-g-t.png",
                "LOAD_WATCHDOG_MS", "Math.min(window.devicePixelRatio, 2)",
                "visibilitychange", "IntersectionObserver",
                "0.82919",           # eagle manual fit (quantised model)
-               "fitMode: 'skinned'",  # tiger pose-box fit
-               "lionPush", "boyCarry", "tigerPush", "eagleSwoop",
-               "__friendsReady"]:
+               # the routines are the director's eagle scene now,
+               # in its three rotating performances
+               "playEagle", "playEaglePerch", "playEagleCarry",
+               "playEagleKiss", "MutationObserver",
+               "__sceneEagleOnly3D", "__friendsReady"]:
     check(f"scene3d.js: {marker}", marker in s3d)
 
 css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
 check("CSS: .scene-3d layer + .scene-3d-on swap",
       ".scene-3d {" in css and ".scene-stage.scene-3d-on" in css)
-check("CSS: canvas keeps pan-y (page scroll survives)",
-      "touch-action: pan-y" in css)
+check("CSS: canvas is pointer-free (Wave 62 — no orbit; taps hit the stage)",
+      "touch-action: pan-y" not in css and ".boy-writer-3d" in css)
 
 sw = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
-check("SW cache v11", 'GANITRA_CACHE = "ganitra-static-v11"' in sw)
+check("SW cache v13", 'GANITRA_CACHE = "ganitra-static-v13"' in sw)
 check("SW bypasses /static/models/", '"/static/models/"' in sw)
 base = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
-check("stylesheet pin ?v=34", "v='34'" in base)
+check("stylesheet pin ?v=36", "v='36'" in base)
 
 for vend in ["vendor/three.module.js",
              "vendor/addons/loaders/GLTFLoader.js",
@@ -197,7 +223,7 @@ page = client.get("/").get_data(as_text=True)
 check("served chat page has the 3D layer", 'id="scene-3d"' in page)
 check("served chat page has the import map", "vendor/three.module.js" in page)
 check("served chat page keeps the 2D stage", 'id="scene-stage"' in page)
-check("served page pins stylesheet ?v=34", "style.css?v=34" in page)
+check("served page pins stylesheet ?v=36", "style.css?v=36" in page)
 for url in ["/static/scene3d.js", "/static/vendor/three.module.js",
             "/static/models/lion.glb", "/static/models/boy.glb",
             "/static/models/tiger.glb", "/static/models/eagle.glb"]:

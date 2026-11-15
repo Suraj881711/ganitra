@@ -138,6 +138,33 @@ CONCEPTS = [
         },
     },
     {
+        # Wave 65: sits AFTER root2_irrational on purpose —
+        # "अपरिमेय"/"aparimey" asks must keep hitting the
+        # irrational entry above; only the bare rational ask
+        # ("परिमेय संख्या क्या होती है?", "parimey sankhya
+        # matlab kya hota hai", "define a rational number")
+        # falls through to here.
+        "id": "rational_number",
+        "keywords": ("rational number", "rational numbers",
+                     "परिमेय", "parimey"),
+        "title": "Rational Number (परिमेय संख्या)",
+        "formula": "A rational number is any number that "
+                   "can be written as p/q, where p and q "
+                   "are integers and q ≠ 0.",
+        "explain": "3/4, -5, 0.25 and 7 (= 7/1) are all "
+                   "rational. Numbers like √2 and π cannot "
+                   "be written exactly as p/q, so they are "
+                   "irrational.",
+        "hinglish": "Jo sankhya p/q ke roop me likhi ja "
+                    "sake (q zero na ho), wahi parimey "
+                    "sankhya hai.",
+        "example": {
+            "q": "Is 0.5 a rational number?",
+            "steps": ["0.5 = 1/2, which is p/q form"],
+            "answer": "Yes, 0.5 is rational",
+        },
+    },
+    {
         "id": "area_circle",
         "keywords": ("area of circle", "area of a circle",
                      "वृत्त का क्षेत्रफल", "वृत्त के क्षेत्रफल",
@@ -158,6 +185,31 @@ CONCEPTS = [
         },
     },
     {
+        # Wave 65: radius/diameter definition asks in all
+        # three languages ("वृत्त की त्रिज्या किसे कहते
+        # हैं?", "vritt ki trijya kya hoti hai?").
+        "id": "radius_diameter",
+        "keywords": ("त्रिज्या", "trijya", "व्यास", "vyaas",
+                     "what is radius", "what is the radius",
+                     "radius kya", "diameter kya",
+                     "what is diameter", "what is the diameter"),
+        "title": "Radius (त्रिज्या) and Diameter (व्यास)",
+        "formula": "Radius = the distance from the centre "
+                   "of a circle to any point on it. Diameter "
+                   "= 2 × radius — the longest chord, passing "
+                   "through the centre.",
+        "explain": "Every radius of a circle is equal. If "
+                   "the radius is 7 cm, the diameter is "
+                   "14 cm.",
+        "hinglish": "Kendr se paridhi tak ki doori trijya "
+                    "hai; uska dugna vyaas hota hai.",
+        "example": {
+            "q": "Radius is 5 cm. What is the diameter?",
+            "steps": ["Diameter = 2 × 5 = 10 cm"],
+            "answer": "Diameter = 10 cm",
+        },
+    },
+    {
         "id": "area_triangle",
         "keywords": ("area of triangle", "area of a triangle",
                      "त्रिभुज का क्षेत्रफल", "tribhuj ka kshetrafal",
@@ -173,6 +225,37 @@ CONCEPTS = [
                  "height 6 cm.",
             "steps": ["Area = ½ × 10 × 6", "= 30"],
             "answer": "Area = 30 cm²",
+        },
+    },
+    {
+        # Wave 65: the difference ask ("वर्ग और आयत में क्या
+        # अंतर है?", "what is the difference between a
+        # square and a rectangle?") — the area entry below
+        # never matched it.
+        "id": "square_vs_rectangle",
+        "keywords": ("square and rectangle",
+                     "square and a rectangle",
+                     "वर्ग और आयत", "वर्ग तथा आयत",
+                     "varg aur aayat", "square aur rectangle",
+                     "difference between a square and a "
+                     "rectangle",
+                     "difference between square and rectangle"),
+        "title": "Square vs Rectangle (वर्ग बनाम आयत)",
+        "formula": "Square: all four sides equal, all "
+                   "angles 90°. Rectangle: only opposite "
+                   "sides equal, all angles 90°.",
+        "explain": "Every square is a rectangle, but a "
+                   "rectangle is a square only when all its "
+                   "sides become equal. Both have 4 sides, "
+                   "4 right angles and equal diagonals.",
+        "hinglish": "Varg ki chaaro bhujaayein barabar "
+                    "hoti hain; aayat ki sirf aamne-saamne "
+                    "wali bhujaayein barabar hoti hain.",
+        "example": {
+            "q": "Sides 6, 6, 6, 6 — square or rectangle?",
+            "steps": ["All four sides are equal and "
+                      "angles are 90°"],
+            "answer": "It is a square (and also a rectangle)",
         },
     },
     {
@@ -366,6 +449,7 @@ CONCEPTS = [
                      "geometric progression", "nth term",
                      "n-th term", "समांतर श्रेढ़ी", "गुणोत्तर श्रेढ़ी",
                      "समांतर श्रेणी", "ज्यामितीय श्रेणी",
+                     "समान्तर श्रेणी", "समान्तर श्रेढ़ी",
                      "samaantar shreni", "ap ka formula",
                      "gp ka formula", "ap kya hoti", "gp kya hoti",
                      "ap kya hota", "gp kya hota", "ap aur gp",
@@ -1273,6 +1357,186 @@ CONCEPTS = [
             "q": "Distance between (0, 0) and (3, 4)?",
             "steps": ["√((3−0)² + (4−0)²) = √(9 + 16) = √25"],
             "answer": "5",
+        },
+    },
+    {
+        # Wave 65: definition asks the earlier list never
+        # carried, in the students' own words (Devanagari,
+        # Roman Hindi and English). Appended last: every
+        # older entry keeps priority for its own keywords.
+        "id": "equilateral_triangle",
+        "keywords": ("equilateral", "समबाहु", "sambahu",
+                     "samabahu"),
+        "title": "Equilateral Triangle (समबाहु त्रिभुज)",
+        "formula": "All three sides are equal and all "
+                   "three angles are 60° each. Perimeter = "
+                   "3 × side; Area = (√3/4) × side².",
+        "explain": "Because the sides are equal, the "
+                   "angles opposite them are equal too — "
+                   "and angles sum to 180°, so each is 60°.",
+        "hinglish": "Teeno bhujaayein barabar aur teeno "
+                    "kon 60° ke hote hain — wahi samabahu "
+                    "tribhuj hai.",
+        "example": {
+            "q": "Perimeter of an equilateral triangle "
+                 "with side 5 cm?",
+            "steps": ["3 × 5 = 15 cm"],
+            "answer": "15 cm",
+        },
+    },
+    {
+        "id": "right_triangle",
+        "keywords": ("samkon tribhuj", "samkon",
+                     "right triangle", "right-angled triangle",
+                     "right angled triangle"),
+        "title": "Right Triangle (समकोण त्रिभुज)",
+        "formula": "A triangle with one angle of exactly "
+                   "90°. The side opposite the right angle "
+                   "is the hypotenuse, and a² + b² = c² "
+                   "(Pythagoras).",
+        "explain": "The two sides forming the right angle "
+                   "are the legs (perpendicular and base); "
+                   "the hypotenuse is always the longest "
+                   "side.",
+        "hinglish": "Jis tribhuj ka ek kon 90° ka ho, "
+                    "use samkon tribhuj kehte hain; 90° ke "
+                    "saamne wali bhuja karn hoti hai.",
+        "example": {
+            "q": "Legs 3 and 4 — hypotenuse?",
+            "steps": ["√(3² + 4²) = √25 = 5"],
+            "answer": "Hypotenuse = 5",
+        },
+    },
+    {
+        "id": "ratio_concept",
+        "keywords": ("anupaat", "anupat", "अनुपात",
+                     "what is a ratio", "what is ratio",
+                     "ratio kya", "ratio matlab",
+                     "ratio ka matlab"),
+        "title": "Ratio (अनुपात)",
+        "formula": "A ratio compares two quantities of "
+                   "the same kind: a : b means a/b. Ratios "
+                   "have no unit and are written in the "
+                   "simplest form.",
+        "explain": "If a class has 12 boys and 18 girls, "
+                   "the ratio of boys to girls is 12 : 18 "
+                   "= 2 : 3.",
+        "hinglish": "Do cheezon ki tulna ko anupaat "
+                    "kehte hain — jaise 2 : 3 matlab 2/3.",
+        "example": {
+            "q": "Ratio of 20 cm to 1 m?",
+            "steps": ["1 m = 100 cm, so 20 : 100 = 1 : 5"],
+            "answer": "1 : 5",
+        },
+    },
+    {
+        "id": "identity_concept",
+        "keywords": ("sarvsamika", "सर्वसमिका",
+                     "what is an identity",
+                     "algebraic identity", "identity kya"),
+        "title": "Identity (सर्वसमिका)",
+        "formula": "An identity is an equality that is "
+                   "true for EVERY value of the variable — "
+                   "like (a + b)² = a² + 2ab + b².",
+        "explain": "An equation (2x + 3 = 7) is true "
+                   "only for one value; an identity holds "
+                   "for all values, so it can be used to "
+                   "expand and factorise.",
+        "hinglish": "Jo barabari har value par sach ho, "
+                    "wo sarvsamika hai; samikaran sirf kuch "
+                    "values par sach hota hai.",
+        "example": {
+            "q": "Expand (x + 3)² using the identity.",
+            "steps": ["(a + b)² = a² + 2ab + b² gives "
+                      "x² + 6x + 9"],
+            "answer": "x² + 6x + 9",
+        },
+    },
+    {
+        "id": "factors_concept",
+        "keywords": ("gunankhand", "गुणनखण्ड", "गुणनखंड",
+                     "what are factors", "factors kya"),
+        "title": "Factors (गुणनखण्ड)",
+        "formula": "A factor of a number divides it "
+                   "exactly, leaving no remainder. 12 = "
+                   "3 × 4, so 3 and 4 are factors of 12.",
+        "explain": "Factors of 12: 1, 2, 3, 4, 6, 12. "
+                   "Prime factors use only primes: 12 = "
+                   "2 × 2 × 3.",
+        "hinglish": "Jo sankhya kisi sankhya ko poora "
+                    "bhaag de de, wo uska gunankhand hai.",
+        "example": {
+            "q": "Factors of 18?",
+            "steps": ["18 = 1 × 18, 2 × 9, 3 × 6"],
+            "answer": "1, 2, 3, 6, 9, 18",
+        },
+    },
+    {
+        "id": "line_segment_concept",
+        "keywords": ("rekha khand", "रेखा खण्ड", "रेखा खंड",
+                     "line segment", "rekha aur rekha khand",
+                     "difference between a line and a line "
+                     "segment"),
+        "title": "Line vs Line Segment (रेखा बनाम रेखा खण्ड)",
+        "formula": "A line goes on forever in both "
+                   "directions and has no length. A line "
+                   "segment is the part of a line between "
+                   "two endpoints — it has a fixed length.",
+        "explain": "A ray is the third member of the "
+                   "family: it starts at one point and "
+                   "goes on forever in one direction.",
+        "hinglish": "Rekha dono taraf ant tak jaati "
+                    "hai; rekha khand do binduon ke beech "
+                    "ka hissa hai, uski lambaai hoti hai.",
+        "example": {
+            "q": "Can you measure a line?",
+            "steps": ["A line is endless, so no; a "
+                      "segment can be measured"],
+            "answer": "Only the segment has a length",
+        },
+    },
+    {
+        "id": "quadrilateral_angles",
+        "keywords": ("chaturbhuj", "चतुर्भुज",
+                     "sum of angles of a quadrilateral",
+                     "quadrilateral ke kono"),
+        "title": "Quadrilateral (चतुर्भुज): Angle Sum",
+        "formula": "The four interior angles of any "
+                   "quadrilateral add up to 360°.",
+        "explain": "A quadrilateral splits into two "
+                   "triangles along a diagonal, and each "
+                   "triangle's angles sum to 180° — so the "
+                   "total is 2 × 180° = 360°.",
+        "hinglish": "Chaturbhuj ke chaaro kono ka yog "
+                    "360° hota hai.",
+        "example": {
+            "q": "Three angles are 90°, 80°, 100°. "
+                 "Fourth angle?",
+            "steps": ["360 - (90 + 80 + 100) = 90"],
+            "answer": "90°",
+        },
+    },
+    {
+        "id": "quadratic_equation_concept",
+        "keywords": ("vargeeya samikaran", "वर्गीय समीकरण",
+                     "dvighat samikaran", "द्विघात समीकरण",
+                     "what is a quadratic equation",
+                     "quadratic equation kise"),
+        "title": "Quadratic Equation (द्विघात समीकरण)",
+        "formula": "An equation of the form ax² + bx + "
+                   "c = 0 (a ≠ 0). It has at most two "
+                   "solutions, found by factorising or by "
+                   "x = (-b ± √(b² - 4ac)) / 2a.",
+        "explain": "The highest power of the variable "
+                   "is 2 — that is what makes it quadratic "
+                   "(dvighat).",
+        "hinglish": "Jis samikaran me variable ki sabse "
+                    "badi ghaat 2 ho, wo dvighat samikaran "
+                    "hai.",
+        "example": {
+            "q": "Solve x² - 5x + 6 = 0.",
+            "steps": ["(x - 2)(x - 3) = 0"],
+            "answer": "x = 2 or x = 3",
         },
     },
 ]

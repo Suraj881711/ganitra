@@ -22,6 +22,7 @@ Contract:
 Run:  python verify_wave16.py
 """
 import html as _html
+import markupsafe as _ms
 import os
 import sys
 from pathlib import Path
@@ -158,9 +159,15 @@ check("signup for papers test user", r.status_code in (200, 302),
 
 r = client.get("/papers")
 body = r.get_data(as_text=True)
+# Wave 63: the library still LISTS every paper (source named as
+# plain text for provenance), but no page in the papers flow
+# links out any more — the source URLs stay in the data only.
 check("GET /papers (signed in) -> 200 + library listed",
       r.status_code == 200
-      and all(p["source_url"] in body for p in papers_data.PAPERS))
+      and all(str(_ms.escape(p["source_name"])) in body
+              for p in papers_data.PAPERS)
+      and all(p["source_url"] not in body
+              for p in papers_data.PAPERS))
 
 first = papers_data.PAPERS[0]
 r = client.get("/papers/" + first["id"])
