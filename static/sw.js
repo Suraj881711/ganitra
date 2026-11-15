@@ -65,7 +65,13 @@
    name v8, stylesheet ?v=31. */
 /* Wave 55: topic-directory CSS — cache v9, stylesheet ?v=32. */
 /* Wave 60: back-bar CSS — cache v10, stylesheet ?v=33. */
-var GANITRA_CACHE = "ganitra-static-v10";
+/* Wave 61: 3D Logo Jungle — cache v11, stylesheet ?v=34.
+   The 3D model files under /static/models/ are deliberately
+   NOT handled by this worker (see the fetch handler): at up
+   to ~17 MB each they stay out of Cache Storage, and their
+   freshness is pinned by the ?v= query scene3d.js requests
+   plus the server's own HTTP cache headers. */
+var GANITRA_CACHE = "ganitra-static-v11";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();
@@ -98,6 +104,13 @@ self.addEventListener("fetch", function (event) {
   if (url.origin !== self.location.origin) return;
 
   if (url.pathname.indexOf("/static/") === 0) {
+    if (url.pathname.indexOf("/static/models/") === 0) {
+      // Wave 61: big 3D model binaries — straight to the
+      // network (browser HTTP cache applies); never copied
+      // into the worker cache. Returning without respondWith
+      // gives the request default browser handling.
+      return;
+    }
     if (/\.(css|js)$/.test(url.pathname)) {
       // Code (stylesheets, scripts): network-first WITH
       // revalidation (Wave 26) — a plain fetch(req) can be

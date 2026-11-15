@@ -1792,6 +1792,38 @@ body.chat-page .chat-bar .send-btn svg {
   .boy-writer { animation: none !important; }
 }
 
+/* --- Wave 61: the 3D stage layer. The canvas lives in an
+   absolutely-positioned layer INSIDE the same stage box, so
+   it can never change the stage's size or push the composer
+   and cards around. It starts invisible and pointer-free;
+   only when scene3d.js has loaded all four models does the
+   stage gain .scene-3d-on — then the 2D sprites, stick and
+   logo <img> hide (the 3D plaque carries the same artwork)
+   and the canvas fades in. On any failure the class never
+   lands and the 2D jungle runs on untouched. The canvas
+   keeps pan-y touch behaviour: a vertical drag still
+   scrolls the page, a horizontal one orbits the scene. --- */
+.scene-3d {
+  position: absolute; inset: 0; z-index: 5;
+  opacity: 0; pointer-events: none;
+  transition: opacity .6s ease;
+}
+.scene-3d canvas {
+  display: block; width: 100%; height: 100%;
+  touch-action: pan-y;
+}
+.scene-stage.scene-3d-on .scene-3d {
+  opacity: 1; pointer-events: auto;
+}
+.scene-stage.scene-3d-on .scene-actor,
+.scene-stage.scene-3d-on .scene-stick,
+.scene-stage.scene-3d-on .empty-logo {
+  visibility: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .scene-3d { display: none !important; }
+}
+
 /* ================= Wave 24: the answer SEQUENCE ==============
    Suraj (12 Nov 2026, ~23:44 IST): after a question, the answer
    "pura kachra ki tarah lagta hai, sequence mai nahi lagta
