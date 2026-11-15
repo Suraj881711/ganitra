@@ -126,8 +126,8 @@ def test_boy_writer_is_the_2d_sprite_again():
 def test_served_page_wave62b(client):
     page = client.get("/").get_data(as_text=True)
     assert 'id="scene-3d"' in page and 'id="scene-stage"' in page
-    # Merge-4: pins reconciled to ?v=36 / ganitra-static-v13.
-    assert "style.css?v=36" in page
+    # Merge-4: pins reconciled to ?v=37 / ganitra-static-v14.
+    assert "style.css?v=37" in page
     r = client.get("/static/logo-g-t.png")
     assert r.status_code == 200
     # the parked files are still served (they exist) — the

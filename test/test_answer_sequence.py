@@ -75,7 +75,9 @@ def test_chat_assembly_single_ordered_block():
     asm = INDEX[INDEX.index("/* Wave 24: THE reading sequence"):]
     asm = asm[:asm.index("log.appendChild(wrap);")]
     seq = ["div.appendChild(badge);",
-           "if (explEl) div.appendChild(explEl);",
+           # Wave 68: the explanation slot became the intro
+           # line (the givens/framing step, when present).
+           "if (introEl) div.appendChild(introEl);",
            "if (stepsSection) div.appendChild(stepsSection);",
            "if (graphImg) div.appendChild(graphImg);",
            "div.appendChild(ans);",
@@ -107,7 +109,13 @@ def test_chat_steps_open_unnumbered_and_answer_plain():
     # NO numbering (Suraj: "1,2,3 likhne ki jarurat nahi"):
     # the seq badge class is gone from the steps list.
     assert '"steps notebook seq"' not in INDEX
-    assert '"steps notebook"' in INDEX
+    # Wave 68: the notebook/copy-style panel is OUT of the
+    # chat answer flow (Suraj's chat-overhaul order) — the
+    # chat steps are a plain list now. The classic answer
+    # PAGE keeps its notebook (test_answer_template_sequence
+    # below still pins it there).
+    assert '"steps notebook"' not in INDEX
+    assert 'ol.className = "steps";' in INDEX
     # NO answer box in the chat (Suraj: "ans itna highlight
     # nahi karna") — a plain line inside the card, and the
     # row/panels live in the wrap outside the card.
@@ -549,9 +557,14 @@ def test_jsdom_answer_sequence(client, tmp_path):
     s1 = out["s1"]
     # The full sequence across the wrap: solve inside the
     # card, then the row + panels OUTSIDE/below it.
-    assert s1["order"] == ["explain", "steps", "answer",
+    # Wave 68: the explanation paragraph no longer renders
+    # in the chat card at all (it restated the final
+    # answer); the card is steps -> answer, opened by the
+    # intro line when the server sends one (this fixture
+    # sends none).
+    assert s1["order"] == ["steps", "answer",
                            "actions", "advice", "methods"]
-    assert s1["cardOrder"] == ["explain", "steps", "answer"]
+    assert s1["cardOrder"] == ["steps", "answer"]
     assert s1["rowInBubble"] is False
     assert s1["rowParentWrap"] is True
     assert "answer-wrap" in s1["wrapClass"]
@@ -591,8 +604,10 @@ def test_jsdom_answer_sequence(client, tmp_path):
         or "2px" in (s1["rowStyle"]["gap"] or "")
     assert s1["methodsDots"] == 3
     # Font scale: corrected sizes, computed live.
-    step_want = "14px" if "handwriting-on" in s1["olClasses"] \
-        else "13px"
+    # Wave 68: chat steps are a plain list at an explicit
+    # 14px (the handwriting/notebook sizing no longer
+    # applies in the chat flow).
+    step_want = "14px"
     assert s1["fonts"]["step"] == step_want
     assert s1["fonts"]["answer"] == "14.5px"
     assert s1["fonts"]["summary"] == "12px"

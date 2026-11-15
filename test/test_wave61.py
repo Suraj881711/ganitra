@@ -9,7 +9,7 @@ files' hashes (artwork never edited); the stage wiring (3D
 layer div + import map + lazy bootstrap in the served chat
 page, 2D fallback intact); scene3d.js's non-blocking markers;
 the CSS swap rules; and the bumped delivery pins
-(?v=36 / cache ganitra-static-v13 — merge-4 reconciled,
+(?v=37 / cache ganitra-static-v14 — merge-4 reconciled,
 models bypass the SW).
 """
 import hashlib
@@ -161,8 +161,8 @@ def test_css_swap_rules():
 def test_delivery_pins_wave61():
     base = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
     sw = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
-    assert "v='36'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v13"' in sw
+    assert "v='37'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v14"' in sw
     assert '"/static/models/"' in sw   # models bypass the worker cache
 
 
@@ -180,7 +180,7 @@ def test_served_chat_page_carries_3d_layer(client):
     assert 'id="scene-3d"' in page
     assert 'id="scene-stage"' in page
     assert "vendor/three.module.js" in page
-    assert "style.css?v=36" in page
+    assert "style.css?v=37" in page
 
 
 @pytest.mark.parametrize("url", [
