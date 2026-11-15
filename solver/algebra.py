@@ -775,8 +775,79 @@ def _function_composition(q: str):
     return None
 
 
+def _proportion59(q):
+    """Wave 59: a proportion with x in one slot — "2/3 = x/15,
+    find x" (and the mirrored "x/15 = 2/3"). Cross-multiply."""
+    from fractions import Fraction
+    m = re.search(r"(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)"
+                  r"\s*=\s*x\s*/\s*(\d+(?:\.\d+)?)", q)
+    if m:
+        a, b, c = (Fraction(m.group(i)) for i in (1, 2, 3))
+        val = a * c / b
+        steps = [
+            f"Cross-multiply: {b} x = {a} × {c} = {a * c}",
+            f"x = {a * c} / {b} = {val}",
+        ]
+        return {"type": "algebra", "op": "proportion",
+                "answer": str(val), "value": float(val),
+                "steps": steps}
+    m = re.search(r"x\s*/\s*(\d+(?:\.\d+)?)\s*=\s*"
+                  r"(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)", q)
+    if m:
+        a, b, c = (Fraction(m.group(i)) for i in (1, 2, 3))
+        val = a * b / c
+        steps = [
+            f"Cross-multiply: {c} x = {a} × {b} = {a * b}",
+            f"x = {a * b} / {c} = {val}",
+        ]
+        return {"type": "algebra", "op": "proportion",
+                "answer": str(val), "value": float(val),
+                "steps": steps}
+    return None
+
+
 def solve_algebra(question: str):
     q = question.strip()
+
+    # Wave 59: an equation followed by a Hinglish ask tail —
+    # "x^2 + 7x + 12 = 0 ke mool batao" — is one equation,
+    # not an expression in the tail words; the parser
+    # degraded it to "7x + 12 = 0". Cut the tail.
+    q = re.sub(r"(=\s*0)\s+(?:ke\s+mool|ka\s+hal|mool|hal|"
+               r"roots?|batao|btao|solve\s+karo)\b.*$",
+               r"\1", q, flags=re.I)
+
+    _prop59 = _proportion59(q.lower())
+    if _prop59 is not None:
+        return _prop59
+
+    # Wave 59: polynomial VALUE at a point — "p(x) = x^2 + 2x
+    # + 3 hai to p(2) ki value kitni hogi?" The bare parser
+    # read the definition as an equation in p and answered
+    # "p = 1/x". Parse the definition, then evaluate.
+    _mpv = re.search(r"p\(\s*x\s*\)\s*=\s*(.+?)(?=\s+hai\b|"
+                     r"\s+to\b|\s+find\b|\s*,?\s*p\(\s*-?\d)",
+                     q, re.I)
+    _mpt = re.search(r"p\(\s*(-?\d+(?:\.\d+)?)\s*\)", q)
+    if _mpv and _mpt:
+        try:
+            _expr = parse_expression(re.sub(
+                r"(?<![\d.])0x(?![\d])", "0*x",
+                _mpv.group(1)))
+            _syms = sorted(_expr.free_symbols,
+                           key=lambda s: s.name)
+            if len(_syms) == 1:
+                _at = sp.Rational(_mpt.group(1))
+                _val = _expr.subs(_syms[0], _at)
+                return {
+                    "type": "algebra", "op": "poly_value",
+                    "answer": fmt(_val), "value": float(_val),
+                    "steps": [
+                        f"p(x) = {fmt(_expr)}",
+                        f"Put x = {fmt(_at)}: "
+                        f"p({fmt(_at)}) = {fmt(_val)}"]}
+        except Exception:
+            pass
 
     # Wave 58: "If x = 3, find the value of ..." substitution
     # and find-k-given-a-root — see _substitution_eval.

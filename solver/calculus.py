@@ -1062,6 +1062,18 @@ def solve_calculus(question: str):
             flags=re.I)
         text = re.sub(r"^\s*the\s+", "", text, flags=re.I)
         text = text.strip().rstrip(".")
+        # Wave 59: "... at x = 2" asks for the derivative's
+        # VALUE at the point, not the derivative expression —
+        # the point clause used to poison the expression parse
+        # and the ask fell to salvage ("x = 2"). Capture and
+        # strip it; the value is substituted at the end.
+        _at59 = None
+        _mat59 = re.search(r"\bat\s+(?:the\s+point\s+)?x\s*=\s*"
+                           r"(-?\d+(?:\.\d+)?)\s*\??\s*\.?\s*$",
+                           text, flags=re.I)
+        if _mat59:
+            _at59 = sp.Rational(_mat59.group(1))
+            text = text[:_mat59.start()].strip().rstrip(".")
         # Wave 56: "second derivative of x^4" — the order
         # word survived into the expression text, which the
         # parser read as s·e·c·o·n·d × x^4. Detect the
@@ -1102,6 +1114,19 @@ def solve_calculus(question: str):
             _steps56 = _steps56 + [
                 f"Differentiate {_ord56 - 1} more time(s): "
                 f"the result is {fmt(_dres)}"]
+        if _at59 is not None:
+            _val59 = _dres.subs(var, _at59)
+            _steps56 = _steps56 + [
+                f"Now put x = {fmt(_at59)} in the derivative: "
+                f"{fmt(_dres)}",
+                f"Value at x = {fmt(_at59)} = {fmt(_val59)}"]
+            return {
+                "type": "calculus",
+                "op": "derivative_at_point",
+                "answer": fmt(_val59),
+                "steps": _steps56,
+                "latex": sp.latex(_val59),
+            }
         return {
             "type": "calculus",
             "op": "derivative" if _ord56 == 1 else

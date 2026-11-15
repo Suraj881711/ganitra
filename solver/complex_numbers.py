@@ -37,6 +37,21 @@ def _to_sympy(text: str):
 def solve_complex(question: str):
     q = question.strip()
     ql = q.lower()
+    # Wave 59: a bare power of i — "value of i^2". The generic
+    # expression path returned the unevaluated "i**2".
+    _mi59 = re.fullmatch(
+        r"(?:what\s+is\s+)?(?:the\s+)?value\s+of\s+"
+        r"i\s*\^\s*(\d+)\s*\??\s*\.?\s*", ql) or \
+        re.fullmatch(r"i\s*\^\s*(\d+)\s*\??\s*", ql)
+    if _mi59:
+        _n59 = int(_mi59.group(1))
+        _ans59 = ["1", "i", "-1", "-i"][_n59 % 4]
+        return {"type": "complex", "op": "i_power",
+                "answer": _ans59,
+                "steps": [
+                    "i^2 = -1, and the powers of i repeat "
+                    "every 4: i, -1, -i, 1, ...",
+                    f"i^{_n59} = {_ans59}"]}
     # Wave 38: "Multiply (1 + i) by (1 - i)" — the word form
     # has no operator for the parser; build the product from
     # the two factors directly.

@@ -392,6 +392,14 @@ def _area_perimeter_volume(q: str):
     if "circle" in q or "circumference" in q:
         r = _param_flex(q, ["radius", "r"])
         d = find_param(q, ["diameter"])
+        # Wave 59: the radius itself asked from a stated
+        # diameter ("diameter is 14 cm, find its radius") —
+        # the branch used to compute the area instead.
+        if d is not None and "radius" in q \
+                and "circumference" not in q and "area" not in q:
+            return "radius", fmt_num(d / 2), [
+                "Radius = diameter / 2",
+                f"= {fmt_num(d)} / 2 = {fmt_num(d / 2)}"]
         if r is None and d is not None:
             r = d / 2
         if r is None:
@@ -439,8 +447,8 @@ def _area_perimeter_volume(q: str):
     # Wave 56: standard mensuration schemas that had no
     # branch at all and fell to the concept layer.
     if "parallelogram" in q:
-        _pb = find_param(q, ["base"])
-        _ph = find_param(q, ["height", "h"])
+        _pb = find_param(q, ["base", "aadhar"])
+        _ph = find_param(q, ["height", "h", "unchai"])
         if _pb is not None and _ph is not None:
             val = _pb * _ph
             steps = [f"Area of a parallelogram = base × "

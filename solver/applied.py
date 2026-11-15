@@ -322,6 +322,15 @@ def _simple_interest(q):
         steps.append(f"= {fmt_num(P)} × {fmt_num(R)} × "
                      f"{fmt_num(T)} / 100 = {fmt_num(si)}")
         steps.append(f"Total amount = P + SI = {fmt_num(P + si)}")
+        # Wave 59: when the TOTAL AMOUNT is the ask, it is
+        # the answer (the SI alone failed those asks).
+        if re.search(r"total\s+amount|find\s+the\s+amount|"
+                     r"what\s+is\s+the\s+amount|amount\s+after",
+                     q):
+            return {"type": "word_problem", "op": "simple_amount",
+                    "answer": fmt_num(P + si), "value": P + si,
+                    "steps": steps, "principal": P, "rate": R,
+                    "time_years": T}
         return {"type": "word_problem", "op": "simple_interest",
                 "answer": fmt_num(si), "value": si, "steps": steps,
                 "principal": P, "rate": R, "time_years": T}
@@ -336,12 +345,51 @@ def _simple_interest(q):
     steps.append(f"= {fmt_num(P)} × {fmt_num(R)} × {fmt_num(T)} "
                  f"/ 100 = {fmt_num(si)}")
     steps.append(f"Total amount = P + SI = {fmt_num(P + si)}")
+    if re.search(r"total\s+amount|find\s+the\s+amount|"
+                 r"what\s+is\s+the\s+amount|amount\s+after", q):
+        return {"type": "word_problem", "op": "simple_amount",
+                "answer": fmt_num(P + si), "value": P + si,
+                "steps": steps, "principal": P, "rate": R,
+                "time_years": T}
     return {"type": "word_problem", "op": "simple_interest",
             "answer": fmt_num(si), "value": si, "steps": steps,
             "principal": P, "rate": R, "time_years": T}
 
 
 def _profit_loss(q):
+    # Wave 59: "cost price is 400, profit is 20%, find the
+    # selling price" — SP from CP and a target profit/loss %.
+    _msp = re.search(r"cost\s+price\s+(?:is\s+)?(\d+(?:\.\d+)?)"
+                     r"[\s\S]{0,60}?profit\s+(?:is\s+)?"
+                     r"(\d+(?:\.\d+)?)\s*%[\s\S]{0,40}?"
+                     r"selling\s+price", q)
+    if _msp:
+        _cp = float(_msp.group(1))
+        _p = float(_msp.group(2))
+        _sp = _cp * (1 + _p / 100)
+        _sp = int(_sp) if _sp == int(_sp) else _sp
+        return {"type": "applied", "op": "selling_price",
+                "answer": f"Rs {_sp}",
+                "steps": [
+                    f"Selling price = cost price × (1 + "
+                    f"profit/100) = {_cp:g} × "
+                    f"{1 + _p / 100:g}",
+                    f"Selling price = Rs {_sp}"]}
+    _msp = re.search(r"cost\s+price\s+(?:is\s+)?(\d+(?:\.\d+)?)"
+                     r"[\s\S]{0,60}?loss\s+(?:is\s+)?"
+                     r"(\d+(?:\.\d+)?)\s*%[\s\S]{0,40}?"
+                     r"selling\s+price", q)
+    if _msp:
+        _cp = float(_msp.group(1))
+        _p = float(_msp.group(2))
+        _sp = _cp * (1 - _p / 100)
+        _sp = int(_sp) if _sp == int(_sp) else _sp
+        return {"type": "applied", "op": "selling_price",
+                "answer": f"Rs {_sp}",
+                "steps": [
+                    f"Selling price = cost price × (1 - "
+                    f"loss/100) = {_cp:g} × {1 - _p / 100:g}",
+                    f"Selling price = Rs {_sp}"]}
     m = re.search(
         r"\bbought\b[\s\S]{0,40}?(?:" + _RS + r"\s*)?(" + _NUM
         + r")[\s\S]{0,30}?\bsold\b[\s\S]{0,30}?(?:" + _RS
@@ -1041,6 +1089,13 @@ def _compound_interest(q):
         f"Compound interest = A - P = {fmt_num(amount)} - "
         f"{fmt_num(P)} = {fmt_num(ci)}",
     ]
+    # Wave 59: when the TOTAL AMOUNT is the ask, it is the
+    # answer (mirrors the frequency variant's rule below).
+    if re.search(r"total\s+amount|find\s+the\s+amount|"
+                 r"what\s+is\s+the\s+amount|amount\s+after", q):
+        return {"type": "applied", "op": "compound_amount",
+                "answer": fmt_num(amount), "value": float(amount),
+                "steps": steps, "amount": float(amount)}
     return {"type": "applied", "op": "compound_interest",
             "answer": fmt_num(ci), "value": float(ci),
             "steps": steps, "amount": float(amount)}
@@ -4053,8 +4108,15 @@ def _hinglish_schemas(q):
                or re.fullmatch(
                    r"jod\w*\s*(?:batao|btaao|bataao|"
                    r"bataiye)?\s*\??\s*", q[mj.start():])):
+        # Wave 59: numbers inside "(x, y)" point tuples are
+        # coordinates, not addends — "bindu (1, 2) aur (3, 8)
+        # ko jodne wali rekha..." (the line JOINING two
+        # points) used to be summed into 14.
+        _prefix = re.sub(r"\(\s*-?\d+(?:\.\d+)?\s*,\s*"
+                         r"-?\d+(?:\.\d+)?\s*\)", " ",
+                         q[:mj.start()])
         nums = [_num(x) for x in re.findall(
-            r"(" + _NUM + r")", q[:mj.start()])]
+            r"(" + _NUM + r")", _prefix)]
         if len(nums) >= 2:
             v = sum(nums)
             return {"type": "applied", "op": "hinglish_arith",

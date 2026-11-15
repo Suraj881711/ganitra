@@ -98,6 +98,39 @@ def solve_exponents_logs(question: str):
             "steps": steps,
         }
 
+    # Wave 59: nth root stated in words — "find the 5th root
+    # of 32", "the cube root of 27" (the symbol forms were
+    # covered; the word form fell through entirely).
+    _mroot = re.search(
+        r"(\d+)(?:st|nd|rd|th)\s+root\s+of\s+(\d+(?:\.\d+)?)",
+        qlow) or re.search(
+            r"cube\s+root\s+of\s+(\d+(?:\.\d+)?)", qlow) or \
+        re.search(r"square\s+root\s+of\s+(\d+(?:\.\d+)?)", qlow)
+    if _mroot:
+        if _mroot.re.pattern.startswith(r"(\d+)(?:st"):
+            _nroot, _vroot = int(_mroot.group(1)), \
+                float(_mroot.group(2))
+        elif "cube" in _mroot.group(0):
+            _nroot, _vroot = 3, float(_mroot.group(1))
+        else:
+            _nroot, _vroot = 2, float(_mroot.group(1))
+        _res = sp.nsimplify(sp.real_root(
+            sp.Rational(_vroot).limit_denominator(), _nroot))
+        _exact = _res.is_Integer or _res.is_Rational
+        return {
+            "type": "exponents_logs",
+            "op": "nth_root",
+            "answer": fmt(_res) if _exact else
+                      fmt(float(_res)),
+            "value": float(_res),
+            "steps": [
+                f"The {_nroot}th root of {fmt(_vroot)} is the "
+                f"number whose {_nroot}th power is "
+                f"{fmt(_vroot)}.",
+                f"Answer = {fmt(_res) if _exact else fmt(float(_res))}",
+            ],
+        }
+
     # Log / exponential equation: anything containing log/ln and '='
     if "=" in q and ("log" in qlow or "ln" in qlow or "^" in q or "**" in q):
         text = re.sub(r"^\s*solve\b", "", q, flags=re.I).strip()
