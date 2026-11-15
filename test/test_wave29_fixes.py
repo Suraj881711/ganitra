@@ -120,12 +120,15 @@ def test_photo_solve_aria_names_the_photo_for_photos(client):
 # --- 3. Delivery versions -------------------------------------
 
 def test_delivery_versions_wave29():
-    assert "v='32'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v9"' in SW
+    assert "v='33'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v10"' in SW
     for old in ("ganitra-static-v5", "ganitra-static-v4",
                 "ganitra-static-v3", "ganitra-static-v2",
                 "ganitra-static-v1"):
-        assert old not in SW
+        # Wave 60: match the FULL quoted cache name —
+        # "ganitra-static-v10" contains "ganitra-static-v1"
+        # as a bare substring, which is not the old cache.
+        assert f'"{old}"' not in SW
 
 
 # --- 4. THE TEACH REGRESSION (boot smoke, jsdom) --------------
