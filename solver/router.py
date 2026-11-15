@@ -33,19 +33,382 @@ from .word_problems import solve_word_problem
 # Hinglish normalisation:  "5 aur 3 ko jodo" -> "5 + 3",
 # "240 ka 15 pratishat" -> "15% of 240",  "2, 4, 6 ka ausat" -> mean, ...
 # --------------------------------------------------------------------------
+# ---------------------------------------------------------------------
+# Wave 57: spelling normalisation — students type Hinglish with
+# chaotic spellings (btaao, ktna, khetrafal, byaaj) and English with
+# typos / OCR noise (rectangel, circumfrence, 24O, circ1e, rnaximum).
+# Rather than adding every spelling as its own pattern, fold each
+# token back to the canonical word BEFORE pattern matching:
+#   1. a variant map for the commonest misspellings,
+#   2. phonetic folding rules (doubled letters, long vowels) that
+#      only fire when the folded form is a known canonical word,
+#   3. consonant-skeleton matching against the canonical Hinglish
+#      maths wordlist for dropped-vowel forms (ktna -> kitna),
+#      gated on the question actually looking Hinglish, and never
+#      applied to ordinary English words.
+# Latin tokens only; Devanagari text is untouched apart from its
+# digits (०१२३ -> 0123), which every solver expects in ASCII.
+_DEV_DIGIT_TABLE = str.maketrans("०१२३४५६७८९", "0123456789")
+
+_HINGLISH_VARIANTS = {
+    "chaahiye": "chahiye", "chaiye": "chahiye",
+    "chahiyee": "chahiye", "bataao": "batao", "btaao": "batao",
+    "smjhao": "samjhao", "kitnaa": "kitna", "kitana": "kitna",
+    "parcent": "pratishat", "khetrafal": "kshetrafal",
+    "lambaai": "lambai", "chauraai": "chaudai",
+    "unchaai": "unchai", "warg": "varg", "parimaap": "parimap",
+    "vrit": "vritt", "trijiya": "trijya", "rupay": "rupaye",
+    "byaaj": "byaj", "sankhyaa": "sankhya",
+    "ausaat": "ausat", "sambhaavna": "sambhavna",
+    "prayikta": "sambhavna", "cheet": "chit", "tribuj": "tribhuj",
+    "adhar": "aadhar", "samikarn": "samikaran", "pahle": "pehle",
+    "yogg": "yog", "nikaalo": "nikalo",
+    "duri": "doori", "paasa": "pasa", "ghantay": "ghante",
+    "jodd": "jod", "ghaata": "ghata", "gunna": "guna",
+    "bhag": "bhaag", "tren": "train", "railgadi": "train",
+    "ayat": "aayat", "sadharann": "sadharan",
+}
+
+_HINGLISH_CANON = frozenset(_HINGLISH_VARIANTS.values()) | frozenset(
+    "batao kitna kitne kitni hai hoga hogi kya samjha samjhao "
+    "chahiye pratishat kshetrafal parimap paridhi lambai chaudai "
+    "unchai aadhar tribhuj chaturbhuj varg ghan ghanaab vritt "
+    "trijya byaj dar saal rupaye paas sankhya ausat "
+    "madhyika sambhavna "
+    "sikka sikke pasa chit puchh samikaran mool yog pad padon "
+    "pehle ghante ghanta doori train speed chaal gati samay karo "
+    "wala wali milega mile mila milta anupat banto number gaya jati tay uchale "
+    "feko sama visham sadharan".split())
+
+# Ambiguous short forms: folded only when the question already
+# looks Hinglish ("sal" is also a name, "mul" a name fragment).
+_HINGLISH_VARIANTS_GATED = {"sal": "saal", "mul": "mool"}
+
+# Real Hinglish words whose consonant skeleton collides with a
+# maths word — never skeleton-folded ("paise" = money must not
+# become "pasa" = die; "paas" is protected via the canon set).
+_HINGLISH_NO_FOLD = frozenset({"paisa", "paise"})
+
+_EN_TYPOS = {
+    "rectangel": "rectangle", "rectnagle": "rectangle",
+    "circumfrence": "circumference",
+    "circumfernce": "circumference", "cirle": "circle",
+    "mena": "mean", "midean": "median", "precent": "percent",
+    "pecent": "percent", "intrest": "interest",
+    "lenght": "length", "hieght": "height", "redius": "radius",
+    "squre": "square", "triangel": "triangle",
+    "traingle": "triangle", "diametre": "diameter",
+    "volum": "volume", "eqaution": "equation",
+    "equaton": "equation", "slove": "solve", "theorm": "theorem",
+    "pythagorus": "pythagoras", "probablity": "probability",
+    "probibility": "probability", "probabilty": "probability",
+    "parimeter": "perimeter", "formulla": "formula",
+    "avrage": "average", "substraction": "subtraction",
+    "addtion": "addition", "quadretic": "quadratic",
+}
+
+# Words an rn->m or 1->l OCR repair may land on.
+_EN_VOCAB = frozenset(
+    "maximum minimum metre metres meter meters circle rectangle "
+    "length breadth solve value radius simple area volume triangle "
+    "square algebra calculate total parallel equal angle single "
+    "double whole table sample example".split())
+
+# Ordinary English words are never skeleton-folded into Hinglish.
+_EN_NO_FOLD = frozenset(
+    "the and for with find area what when then than that this from "
+    "into have has each side mean mode root sum all two one six ten "
+    "per get got set put use way day say see try its is in on of to "
+    "do go no so up us we he be by my volume radius diameter square "
+    "triangle rectangle length breadth height base perimeter "
+    "circumference surface equation solve simplify factorise "
+    "factorize expand evaluate value angle degree degrees median "
+    "range data numbers number digits digit prime composite factor "
+    "factors multiple product quotient remainder fraction decimal "
+    "percent percentage ratio proportion interest simple compound "
+    "principal rate time speed distance train travels cover covers "
+    "hours minutes seconds days years rupees price cost profit loss "
+    "discount marked selling total first second third term terms "
+    "series sequence probability coin coins dice die head heads "
+    "tail tails card cards ball balls bag box red blue green "
+    "marble marbles how why who let given show prove draw plot "
+    "graph line point points form take takes made make makes long "
+    "much many more most less least just only also very can could "
+    "will would shall should may might must average".split())
+
+_HINGLISH_MARKERS = _HINGLISH_CANON | frozenset(_HINGLISH_VARIANTS) \
+    | frozenset(
+        "ka ki ke hai hain aur mein me se ko ek do teen kya par bhi "
+        "ye woh bata nikal hua mile mila wala wali karo karke lagta "
+        "lagega jata gaya gayi raha rahi tha thi apna apni iska iski "
+        "uska uski jiska jiski kitna kitne kitni chahiye batao "
+        "nikalo sankhyaon".split())
+
+
+def _skeleton(word):
+    """Consonant skeleton: vowels (and y) dropped — ktna and kitna
+    share 'ktn'."""
+    return re.sub(r"[aeiouy]+", "", word)
+
+
+_SKEL_TARGETS = {}
+for _w in _HINGLISH_CANON:
+    if len(_w) >= 4:
+        _SKEL_TARGETS.setdefault(_skeleton(_w), []).append(_w)
+_SKEL_TARGETS = {k: v[0] for k, v in _SKEL_TARGETS.items()
+                 if len(v) == 1}
+# Merge-3: one-consonant skeletons ("g" -> gaya, "t" -> aayat)
+# are dropped — they collide with ordinary English words (age,
+# ago, eat, tea), and once two such tokens appear the Hinglish
+# gate opens and rewrites clean English questions (it broke
+# Wave 56's ages schemas: "age" became "gaya"). A dropped-vowel
+# form worth folding always keeps >= 2 consonants.
+_SKEL_TARGETS = {k: v for k, v in _SKEL_TARGETS.items()
+                 if len(k) >= 2}
+# Ambiguous skeletons whose maths-default reading is clear.
+_SKEL_TARGETS.update({"ghnt": "ghante", "ktn": "kitna",
+                     "skk": "sikka", "dr": "doori",
+                     "ps": "pasa"})
+
+_JOIN_VOCAB = frozenset(
+    "rectangle circumference probability triangle square circle "
+    "perimeter interest equation volume diameter simple area"
+    .split())
+_JOIN_LEFT_STOP = frozenset(
+    "right acute obtuse straight reflex".split())
+
+_NOSPACE_WORDS = sorted(
+    "find the area of square circle triangle rectangle with side "
+    "radius diameter perimeter circumference volume mean median "
+    "mode what is solve and cm mm km in to an a".split(),
+    key=len, reverse=True)
+
+
+def _fold_word(w, hinglish_gate):
+    """Fold one lowercase Latin token to its canonical spelling."""
+    for _ in range(3):
+        if w in _HINGLISH_VARIANTS:
+            w = _HINGLISH_VARIANTS[w]
+            continue
+        if hinglish_gate and w in _HINGLISH_VARIANTS_GATED:
+            w = _HINGLISH_VARIANTS_GATED[w]
+            continue
+        if w in _HINGLISH_CANON:
+            break
+        if w in _EN_TYPOS:
+            w = _EN_TYPOS[w]
+            break
+        # OCR: rn -> m ("rnaximum"), digit 1 -> letter l ("circ1e").
+        if w.startswith("rn") and "m" + w[2:] in _EN_VOCAB:
+            w = "m" + w[2:]
+            break
+        if w.count("1") == 1 and len(w) >= 4 and \
+                re.fullmatch(r"[a-z1]+", w) and \
+                w.replace("1", "l") in _EN_VOCAB:
+            w = w.replace("1", "l")
+            break
+        # Doubled letters collapsed ("kitnaaa", "joddd", "byajj").
+        collapsed = re.sub(r"([a-z])\1+", r"\1", w)
+        if collapsed != w and (collapsed in _HINGLISH_CANON
+                               or collapsed in _HINGLISH_VARIANTS):
+            w = collapsed
+            continue
+        # Long vowels folded ("byaaj", "chaahiye", "nikaalo").
+        folded = w.replace("aa", "a").replace("ee", "i") \
+            .replace("oo", "u")
+        if folded != w and (folded in _HINGLISH_CANON
+                            or folded in _HINGLISH_VARIANTS):
+            w = folded
+            continue
+        break
+    # Dropped-vowel forms: consonant-skeleton match, Hinglish only.
+    if hinglish_gate and len(w) >= 3 and w not in _HINGLISH_CANON \
+            and w not in _HINGLISH_NO_FOLD \
+            and w not in _EN_NO_FOLD and w.isalpha():
+        sk = _skeleton(w)
+        target = _SKEL_TARGETS.get(sk)
+        if target is None and sk[:1] in ("b", "v"):
+            # b/v are interchangeable in Roman Hindi (britt =
+            # vritt, warg = varg).
+            target = _SKEL_TARGETS.get(
+                ("v" if sk[0] == "b" else "b") + sk[1:])
+        if target is None and sk.startswith("ch"):
+            # क्षेत्र is typed both kshetra and chetra.
+            target = _SKEL_TARGETS.get("ksh" + sk[2:])
+        if target is None and w[0] in "aeiou":
+            # Roman Hindi often drops the nasal of ऊँचाई-type
+            # words: uchai for unchai.
+            target = _SKEL_TARGETS.get(_skeleton("n" + w))
+        if target is not None:
+            w = target
+    return w
+
+
+def _nospace_repair(text):
+    """'findtheareaofasquarewithside9cm' -> spaced words, by greedy
+    longest-match over a small maths vocabulary. Returns None when
+    the string does not tokenise almost completely."""
+    s = text.strip()
+    if " " in s or len(s) < 12 or not re.fullmatch(r"[a-z0-9%,.]+", s):
+        return None
+    out, i = [], 0
+    while i < len(s):
+        m = re.match(r"\d[\d,]*(?:\.\d+)?%?", s[i:])
+        if m:
+            out.append(m.group(0))
+            i += len(m.group(0))
+            continue
+        for word in _NOSPACE_WORDS:
+            if s.startswith(word, i):
+                out.append(word)
+                i += len(word)
+                break
+        else:
+            return None
+    return " ".join(out)
+
+
+def normalize_spelling(question: str) -> str:
+    """Wave 57: fold student-typing noise (Hinglish spelling chaos,
+    English typos, OCR-style noise) back to canonical words before
+    any pattern matching. Conservative by design: a token changes
+    only when the folded form is a known word, so clean questions
+    pass through byte-identical."""
+    try:
+        return _normalize_spelling(question)
+    except Exception:
+        return question
+
+
+def _normalize_spelling(question: str) -> str:
+    text = str(question).translate(_DEV_DIGIT_TABLE)
+    repaired = _nospace_repair(text.lower())
+    if repaired is not None:
+        text = repaired
+    # OCR digit/O swaps inside number tokens ("24O", "1OOO", "6O").
+    def _o_swap(m):
+        tok = m.group(0)
+        if any(c.isdigit() for c in tok) and ("O" in tok
+                                              or "o" in tok):
+            return tok.replace("O", "0").replace("o", "0")
+        return tok
+    text = re.sub(r"(?<![A-Za-z0-9])[0-9Oo]+(?![A-Za-z0-9])",
+                  _o_swap, text)
+    low_tokens = re.findall(r"[a-z]+", text.lower())
+    hinglish_gate = any("ऀ" <= c <= "ॿ" for c in text) or \
+        sum(1 for t in low_tokens if t in _HINGLISH_MARKERS) >= 2
+    if not hinglish_gate:
+        # Short Hinglish asks may carry only one marker word
+        # ("in snkhya ka osat btao: ...") — open the gate when
+        # two or more tokens already skeleton-match the maths
+        # wordlist.
+        hits = sum(1 for t in low_tokens
+                   if len(t) >= 3 and t not in _EN_NO_FOLD
+                   and t not in _HINGLISH_NO_FOLD
+                   and t not in _HINGLISH_CANON
+                   and _skeleton(t) in _SKEL_TARGETS)
+        hinglish_gate = hits >= 2
+
+    def _sub(m):
+        tok = m.group(0)
+        low = tok.lower()
+        if len(low) < 2:
+            return tok
+        # OCR digit 1 inside a word ("circ1e", "1ength", "so1ve",
+        # "rad1us"): the 1 stands for l OR i — fold only when one
+        # of the results is a known English word.
+        if "1" in low:
+            if low.count("1") == 1 and len(low) >= 4:
+                for cand in (low.replace("1", "l"),
+                             low.replace("1", "i")):
+                    if cand in _EN_VOCAB:
+                        return cand
+            return tok
+        if not low.isalpha():
+            return tok
+        folded = _fold_word(low, hinglish_gate)
+        return folded if folded != low else tok
+    text = re.sub(r"[A-Za-z]*1[A-Za-z]+|[A-Za-z]+", _sub, text)
+    # "6 percent" -> "6%": the solvers' percent patterns are
+    # written for the % sign.
+    text = re.sub(r"(\d+(?:\.\d+)?)\s+percent\b", r"\1%", text)
+    # "breath" is a typo for breadth only next to a measurement.
+    text = re.sub(r"\bbreath\s+(is\s+)?(\d)",
+                  lambda m: "breadth " + (m.group(1) or "")
+                  + m.group(2), text)
+    # Broken words: "rect angle", "circum ference", "sim ple".
+    parts = text.split(" ")
+    if len(parts) > 1:
+        merged, i, changed = [], 0, False
+        while i < len(parts):
+            if i + 1 < len(parts):
+                a, b = parts[i].lower(), parts[i + 1].lower()
+                if a + b in _JOIN_VOCAB and a not in _JOIN_LEFT_STOP:
+                    merged.append(a + b)
+                    i += 2
+                    changed = True
+                    continue
+            merged.append(parts[i])
+            i += 1
+        if changed:
+            text = " ".join(merged)
+    # Typed superscripts in equations: "x2 - 5x + 6 = 0" -> x^2.
+    if "=" in text:
+        text = re.sub(r"(?<![A-Za-z0-9])([a-z])([23])(?![0-9])",
+                      r"\1^\2", text)
+    return text
+
+
 def normalize_hinglish(question: str) -> str:
     q = " " + question.strip() + " "
     ql = q.lower()
 
     # Percentage: "240 ka 15 pratishat (kitna hoga)" -> "15% of 240"
-    m = re.search(r"(\d+(?:\.\d+)?)\s+ka\s+(\d+(?:\.\d+)?)\s+pratishat",
-                  ql)
+    # (Wave 57: the English word "percent" in the same slot too.
+    # Guarded: with "discount" nearby the ka-phrase is a price
+    # story, not a plain percent-of.)
+    m = re.search(r"(\d+(?:\.\d+)?)\s+ka\s+(\d+(?:\.\d+)?)\s+"
+                  r"(?:pratishat|percent)", ql)
+    if m and "discount" not in ql:
+        return f"{m.group(2)}% of {m.group(1)}"
+
+    # Wave 57: Devanagari percent — "240 का 15 प्रतिशत कितना होगा?"
+    m = re.search(r"(\d+(?:\.\d+)?)\s*का\s*(\d+(?:\.\d+)?)\s*"
+                  r"प्रतिशत", ql)
     if m:
+        return f"{m.group(2)}% of {m.group(1)}"
+
+    # Wave 57: Devanagari roots — "144 का वर्गमूल" / "27 का
+    # घनमूल" (these returned letter-soup before; the word
+    # forms "square root of N" do not parse in the solver,
+    # the function forms do).
+    m = re.search(r"(\d+(?:\.\d+)?)\s*का\s*वर्गमूल", ql)
+    if m:
+        return f"sqrt({m.group(1)})"
+    m = re.search(r"(\d+(?:\.\d+)?)\s*का\s*घनमूल", ql)
+    if m:
+        return f"cbrt({m.group(1)})"
+
+    # Wave 57: same ask with the % sign — "240 ka 15% kitna hoga".
+    # Guarded: with byaj/saal nearby it is an interest ask, not a
+    # plain percent-of; with "discount" it is a price story.
+    m = re.search(r"(\d+(?:\.\d+)?)\s+ka\s+(\d+(?:\.\d+)?)\s*%", ql)
+    if m and "byaj" not in ql and "saal" not in ql \
+            and "dar se" not in ql and "discount" not in ql:
         return f"{m.group(2)}% of {m.group(1)}"
 
     # Average: "2, 4, 6 ka ausat" -> "mean of 2, 4, 6"
     m = re.search(r"([\d][\d\s,\.]*?)\s+ka\s+ausat", ql)
     if m:
+        return f"mean of {m.group(1).strip()}"
+
+    # Wave 57: the list can also come AFTER "ausat batao:" —
+    # "in sankhyaon ka ausat batao: 3, 6, 9, 12". A comma is
+    # required, so "ausat 12 hai, yog kitna?" (mean GIVEN) is
+    # never mistaken for a list.
+    m = re.search(r"ausat\s*(?:batao|nikalo|bata\s*do|kya\s+hoga)?"
+                  r"\s*[:\-]?\s*([\d][\d\s,\.]*)", ql)
+    if m and "," in m.group(1) and len(re.findall(r"\d", m.group(1))) >= 2:
         return f"mean of {m.group(1).strip()}"
 
     # Multiply: "4 guna 5", "4 aur 5 ka guna", "4 ko 5 se guna"
@@ -62,6 +425,8 @@ def normalize_hinglish(question: str) -> str:
     m = re.search(r"(\d+(?:\.\d+)?)\s+ko\s+(\d+(?:\.\d+)?)\s+se\s+bhaag",
                   ql) or \
         re.search(r"(\d+(?:\.\d+)?)\s+bhaag\s+(\d+(?:\.\d+)?)", ql) or \
+        re.search(r"(\d+(?:\.\d+)?)\s+ka\s+bhaag\s+(\d+(?:\.\d+)?)",
+                  ql) or \
         re.search(r"(\d+(?:\.\d+)?)\s+aur\s+(\d+(?:\.\d+)?)\s+ka\s+bhaag\b",
                   ql)
     if m:
@@ -116,6 +481,112 @@ def normalize_hinglish(question: str) -> str:
                   r"(\d+(?:\.\d+)?)\s*ghante", ql)
     if m:
         return f"{m.group(1)} km/h for {m.group(2)} hours"
+
+    # Wave 57: Roman-Hindi time ask — "train 80 km/h ki speed
+    # se 240 km kitne ghante me jayegi?" (distance rule above
+    # cannot match: the hours are not digit-adjacent here).
+    m = re.search(r"(\d+(?:\.\d+)?)\s*km/h[^0-9]{0,60}?"
+                  r"(\d+(?:\.\d+)?)\s*km\b[^0-9]{0,30}?ghante",
+                  ql)
+    if m:
+        return (f"how long does a train take to travel "
+                f"{m.group(2)} km at {m.group(1)} km/h")
+
+    # Wave 57: Roman-Hindi word problems -> the canonical English
+    # forms the solvers already accept. These run on the spelling-
+    # folded text, so only canonical Hinglish words are matched
+    # (btaao/ktna/khetrafal never reach here — they are folded by
+    # normalize_spelling first).
+    # Speed from distance + time: "ek train 360 km (ki doori)
+    # 4 ghante me tay karti hai, speed/chaal kitni hai?"
+    if "km/h" not in ql and ("speed" in ql or "chaal" in ql
+                             or "gati" in ql):
+        m = re.search(r"(\d+(?:\.\d+)?)\s*km\b[^0-9]{0,24}?"
+                      r"(\d+(?:\.\d+)?)\s*ghante", ql)
+        if m:
+            return (f"a train travels {m.group(1)} km in "
+                    f"{m.group(2)} hours, find its speed")
+    # Time from distance + speed: "train ko 360 km jana hai,
+    # speed 60 km/h hai, kitna time lagega?"
+    if "time" in ql or "samay" in ql:
+        m = re.search(r"(\d+(?:\.\d+)?)\s*km\s+jana\s+hai"
+                      r"[^0-9]{0,40}?(\d+(?:\.\d+)?)\s*km/h", ql)
+        if m:
+            return (f"how long does a train take to travel "
+                    f"{m.group(1)} km at {m.group(2)} km/h")
+    # Rectangle area: lambai/chaudai or length/breadth forms.
+    m = re.search(r"aayat[^0-9]{0,40}?lambai\s+(?:hai\s+)?"
+                  r"(\d+(?:\.\d+)?)[^0-9]{0,20}?chaudai\s+"
+                  r"(?:hai\s+)?(\d+(?:\.\d+)?)", ql) or \
+        re.search(r"aayat[^0-9]{0,40}?length\s+(\d+(?:\.\d+)?)"
+                  r"[^0-9]{0,20}?breadth\s+(\d+(?:\.\d+)?)", ql)
+    if m:
+        return (f"area of a rectangle with length {m.group(1)} "
+                f"and breadth {m.group(2)}")
+    # Triangle area: "tribhuj ... aadhar B ... unchai H".
+    m = re.search(r"tribhuj[^0-9]{0,50}?aadhar\s+(?:hai\s+)?"
+                  r"(\d+(?:\.\d+)?)[^0-9]{0,20}?unchai\s+"
+                  r"(?:hai\s+)?(\d+(?:\.\d+)?)", ql)
+    if m:
+        return (f"area of a triangle with base {m.group(1)} "
+                f"and height {m.group(2)}")
+    # Square perimeter / area with "side S".
+    m = re.search(r"varg\s+ka\s+parimap[^0-9]{0,30}?side\s+"
+                  r"(\d+(?:\.\d+)?)", ql)
+    if m:
+        return f"perimeter of a square with side {m.group(1)}"
+    m = re.search(r"varg\s+ka\s+(?:area|kshetrafal)[^0-9]{0,30}?"
+                  r"side\s+(\d+(?:\.\d+)?)", ql)
+    if m:
+        return f"area of a square with side {m.group(1)}"
+    # Circle area / circumference with trijya or radius.
+    m = re.search(r"(?:vritt|circle)[^0-9]{0,50}?(?:kshetrafal|"
+                  r"area)[^0-9]{0,50}?(?:trijya|radius)\s+"
+                  r"(\d+(?:\.\d+)?)", ql)
+    if m:
+        return f"area of a circle with radius {m.group(1)}"
+    m = re.search(r"(?:vritt|circle)[^0-9]{0,50}?paridhi"
+                  r"[^0-9]{0,50}?(?:trijya|radius)\s+"
+                  r"(\d+(?:\.\d+)?)", ql)
+    if m:
+        return f"circumference of a circle with radius {m.group(1)}"
+    # Cuboid volume: "ghanaab ... lambai L chaudai B unchai H".
+    m = re.search(r"ghanaab[^0-9]{0,60}?lambai\s+(\d+(?:\.\d+)?)"
+                  r"[^0-9]{0,20}?chaudai\s+(\d+(?:\.\d+)?)"
+                  r"[^0-9]{0,20}?unchai\s+(\d+(?:\.\d+)?)", ql)
+    if m:
+        return (f"volume of a cuboid with length {m.group(1)} "
+                f"breadth {m.group(2)} and height {m.group(3)}")
+    # Simple interest: "P rupaye ka R percent/% ... T saal ... byaj".
+    m = re.search(r"(\d+(?:\.\d+)?)\s+rupaye[^0-9]{0,30}?"
+                  r"(\d+(?:\.\d+)?)\s*(?:percent|pratishat)"
+                  r"[^0-9]{0,40}?(\d+(?:\.\d+)?)\s+saal", ql) or \
+        re.search(r"(\d+(?:\.\d+)?)\s+rupaye[^0-9]{0,20}?"
+                  r"(\d+(?:\.\d+)?)\s*%[^0-9]{0,50}?"
+                  r"(\d+(?:\.\d+)?)\s+saal", ql)
+    if m and "byaj" in ql:
+        return (f"simple interest on {m.group(1)} at "
+                f"{m.group(2)}% for {m.group(3)} years")
+    # Marks percent: "500 me se 350 number mile, percent kitna?"
+    m = re.search(r"(\d+(?:\.\d+)?)\s+me\s+se\s+(\d+(?:\.\d+)?)"
+                  r"\s+(?:number|marks?)\s+mile", ql)
+    if m:
+        return (f"what percentage is {m.group(2)} out of "
+                f"{m.group(1)}")
+    # Ratio share: "1000 rupaye ko 2:3 ke anupat me banto".
+    m = re.search(r"(\d+(?:\.\d+)?)\s+rupaye\s+ko\s+"
+                  r"(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)\s+ke\s+"
+                  r"anupat", ql)
+    if m:
+        return (f"divide {m.group(1)} in the ratio "
+                f"{m.group(2)}:{m.group(3)} how much does the "
+                f"first person get")
+    # Discount: "2000 rupaye wali cheez par 10% discount".
+    m = re.search(r"(\d+(?:\.\d+)?)\s+rupaye\s+wali[^0-9]{0,30}?"
+                  r"(\d+(?:\.\d+)?)\s*%\s+discount", ql)
+    if m:
+        return (f"marked price is {m.group(1)}, discount of "
+                f"{m.group(2)}%")
 
     # "ka maan (nikalo)" = "the value of": strip it and route normally.
     t = re.sub(r"\s+ka\s+maan\b.*$", "", ql).strip()
@@ -200,7 +671,7 @@ def route_intent(question: str) -> str:
             re.search(r"rate\s+of\s+change", q) or re.search(
             r"slope\s+of\s+(the\s+)?(tangent|normal)\b", q) or \
             re.search(
-            r"equation\s+of\s+(the\s+)?(tangent|normal)\b", q) or \
+            r"equations?\s+of\s+(the\s+)?(tangent|normal)\b", q) or \
             re.search(
             r"(maximum|minimum)\s+value\s+of\s+(the\s+)?"
             r"(function\s+)?f\s*\(\s*x\s*\)", q):
@@ -230,6 +701,16 @@ def route_intent(question: str) -> str:
             re.search(r"\d+\s*[CP]\s*\d+", question):
         return "statistics"
 
+    # Wave 58: event-probability notation — "P(A) = 0.3 ...
+    # find P(A or B)". Two or more capital-event P() mentions
+    # mark a probability question even when the word
+    # "probability" never appears; without this the algebra
+    # intent claimed them and the system solver served
+    # letter-equation garbage. (Polynomial P(x) is lowercase
+    # and never matches.)
+    if len(re.findall(r"P\(\s*[A-Z]\b", question)) >= 2:
+        return "statistics"
+
     # Statistics & probability ("mode" as a standalone word only, so
     # "model" etc. are not hijacked; dice handled by word boundary)
     # Wave 33: Hindi / Hinglish statistics tokens — प्रायिकता /
@@ -254,7 +735,9 @@ def route_intent(question: str) -> str:
             r"distance between|midpoint|slope|hypotenuse|"
             r"equation of|triangle.{0,50}angle|section\s+formula|"
             r"divides\s+the\s+line|coordinates\s+of\s+the\s+point|"
-            r"diagonal|pythagor|समकोण|कर्ण)",
+            r"diagonal|pythagor|समकोण|कर्ण|"
+            r"क्षेत्रफल|परिमाप|परिधि|त्रिज्या|आयत|वर्ग\s+क|"
+            r"त्रिभुज|वृत्त|भुजा|लंबाई|चौड़ाई|ऊँचाई|आधार)",
             q):
         return "geometry"
 
@@ -284,7 +767,12 @@ def route_intent(question: str) -> str:
         return "complex"
 
     # Logarithms / exponents (before algebra: log equations contain '=')
-    if re.search(r"\b(log|ln|logarithm|antilog)\b", q):
+    # Wave 58: the subscript forms "log_2" / "log2" must count —
+    # "_" is a word character, so a plain \b after "log" never
+    # matched them and those questions fell through to the
+    # arithmetic simplifier, which served "32*log_2" as the
+    # value of log_2 32.
+    if re.search(r"\b(log|ln|logarithm|antilog)(?:_?\d|\b)", q):
         return "exponents_logs"
 
     # Number theory. "mod" must be a standalone token so words like
@@ -296,7 +784,8 @@ def route_intent(question: str) -> str:
     if re.search(r"\bprime\s+numbers?\s+(between|from)\b", q):
         return "junior"
     if re.search(r"\b(prime|gcd|hcf|lcm|modulo|divisible)\b", q) or \
-            re.search(r"(?<![a-z])mod(?![a-z])", q):
+            re.search(r"(?<![a-z])mod(?![a-z])", q) or \
+            re.search(r"महत्तम|लघुत्तम|समापवर्त", q):
         return "number_theory"
     if re.search(r"\bfactor", q) and not re.search(r"[a-z]", re.sub(
             r"\bfactors?\b|\bfactorise\b|\bfactorize\b|\bof\b|"
@@ -357,7 +846,8 @@ def route_intent(question: str) -> str:
             r"\b(twice|thrice|double)\s+(a\s+)?number\b|"
             r"\bsum\s+of\s+a\s+number\s+and\s+\d|"
             r"\bwhen\s+\d+\s+is\s+added\s+to\s+a\s+number\b|"
-            r"\btravels?\b.{0,40}?\bkm\b|\bcovers\s+\d+\s*km\b)",
+            r"\btravels?\b.{0,40}?\bkm\b|\bcovers\s+\d+\s*km\b|"
+            r"चाल|रेलगाड़ी|ट्रेन|ब्याज)",
             q):
         return "applied"
 
@@ -553,7 +1043,11 @@ def solve_question(question: str):
 
 def _solve_question_uncached(question: str):
     original = question
-    translated = normalize_hinglish(question)
+    # Wave 57: fold typing noise (Hinglish spellings, typos, OCR)
+    # to canonical words first; Hinglish translation then works on
+    # the folded text. Clean questions pass through unchanged.
+    folded = normalize_spelling(question)
+    translated = normalize_hinglish(folded)
     was_translated = translated.strip().lower() != question.strip().lower()
     working = translated if was_translated else question
 
@@ -639,6 +1133,9 @@ def _solve_question_uncached(question: str):
             r"|arc of (?:a |the )?circle"
             r"|sector of (?:a |the )?circle"
             r"|segment of (?:a |the )?circle"
+            r"|dot\s+product|unit\s+vector"
+            r"|length\s+of\s+(?:each\s+|the\s+)?tangent"
+            r"|magnitude\s+of\s+(?:the\s+)?vector"
             r"|distance of (?:the )?point .* from the origin"
             r"|ratio does the (?:x|y)-axis divide"
             r"|\(\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?"
@@ -649,6 +1146,193 @@ def _solve_question_uncached(question: str):
             out = None
         if out is not None and out.get("op") not in (
                 "unknown", "error"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 56: Hindi / Hinglish word schemas (in
+    # solver/applied.py) are systematically HIJACKED by the
+    # expression parser, which reads the Hindi words as
+    # letter variables and returns a "simplify" letter-soup
+    # that is neither an error nor unknown — so the applied
+    # second chance further down never fires ("3/4 ko
+    # decimal me batao" answered '3*a*c*d*e**2...'). When
+    # the question carries Devanagari or a common Hinglish
+    # stem, try applied FIRST and accept ONLY the Wave 56
+    # hindi_/hinglish_ ops, so no English path can change.
+    # Wave 56: two algebra schemas whose questions never
+    # route to algebra — "Evaluate 105^2 using the identity
+    # (a + b)^2" lands in arithmetic (which simplifies the
+    # sentence into letter-soup) and "Form a quadratic
+    # equation whose roots are ..." lands nowhere. Try
+    # algebra FIRST for those shapes and accept ONLY the
+    # Wave 56 ops.
+    if (re.search(r"using\s+(?:the\s+|an\s+)?identity",
+                  working, re.I)
+            and re.search(r"\d+\s*\^\s*2", working)) or \
+            re.search(r"form\s+a\s+quadratic|quadratic\s+"
+                      r"equation\s+whose\s+roots", working,
+                      re.I):
+        try:
+            out = solve_algebra(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") in (
+                "identity_square", "form_quadratic"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 56: fraction commands with a whole-number
+    # operand ("Add 1 and 1/5") route to the JUNIOR solver,
+    # whose add pattern reads only whole numbers and
+    # silently drops the "/5". Try arithmetic first when a
+    # command verb meets a fraction token, accepting only
+    # its fraction_* ops.
+    if re.search(r"^\s*(add|subtract|multiply|divide)\b",
+                 working, re.I) and \
+            re.search(r"\d+\s*/\s*\d+", working):
+        try:
+            out = solve_arithmetic(working)
+        except Exception:
+            out = None
+        if out is not None and str(
+                out.get("op") or "").startswith("fraction_"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 56: set-counting questions (n(A) notation, the
+    # power set, the play-both/neither class form) carry no
+    # literal sets, so solve_sets' own gate never sees
+    # them through the intent table. Try sets FIRST for
+    # those shapes, accepting only the counting ops.
+    if re.search(r"n\(\s*[a-z]\s*(?:\)|union|intersection)",
+                 working, re.I) \
+            or "power set" in working.lower() \
+            or (re.search(r"\bplay\s+(?:both|neither)\b",
+                          working, re.I)
+                and re.search(r"\bclass\s+of\s+\d+", working,
+                              re.I)):
+        try:
+            out = solve_sets(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") in (
+                "cardinality", "power_set", "play_neither",
+                "play_both", "play_union"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 56: "Find the range of the data ..." —
+    # route_intent's statistics pattern has no "range", so
+    # these went to arithmetic and errored, although
+    # solve_statistics implements range. Try statistics
+    # first for the shape, accepting only its range op.
+    if re.search(r"\brange\s+of\s+(?:the\s+)?(?:data|"
+                 r"following)", working, re.I):
+        try:
+            out = solve_statistics(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") == "range":
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 56: a BARE product in words — "can you solve
+    # 17 x 24" — has no intent keywords at all and fell to
+    # the fallback although it is one multiplication. Try
+    # arithmetic first for the whole-question shape,
+    # accepting only its evaluate op.
+    if re.match(r"\s*(?:can\s+you\s+)?(?:please\s+)?"
+                r"(?:solve|calculate|evaluate|find|what\s+is)?"
+                r"\s*\d+(?:\.\d+)?\s*[x×]\s*\d+(?:\.\d+)?"
+                r"\s*[=?]?\s*\.?\s*$", working, re.I):
+        try:
+            out = solve_arithmetic(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") == "evaluate":
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 56: a BARE number list with a next-term ask
+    # ("2, 4, 8, 16 ke baad kya aayega") carries no AP/GP
+    # keyword for route_intent, so it never reached
+    # sequences. Try sequences first for the shape,
+    # accepting only its next-term ops.
+    if re.match(r"\s*-?\d+(?:\.\d+)?\s*,\s*-?\d+", working) \
+            and re.search(r"ke\s+baad|agla|next\s+term|"
+                          r"what\s+comes\s+next", working,
+                          re.I):
+        try:
+            out = solve_sequences(working)
+        except Exception:
+            out = None
+        if out is not None and "next" in str(
+                out.get("op") or ""):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 56: heights-and-distances shapes can route to
+    # geometry ("Two poles ... distance between their
+    # tops") and never reach trigonometry. Try trigonometry
+    # FIRST for those shapes, accepting only its
+    # height_distance op.
+    if re.search(r"ladder|kite|shadow|angle\s+of\s+"
+                 r"elevation|angle\s+of\s+depression|"
+                 r"distance\s+between\s+their\s+tops",
+                 working, re.I):
+        try:
+            out = solve_trigonometry(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") in (
+                "height_distance", "two_observation_height"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # (Scan the ORIGINAL too: the normaliser strips some
+    # stems, e.g. "batao", before this point.)
+    _wl = (working + " " + original).lower()
+    if re.search(r"[ऀ-ॿ]", _wl) or re.search(
+            r"\b(?:batao|btaao|bataao|bataiye|kitna|kitne|"
+            r"kitni|ghatao|ghaatao|jodne|jodo|keemat|kimat|"
+            r"qeemat|daam|rupay|rupaye|bacche|bachche|"
+            r"sankhya|duguna|tiguna|milega|milegi|chahiye|"
+            r"chaahiye|ladkiyan|ladkiya|istemal|istemaal|"
+            r"lambai|chaudai|aadhar|unchai|vyas|trijya|"
+            r"paridhi|parimaap|kshetrafal|ghante|saal)\b",
+            _wl):
+        # Try the NORMALISED text first. The ORIGINAL is
+        # tried only for equation-shaped questions: the
+        # normaliser strips exactly the word the wrapped-
+        # equation schema keys on ("batao" is removed from
+        # '8x + 8 = 176 hai to x batao', leaving a text
+        # whose equation no longer has a solve word) —
+        # while for plain arithmetic the normaliser's own
+        # translation ("15 aur 27 ko jodo" -> "15 + 27")
+        # must keep ownership, so the original is NOT
+        # retried there.
+        out = None
+        _cands = (working, original) if "=" in original \
+            else (working,)
+        for _cand in _cands:
+            try:
+                out = solve_applied(_cand)
+            except Exception:
+                out = None
+            if out is not None and str(
+                    out.get("op", "")).startswith(
+                    ("hindi", "hinglish")):
+                break
+            out = None
+        if out is not None:
             if was_translated:
                 out["interpreted_as"] = translated
             return out
@@ -688,6 +1372,24 @@ def _solve_question_uncached(question: str):
                 out["interpreted_as"] = translated
             return out
 
+    # Wave 58: a Devanagari question tries solve_applied FIRST
+    # and accepts ONLY the hindi_* ops. Hindi mensuration / SI /
+    # percentage statements had no pattern at all, so they fell
+    # through routing to the generic parser, which letter-
+    # multiplied the sentence and served the product as the
+    # answer (audit #385-#514). The gate falls through unchanged
+    # whenever applied has no Hindi pattern for the question.
+    if re.search(r"[ऀ-ॿ]", working):
+        try:
+            out = solve_applied(working)
+        except Exception:
+            out = None
+        if out is not None and str(out.get("op", "")).startswith(
+                "hindi_"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
     # Wave 47: "How many factors does 36 have?" never reached
     # number theory — the intent strip-check rejected it (the
     # sentence keeps its words) and the arithmetic simplifier
@@ -703,6 +1405,26 @@ def _solve_question_uncached(question: str):
         except Exception:
             out = None
         if out is not None and out.get("op") == "factor_count":
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 52: Devanagari word problems (Wave 35 audit #1).
+    # A Hindi mensuration / SI / percentage statement names
+    # no English intent keyword, so it routed to arithmetic,
+    # whose simplifier multiplied the question's own
+    # Devanagari letters together and returned the product
+    # as the answer. The strict Hindi patterns live in
+    # solver/applied.py (_hindi_word_problems); try applied
+    # FIRST for Devanagari questions and accept only its
+    # hindi_* ops, falling through unchanged otherwise.
+    if any("ऀ" <= ch <= "ॿ" for ch in working):
+        try:
+            out = solve_applied(working)
+        except Exception:
+            out = None
+        if out is not None and str(
+                out.get("op", "")).startswith("hindi_"):
             if was_translated:
                 out["interpreted_as"] = translated
             return out

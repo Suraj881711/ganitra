@@ -60,6 +60,75 @@ def solve_number_theory(question: str):
         return {"type": "number_theory", "op": "modulo",
                 "answer": str(a % b), "value": a % b, "steps": steps}
 
+    # HCF × LCM = product of the two numbers (Waves 52 + 56,
+    # unified at merge-3 — both waves fixed echo case #437
+    # with the same relation; this single block keeps Wave
+    # 52's anchored patterns widened with Wave 56's gcd /
+    # "=" forms): "The HCF of two numbers is 12 and their
+    # LCM is 240. If one number is 60, find the other
+    # number." — the together-branch below read the three
+    # numbers as the operands and echoed the givens back
+    # ("HCF = 12, LCM = 240"). For two numbers,
+    # first × second = HCF × LCM.
+    _mh = re.search(r"(?:hcf|gcd)\s+(?:of\s+(?:the\s+)?two"
+                    r"\s+numbers\s+)?(?:is|=)\s*(\d+)", q)
+    _ml = re.search(r"lcm\s+(?:of\s+(?:the\s+)?two\s+numbers"
+                    r"\s+)?(?:is|=)\s*(\d+)", q)
+    _mo = re.search(r"one\s+(?:of\s+(?:the\s+)?(?:two\s+)?)?"
+                    r"numbers?\s+is\s+(\d+)", q)
+    if _mh and _ml and _mo and "other" in q:
+        _h, _l, _one = (int(_mh.group(1)), int(_ml.group(1)),
+                        int(_mo.group(1)))
+        if _one and (_h * _l) % _one == 0:
+            _other = _h * _l // _one
+            steps = [
+                "For two numbers: first number × second "
+                "number = HCF × LCM",
+                f"{_one} × second number = {_h} × {_l} "
+                f"= {_h * _l}",
+                f"Second number = {_h * _l} ÷ {_one} "
+                f"= {_other}",
+            ]
+            return {"type": "number_theory",
+                    "op": "hcf_lcm_other",
+                    "answer": str(_other), "value": _other,
+                    "steps": steps}
+
+    # Wave 57: Devanagari HCF / LCM — "12 और 18 का महत्तम
+    # समापवर्तक बताओ" / "12 और 15 का लघुत्तम समापवर्त्य निकालो".
+    # (Digits reach here in ASCII: the router's spelling
+    # normalisation converts Devanagari digits first.)
+    if "महत्तम समापवर्तक" in q or "लघुत्तम समापवर्त्य" in q:
+        nums = _all_ints(question)
+        if len(nums) >= 2:
+            import math
+            a, b = nums[0], nums[1]
+            if "महत्तम समापवर्तक" in q:
+                g = a
+                for v in nums[1:]:
+                    g = math.gcd(g, v)
+                steps = [
+                    f"{a} = {_factor_str(a)}",
+                    f"{b} = {_factor_str(b)}",
+                    "उभयनिष्ठ अभाज्य गुणनखंडों की सबसे छोटी घातें "
+                    "लें।",
+                    f"महत्तम समापवर्तक (HCF) = {g}",
+                ]
+                return {"type": "number_theory", "op": "gcd",
+                        "answer": str(g), "value": g,
+                        "steps": steps}
+            l = a
+            for v in nums[1:]:
+                l = l * v // math.gcd(l, v)
+            steps = [
+                f"{a} = {_factor_str(a)}",
+                f"{b} = {_factor_str(b)}",
+                "हर अभाज्य गुणनखंड की सबसे बड़ी घात लें।",
+                f"लघुत्तम समापवर्त्य (LCM) = {l}",
+            ]
+            return {"type": "number_theory", "op": "lcm",
+                    "answer": str(l), "value": l, "steps": steps}
+
     # Wave 30: HCF and LCM asked TOGETHER ("Find the HCF and
     # LCM of 12 and 18") — the HCF branch below used to fire
     # alone and the LCM was silently never given.

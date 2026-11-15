@@ -91,9 +91,21 @@ def solve_units(question: str):
     q = question.strip()
     # Wave 13: "5 kg = how many grams" — value first, question
     # form second (the two patterns below cannot see this shape).
+    # Wave 57: anaphoric form — "a rope is 3 metres long, how
+    # many centimetres is that?" (same group order: value, from,
+    # to; non-unit words fall out at _find_category below). The
+    # two units must DIFFER — "12 days ... in how many days"
+    # is a work-rate question, not a conversion.
     m0 = re.search(
         r"(-?\d+(?:\.\d+)?)\s*([a-zA-Z]+)\s*=\s*how\s+many\s+"
         r"([a-zA-Z]+)", q, re.I)
+    if not m0:
+        _ma = re.search(
+            r"(-?\d+(?:\.\d+)?)\s*([a-zA-Z]+)\b[^0-9]{0,60}?"
+            r"how\s+many\s+([a-zA-Z]+)", q, re.I)
+        if _ma and _norm_unit(_ma.group(2)) != \
+                _norm_unit(_ma.group(3)):
+            m0 = _ma
     m = None if m0 else re.search(
         r"(?:convert\s+)?(-?\d+(?:\.\d+)?)\s*([a-zA-Z°\^²2 ]+?)\s+"
         r"(?:to|into|in|=)\s+([a-zA-Z°\^²2 ]+?)\s*$",

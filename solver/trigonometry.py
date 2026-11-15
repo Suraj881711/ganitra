@@ -3,6 +3,7 @@
 School convention used here: a bare number argument ("sin 30") is in
 DEGREES unless the question mentions radians or the argument uses pi.
 """
+import math
 import re
 
 import sympy as sp
@@ -56,10 +57,177 @@ def _convert_degrees(q: str):
     return t, conversions
 
 
+def _heights_distances56(q, qlow):
+    """Wave 56: heights-and-distances word schemas (Class 10)
+    — ladder against a wall, kite string, shadow, tower from
+    a distance, an observer walking towards a tower (two
+    angles), and the distance between the tops of two poles.
+    Each parses the given length + angle slots and applies
+    the one right-triangle ratio; before this the chapter's
+    word questions all fell through to the fallback."""
+    num = r"(\d+(?:\.\d+)?)"
+    ang = r"(\d+(?:\.\d+)?)\s*(?:°|degrees?|deg\b)"
+
+    def _r(val, steps, label):
+        return {"type": "trigonometry", "op": "height_distance",
+                "answer": fmt_num(round(val, 3)),
+                "value": val, "steps": steps,
+                "answer_label": label}
+
+    # Ladder: foot D from the wall, angle θ with the ground
+    # -> length = D / cos θ.
+    if "ladder" in qlow:
+        m = re.search(num + r"\s*m(?:etres?|eters?)?\s+(?:away\s+)?"
+                      r"from\s+the\s+(?:wall|foot)", qlow)
+        ma = re.search(r"angle\s+of\s+" + ang, qlow) or \
+            re.search(r"makes\s+an\s+angle\s+of\s+" + ang, qlow) \
+            or re.search(r"at\s+an?\s+angle\s+of\s+" + ang, qlow)
+        if m and ma:
+            d, t = float(m.group(1)), float(ma.group(1))
+            val = d / math.cos(math.radians(t))
+            return _r(val, [
+                f"The ladder, the wall and the ground form a "
+                f"right triangle; cos {fmt_num(t)}° = "
+                f"foot distance / ladder length.",
+                f"Ladder length = {fmt_num(d)} / cos "
+                f"{fmt_num(t)}° = {fmt_num(round(val, 3))} m",
+            ], "Length of the ladder")
+        return None
+    # Kite: kite is H m high, string makes angle θ with the
+    # ground -> string = H / sin θ.
+    if "kite" in qlow:
+        m = re.search(r"height\s+of\s+" + num +
+                      r"\s*m(?:etres?|eters?)?", qlow) or \
+            re.search(num + r"\s*m(?:etres?|eters?)?\s+"
+                      r"(?:high|above)", qlow)
+        ma = re.search(ang, qlow)
+        if m and ma and "string" in qlow:
+            h, t = float(m.group(1)), float(ma.group(1))
+            val = h / math.sin(math.radians(t))
+            return _r(val, [
+                f"sin {fmt_num(t)}° = height of the kite / "
+                f"length of the string.",
+                f"String length = {fmt_num(h)} / sin "
+                f"{fmt_num(t)}° = {fmt_num(round(val, 3))} m",
+            ], "Length of the string")
+        return None
+    # Shadow: shadow S long, sun's elevation θ -> height =
+    # S · tan θ.
+    if "shadow" in qlow:
+        m = re.search(num + r"\s*m(?:etres?|eters?)?\s+long",
+                      qlow) or re.search(
+                          r"shadow[^.]*?" + num +
+                          r"\s*m(?:etres?|eters?)?\b", qlow)
+        ma = re.search(r"elevation[^.]*?" + ang, qlow) or \
+            re.search(ang, qlow)
+        if m and ma:
+            s, t = float(m.group(1)), float(ma.group(1))
+            val = s * math.tan(math.radians(t))
+            return _r(val, [
+                f"tan {fmt_num(t)}° = height / shadow "
+                f"length.",
+                f"Height = {fmt_num(s)} × tan "
+                f"{fmt_num(t)}° = {fmt_num(round(val, 3))} m",
+            ], "Height")
+        return None
+    # Two poles: heights h1, h2, feet D apart -> distance
+    # between the tops = sqrt(D^2 + (h2 - h1)^2).
+    if "pole" in qlow and "tops" in qlow:
+        mh = re.search(r"heights?\s+(?:of\s+)?" + num +
+                       r"\s*m(?:etres?|eters?)?\s+and\s+" + num,
+                       qlow)
+        hs = [mh.group(1), mh.group(2)] if mh else \
+            re.findall(num + r"\s*m(?:etres?|eters?)?\s+"
+                       r"(?:tall|high)", qlow)
+        md = re.search(num + r"\s*m(?:etres?|eters?)?\s+apart",
+                       qlow) or re.search(
+                           r"distance\s+between\s+(?:their\s+)?"
+                           r"feet\s+is\s+" + num, qlow)
+        if len(hs) >= 2 and md:
+            h1, h2 = float(hs[0]), float(hs[1])
+            d = float(md.group(1))
+            val = math.hypot(d, abs(h2 - h1))
+            return _r(val, [
+                f"The difference of heights is "
+                f"{fmt_num(abs(h2 - h1))} m and the feet are "
+                f"{fmt_num(d)} m apart.",
+                f"Distance between the tops = sqrt("
+                f"{fmt_num(d)}^2 + "
+                f"{fmt_num(abs(h2 - h1))}^2) = "
+                f"{fmt_num(round(val, 3))} m",
+            ], "Distance between the tops")
+        return None
+    # Walking towards a tower: angle θ1, walks D m closer,
+    # angle becomes θ2 -> h = D / (cot θ1 - cot θ2).
+    mw = re.search(num + r"\s*m(?:etres?|eters?)?\s+closer",
+                   qlow) or re.search(
+                       r"(?:walks?|moves?|moving|goes)\s+"
+                       r"(?:towards\s+[^,]*?\s)?" + num +
+                       r"\s*m", qlow)
+    if mw and ("angle of elevation" in qlow or "towards" in qlow
+               or "toward" in qlow):
+        angs = re.findall(ang, qlow)
+        if len(angs) >= 2:
+            # The two angles may be stated in either order
+            # ("becomes 60° from 30°"); the nearer angle is
+            # the larger one, so take the absolute gap.
+            t1, t2 = float(angs[0]), float(angs[1])
+            d = float(mw.group(1))
+            den = abs(1 / math.tan(math.radians(t1))
+                      - 1 / math.tan(math.radians(t2)))
+            if den > 0:
+                val = d / den
+                # Same schema as applied's existing
+                # two_observation_height family (which
+                # needs its own stricter phrasing) — keep
+                # the established op name.
+                return {"type": "trigonometry",
+                        "op": "two_observation_height",
+                        "answer": fmt_num(round(val, 3)),
+                        "value": val,
+                        "steps": [
+                            f"If the height is h, the first "
+                            f"distance is h cot "
+                            f"{fmt_num(t1)}° and the second "
+                            f"is h cot {fmt_num(t2)}°; their "
+                            f"difference is the {fmt_num(d)} "
+                            f"m walked.",
+                            f"h = {fmt_num(d)} / (cot "
+                            f"{fmt_num(t1)}° - cot "
+                            f"{fmt_num(t2)}°) = "
+                            f"{fmt_num(round(val, 3))} m",
+                        ],
+                        "answer_label": "Height of the tower"}
+        return None
+    # Tower/building from a point D away at elevation θ.
+    if "angle of elevation" in qlow:
+        m = re.search(num + r"\s*m(?:etres?|eters?)?\s+"
+                      r"(?:away\s+)?from", qlow)
+        ma = re.search(r"elevation\s+(?:is\s+|of\s+)?" + ang,
+                       qlow) or re.search(ang, qlow)
+        if m and ma:
+            d, t = float(m.group(1)), float(ma.group(1))
+            val = d * math.tan(math.radians(t))
+            return _r(val, [
+                f"tan {fmt_num(t)}° = height / distance "
+                f"from the foot.",
+                f"Height = {fmt_num(d)} × tan "
+                f"{fmt_num(t)}° = {fmt_num(round(val, 3))} m",
+            ], "Height")
+    return None
+
+
 def solve_trigonometry(question: str):
     q = _normalise(question.strip())
     qlow = q.lower()
     deg = _degrees_mode(q)
+
+    # Wave 56: heights-and-distances word schemas first —
+    # their angle words ("angle of elevation is 30°")
+    # otherwise reach the bare-expression paths and error.
+    _hd56 = _heights_distances56(q, qlow)
+    if _hd56 is not None:
+        return _hd56
 
     # --- Identity proof / verification -------------------------------------
     if "=" in q and re.search(r"\b(prove|verify|identity|show)\b", qlow):
@@ -71,12 +239,40 @@ def solve_trigonometry(question: str):
         # famous identity in the chapter.
         text = re.sub(r"\b(prove|verify|show)\b(\s+that)?", "",
                       q, flags=re.I)
+        # Wave 52: the spelled-out angle name "theta" broke
+        # the parser outright (it read t·h·e·t·a and the
+        # identity ask ERRORED — Wave 47's documented open
+        # item). Map the Greek names to single letters, the
+        # same trick the Wave 42 clean-evaluation block uses
+        # (theta -> u), each name to its OWN letter so a
+        # two-angle identity keeps its angles distinct; and
+        # "cosec" -> "csc", which the parser does not know
+        # (it read c**3·e·o·s·u into cosec^2 theta).
+        text = re.sub(r"\bcosec\b", "csc", text, flags=re.I)
+        for _gname, _gletter in (("theta", "u"),
+                                 ("alpha", "v"), ("beta", "w"),
+                                 ("gamma", "z")):
+            text = re.sub(rf"\b{_gname}\b", _gletter, text,
+                          flags=re.I)
         # Wave 47: the sentence's trailing full stop turns
         # "sec^2 A." into sec(A)**2.0 — a float exponent,
         # which trigsimp cannot cancel against tan^2 A + 1,
         # so "Prove that tan^2 A + 1 = sec^2 A" was still
         # reported "Not an identity" after the Wave 42 fix.
         text = text.strip().rstrip(".")
+        # Wave 58: spelled-out Greek names — "theta" reached
+        # the parser as the letter product t·h·e·t·a, which
+        # trigsimp cannot cancel, so theta-worded identities
+        # never verified (and a FALSE one could not be called
+        # out). Each name maps to its own letter; cosec is the
+        # school spelling of csc.
+        for _gname, _gletter in (("theta", "u"),
+                                 ("alpha", "v"),
+                                 ("beta", "w"),
+                                 ("gamma", "z")):
+            text = re.sub(r"\b" + _gname + r"\b", _gletter,
+                          text, flags=re.I)
+        text = re.sub(r"\bcosec\b", "csc", text, flags=re.I)
         if deg:
             text, _ = _convert_degrees(text)
         left, right = text.split("=", 1)
@@ -139,20 +335,48 @@ def solve_trigonometry(question: str):
     # triple (3-4-5 style) from the given ratio and read the
     # asked ratio off it. This used to fall through to the
     # expression parser, which "solved" a stray fragment.
+    # Wave 52: the given value may be in sqrt form
+    # ("cos theta = sqrt(3)/2, find theta" — Wave 47's
+    # documented open item): the value group now also reads
+    # sqrt(N) on either side of the slash, and the triangle
+    # sides below come from sp.fraction, which splits a
+    # Rational exactly as .p/.q did and an irrational value
+    # into its (numerator, denominator) pair — (sqrt(3), 2),
+    # (1, sqrt(2)) — so the same 3-4-5-style construction
+    # works symbolically (cos = sqrt(3)/2 -> adjacent
+    # sqrt(3), hypotenuse 2, opposite 1).
+    # Merge-3 hand-merge: Wave 52's sqrt-form value group
+    # with Wave 56's widened given-ratio set (any of the six
+    # ratios may be given, not just sin/cos/tan).
     mr = re.search(
-        r"\b(sin|cos|tan)\s*(theta|θ|[a-z])\s*=\s*(\d+(?:\.\d+)?"
-        r"(?:\s*/\s*\d+(?:\.\d+)?)?)", qlow)
+        r"\b(sin|cos|tan|sec|csc|cosec|cot)\s*(theta|θ|[a-z])"
+        r"\s*=\s*"
+        r"((?:sqrt\s*\(\s*\d+(?:\.\d+)?\s*\)|\d+(?:\.\d+)?)"
+        r"(?:\s*/\s*(?:sqrt\s*\(\s*\d+(?:\.\d+)?\s*\)|"
+        r"\d+(?:\.\d+)?))?)", qlow)
     if mr and "find" in qlow:
         _fn = mr.group(1)
+        if _fn == "cosec":
+            _fn = "csc"
         # Wave 33: "theta" / "θ" name the angle too — display
         # it as θ (the single-letter path upper-cases its
         # letter, which would print "THETA").
         _ang = "θ" if mr.group(2) in ("theta", "θ") \
             else mr.group(2).upper()
         _raw = mr.group(3).replace(" ", "")
-        _val = sp.Rational(_raw) if "/" in _raw else \
-            sp.nsimplify(float(_raw), rational=True)
-        if _val > 0 and (_fn == "tan" or _val < 1):
+        if "sqrt" in _raw:
+            _val = sp.sympify(_raw)
+        elif "/" in _raw:
+            _val = sp.Rational(_raw)
+        else:
+            _val = sp.nsimplify(float(_raw), rational=True)
+        _top, _bot = sp.fraction(_val)
+        # Wave 56: the given ratio may be any of the six —
+        # sec/csc are hypotenuse ratios (> 1), cot like tan
+        # is a ratio of legs (any positive value).
+        _valid56 = (_val > 1) if _fn in ("sec", "csc") else \
+            (_val > 0 if _fn in ("tan", "cot") else _val < 1)
+        if _val > 0 and _valid56:
             _tail = qlow[qlow.index("find"):]
             # Wave 47: the ANGLE itself is the unknown ("If
             # sin theta = 1/2, find the value of theta in
@@ -164,16 +388,18 @@ def solve_trigonometry(question: str):
             # "find the value of tan theta" does NOT match —
             # there the object is the ratio, as before.
             _ang_raw = mr.group(2)
-            if re.search(
-                    r"\bvalue\s+of\s+(?:the\s+)?"
-                    + re.escape(_ang_raw) + r"\b",
-                    _tail) or re.search(
-                    r"\bfind\s+(?:the\s+)?(?:angle|theta|θ)\b",
-                    _tail) or re.search(
-                    r"^find\s+(?:the\s+)?"
-                    + re.escape(_ang_raw)
-                    + r"(?:\s+in\s+(?:degrees|radians))?"
-                      r"\s*\.?\s*$", _tail):
+            if _fn in ("sin", "cos", "tan") and (
+                    re.search(
+                        r"\bvalue\s+of\s+(?:the\s+)?"
+                        + re.escape(_ang_raw) + r"\b",
+                        _tail) or re.search(
+                        r"\bfind\s+(?:the\s+)?"
+                        r"(?:angle|theta|θ)\b",
+                        _tail) or re.search(
+                        r"^find\s+(?:the\s+)?"
+                        + re.escape(_ang_raw)
+                        + r"(?:\s+in\s+(?:degrees|radians))?"
+                          r"\s*\.?\s*$", _tail)):
                 _inv = {"sin": sp.asin, "cos": sp.acos,
                         "tan": sp.atan}[_fn](_val)
                 if "radian" in qlow:
@@ -203,7 +429,7 @@ def solve_trigonometry(question: str):
                     "answer": f"{_ang} = {_deg_s}°",
                     "value": _degf, "steps": steps}
             if _fn == "sin":
-                _opp, _hyp = _val.p, _val.q
+                _opp, _hyp = _top, _bot
                 _adj = sp.sqrt(_hyp ** 2 - _opp ** 2)
                 _given = (f"sin {_ang} = opposite/hypotenuse "
                           f"= {_opp}/{_hyp}, so take opposite "
@@ -212,7 +438,7 @@ def solve_trigonometry(question: str):
                           f"{_opp}^2) = {fmt(_adj)} "
                           f"(Pythagoras)")
             elif _fn == "cos":
-                _adj, _hyp = _val.p, _val.q
+                _adj, _hyp = _top, _bot
                 _opp = sp.sqrt(_hyp ** 2 - _adj ** 2)
                 _given = (f"cos {_ang} = adjacent/hypotenuse "
                           f"= {_adj}/{_hyp}, so take adjacent "
@@ -220,8 +446,8 @@ def solve_trigonometry(question: str):
                 _third = (f"opposite = sqrt({_hyp}^2 - "
                           f"{_adj}^2) = {fmt(_opp)} "
                           f"(Pythagoras)")
-            else:
-                _opp, _adj = _val.p, _val.q
+            elif _fn == "tan":
+                _opp, _adj = _top, _bot
                 _hyp = sp.sqrt(_opp ** 2 + _adj ** 2)
                 _given = (f"tan {_ang} = opposite/adjacent "
                           f"= {_opp}/{_adj}, so take opposite "
@@ -229,16 +455,63 @@ def solve_trigonometry(question: str):
                 _third = (f"hypotenuse = sqrt({_opp}^2 + "
                           f"{_adj}^2) = {fmt(_hyp)} "
                           f"(Pythagoras)")
+            elif _fn == "sec":
+                # Wave 56: sec = hypotenuse/adjacent.
+                # (Merge-3: sides from sp.fraction's _top/_bot
+                # instead of _val.p/_val.q, so sqrt-form givens
+                # work here too, as in the sin/cos/tan branches.)
+                _hyp, _adj = _top, _bot
+                _opp = sp.sqrt(_hyp ** 2 - _adj ** 2)
+                _given = (f"sec {_ang} = hypotenuse/adjacent "
+                          f"= {_hyp}/{_adj}, so take "
+                          f"hypotenuse = {_hyp} and adjacent "
+                          f"= {_adj}")
+                _third = (f"opposite = sqrt({_hyp}^2 - "
+                          f"{_adj}^2) = {fmt(_opp)} "
+                          f"(Pythagoras)")
+            elif _fn == "csc":
+                # Wave 56: csc = hypotenuse/opposite.
+                _hyp, _opp = _top, _bot
+                _adj = sp.sqrt(_hyp ** 2 - _opp ** 2)
+                _given = (f"csc {_ang} = hypotenuse/opposite "
+                          f"= {_hyp}/{_opp}, so take "
+                          f"hypotenuse = {_hyp} and opposite "
+                          f"= {_opp}")
+                _third = (f"adjacent = sqrt({_hyp}^2 - "
+                          f"{_opp}^2) = {fmt(_adj)} "
+                          f"(Pythagoras)")
+            else:
+                # Wave 56: cot = adjacent/opposite.
+                _adj, _opp = _top, _bot
+                _hyp = sp.sqrt(_opp ** 2 + _adj ** 2)
+                _given = (f"cot {_ang} = adjacent/opposite "
+                          f"= {_adj}/{_opp}, so take adjacent "
+                          f"= {_adj} and opposite = {_opp}")
+                _third = (f"hypotenuse = sqrt({_opp}^2 + "
+                          f"{_adj}^2) = {fmt(_hyp)} "
+                          f"(Pythagoras)")
             _vals = {"sin": _opp / _hyp, "cos": _adj / _hyp,
-                     "tan": _opp / _adj}
+                     "tan": _opp / _adj, "sec": _hyp / _adj,
+                     "csc": _hyp / _opp, "cot": _adj / _opp}
             _tail = qlow[qlow.index("find"):]
-            _asked = [f for f in ("sin", "cos", "tan")
+            _six56 = ("sin", "cos", "tan", "sec", "csc", "cot")
+            _asked = [f for f in _six56
                       if f != _fn
-                      and re.search(rf"\b{f}\s*{mr.group(2)}\b",
-                                    _tail)]
+                      and (re.search(
+                          rf"\b{f}\s*{mr.group(2)}\b", _tail)
+                          or (f == "csc" and re.search(
+                              rf"\bcosec\s*{mr.group(2)}\b",
+                              _tail)))]
             if not _asked:
-                _asked = [f for f in ("sin", "cos", "tan")
-                          if f != _fn]
+                # "find all other ratios" wants all six;
+                # the classic unnamed ask keeps the two
+                # primary others for sin/cos/tan givens.
+                if "all" in _tail or _fn not in (
+                        "sin", "cos", "tan"):
+                    _asked = [f for f in _six56 if f != _fn]
+                else:
+                    _asked = [f for f in ("sin", "cos", "tan")
+                              if f != _fn]
             # Wave 47: a SUM of ratios is asked ("find cos A
             # + tan A") — the components were listed but never
             # added (audit #443; cos A + tan A = 5·sqrt(3)/6).
@@ -278,10 +551,14 @@ def solve_trigonometry(question: str):
             steps = [_given, _third]
             for f in _asked:
                 _num_name = {"sin": "opposite", "cos": "adjacent",
-                             "tan": "opposite"}[f]
+                             "tan": "opposite", "sec": "hypotenuse",
+                             "csc": "hypotenuse",
+                             "cot": "adjacent"}[f]
                 _den_name = {"sin": "hypotenuse",
                              "cos": "hypotenuse",
-                             "tan": "adjacent"}[f]
+                             "tan": "adjacent", "sec": "adjacent",
+                             "csc": "opposite",
+                             "cot": "opposite"}[f]
                 steps.append(
                     f"{f} {_ang} = {_num_name}/{_den_name} "
                     f"= {fmt(_vals[f])}")

@@ -78,7 +78,7 @@ def solve_sequences(question: str):
         or re.search(r"पदों\s*का\s*योग|padon\s+ka\s+"
                      r"(?:yog|jod)", _ql)
     _next42 = "अगला पद" in _qn or "agla pad" in _ql \
-        or "next term" in _ql
+        or "next term" in _ql or "ke baad" in _ql
     if _terms42 and _kind42 in ("AP", "GP") and \
             (_hi42 or _next42):
         _a42 = _terms42[0]
@@ -151,6 +151,74 @@ def solve_sequences(question: str):
                         "op": "ap_nth_term",
                         "answer": fmt_num(_val), "value": _val,
                         "steps": steps}
+
+    # --- Wave 56: named-series sums, common difference
+    # from two terms, and the explicit-series AP sum.
+    # "Sum of the first 20 even numbers" is a closed form
+    # (n(n+1)); "3rd term is 11 and 8th term is 31" gives
+    # d = (a_m - a_k)/(m - k); "sum of the AP 2, 7, 12, ...
+    # up to 10 terms" sums the parsed series directly.
+    _msum56 = re.search(
+        r"sum\s+of\s+(?:the\s+)?first\s+(\d+)\s+"
+        r"(even|odd|natural)\s+numbers", q)
+    if _msum56:
+        _n = int(_msum56.group(1))
+        _kind = _msum56.group(2)
+        if _kind == "even":
+            _val = _n * (_n + 1)
+            _f = f"Sum of the first {_n} even numbers " \
+                 f"= n(n + 1) = {_n} × {_n + 1}"
+        elif _kind == "odd":
+            _val = _n * _n
+            _f = f"Sum of the first {_n} odd numbers " \
+                 f"= n^2 = {_n}^2"
+        else:
+            _val = _n * (_n + 1) // 2
+            _f = f"Sum of the first {_n} natural numbers " \
+                 f"= n(n + 1)/2 = {_n} × {_n + 1} / 2"
+        return {"type": "sequences", "op": "named_series_sum",
+                "answer": fmt_num(_val), "value": _val,
+                "steps": [_f + f" = {fmt_num(_val)}"]}
+    if "common difference" in q:
+        _mt = re.findall(
+            r"(\d+)(?:st|nd|rd|th)\s+term\b[^.]*?\bis\s+"
+            r"(-?\d+(?:\.\d+)?)", q)
+        if len(_mt) >= 2:
+            (_n1, _v1), (_n2, _v2) = (int(_mt[0][0]),
+                                      float(_mt[0][1])), \
+                (int(_mt[1][0]), float(_mt[1][1]))
+            if _n2 != _n1:
+                _d = (_v2 - _v1) / (_n2 - _n1)
+                steps = [
+                    f"a_{_n2} - a_{_n1} = ({_n2} - {_n1})d, "
+                    f"so {_n2 - _n1}d = {fmt_num(_v2)} - "
+                    f"{fmt_num(_v1)} = {fmt_num(_v2 - _v1)}",
+                    f"d = {fmt_num(_d)}",
+                ]
+                return {"type": "sequences",
+                        "op": "ap_common_difference",
+                        "answer": fmt_num(_d), "value": _d,
+                        "steps": steps}
+    if _terms42 and _kind42 == "AP" and "sum" in _ql:
+        _mn56 = re.search(r"up\s+to\s+(\d+)\s+terms", _ql) \
+            or re.search(r"first\s+(\d+)\s+terms", _ql) \
+            or re.search(r"\b(\d+)\s+terms\b", _ql)
+        if _mn56:
+            _n = int(_mn56.group(1))
+            _val = _n * (2 * _terms42[0]
+                         + (_n - 1) * _d42) / 2
+            steps = [
+                f"AP with a = {fmt_num(_terms42[0])}, "
+                f"d = {fmt_num(_d42)}",
+                "Sum of first n terms: S_n = n/2 · "
+                "(2a + (n - 1)d)",
+                f"S_{_n} = {_n}/2 × (2×"
+                f"{fmt_num(_terms42[0])} + {_n - 1}×"
+                f"{fmt_num(_d42)}) = {fmt_num(_val)}",
+            ]
+            return {"type": "sequences", "op": "ap_sum",
+                    "answer": fmt_num(_val), "value": _val,
+                    "steps": steps}
 
     # --- Wave 33: nth term from a given S_n -------------------
     # "The sum of the first n terms of an AP is 3n^2 + 5n.

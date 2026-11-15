@@ -25,8 +25,101 @@ def _show(s) -> str:
     return "{" + ", ".join(str(v) for v in sorted(s, key=key)) + "}"
 
 
+def _cardinality56(q: str):
+    """Wave 56: set COUNTING schemas (no literal sets) —
+    the power-set count 2^n, inclusion-exclusion for
+    n(A)/n(B)/n(A union B)/n(A intersection B) with any
+    one of them missing, and the two-activity class form
+    ("30 play cricket, 25 play football, 12 play both —
+    how many play neither?"). solve_sets used to answer
+    "Give me two sets" to all of these."""
+    # Power set: |P(A)| = 2^n.
+    if "power set" in q:
+        m = re.search(r"(\d+)\s+elements", q)
+        if m:
+            n = int(m.group(1))
+            return {"type": "sets", "op": "power_set",
+                    "answer": str(2 ** n), "value": 2 ** n,
+                    "steps": [
+                        f"A set with {n} elements has "
+                        f"2^{n} subsets, and the power set is "
+                        f"the set of all its subsets.",
+                        f"Number of elements in the power "
+                        f"set = 2^{n} = {2 ** n}"]}
+        return None
+    # Two-activity class form.
+    m = re.search(r"class\s+of\s+(\d+)", q)
+    mp = re.findall(r"(\d+)\s+play\s+([a-z]+)", q)
+    mb = re.search(r"(\d+)\s+play\s+both", q)
+    if m and len(mp) >= 2 and mb:
+        total, both = int(m.group(1)), int(mb.group(1))
+        a, b = int(mp[0][0]), int(mp[1][0])
+        union = a + b - both
+        steps = [
+            f"Students playing at least one game = "
+            f"{a} + {b} - {both} (the {both} who play both "
+            f"were counted twice) = {union}.",
+        ]
+        if "neither" in q:
+            val = total - union
+            steps.append(
+                f"Playing neither = {total} - {union} "
+                f"= {val}.")
+            return {"type": "sets", "op": "play_neither",
+                    "answer": str(val), "value": val,
+                    "steps": steps}
+        if "both" in q and "how many" in q:
+            return {"type": "sets", "op": "play_both",
+                    "answer": str(both), "value": both,
+                    "steps": steps}
+        return {"type": "sets", "op": "play_union",
+                "answer": str(union), "value": union,
+                "steps": steps}
+    # n(...) notation: solve inclusion-exclusion for the
+    # one missing quantity.
+    singles = dict(re.findall(
+        r"n\(\s*([a-z])\s*\)\s*=\s*(\d+)", q))
+    mu = re.search(r"n\(\s*([a-z])\s*(?:union|∪)\s*([a-z])"
+                   r"\s*\)\s*=\s*(\d+)", q)
+    mi = re.search(r"n\(\s*([a-z])\s*(?:intersection|∩)\s*"
+                   r"([a-z])\s*\)\s*=\s*(\d+)", q)
+    if len(singles) >= 2 and (mu or mi):
+        names = sorted(singles)
+        a = int(singles[names[0]])
+        b = int(singles[names[1]])
+        ask_union = re.search(
+            r"find\s+n\(\s*[a-z]\s*(?:union|∪)", q)
+        ask_inter = re.search(
+            r"find\s+n\(\s*[a-z]\s*(?:intersection|∩)", q)
+        if mu and ask_inter:
+            union = int(mu.group(3))
+            val = a + b - union
+            steps = [
+                "n(A ∪ B) = n(A) + n(B) - n(A ∩ B)",
+                f"{union} = {a} + {b} - n(A ∩ B), so "
+                f"n(A ∩ B) = {a} + {b} - {union} = {val}",
+            ]
+            return {"type": "sets", "op": "cardinality",
+                    "answer": str(val), "value": val,
+                    "steps": steps}
+        if mi and ask_union:
+            inter = int(mi.group(3))
+            val = a + b - inter
+            steps = [
+                "n(A ∪ B) = n(A) + n(B) - n(A ∩ B)",
+                f"n(A ∪ B) = {a} + {b} - {inter} = {val}",
+            ]
+            return {"type": "sets", "op": "cardinality",
+                    "answer": str(val), "value": val,
+                    "steps": steps}
+    return None
+
+
 def solve_sets(question: str):
     q = question.lower()
+    _card56 = _cardinality56(q)
+    if _card56 is not None:
+        return _card56
     sets = _parse_sets(question)
     if len(sets) < 2:
         return {"type": "sets", "op": "unknown",

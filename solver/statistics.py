@@ -123,7 +123,7 @@ _HI_NUM_WORDS = {"एक": 1, "दो": 2, "तीन": 3, "चार": 4,
 _HI_NUM = (r"(?:एक|दो|तीन|चार|पाँच|पांच|छह|\d+|\bek\b|"
            r"\bdo\b|\bteen\b|\bchaar\b|\bchar\b|\bpaanch\b|"
            r"\bpanch\b)")
-_HI_FACE = r"(चित|पट|chit|pat|heads?|tails?)"
+_HI_FACE = r"(चित|पट|chit|pat|puchh|heads?|tails?)"
 
 
 def _hi_num(tok):
@@ -165,8 +165,11 @@ def _hindi_coin(qn):
         if re.search(r"पट|\bpat\b|\btail", qn):
             return n, (lambda h, nn: h == nn), "no tail"
         return n, (lambda h, nn: h == 0), "no head"
-    # Both / all of a face ("दोनों पट", "sabhi chit")
-    if re.search(r"दोनों|\bdono\b|सभी|\bsabhi\b", qn):
+    # Both / all of a face ("दोनों पट", "sabhi chit",
+    # "teeno chit" — Wave 57: तीनों/teeno was missing and
+    # three-coin all-heads asks fell through entirely)
+    if re.search(r"दोनों|\bdono\b|तीनों|तीनो|\bteeno\b|\btino\b|"
+                 r"सभी|\bsabhi\b", qn):
         m = re.search(_HI_FACE, qn)
         if m:
             if _hi_face_is_heads(m.group(1)):
@@ -217,19 +220,21 @@ def _hindi_coin(qn):
 def _hindi_dice_faces(qn):
     """(favourable faces, label) for a single-die Hindi /
     Hinglish event, or None."""
-    m = re.search(_HI_NUM + r"\s*से\s*(?:बड़ी|बड़ा|अधिक)\s*"
+    m = re.search(_HI_NUM + r"\s*(?:से|\bse\b)\s*(?:बड़ी|बड़ा|"
+                  r"अधिक|badi|bada|adhik)\s*"
                   r"(?:संख्या|sankhya|number)?", qn)
     if m:
         k = _hi_num(re.search(_HI_NUM, m.group(0)).group(0))
         return [f for f in range(1, 7) if f > k], \
             f"a number greater than {k}"
-    m = re.search(_HI_NUM + r"\s*से\s*(?:छोटी|छोटा|कम)\s*"
+    m = re.search(_HI_NUM + r"\s*(?:से|\bse\b)\s*(?:छोटी|छोटा|"
+                  r"कम|chhoti|chhota|kam)\s*"
                   r"(?:संख्या|sankhya|number)?", qn)
     if m:
         k = _hi_num(re.search(_HI_NUM, m.group(0)).group(0))
         return [f for f in range(1, 7) if f < k], \
             f"a number less than {k}"
-    if re.search(r"सम\s*(?:संख्या|sankhya)|\bsam\s+sankhya\b|"
+    if re.search(r"सम\s*(?:संख्या|sankhya)|\bsama?\s+sankhya\b|"
                  r"\beven\b", qn):
         return [2, 4, 6], "an even number"
     if re.search(r"विषम\s*(?:संख्या|sankhya)|visham\s+sankhya|"
@@ -294,9 +299,16 @@ def _probability_hindi(q, ql):
         ]
         return _prob_answer(Fraction(fav, 2 ** n), steps)
     # --- dice ---
-    if re.search(r"पास|pasa|paase", qn):
+    # Wave 56: the Roman gate was "pasa|paase" — the common
+    # spelling "paasa" (double a) matched NEITHER and the
+    # whole Hindi dice path was skipped (battery #496).
+    # Hinglish spelling variants (doubled vowels, an extra
+    # nasal) are folded into the pattern itself: pa + s
+    # with any vowel tail covers pasa / paasa / paase /
+    # paansa.
+    if re.search(r"पास|pa+n?s\w*", qn):
         two = re.search(r"(?:दो|\bdo\b|\b2\b)\s*(?:पासे|पासों|"
-                        r"pasa|paase|dice)", qn) or \
+                        r"pa+n?s\w*|dice)", qn) or \
             "दोनों पास" in qn
         if two:
             if re.search(r"समान\s*संख्या|बराबर\s*संख्या|"
@@ -445,6 +457,55 @@ def _probability(q: str):
     if _hindi is not None:
         return _hindi
 
+    # Wave 58: the abstract union formula — "P(A) = 0.3 and
+    # P(B) = 0.4, A and B mutually exclusive, find P(A or B)"
+    # and the general form with P(A and B) given. Formula-
+    # style questions like this parsed as letter equations
+    # everywhere else (Wave 55 trap); here they are answered
+    # by the addition rule itself, and only when the result
+    # is a valid probability.
+    if "p(a)" in ql and "p(b)" in ql:
+        def _pval(pat):
+            _m = re.search(pat, ql)
+            return Fraction(_m.group(1)) if _m else None
+        _pa = _pval(r"p\(\s*a\s*\)\s*=\s*(\d+(?:\.\d+)?)")
+        _pb = _pval(r"p\(\s*b\s*\)\s*=\s*(\d+(?:\.\d+)?)")
+        _pab = _pval(r"p\(\s*a\s*(?:and|∩|cap)\s*b\s*\)\s*"
+                     r"=\s*(\d+(?:\.\d+)?)")
+        _por = _pval(r"p\(\s*a\s*(?:or|union|∪)\s*b\s*\)\s*"
+                     r"=\s*(\d+(?:\.\d+)?)")
+        _ask_or = re.search(r"find\s+p\(\s*a\s*(?:or|union|∪)"
+                            r"\s*b\s*\)", ql)
+        _ask_and = re.search(r"find\s+p\(\s*a\s*(?:and|∩|cap)"
+                             r"\s*b\s*\)", ql)
+        if _pa is not None and _pb is not None:
+            if _ask_or:
+                if "mutually exclusive" in ql:
+                    _pab = Fraction(0)
+                if _pab is not None:
+                    _res = _pa + _pb - _pab
+                    if 0 <= _res <= 1:
+                        steps = [
+                            "Addition rule: P(A or B) = "
+                            "P(A) + P(B) - P(A and B)",
+                            f"= {fmt_num(_pa)} + "
+                            f"{fmt_num(_pb)} - "
+                            f"{fmt_num(_pab)} "
+                            f"= {fmt_num(_res)}",
+                        ]
+                        return _prob_answer(_res, steps)
+            if _ask_and and _por is not None:
+                _res = _pa + _pb - _por
+                if 0 <= _res <= 1:
+                    steps = [
+                        "Addition rule rearranged: "
+                        "P(A and B) = P(A) + P(B) - P(A or B)",
+                        f"= {fmt_num(_pa)} + {fmt_num(_pb)} "
+                        f"- {fmt_num(_por)} "
+                        f"= {fmt_num(_res)}",
+                    ]
+                    return _prob_answer(_res, steps)
+
     # Binomial: exactly k successes in n trials with p
     m = re.search(
         r"exactly\s+(\d+)\s+success\w*\s+in\s+(\d+)\s+trials.*?p\s*=\s*"
@@ -540,7 +601,7 @@ def _probability(q: str):
     # through to the shortcut and returned 1/2, and "no tail" /
     # "at most ... tail" / "exactly ... tails" were missing too.
     if "coin" in ql and ("toss" in ql or "throw" in ql
-                         or "flip" in ql):
+                         or "flip" in ql or "both" in ql):
         _words = {"one": 1, "two": 2, "three": 3, "four": 4,
                   "five": 5}
         _num = r"(one|two|three|four|five|\d+)"
@@ -555,6 +616,10 @@ def _probability(q: str):
         _mc = re.search(r"\b" + _num + r"\s+coins?\b", ql)
         if _mc:
             _n = _cnt(_mc.group(1))
+        elif re.search(r"\bboth\s+coins?\b", ql):
+            # Wave 57: "both coins show heads" states the count
+            # without a number word.
+            _n = 2
         elif re.search(r"\ba\s+pair\s+of\s+coins?\b", ql):
             _n = 2
         elif re.search(r"\btossed\s+twice\b", ql):
@@ -632,7 +697,13 @@ def _probability(q: str):
                                (_fn, _k), _m.group(0))
                         break
             if _ev is None:
-                if "both heads" in ql or "all heads" in ql:
+                if re.search(r"\bboth\s+coins?\b[^.]{0,24}?"
+                             r"\bheads?\b", ql):
+                    _ev = (lambda h, n=_n: h == n, "all heads")
+                elif re.search(r"\bboth\s+coins?\b[^.]{0,24}?"
+                               r"\btails?\b", ql):
+                    _ev = (lambda h: h == 0, "all tails")
+                elif "both heads" in ql or "all heads" in ql:
                     _ev = (lambda h, n=_n: h == n, "all heads")
                 elif "both tails" in ql or "all tails" in ql:
                     _ev = (lambda h: h == 0, "all tails")
@@ -640,6 +711,20 @@ def _probability(q: str):
                     _ev = (lambda h: h == 0, "no head")
                 elif "no tail" in ql:
                     _ev = (lambda h, n=_n: h == n, "no tail")
+                # Wave 58: "not getting a head" is the no-head
+                # event worded with a negation — it used to fall
+                # through to the bare coin+head shortcut below
+                # and answer 1/2 whatever the coin count.
+                elif re.search(
+                        r"not\s+(?:getting|get)\s+(?:a\s+|an\s+)?"
+                        r"heads?\b", ql):
+                    _ev = (lambda h: h == 0,
+                           "not getting a head")
+                elif re.search(
+                        r"not\s+(?:getting|get)\s+(?:a\s+|an\s+)?"
+                        r"tails?\b", ql):
+                    _ev = (lambda h, n=_n: h == n,
+                           "not getting a tail")
                 elif _n == 2 and re.search(
                         r"\b(?:a|one)\s+head\s+and\s+"
                         r"(?:a|one)\s+tail\b", ql):
@@ -657,11 +742,21 @@ def _probability(q: str):
                 ]
                 return _prob_answer(Fraction(fav, 2 ** _n),
                                     steps)
-    if "coin" in ql and "head" in ql:
+    # Wave 58: the two bare shortcuts below carry an unstated
+    # premise — a PLAIN single-toss ask. A question that
+    # narrates an observed streak ("tossed 100 times in a row
+    # and it lands heads every time — the next toss?") is not
+    # that ask: the audit (#515) counts the confident 1/2 there
+    # as a mistake, so a streak/history framing falls through
+    # to the honest fallback instead.
+    _streak = re.search(
+        r"every\s+time|in\s+a\s+row|\bstreak\b|so\s+far|"
+        r"always\s+lands?|has\s+landed", ql)
+    if "coin" in ql and "head" in ql and not _streak:
         return _prob_answer(Fraction(1, 2),
                             ["A fair coin has 2 equally likely outcomes; "
                              "heads is 1 of them."])
-    if "coin" in ql and "tail" in ql:
+    if "coin" in ql and "tail" in ql and not _streak:
         return _prob_answer(Fraction(1, 2),
                             ["A fair coin has 2 equally likely outcomes; "
                              "tails is 1 of them."])
@@ -712,6 +807,32 @@ def _probability(q: str):
         ]
         return _prob_answer(Fraction(fav, 36), steps)
 
+    # Wave 56: two-dice / thrown-twice SUM in the separated
+    # phrasings — "the sum of the numbers is 8" (the sum and
+    # the dice sit in different clauses, so the two patterns
+    # above miss it) and "a die is thrown twice ... sum is
+    # 12" (no word "two" at all). Same schema, any target.
+    if ("two dice" in ql or "pair of dice" in ql
+            or "two die" in ql or "thrown twice" in ql
+            or "rolled twice" in ql or "tossed twice" in ql):
+        _m56 = re.search(
+            r"sum[^.]{0,45}?\bis\s+(?:equal\s+to\s+)?(\d+)",
+            ql) or re.search(r"\bsum\s+(?:of\s+)?(\d+)\b", ql)
+        if _m56:
+            _t56 = int(_m56.group(1))
+            if 2 <= _t56 <= 12:
+                _fav56 = sum(
+                    1 for a, b in _iproduct(range(1, 7),
+                                            repeat=2)
+                    if a + b == _t56)
+                steps = [
+                    "Two dice give 6 × 6 = 36 equally likely "
+                    "outcomes.",
+                    f"Outcomes with sum {_t56}: {_fav56}",
+                ]
+                return _prob_answer(Fraction(_fav56, 36),
+                                    steps)
+
     # Wave 33: two dice — doublet ("same number on both dice").
     if ("die" in ql or "dice" in ql) and (
             "doublet" in ql or "same number" in ql):
@@ -734,6 +855,12 @@ def _probability(q: str):
         _ml = re.search(r"less\s+than\s+(\d)", ql)
         _mm = re.search(r"multiple\s+of\s+(\d)", ql) or \
             re.search(r"divisible\s+by\s+(\d)", ql)
+        # Wave 58: "at least k" / "at most k" were missing from
+        # this event table entirely, so "at least 5" fell to the
+        # legacy pattern below, which reads ANY digit as the
+        # wanted face and answered 1/6 (the chance of exactly 5).
+        _mal = re.search(r"at\s+least\s+(\d)", ql)
+        _mam = re.search(r"at\s+most\s+(\d)", ql)
         if "even" in ql:
             _faces, _label = [2, 4, 6], "an even number"
         elif "odd" in ql:
@@ -757,6 +884,33 @@ def _probability(q: str):
             if _k:
                 _faces = [f for f in range(1, 7) if f % _k == 0]
                 _label = f"a multiple of {_k}"
+        elif _mal:
+            _k = int(_mal.group(1))
+            _faces = [f for f in range(1, 7) if f >= _k]
+            _label = f"a number at least {_k}"
+        elif _mam:
+            _k = int(_mam.group(1))
+            _faces = [f for f in range(1, 7) if f <= _k]
+            _label = f"a number at most {_k}"
+        # Wave 58: "not getting ..." is the COMPLEMENT of the
+        # event. The legacy pattern below ignored the "not"
+        # entirely — "not getting a 6" was answered 1/6, the
+        # probability of getting a 6 itself.
+        _neg = re.search(
+            r"\bnot\s+(?:getting|rolling|obtaining|get)\b", ql) \
+            or re.search(
+                r"\bnot\s+(?:an?\s+)?(?:even|odd|prime|"
+                r"composite)\b", ql)
+        if _faces is None and _neg:
+            _mf1 = re.search(
+                r"(?:getting|rolling|of)\s+(?:a\s+|an\s+)?"
+                r"(\d)\b", ql)
+            if _mf1:
+                _faces = [int(_mf1.group(1))]
+                _label = f"a {_mf1.group(1)}"
+        if _faces is not None and _neg:
+            _faces = [f for f in range(1, 7) if f not in _faces]
+            _label = "not " + _label
         if _faces is not None:
             steps = [
                 "A fair die has 6 equally likely faces (1-6).",
@@ -832,15 +986,35 @@ def _probability(q: str):
             return _prob_answer(Fraction(2, 7), steps)
 
     # Balls in a bag: "5 red and 3 blue balls ... red ball"
-    if "ball" in ql:
+    # Wave 56: marbles in a jar/box are the same schema (the
+    # gate required the word "ball", so "4 red marbles, 6
+    # green marbles ... it is green" fell through), and the
+    # ask may name the colour WITHOUT the object word —
+    # "probability that it is red / it is not black" — which
+    # the "<colour> ball" search after "probab" missed.
+    if "ball" in ql or "marble" in ql:
         counts = {}
         for num, colour in re.findall(
             r"(\d+)\s+(red|blue|green|yellow|black|white|orange|pink|"
-            r"purple|brown)\s*(?:balls?)?", ql
+            r"purple|brown)\s*(?:balls?|marbles?)?", ql
         ):
             counts[colour] = counts.get(colour, 0) + int(num)
         m = re.search(r"(red|blue|green|yellow|black|white|orange|pink|"
-                      r"purple|brown)\s+ball", ql.split("probab")[-1])
+                      r"purple|brown)\s+(?:ball|marble)",
+                      ql.split("probab")[-1])
+        if m is None:
+            m = re.search(
+                r"it\s+is\s+(?:not\s+)?"
+                r"(red|blue|green|yellow|black|white|orange|"
+                r"pink|purple|brown)\b", ql.split("probab")[-1])
+        if m is None:
+            # "the marble is black" — object word, then the
+            # colour (the reverse of the "<colour> ball"
+            # order above).
+            m = re.search(
+                r"(?:ball|marble)\s+is\s+(?:not\s+)?"
+                r"(red|blue|green|yellow|black|white|orange|"
+                r"pink|purple|brown)\b", ql.split("probab")[-1])
         if counts and m:
             colour = m.group(1)
             total = sum(counts.values())
@@ -873,6 +1047,66 @@ def _probability(q: str):
             return _prob_answer(
                 Fraction(counts.get(colour, 0), total), steps)
 
+    # Wave 56: numbered-set schema — discs / tickets / cards /
+    # chits numbered 1 to N, or a spinner with numbers 1 to N.
+    # One number is drawn; count how many of 1..N carry the
+    # asked property (two-digit, multiple of k, prime, ...)
+    # arithmetically — any N, any property in the table.
+    _mn56 = None
+    if "numbered" in ql or "spinner" in ql:
+        _mn56 = re.search(r"1\s+to\s+(\d+)", ql)
+    if _mn56:
+        _N56 = int(_mn56.group(1))
+        if 2 <= _N56 <= 100000:
+            _fav56 = _label56 = None
+            _mg56 = re.search(r"(?:greater|more)\s+than\s+(\d+)",
+                              ql)
+            _ml56 = re.search(r"less\s+than\s+(\d+)", ql)
+            _mm56 = re.search(r"multiple\s+of\s+(\d+)", ql) or \
+                re.search(r"divisible\s+by\s+(\d+)", ql)
+            if "two-digit" in ql or "two digit" in ql:
+                _fav56 = max(0, min(_N56, 99) - 9)
+                _label56 = "two-digit numbers"
+            elif "single-digit" in ql or "one-digit" in ql:
+                _fav56 = min(_N56, 9)
+                _label56 = "single-digit numbers"
+            elif _mm56 and int(_mm56.group(1)) > 0:
+                _k56 = int(_mm56.group(1))
+                _fav56 = _N56 // _k56
+                _label56 = f"multiples of {_k56}"
+            elif "prime" in ql:
+                _fav56 = sum(
+                    1 for _v in range(2, _N56 + 1)
+                    if all(_v % _d for _d in range(
+                        2, int(_v ** 0.5) + 1)))
+                _label56 = "prime numbers"
+            elif "perfect square" in ql or "square number" in ql:
+                from math import isqrt as _isqrt56
+                _fav56 = _isqrt56(_N56)
+                _label56 = "perfect squares"
+            elif "even" in ql:
+                _fav56 = _N56 // 2
+                _label56 = "even numbers"
+            elif "odd" in ql:
+                _fav56 = (_N56 + 1) // 2
+                _label56 = "odd numbers"
+            elif _mg56:
+                _k56 = int(_mg56.group(1))
+                _fav56 = max(0, _N56 - _k56)
+                _label56 = f"numbers greater than {_k56}"
+            elif _ml56:
+                _k56 = int(_ml56.group(1))
+                _fav56 = max(0, min(_N56, _k56 - 1))
+                _label56 = f"numbers less than {_k56}"
+            if _fav56 is not None:
+                steps = [
+                    f"The numbers are 1 to {_N56} — {_N56} "
+                    f"equally likely outcomes.",
+                    f"Favourable ({_label56}) = {_fav56}",
+                ]
+                return _prob_answer(Fraction(_fav56, _N56),
+                                    steps)
+
     # Pack of cards
     if "card" in ql and ("deck" in ql or "pack" in ql or "52" in ql):
         # Wave 33: a SPECIFIC card or colour+rank ask must be
@@ -903,6 +1137,45 @@ def _probability(q: str):
                 f"Number of {_colr} {_rank}s = 2.",
             ]
             return _prob_answer(Fraction(2, 52), steps)
+        # Wave 58: "a king or a queen" is a UNION of two
+        # mutually exclusive events. The table below takes the
+        # FIRST pattern that matches, so it answered 1/13 (the
+        # kings alone). The union is summed only inside one
+        # disjoint family — two ranks, two suits, or the two
+        # colours — where the events cannot overlap.
+        _mu = re.search(
+            r"\b(ace|king|queen|jack)s?\b\s+or\s+(?:a\s+|an\s+)?"
+            r"(ace|king|queen|jack)s?\b", ql)
+        if _mu and _mu.group(1) != _mu.group(2):
+            steps = [
+                "A standard pack has 52 cards.",
+                f"There are 4 {_mu.group(1)}s and 4 "
+                f"{_mu.group(2)}s, and a card cannot be both.",
+                f"Favourable = 4 + 4 = 8",
+            ]
+            return _prob_answer(Fraction(8, 52), steps)
+        _mu = re.search(
+            r"\b(hearts?|diamonds?|spades?|clubs?)\b\s+or\s+"
+            r"(?:a\s+|an\s+)?(hearts?|diamonds?|spades?|clubs?)\b",
+            ql)
+        if _mu and _mu.group(1) != _mu.group(2):
+            steps = [
+                "A standard pack has 52 cards.",
+                f"There are 13 {_mu.group(1)} and 13 "
+                f"{_mu.group(2)}, and a card has only one suit.",
+                "Favourable = 13 + 13 = 26",
+            ]
+            return _prob_answer(Fraction(26, 52), steps)
+        _mu = re.search(
+            r"\b(red|black)\b\s+or\s+(?:a\s+|an\s+)?(red|black)\b",
+            ql)
+        if _mu and _mu.group(1) != _mu.group(2):
+            steps = [
+                "A standard pack has 52 cards.",
+                "Every card is either red or black.",
+                "Favourable = 26 + 26 = 52",
+            ]
+            return _prob_answer(Fraction(52, 52), steps)
         fav, label = None, None
         table = [
             (r"\bace\b", 4, "aces"),
@@ -1315,6 +1588,37 @@ def solve_statistics(question: str):
     if _grouped is not None:
         return _grouped
 
+    # Wave 56: mean of the first n natural / even / odd
+    # numbers — a closed-form family ((n+1)/2, n+1, n). The
+    # generic list path read the lone count "10" as the data
+    # and could not answer at all.
+    _mf56 = re.search(
+        r"(?:mean|average)\s+of\s+(?:the\s+)?first\s+(\d+)\s+"
+        r"(natural|even|odd)\s+numbers?", ql)
+    if _mf56:
+        _n56 = int(_mf56.group(1))
+        _kind56 = _mf56.group(2)
+        if _n56 >= 1:
+            if _kind56 == "natural":
+                _v56 = (_n56 + 1) / 2
+                _f56 = (f"Sum of the first {_n56} natural "
+                        f"numbers = {_n56}({_n56} + 1)/2, so "
+                        f"mean = ({_n56} + 1)/2")
+            elif _kind56 == "even":
+                _v56 = float(_n56 + 1)
+                _f56 = (f"The first {_n56} even numbers are "
+                        f"2, 4, ..., {2 * _n56}; their mean is "
+                        f"{_n56} + 1")
+            else:
+                _v56 = float(_n56)
+                _f56 = (f"The first {_n56} odd numbers are "
+                        f"1, 3, ..., {2 * _n56 - 1}; their mean "
+                        f"is {_n56}")
+            steps = [_f56 + f" = {fmt_num(_v56)}"]
+            return {"type": "statistics", "op": "mean_first_n",
+                    "answer": fmt_num(_v56), "value": float(_v56),
+                    "steps": steps}
+
     # Wave 30: the missing value behind a stated mean ("The
     # mean of 5 numbers is 20. Four of the numbers are 18, 22,
     # 19 and 21. Find the fifth number."). The generic list-mean
@@ -1462,6 +1766,7 @@ def solve_statistics(question: str):
     # _probability returns None unless it can parse an event,
     # so descriptive questions are unaffected.
     if "probab" in ql or "chance" in ql or re.search(
+            r"p\(\s*[a-z]\s*\)", ql) or re.search(
             r"प्रायिकता|संभावना|sambhavna|सिक्क|पास|गेंद|पत्त|"
             r"\bsikka\b|\bsikke\b|\bpasa\b|\bpaase\b", ql):
         out = _probability(q)
@@ -1478,6 +1783,43 @@ def solve_statistics(question: str):
     _freq_unk = _freq_mean_unknown(ql)
     if _freq_unk is not None:
         return _freq_unk
+
+    # Wave 58: GEOMETRIC mean. The keyword selection below
+    # sees only "mean" and answered with the ARITHMETIC mean
+    # — GM of 4 and 9 came out 6.5 instead of 6 (Wave 55
+    # trap). GM = (product of the numbers)^(1/n), exact when
+    # the product is a perfect nth power.
+    if "geometric mean" in ql or "geometric-mean" in ql:
+        _gnums = _extract_list(q)
+        if _gnums and len(_gnums) >= 2 \
+                and all(n > 0 for n in _gnums):
+            _prod = 1
+            for _n in _gnums:
+                _prod *= _n
+            _cnt = len(_gnums)
+            _root = None
+            if all(float(n).is_integer() for n in _gnums):
+                _iprod = 1
+                for _n in _gnums:
+                    _iprod *= int(_n)
+                _cand = round(_iprod ** (1.0 / _cnt))
+                if _cand ** _cnt == _iprod:
+                    _root = float(_cand)
+            _val = _root if _root is not None else \
+                float(_prod) ** (1.0 / _cnt)
+            steps = [
+                "Geometric mean = (product of the numbers)"
+                f"^(1/n) with n = {_cnt} numbers.",
+                f"Product = "
+                + " × ".join(fmt_num(n) for n in _gnums)
+                + f" = {fmt_num(_prod)}",
+                f"GM = {fmt_num(_prod)}^(1/{_cnt}) "
+                f"= {fmt_num(_val)}",
+            ]
+            return {"type": "statistics",
+                    "op": "geometric_mean",
+                    "answer": fmt_num(_val), "value": _val,
+                    "steps": steps}
 
     op = None
     # Wave 33: Hindi descriptive statistics — माध्यक /
