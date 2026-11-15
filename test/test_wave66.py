@@ -155,7 +155,7 @@ def test_up12_single_section_render(client):
 def test_pins_unchanged():
     # Wave 66 changes no CSS/JS and moves no delivery pin:
     # the pins stay whatever the tree carries (?v=36 / v13 in
-    # the Wave-66 copy; ?v=37 / v14 in the original tree after
+    # the Wave-66 copy; ?v=38 / v14 in the original tree after
     # Waves 67/68). Assert presence and format only.
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()

@@ -21,8 +21,9 @@ What these tests pin:
    none; the final answer is never duplicated as a step or
    in the intro.
 3. THE CHAT TEMPLATE: no explanation paragraph, no
-   notebook/copy-style panel in the answer flow, example
-   chips on the empty state, pins ?v=37 / ganitra-static-v14.
+   notebook/copy-style panel in the answer flow, NO example
+   chips on the empty state (Wave-68 chips removed in Wave
+   69 on Suraj's order), pins ?v=38 / ganitra-static-v15.
 """
 from pathlib import Path
 
@@ -259,15 +260,15 @@ def test_chat_template_no_explanation_or_notebook():
     assert "steps-tools" not in INDEX
 
 
-def test_chat_template_example_chips():
-    assert 'id="example-chips"' in INDEX
-    assert INDEX.count('class="example-chip"') == 4
-    for q in ("Solve x² - 5x + 6 = 0", "15% of 240 kitna hoga?",
-              "Find the area of a circle with radius 7 cm"):
-        assert f'data-q="{q}"' in INDEX
+def test_chat_template_no_example_chips():
+    # Wave 69 (Suraj): example-question chips removed — the
+    # empty state must carry no pre-written questions at all.
+    assert 'id="example-chips"' not in INDEX
+    assert INDEX.count('class="example-chip"') == 0
+    assert 'class="example-chip"' not in INDEX
 
 
-def test_example_chip_questions_all_solve():
+def test_sample_questions_all_solve():
     assert _solve_friendly("Solve x² - 5x + 6 = 0")["answer"] \
         == "x = 2, x = 3"
     assert _solve_friendly("15% of 240 kitna hoga?")["answer"] \
@@ -280,9 +281,9 @@ def test_example_chip_questions_all_solve():
 
 
 def test_wave68_pins_and_css():
-    assert "v='37'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v14"' in SW
-    assert ".example-chip" in CSS
+    assert "v='38'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v15"' in SW
+    assert ".example-chip" not in CSS
     assert ".plain-reply" in CSS
     assert ".answer-intro" in CSS
     assert ".step-verify" in CSS

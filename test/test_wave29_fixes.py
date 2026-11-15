@@ -120,13 +120,13 @@ def test_photo_solve_aria_names_the_photo_for_photos(client):
 # --- 3. Delivery versions -------------------------------------
 
 def test_delivery_versions_wave29():
-    assert "v='37'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v14"' in SW
+    assert "v='38'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v15"' in SW
     for old in ("ganitra-static-v5", "ganitra-static-v4",
                 "ganitra-static-v3", "ganitra-static-v2",
                 "ganitra-static-v1"):
         # Wave 60: match the FULL quoted cache name —
-        # "ganitra-static-v14" contains "ganitra-static-v1"
+        # "ganitra-static-v15" contains "ganitra-static-v1"
         # as a bare substring, which is not the old cache.
         assert f'"{old}"' not in SW
 

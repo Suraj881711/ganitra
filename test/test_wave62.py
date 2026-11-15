@@ -9,7 +9,7 @@ the lion, gated on 3D activation); scene3d.js performing the
 director's scenes (no orbit / no idle wander / no tap buttons);
 the 3D boy writer with the sprite fallback; the 2D fallback
 intact; and the bumped pins (?v=35 / ganitra-static-v12;
-merge-4 reconciled them to ?v=37 / ganitra-static-v14).
+merge-4 reconciled them to ?v=38 / ganitra-static-v15).
 
 Wave 62B update (Suraj's final spec, same day): the 3D scene
 performs ONLY the eagle — perch / carry / kiss on the G
@@ -166,8 +166,8 @@ def test_served_page_wave62(client):
     assert 'SCENE_ORDER = ["eagle", "tiger", "chase", "lion"]' in page
     assert 'id="scene-3d"' in page and 'id="scene-stage"' in page
     assert "__ganitraBoyWriter3D" in page
-    # Merge-4: pins reconciled to ?v=37 / ganitra-static-v14.
-    assert "style.css?v=37" in page
+    # Merge-4: pins reconciled to ?v=38 / ganitra-static-v15.
+    assert "style.css?v=38" in page
     # the 2D fallback actors are still served in the stage
     for n in ("eagle", "tiger", "boy"):
         assert f'id="scene-{n}"' in page
