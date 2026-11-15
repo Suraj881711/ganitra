@@ -64,7 +64,8 @@
 /* Merge-2: pins reconciled as anticipated above — cache
    name v8, stylesheet ?v=31. */
 /* Wave 55: topic-directory CSS — cache v9, stylesheet ?v=32. */
-var GANITRA_CACHE = "ganitra-static-v9";
+/* Wave 60: back-bar CSS — cache v10, stylesheet ?v=33. */
+var GANITRA_CACHE = "ganitra-static-v10";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();
