@@ -1816,8 +1816,22 @@ def create_app():
     def _paper_sheet(paper):
         """View-model for the typed exam-paper sheet of one stored
         paper (Wave 63). See the block comment above for the
-        honesty rules behind every derived number."""
+        honesty rules behind every derived number.
+
+        Wave 66: other boards' layouts genuinely differ from the
+        CBSE pattern this builder was written for, so a paper may
+        carry optional overrides, all derived from its own printed
+        header/structure (never invented): "section_titles"
+        {section: full English title}, "section_titles_hindi"
+        {section: Hindi subtitle}, "hindi_section_letters"
+        {section: letter} (e.g. RBSE prints खण्ड अ/ब/स/द, not
+        क/ख/ग/घ), "full_marks"/"full_count" {section: value}
+        replacing the derived section totals, and "max_marks"/
+        "max_questions" replacing the header totals (e.g. ISC,
+        where Sections B and C are alternatives and must not be
+        added together)."""
         hindi = paper.get("medium") == "hindi"
+        hi_letters = paper.get("hindi_section_letters") or _HI_SECTION
         stored = paper["questions"]
         by_section = {}
         for q in stored:
@@ -1850,7 +1864,14 @@ def create_app():
             if marks_set == {std_marks} and sec_count < std_count:
                 sec_marks += (std_count - sec_count) * std_marks
                 sec_count = std_count
-            title = papers_data.section_title_for(section, qs)
+            # Wave 66: a paper's own printed totals win over the
+            # derived ones (see the docstring above).
+            if section in paper.get("full_count", {}):
+                sec_count = paper["full_count"][section]
+            if section in paper.get("full_marks", {}):
+                sec_marks = paper["full_marks"][section]
+            title = paper.get("section_titles", {}).get(
+                section) or papers_data.section_title_for(section, qs)
             subtitle = ""
             if " — " in title:
                 subtitle = title.split(" — ", 1)[1]
@@ -1858,16 +1879,19 @@ def create_app():
                 subtitle = title[len(f"Section {section} "):]
             heading = f"SECTION {section}"
             if hindi:
-                heading = f"खण्ड {_HI_SECTION[section]}"
-                std = papers_data.PAPER_STRUCTURE[section]
-                if (sec_count, qs[0]["marks"]) == std \
-                        and len(marks_set) == 1:
-                    subtitle = _HI_SUBTITLES[section]
-                elif len(marks_set) == 1:
-                    subtitle = (f"{sec_count} प्रश्न "
-                                f"(प्रत्येक {qs[0]['marks']} अंक)")
+                heading = f"खण्ड {hi_letters[section]}"
+                if section in paper.get("section_titles_hindi", {}):
+                    subtitle = paper["section_titles_hindi"][section]
                 else:
-                    subtitle = f"{sec_count} प्रश्न"
+                    std = papers_data.PAPER_STRUCTURE[section]
+                    if (sec_count, qs[0]["marks"]) == std \
+                            and len(marks_set) == 1:
+                        subtitle = _HI_SUBTITLES[section]
+                    elif len(marks_set) == 1:
+                        subtitle = (f"{sec_count} प्रश्न "
+                                    f"(प्रत्येक {qs[0]['marks']} अंक)")
+                    else:
+                        subtitle = f"{sec_count} प्रश्न"
             sections.append({
                 "section": section,
                 "heading": heading,
@@ -1887,6 +1911,12 @@ def create_app():
             })
             full_marks += sec_marks
             full_count += sec_count
+        # Wave 66: header totals override (alternative sections
+        # such as ISC's B/C must not be summed).
+        if "max_marks" in paper:
+            full_marks = paper["max_marks"]
+        if "max_questions" in paper:
+            full_count = paper["max_questions"]
         if hindi:
             # The same derived facts, in the paper's own language
             # (mirrors the printed Hindi सामान्य निर्देश).
@@ -1895,7 +1925,7 @@ def create_app():
                 "सभी प्रश्न अनिवार्य हैं।",
             ]
             for sec in sections:
-                name = _HI_SECTION[sec["section"]]
+                name = hi_letters[sec["section"]]
                 if sec["marks_each"] is not None:
                     instructions.append(
                         f"खण्ड {name} में {sec['full_count']} प्रश्न "
