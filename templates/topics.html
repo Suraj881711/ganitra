@@ -7,24 +7,53 @@
     <h2>{{ t.topics_heading }}</h2>
     <p class="sub">{{ t.topics_sub }}</p>
     <div class="topic-grid">
-      <div class="topic-card"><div class="ic">➗</div><h3>{{ t.t_arithmetic }}</h3><p>Fractions, percentages, BODMAS — with reduction steps.</p></div>
-      <div class="topic-card"><div class="ic">✖️</div><h3>{{ t.t_algebra }}</h3><p>Equations, systems, inequalities, factor, expand, simplify.</p></div>
-      <div class="topic-card"><div class="ic">📈</div><h3>{{ t.t_exponents_logs }}</h3><p>Powers, logarithms and log equations.</p></div>
-      <div class="topic-card"><div class="ic">📐</div><h3>{{ t.t_trigonometry }}</h3><p>Values, identities, equations and inverse trig (degrees by default).</p></div>
-      <div class="topic-card"><div class="ic">∫</div><h3>{{ t.t_calculus }}</h3><p>Limits, derivatives (partial &amp; implicit), integrals, ODEs.</p></div>
-      <div class="topic-card star"><div class="ic">🔀</div><h3>{{ t.t_transforms }}</h3><p>Laplace &amp; inverse Laplace, Taylor/Maclaurin series, partial fractions.</p></div>
-      <div class="topic-card"><div class="ic">🔢</div><h3>{{ t.t_linear_algebra }}</h3><p>Determinant, inverse, eigenvalues, rank, Ax = b.</p></div>
-      <div class="topic-card"><div class="ic">🔷</div><h3>{{ t.t_geometry }}</h3><p>Areas, volumes and coordinate geometry.</p></div>
-      <div class="topic-card"><div class="ic">🎲</div><h3>{{ t.t_statistics }}</h3><p>Mean, median, mode, SD, dice, coins, cards, counting.</p></div>
-      <div class="topic-card star"><div class="ic">📊</div><h3>{{ t.t_distributions }}</h3><p>Normal (z-scores, percentiles), Poisson and binomial probabilities.</p></div>
-      <div class="topic-card"><div class="ic">#️⃣</div><h3>{{ t.t_number_theory }}</h3><p>Primes, GCD/LCM with factorisation steps, modulo.</p></div>
-      <div class="topic-card"><div class="ic">🔁</div><h3>{{ t.t_sequences }}</h3><p>AP/GP terms and sums, natural-number series.</p></div>
-      <div class="topic-card"><div class="ic">ℹ️</div><h3>{{ t.t_complex }}</h3><p>Arithmetic, modulus, conjugate, argument.</p></div>
-      <div class="topic-card"><div class="ic">🧮</div><h3>{{ t.t_sets }}</h3><p>Union, intersection, difference, symmetric difference.</p></div>
-      <div class="topic-card"><div class="ic">🔄</div><h3>{{ t.t_units }}</h3><p>Length, mass, time, volume, area and temperature.</p></div>
-      <div class="topic-card"><div class="ic">📝</div><h3>{{ t.t_word_problems }}</h3><p>Percent change, speed–distance, simple interest.</p></div>
-      <div class="topic-card star"><div class="ic">📉</div><h3>{{ t.t_graphs }}</h3><p>Plot one or two functions; shaded area for definite integrals.</p></div>
+      <div class="topic-card"><div class="ic">➗</div><h3>{{ t.t_arithmetic }}</h3><p>Fractions, percentages, BODMAS — with reduction steps.</p><p>Method: Work step by step and show the working — for HCF and LCM, break both numbers into prime factors first.</p><p>Example: Find the HCF of 12 and 18 → 6</p></div>
+      <div class="topic-card"><div class="ic">✖️</div><h3>{{ t.t_algebra }}</h3><p>Equations, systems, inequalities, factor, expand, simplify.</p><p>Method: Keep the equation balanced — do the same to both sides until the unknown stands alone.</p><p>Example: Solve x + 7 = 15 → x = 8</p></div>
+      <div class="topic-card"><div class="ic">📈</div><h3>{{ t.t_exponents_logs }}</h3><p>Powers, logarithms and log equations.</p><p>Method: Same base? Add or subtract the powers. For logs, turn the log question into a power question.</p><p>Example: Simplify 2^3 * 2^2 → 32</p></div>
+      <div class="topic-card"><div class="ic">📐</div><h3>{{ t.t_trigonometry }}</h3><p>Values, identities, equations and inverse trig (degrees by default).</p><p>Method: Learn the standard-angle table, then fix the sign by the quadrant (ASTC).</p><p>Example: Find the value of sin 150 degrees → 1/2</p></div>
+      <div class="topic-card"><div class="ic">∫</div><h3>{{ t.t_calculus }}</h3><p>Limits, derivatives (partial &amp; implicit), integrals, ODEs.</p><p>Method: Power rule for derivatives, reverse power rule for integrals — adjust the power by one each time.</p><p>Example: Integrate x^3 → x^4/4 + C</p></div>
+      <div class="topic-card star"><div class="ic">🔀</div><h3>{{ t.t_transforms }}</h3><p>Laplace &amp; inverse Laplace, Taylor/Maclaurin series, partial fractions.</p><p>Method: A series writes a function as a sum of powers of x; Laplace turns a function of t into a function of s.</p><p>Example: Find the Taylor series of e^x → 1 + x + x^2/2 + x^3/6 + …</p></div>
+      <div class="topic-card"><div class="ic">🔢</div><h3>{{ t.t_linear_algebra }}</h3><p>Determinant, inverse, eigenvalues, rank, Ax = b.</p><p>Method: The determinant of [[a, b], [c, d]] is ad − bc; systems are solved by elimination or the matrix inverse.</p><p>Example: Find the determinant of the matrix [[3, 4], [1, 2]] → 2</p></div>
+      <div class="topic-card"><div class="ic">🔷</div><h3>{{ t.t_geometry }}</h3><p>Areas, volumes and coordinate geometry.</p><p>Method: Pick the formula for the shape — area, volume, circumference — put the measurements in, and keep the units right.</p><p>Example: Find the area of a circle with radius 7 cm → 49π ≈ 153.94</p></div>
+      <div class="topic-card"><div class="ic">🎲</div><h3>{{ t.t_statistics }}</h3><p>Mean, median, mode, SD, dice, coins, cards, counting.</p><p>Method: Sort the data first: the median is the middle value, the mean is total ÷ count, the mode is the most frequent.</p><p>Example: Find the median of 5, 3, 8, 7, 2 → 5</p></div>
+      <div class="topic-card star"><div class="ic">📊</div><h3>{{ t.t_distributions }}</h3><p>Normal (z-scores, percentiles), Poisson and binomial probabilities.</p><p>Method: For repeated trials use nCr × p^r × (1 − p)^(n − r); for the normal curve use z = (x − mean) / SD.</p><p>Example: A coin is tossed 5 times — probability of exactly 3 heads → 5/16</p></div>
+      <div class="topic-card"><div class="ic">#️⃣</div><h3>{{ t.t_number_theory }}</h3><p>Primes, GCD/LCM with factorisation steps, modulo.</p><p>Method: Prime factorisation unlocks almost everything here: HCF, LCM, factor counts and divisibility.</p><p>Example: How many factors does 36 have? → 9</p></div>
+      <div class="topic-card"><div class="ic">🔁</div><h3>{{ t.t_sequences }}</h3><p>AP/GP terms and sums, natural-number series.</p><p>Method: AP adds the same difference (nth term = a + (n − 1)d); GP multiplies by the same ratio (nth term = a × r^(n − 1)).</p><p>Example: Find the 10th term of the AP 2, 5, 8, 11 → 29</p></div>
+      <div class="topic-card"><div class="ic">ℹ️</div><h3>{{ t.t_complex }}</h3><p>Arithmetic, modulus, conjugate, argument.</p><p>Method: Treat i as a number with i² = −1: combine the real parts and the imaginary parts separately.</p><p>Example: Find the modulus of 3 + 4i → 5</p></div>
+      <div class="topic-card"><div class="ic">🧮</div><h3>{{ t.t_sets }}</h3><p>Union, intersection, difference, symmetric difference.</p><p>Method: Union takes everything from both sets with no repeats; intersection takes only what is common.</p><p>Example: A = {1, 2, 3}, B = {3, 4, 5} — A union B → {1, 2, 3, 4, 5}</p></div>
+      <div class="topic-card"><div class="ic">🔄</div><h3>{{ t.t_units }}</h3><p>Length, mass, time, volume, area and temperature.</p><p>Method: Multiply when going to a smaller unit, divide for a bigger one: km → m is ×1000, minutes → hours is ÷60.</p><p>Example: Convert 5 km into metres → 5000 metres</p></div>
+      <div class="topic-card"><div class="ic">📝</div><h3>{{ t.t_word_problems }}</h3><p>Percent change, speed–distance, simple interest.</p><p>Method: Name the unknown, turn the story into an equation or a direct formula, then solve it.</p><p>Example: Simple interest on Rs 1000 at 5% for 2 years → Rs 100</p></div>
+      <div class="topic-card star"><div class="ic">📉</div><h3>{{ t.t_graphs }}</h3><p>Plot one or two functions; shaded area for definite integrals.</p><p>Method: A line is y = mx + c: m is the slope (steepness) and c is where the line crosses the y-axis.</p><p>Example: Equation of the line through the origin with slope 2 → y = 2x</p></div>
     </div>
+  </section>
+
+  {# Wave 55: per-class topic directory — every NCERT chapter for
+     Classes 6-12 broken into its teachable sub-topics (226 topics),
+     each with its method (idea + plain steps), one worked example
+     verified through the app's own solve path, and a link to its
+     parent chapter (practice + test live there). Data:
+     topics_data.py; quality gate: test/test_wave55_topics.py. #}
+  <section class="topics rise rise-2">
+    <h2>Topics by class — with the method for each</h2>
+    <p class="sub">Every topic below shows how to solve it, with one solved example. Tap a topic to open its chapter — practice questions and a test are waiting there.</p>
+    {% for group in class_topics %}
+    <div class="topic-group">
+      <h3>{{ t.board_class_word }} {{ group.class_num }}</h3>
+      <div class="topic-grid">
+        {% for topic in group.topics %}
+        <a class="topic-card" href="/board/{{ group.class_num }}/{{ topic.chapter }}">
+          <h3>{{ topic.name }}</h3>
+          <p>{{ topic.idea }}</p>
+          <div class="steps">
+            {% for step in topic.steps %}<p>{{ step }}</p>{% endfor %}
+          </div>
+          <p class="ex">Example: {{ topic.starter }}<br>Answer: {{ topic.answer }}</p>
+          <p class="ex">Chapter: {{ topic.chapter_title }}</p>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
   </section>
 
   <section class="how rise rise-2">
