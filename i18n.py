@@ -179,6 +179,9 @@ _EN = {
                           "clear, straight photo again, or type the "
                           "question.",
     "js_photo_sending": "Question found — sending…",
+    # Wave 67: the ONE-line not-found answer (Suraj: gibberish /
+    # unsolved input gets just this line, no long guide card).
+    "answer_not_found": "Answer not found.",
     "js_file_reading": "Reading the file… ⏳",
     "js_file_unsupported": "I can't read this file type yet — please send a photo, a PDF, a Word (.docx) or a text (.txt) file.",
     "js_file_too_large": "That file is too big — please send a file under 2 MB.",
@@ -321,6 +324,7 @@ _HI = {
     "js_photo_not_found": "फ़ोटो में प्रश्न नहीं मिल पाया — साफ़, सीधी "
                           "फ़ोटो फिर भेजिए, या प्रश्न लिख दीजिए।",
     "js_photo_sending": "प्रश्न मिल गया — भेजा जा रहा है…",
+    "answer_not_found": "उत्तर नहीं मिला।",
     "js_file_reading": "File padh raha hoon… ⏳",
     "js_file_unsupported": "Ye file type main abhi nahi padh sakta — photo, PDF, Word (.docx) ya text (.txt) file bhejo.",
     "js_file_too_large": "Ye file bahut badi hai — 2 MB se chhoti file bhejo.",
@@ -466,6 +470,7 @@ _BN = {
     "js_photo_not_found": "ছবিতে প্রশ্ন পাওয়া যায়নি — পরিষ্কার, সোজা "
                           "ছবি আবার পাঠান, বা প্রশ্নটি লিখে দিন।",
     "js_photo_sending": "প্রশ্ন পাওয়া গেছে — পাঠানো হচ্ছে…",
+    "answer_not_found": "উত্তর পাওয়া যায়নি।",
     "js_file_reading": "ফাইল পড়ছি… ⏳",
     "js_file_unsupported": "এই ধরনের ফাইল আমি এখনো পড়তে পারি না — ছবি, PDF, Word (.docx) বা text (.txt) ফাইল পাঠাও।",
     "js_file_too_large": "ফাইলটা খুব বড় — 2 MB-এর ছোট ফাইল পাঠাও।",
@@ -609,6 +614,7 @@ _MR = {
     "js_photo_not_found": "फोटोमध्ये प्रश्न सापडला नाही — स्पष्ट, सरळ "
                           "फोटो पुन्हा पाठवा, किंवा प्रश्न लिहा.",
     "js_photo_sending": "प्रश्न सापडला — पाठवत आहे…",
+    "answer_not_found": "उत्तर सापडले नाही.",
     "js_file_reading": "फाइल वाचत आहे… ⏳",
     "js_file_unsupported": "हा फाइल प्रकार मी अजून वाचू शकत नाही — फोटो, PDF, Word (.docx) किंवा text (.txt) फाइल पाठव.",
     "js_file_too_large": "ही फाइल खूप मोठी आहे — 2 MB पेक्षा लहान फाइल पाठव.",
@@ -773,6 +779,7 @@ _TA = {
                           "அனுப்பவும், அல்லது கேள்வியைத் தட்டச்சு "
                           "செய்யவும்.",
     "js_photo_sending": "கேள்வி கிடைத்தது — அனுப்புகிறேன்…",
+    "answer_not_found": "பதில் கிடைக்கவில்லை.",
     "js_file_reading": "கோப்பைப் படிக்கிறேன்… ⏳",
     "js_file_unsupported": "இந்த வகை கோப்பை என்னால் இன்னும் படிக்க முடியாது — புகைப்படம், PDF, Word (.docx) அல்லது text (.txt) கோப்பை அனுப்பு.",
     "js_file_too_large": "அந்தக் கோப்பு மிகப் பெரியது — 2 MB-க்கு குறைவான கோப்பை அனுப்பு.",
@@ -926,6 +933,7 @@ _TE = {
                           "ఫోటోను మళ్లీ పంపండి, లేదా ప్రశ్నను టైప్ "
                           "చేయండి.",
     "js_photo_sending": "ప్రశ్న దొరికింది — పంపుతున్నాను…",
+    "answer_not_found": "సమాధానం దొరకలేదు.",
     "js_file_reading": "ఫైల్ చదువుతున్నాను… ⏳",
     "js_file_unsupported": "ఈ రకం ఫైల్‌ను నేను ఇంకా చదవలేను — ఫోటో, PDF, Word (.docx) లేదా text (.txt) ఫైల్ పంపు.",
     "js_file_too_large": "ఆ ఫైల్ చాలా పెద్దది — 2 MB కంటే చిన్న ఫైల్ పంపు.",
@@ -1404,12 +1412,25 @@ def get_strings(lang):
     return merged
 
 
+def result_is_plain(result):
+    """Wave 67: True for the minimal one-line responses — the
+    not-found line (fallback_kind == "not_found") and the
+    maths-only guard lines (plain=True: science / nonmaths).
+    They carry NO explanation, NO Teacher's Advice and NO Teach
+    lines; the chat renders them as a plain one-line bubble."""
+    result = result or {}
+    return (result.get("fallback_kind") == "not_found"
+            or bool(result.get("plain")))
+
+
 def explanation_for(result, lang):
     """One localised summary sentence for a solver result dict.
 
     Template lookup: "type:op" -> "type" -> "generic", always with the
     final answer interpolated. Never raises.
     """
+    if result_is_plain(result):
+        return ""
     table = EXPLANATIONS.get(lang) or EXPLANATIONS["en"]
     fallback = EXPLANATIONS["en"]
     answer = str((result or {}).get("answer", "")).strip()
@@ -2221,6 +2242,8 @@ def advice_for(result, lang):
     the discriminant/quadratic formula -> "algebra:quadratic") ->
     "type" -> English equivalents -> "generic". Never raises.
     """
+    if result_is_plain(result):
+        return ""
     table = ADVICE.get(lang) or ADVICE["en"]
     fallback = ADVICE["en"]
     result = result or {}
@@ -4271,6 +4294,8 @@ def teach_for(result, lang):
     solver result. Lookup mirrors explanation_for ("type:op" ->
     "type" -> "generic"); languages without their own TEACH table
     use the English lines. Never raises; always returns a list."""
+    if result_is_plain(result):
+        return []
     try:
         result = result or {}
         rtype = result.get("type", "") or ""

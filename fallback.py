@@ -46,16 +46,36 @@ fallback_kind=...) and never presents a guessed or similar
 answer as the exact answer to the student's question.
 
 Result dicts keep the solver's shape ({type, op, answer,
-steps, ...}) so every existing renderer (chat bubble, answer
+steps, ...) so every existing renderer (chat bubble, answer
 page, print, download, history) works unchanged: the gibberish
 guard in i18n only fires for type arithmetic/algebra with
 op == "simplify", which no fallback result ever uses.
+
+Wave 67 (Suraj, 15 Nov 2026, with phone screenshots): the
+no-dead-end layers above were honest but LOUD — gibberish like
+"If tu gfuf" earned the full guide card (mixed-language guide
+text, the "Questions I solve for sure" notebook panel, a long
+final-answer paragraph and Teacher's Advice). His order:
+"jab kuch bhi likh diya to itna bada answer dene ki jarurat
+nahi hai — bas 'answer not found' bol do, itna hi." So now
+anything that is NOT actually solved — greetings/small talk,
+vague asks, gibberish, a similar example, the general guide —
+collapses to ONE short line in the question's own language
+(fallback_kind == "not_found", see _not_found_result), after
+the AI chain has had its chance (solver -> bank -> AI ->
+one-line not-found). Real answers are untouched: solver,
+salvage, bank, concept cards and AI answers render exactly as
+before. The maths-only guards keep their own one-line wording
+and gain plain=True so the chat shows just that line: the
+science payload keeps its formula-guidance steps for the
+full-solution page, the non-maths line is trimmed to the
+guard sentence itself.
 """
 import re
 from fractions import Fraction
 
 from concepts import find_concept
-from i18n import solve_failed
+from i18n import get_strings, solve_failed
 from solver.router import has_science_signal, normalize_spelling, \
     solve_question
 
@@ -300,6 +320,50 @@ def _friendly_result(kind, answer, steps, hindi):
     }
 
 
+# ---------------------------------------------------------------------------
+# Wave 67: the one-line not-found answer
+# ---------------------------------------------------------------------------
+
+_HINGLISH_NOT_FOUND = "Answer nahi mila."
+
+
+def _not_found_line(question, hindi, lang=None):
+    """The not-found line in the question's own language:
+    Devanagari question -> Hindi (Marathi UI keeps its own
+    line), Roman Hinglish -> "Answer nahi mila.", a bn/mr/ta/te
+    UI language -> its i18n line, otherwise English. The
+    Devanagari/Hinglish wording is Suraj's spec verbatim; the
+    rest ride the i18n "answer_not_found" key."""
+    q = str(question or "")
+    if any("ऀ" <= ch <= "ॿ" for ch in q):
+        if lang == "mr":
+            return get_strings("mr")["answer_not_found"]
+        return get_strings("hi")["answer_not_found"]
+    if hindi:
+        return _HINGLISH_NOT_FOUND
+    if lang in ("bn", "mr", "ta", "te"):
+        return get_strings(lang)["answer_not_found"]
+    if lang == "hi":
+        return _HINGLISH_NOT_FOUND
+    return get_strings("en")["answer_not_found"]
+
+
+def _not_found_result(question, hindi, lang=None):
+    """The ONLY answer to anything that was not solved: one
+    short line, no steps, nothing else. fallback_kind ==
+    "not_found" is the sentinel every renderer gates on (the
+    chat shows a plain minimal bubble; i18n gives it no
+    explanation / advice / teach lines)."""
+    return {
+        "type": "Ganitra",
+        "op": "not_found",
+        "answer": _not_found_line(question, hindi, lang),
+        "steps": [],
+        "fallback": True,
+        "fallback_kind": "not_found",
+    }
+
+
 def _greeting_result(question, hindi):
     g = _greeting_kind(question)
     if g is None:
@@ -353,20 +417,23 @@ def _greeting_result(question, hindi):
 
 
 def _nonmaths_result(hindi):
+    # Wave 67: ONE line only — the maths-only guard sentence
+    # itself. The old second half ("try me with sin 30…") is
+    # gone, and plain=True keeps the chat bubble to this line.
     if hindi:
-        return _friendly_result(
+        result = _friendly_result(
             "nonmaths",
-            "Ye sawal maths ka nahi hai — main sirf ganit ke sawal "
-            "hal karta hoon. 😊 Koi maths ka sawal bhejo, jaise "
-            "'sin 30 ka maan' ya 'x^2 - 5x + 6 = 0'; main turant "
-            "step-by-step hal dunga.",
+            "Ye sawal maths ka nahi hai — Ganitra sirf Maths "
+            "ke sawal hal karta hai।",
             [], hindi)
-    return _friendly_result(
-        "nonmaths",
-        "That's not a maths question — I only solve maths. 😊 "
-        "Try me with something like 'sin 30' or 'solve x^2 - 5x "
-        "+ 6 = 0' and I'll solve it step by step.",
-        [], hindi)
+    else:
+        result = _friendly_result(
+            "nonmaths",
+            "That's not a maths question — Ganitra only "
+            "solves Maths.",
+            [], hindi)
+    result["plain"] = True
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -454,7 +521,14 @@ def _science_result(question, hindi):
             "Send me any Maths question — like a train "
             "speed–distance sum or 'x^2 - 5x + 6 = 0' — and "
             "I'll solve it step by step."]
-    return _friendly_result("science", topic_line, steps, hindi)
+    result = _friendly_result("science", topic_line, steps, hindi)
+    # Wave 67: the chat shows ONLY the one-line refusal (the
+    # topic_line, with the "Ganitra sirf Maths / only solves
+    # Maths" wording). The formula-guidance steps stay in the
+    # payload for the full-solution page — the guard itself is
+    # unchanged (test_science_guard still proves it).
+    result["plain"] = True
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -978,18 +1052,25 @@ def _groq_answer(question, hindi):
 # The entry point
 # ---------------------------------------------------------------------------
 
-def with_fallback(question, result):
+def with_fallback(question, result, lang=None):
     """Return `result` unchanged when it is a real solver
     answer; otherwise return an honest fallback result (never
-    None, never an error dict)."""
+    None, never an error dict). `lang` is the app's UI /
+    detected language (Wave 67: it picks the not-found line
+    for the bn/mr/ta/te UIs; the line otherwise follows the
+    question's own script/words)."""
     hindi = _looks_hindi(question)
 
     # Layer 0 / 0b run before the solver result is even looked
     # at: the solver's letter-products for "hi" / "what is the
     # capital of india" are not answers at all.
-    greeting = _greeting_result(question, hindi)
-    if greeting is not None:
-        return greeting
+    # Wave 67: small talk is not a solved question either —
+    # Suraj's rule ("kuch bhi likh diya to bas not found bolo")
+    # gives a greeting the same one line as gibberish. (The
+    # Wave-18 greeting texts in _greeting_result are retired,
+    # not deleted, so the history stays readable.)
+    if _greeting_kind(question) is not None:
+        return _not_found_result(question, hindi, lang)
     if _is_nonmaths(question):
         return _nonmaths_result(hindi)
 
@@ -1052,10 +1133,20 @@ def with_fallback(question, result):
             ai_result = _groq_answer(question, hindi)
         if ai_result is not None:
             return ai_result
+
+    # Wave 67: whatever honest layer is still standing here —
+    # a similar example, a vague ask, gibberish, the general
+    # guide — means the student's OWN question was not solved,
+    # so the whole answer collapses to the one not-found line.
+    # A concept card is a real answer (formula + worked
+    # example for the exact concept asked) and is served as-is.
+    if result_out.get("fallback_kind") in (
+            "similar", "vague", "gibberish", "guide"):
+        return _not_found_result(question, hindi, lang)
     return result_out
 
 
-def fallback_answer(question, result=None):
+def fallback_answer(question, result=None, lang=None):
     """Convenience wrapper: solve (if no result was given) and
     guarantee a presentable answer dict."""
     if result is None:
@@ -1065,7 +1156,7 @@ def fallback_answer(question, result=None):
             result = {"type": "solver", "op": "error",
                       "answer": f"Could not solve this one: {e}",
                       "steps": []}
-    return with_fallback(question, result)
+    return with_fallback(question, result, lang=lang)
 
 
 __all__ = ["with_fallback", "fallback_answer"]

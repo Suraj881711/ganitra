@@ -17,8 +17,8 @@ from flask import (Flask, Response, jsonify, render_template, request,
 from api import api_bp, trimmed_history_entry
 from i18n import (LANG_NAMES, SPEECH_LANGS, SUPPORTED_LANGS,
                   advice_for, explanation_for, get_strings,
-                  normalise_lang, remark_key_for, result_unsolvable,
-                  solve_failed, teach_for)
+                  normalise_lang, remark_key_for, result_is_plain,
+                  result_unsolvable, solve_failed, teach_for)
 from solver.methods import alternate_methods
 from speedups import methods_nonblocking
 from solver.practice import (QUIZ_DIFFICULTIES, QUIZ_QUESTION_COUNT,
@@ -1034,9 +1034,14 @@ def create_app():
             # friendly guide), so the error card below is now only
             # a last resort that the fallback itself could not
             # cover.
-            result = with_fallback(question, result)
+            result = with_fallback(question, result,
+                                   lang=_lang())
             put_negative(question, result)
         failed = solve_failed(question, result)
+        # Wave 67: a one-line response (not-found / maths-only
+        # guard) gets NO explanation, advice, methods or teach
+        # extras on the answer page either — just its line.
+        quiet = failed or result_is_plain(result)
         session["last_question"] = question
         session["last_result"] = result
         history = session.get("history", [])
@@ -1046,17 +1051,17 @@ def create_app():
         session["history"] = history[:_HISTORY_LIMIT]
         return render_template("answer.html", question=question,
                                result=result,
-                               explanation=(None if failed
+                               explanation=(None if quiet
                                             else explanation_for(result,
                                                                  _lang())),
-                               advice=(None if failed
+                               advice=(None if quiet
                                        else advice_for(result, _lang())),
                                # Wave 14: same non-blocking
                                # auto-teach budget as /api/solve.
-                               methods=([] if failed
+                               methods=([] if quiet
                                         else methods_nonblocking(
                                             question, result)),
-                               teach=([] if failed
+                               teach=([] if quiet
                                       else teach_for(result, _lang())),
                                unsolvable=failed)
 
@@ -1300,9 +1305,12 @@ def create_app():
                 if not solve_failed(question, retry):
                     result = retry
             # Wave 18: same no-dead-end fallback as /solve.
-            result = with_fallback(question, result)
+            result = with_fallback(question, result,
+                                   lang=_lang())
             put_negative(question, result)
         failed = solve_failed(question, result)
+        # Wave 67: one-line responses get no extras (as /solve).
+        quiet = failed or result_is_plain(result)
         session["last_question"] = question
         session["last_result"] = result
         history = session.get("history", [])
@@ -1313,17 +1321,17 @@ def create_app():
         return render_template("answer.html", question=question,
                                result=result, photo_text=question,
                                source=source,
-                               explanation=(None if failed
+                               explanation=(None if quiet
                                             else explanation_for(result,
                                                                  _lang())),
-                               advice=(None if failed
+                               advice=(None if quiet
                                        else advice_for(result, _lang())),
                                # Wave 14: same non-blocking
                                # auto-teach budget as /api/solve.
-                               methods=([] if failed
+                               methods=([] if quiet
                                         else methods_nonblocking(
                                             question, result)),
-                               teach=([] if failed
+                               teach=([] if quiet
                                       else teach_for(result, _lang())),
                                unsolvable=failed)
 

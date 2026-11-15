@@ -45,11 +45,13 @@ def trimmed_history_entry(question, result):
     }
 
 
-def _solve_friendly(question):
+def _solve_friendly(question, lang=None):
     """Wave 5b: solve, and on failure gently re-ask once with a hint
     appended (same behaviour as the classic /solve route), so the
     chat never shows a raw solver failure when a small nudge fixes
-    it. Returns the final result dict.
+    it. Returns the final result dict. (`lang`, Wave 67, is the
+    UI/detected language forwarded to the fallback layer so the
+    one-line not-found answer can use it.)
 
     Wave 18: the result then passes through the no-dead-end
     layer (fallback.with_fallback) — real solver answers come
@@ -72,7 +74,7 @@ def _solve_friendly(question):
         retry = solve_question(f"{question} find the value")
         if not solve_failed(question, retry):
             result = retry
-    result = with_fallback(question, result)
+    result = with_fallback(question, result, lang=lang)
     put_negative(question, result)
     return result
 
@@ -182,7 +184,7 @@ def api_solve():
         switched = True
     fields = _lang_fields(lang, strings, switched)
 
-    result = _solve_friendly(question)
+    result = _solve_friendly(question, lang=lang)
 
     # Wave 5 (additive): a chat solve on the homepage counts exactly
     # like a classic /solve — it lands in the session history and
