@@ -129,6 +129,9 @@ _EN = {
     "classic_open": "Open the classic practice set",
     "classic_note": "(answers hidden until you reveal them).",
     "back_to_solver": "← Back to solver",
+    "nav_back": "Back",
+    "nav_back_test_confirm": "Your test is still running. If you "
+                             "leave now, your answers will be lost.",
     "result_heading": "Quiz result 🏆",
     "score_label": "Score:",
     "your_answer_label": "Your answer:",
@@ -272,6 +275,9 @@ _HI = {
     "classic_open": "क्लासिक अभ्यास समूह खोलिए",
     "classic_note": "(उत्तर तब तक छिपे रहेंगे जब तक आप उन्हें न खोलें)।",
     "back_to_solver": "← सॉल्वर पर वापस",
+    "nav_back": "वापस",
+    "nav_back_test_confirm": "आपकी परीक्षा अभी चल रही है। अभी जाने "
+                             "पर आपके उत्तर चले जाएँगे।",
     "result_heading": "क्विज़ परिणाम 🏆",
     "score_label": "अंक:",
     "your_answer_label": "आपका उत्तर:",
@@ -414,6 +420,9 @@ _BN = {
     "classic_open": "ক্লাসিক অনুশীলন সেট খুলুন",
     "classic_note": "(আপনি না খুললে উত্তর লুকানো থাকবে)।",
     "back_to_solver": "← সলভারে ফিরুন",
+    "nav_back": "পিছনে",
+    "nav_back_test_confirm": "আপনার পরীক্ষা এখনও চলছে। এখন চলে গেলে "
+                             "আপনার উত্তর হারিয়ে যাবে।",
     "result_heading": "কুইজের ফলাফল 🏆",
     "score_label": "স্কোর:",
     "your_answer_label": "আপনার উত্তর:",
@@ -555,6 +564,9 @@ _MR = {
     "classic_open": "क्लासिक सराव संच उघडा",
     "classic_note": "(तुम्ही उघडेपर्यंत उत्तरे लपलेली राहतील).",
     "back_to_solver": "← सॉल्व्हरकडे परत",
+    "nav_back": "मागे",
+    "nav_back_test_confirm": "तुमची परीक्षा अजून सुरू आहे. आता "
+                             "गेल्यास तुमची उत्तरे हरवतील.",
     "result_heading": "क्विझचा निकाल 🏆",
     "score_label": "गुण:",
     "your_answer_label": "तुमचे उत्तर:",
@@ -708,6 +720,10 @@ _TA = {
     "classic_note": "(நீங்கள் வெளிப்படுத்தும் வரை பதில்கள் "
                     "மறைக்கப்பட்டிருக்கும்).",
     "back_to_solver": "← தீர்வாளருக்குத் திரும்பவும்",
+    "nav_back": "பின்செல்",
+    "nav_back_test_confirm": "உங்கள் தேர்வு இன்னும் நடந்து "
+                             "கொண்டிருக்கிறது. இப்போது வெளியேறினால் "
+                             "உங்கள் பதில்கள் தொலைந்துவிடும்.",
     "result_heading": "வினாடிவினா முடிவு 🏆",
     "score_label": "மதிப்பெண்:",
     "your_answer_label": "உங்கள் பதில்:",
@@ -861,6 +877,9 @@ _TE = {
     "classic_open": "క్లాసిక్ అభ్యాస సెట్ తెరవండి",
     "classic_note": "(మీరు చూపించే వరకు సమాధానాలు దాగి ఉంటాయి).",
     "back_to_solver": "← సాల్వర్‌కు తిరిగి వెళ్లండి",
+    "nav_back": "వెనుకకు",
+    "nav_back_test_confirm": "మీ పరీక్ష ఇంకా జరుగుతోంది. ఇప్పుడు "
+                             "వెళితే మీ సమాధానాలు పోతాయి.",
     "result_heading": "క్విజ్ ఫలితం 🏆",
     "score_label": "స్కోరు:",
     "your_answer_label": "మీ సమాధానం:",

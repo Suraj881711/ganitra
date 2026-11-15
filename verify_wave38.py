@@ -207,13 +207,13 @@ TPL = open(os.path.join("templates", "base.html"),
            encoding="utf-8").read()
 SW = open(os.path.join("static", "sw.js"), encoding="utf-8").read()
 # Merge-2 (Waves 47-50): pins reconciled to ?v=31 /
-# ganitra-static-v9 for Wave 55's CSS — assert the current
+# ganitra-static-v10 for Wave 55's CSS — assert the current
 # merged pins, same convention Wave 43 applied to the
 # pytest pin tests.
-check("stylesheet pin at Wave 55 bump (?v=32)",
-      "v='32'" in TPL or "?v=32" in TPL)
+check("stylesheet pin at Wave 55 bump (?v=33)",
+      "v='33'" in TPL or "?v=33" in TPL)
 check("sw cache pin at merge-2 bump (v8)",
-      'GANITRA_CACHE = "ganitra-static-v9"' in SW)
+      'GANITRA_CACHE = "ganitra-static-v10"' in SW)
 for _name, _want in (
         ("logo-full.png", "07009560"),
         ("logo-mark-t.png", "01aa3d23"),

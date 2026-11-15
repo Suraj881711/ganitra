@@ -107,6 +107,52 @@ def _ask_again(question):
     return f"{question} find the value"
 
 
+def _backnav_for_path(path):
+    """Wave 60: the ONE back system (Suraj: "Ganitra ke andar
+    back system nahi hai"). Every inner page gets the same
+    top-left "← Back" button (rendered by base.html); this pure
+    function decides, from the request path alone, whether the
+    bar shows and where its no-history fallback points:
+
+    - returns None -> no bar (the chat home / sign-in gate at
+      "/", and the in-progress Board chapter test, whose
+      template overrides the block with its chapter URL and an
+      always-on confirmation);
+    - returns (fallback, confirm_if) -> show the bar. The
+      button first tries history.back() when the referrer is
+      same-origin; `fallback` is only used when there is no
+      in-app history (fresh tab, PWA launch, deep link).
+      `confirm_if` is a CSS selector for a timed-test element:
+      while that element is visible the button first asks with
+      the localised nav_back_test_confirm message, because
+      leaving would lose the typed answers.
+    """
+    if path == "/" or path == "/board/test/start":
+        return None
+    if path == "/test":
+        # Chapter Test: the paper card exists only while a test
+        # is running (setup/result need no confirmation).
+        return ("/", "#test-paper")
+    if path == "/practice/start":
+        # The timed classic quiz is on screen only in this
+        # POST's response (practice.html's #quiz-form).
+        return ("/", "#quiz-form")
+    if path == "/practice/submit" or path == "/board/test/submit":
+        return ("/practice", None)
+    seg = [s for s in path.split("/") if s]
+    if seg[:1] == ["board"]:
+        if len(seg) <= 2 or seg[1] == "select":
+            return ("/board" if len(seg) >= 2 else "/", None)
+        if len(seg) == 3:
+            return (f"/board/{seg[1]}", None)
+        return (f"/board/{seg[1]}/{seg[2]}", None)
+    if seg[:1] == ["papers"]:
+        return ("/papers", None) if len(seg) >= 2 else ("/", None)
+    if seg[:1] == ["mistakes"] and len(seg) >= 2:
+        return ("/mistakes", None)
+    return ("/", None)
+
+
 def normalize_ocr_text(text):
     """Conservatively clean text recognised from a photo (Tesseract.js).
 
@@ -487,6 +533,21 @@ def create_app():
                 strings, "error_encourage_name", "error_encourage",
                 saathi_name),
         }
+
+    @app.context_processor
+    def inject_backnav():
+        # Wave 60: feed base.html's back bar from the path map
+        # (see _backnav_for_path). Templates that need a custom
+        # target (the Board chapter test) override the block.
+        spec = _backnav_for_path(request.path)
+        if spec is None:
+            return {"backnav": None}
+        fallback, confirm_if = spec
+        nav = {"fallback": fallback}
+        if confirm_if:
+            nav["confirm_if"] = confirm_if
+            nav["confirm_msg"] = _t()["nav_back_test_confirm"]
+        return {"backnav": nav}
 
     @app.get("/set-lang/<code>")
     def set_lang(code):

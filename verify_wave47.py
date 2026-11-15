@@ -250,10 +250,10 @@ TPL = open(os.path.join("templates", "base.html"),
            encoding="utf-8").read()
 SW = open(os.path.join("static", "sw.js"),
           encoding="utf-8").read()
-check("stylesheet pin at Wave 55 reconciliation (?v=32)",
-      "stylesheet?v=32" in TPL or "?v=32" in TPL)
+check("stylesheet pin at Wave 55 reconciliation (?v=33)",
+      "stylesheet?v=33" in TPL or "?v=33" in TPL)
 check("sw cache pin at merge-2 reconciliation (v8)",
-      'GANITRA_CACHE = "ganitra-static-v9"' in SW)
+      'GANITRA_CACHE = "ganitra-static-v10"' in SW)
 for _name, _want in (
         ("logo-full.png", "07009560"),
         ("logo-mark-t.png", "01aa3d23"),
