@@ -54,7 +54,16 @@
 /* Wave 43: cache name bumped to v7 alongside the ?v=30
    stylesheet (Chapter Test Mode styles) — the pins all move
    together, as always. */
-var GANITRA_CACHE = "ganitra-static-v7";
+/* Wave 49: chat-box comfort changed style.css and the
+   chat page's inline script. In Wave 49's standalone tree
+   this cache moved v6 -> v7 with stylesheet ?v=29 -> ?v=30;
+   in the merged tree Wave 43 had already landed exactly
+   those pins, so the value stands — the final merge
+   reconciles the pins to the next free number (?v=31 /
+   v8) so this wave's CSS gets a fresh cache key. */
+/* Merge-2: pins reconciled as anticipated above — cache
+   name v8, stylesheet ?v=31. */
+var GANITRA_CACHE = "ganitra-static-v8";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();
