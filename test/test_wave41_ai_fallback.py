@@ -25,7 +25,21 @@ import pytest
 
 import gemini_fallback
 import groq_fallback
+import solver.answer_cache as cache
 from api import _solve_friendly
+
+
+@pytest.fixture(autouse=True)
+def _clean_caches():
+    # Merge-2: Wave 48's negative cache is process-global, and
+    # these tests mock both AI transports per test for shared
+    # probe questions — each test must start from a clean cache
+    # (the same isolation Wave 48's own tests use), or a guide
+    # result stored by an earlier module's missing-key test
+    # would be served before the mocked providers are consulted.
+    cache.clear_cache()
+    yield
+    cache.clear_cache()
 
 AGES_Q = ("The sum of the ages of a father and his son is "
           "45 years. Five years ago, the product of their ages "

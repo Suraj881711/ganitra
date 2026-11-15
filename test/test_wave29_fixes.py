@@ -39,6 +39,10 @@ guess:
    the visible box (file / file-ocr / photo, 6 languages).
 Delivery hygiene: stylesheet ?v=29, worker cache v6,
 sprite URLs ?v=29 — all pins move together, as always.
+(The pins later moved again — stylesheet ?v=31, worker
+cache v8 — while the sprite URLs stayed at ?v=29: no
+sprite file changed. The pin assertions below track the
+CURRENT pins, as in every wave before this one.)
 """
 import json
 import os
@@ -116,8 +120,8 @@ def test_photo_solve_aria_names_the_photo_for_photos(client):
 # --- 3. Delivery versions -------------------------------------
 
 def test_delivery_versions_wave29():
-    assert "v='30'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v7"' in SW
+    assert "v='31'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v8"' in SW
     for old in ("ganitra-static-v5", "ganitra-static-v4",
                 "ganitra-static-v3", "ganitra-static-v2",
                 "ganitra-static-v1"):
