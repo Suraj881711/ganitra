@@ -19,13 +19,16 @@
           <p class="paper-entry-title">
             <strong>{{ row.paper.board }} · {{ row.paper.year }}</strong>
             — {{ row.paper.set_label }}
+            {% if row.paper.medium == 'hindi' %}
+              <span class="paper-medium paper-medium-hi">हिंदी माध्यम · Hindi Medium</span>
+            {% else %}
+              <span class="paper-medium">English Medium</span>
+            {% endif %}
           </p>
           <p class="muted">
             {{ row.question_count }} {{ t.papers_questions_word }} ·
             {{ row.total_marks }} {{ t.papers_marks_word }} ·
-            {{ t.papers_source_label }}:
-            <a href="{{ row.paper.source_url }}" target="_blank"
-               rel="noopener">{{ row.paper.source_name }}</a>
+            {{ t.papers_source_label }}: {{ row.paper.source_name }}
           </p>
           <p class="muted">{{ row.paper.note }}</p>
           <a class="board-opt" href="/papers/{{ row.paper.id }}">{{ t.papers_view_btn }}</a>
