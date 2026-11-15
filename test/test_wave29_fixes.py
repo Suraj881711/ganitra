@@ -120,8 +120,8 @@ def test_photo_solve_aria_names_the_photo_for_photos(client):
 # --- 3. Delivery versions -------------------------------------
 
 def test_delivery_versions_wave29():
-    assert "v='31'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v8"' in SW
+    assert "v='32'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v9"' in SW
     for old in ("ganitra-static-v5", "ganitra-static-v4",
                 "ganitra-static-v3", "ganitra-static-v2",
                 "ganitra-static-v1"):

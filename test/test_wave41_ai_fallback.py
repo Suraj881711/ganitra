@@ -41,9 +41,16 @@ def _clean_caches():
     yield
     cache.clear_cache()
 
-AGES_Q = ("The sum of the ages of a father and his son is "
-          "45 years. Five years ago, the product of their ages "
-          "was 124. Find their present ages.")
+# Wave 56: the original fixture (sum 45, product 124 five
+# years ago) is now solved DETERMINISTICALLY by the new
+# ages schema in solver/applied.py — it is battery #88 —
+# so it can no longer stand in for "a question the solver
+# cannot answer". This two-condition ages question (still
+# father-and-son present ages) remains unsolved by the
+# pattern solver and keeps every assertion below honest.
+AGES_Q = ("Ten years ago, a father was twelve times as "
+          "old as his son and ten years hence, he will be "
+          "twice as old as his son. Find their present ages.")
 
 SCIENCE_Q = ("A ray of light travels from medium A to medium "
              "B. The refractive index of medium B relative to "

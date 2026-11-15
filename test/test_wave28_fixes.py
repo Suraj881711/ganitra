@@ -105,8 +105,8 @@ def test_sprite_urls_versioned_everywhere(client):
 
 
 def test_delivery_versions_wave28():
-    assert "v='31'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v8"' in SW
+    assert "v='32'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v9"' in SW
     for old in ("ganitra-static-v5", "ganitra-static-v4",
                 "ganitra-static-v3",
                 "ganitra-static-v2", "ganitra-static-v1"):
