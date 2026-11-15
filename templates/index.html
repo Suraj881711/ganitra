@@ -1040,6 +1040,26 @@
           question = data.question || data._q || "";
         }
         var result = data.result || {};
+        /* Wave 67 (Suraj, 15 Nov 2026): a question that was NOT
+           solved gets ONE short line and nothing else — no
+           badge, no card, no steps section, no handwriting /
+           print tools, no icon row, no Teacher's Advice. The
+           sentinel rides on the result itself: fallback_kind
+           "not_found" (the not-found line) or plain === true
+           (the maths-only guard lines). Old saved chats carry
+           neither flag, so their stored long fallbacks still
+           render exactly as they were saved. */
+        if (result.fallback_kind === "not_found"
+            || result.plain === true) {
+          var plainDiv = document.createElement("div");
+          plainDiv.className = "bubble bot";
+          var plainP = document.createElement("p");
+          plainP.textContent = result.answer || "";
+          plainDiv.appendChild(plainP);
+          log.appendChild(plainDiv);
+          scrollLog();
+          return;
+        }
         /* Wave 25: the steps THIS bubble shows, speaks and
            copies. Some solvers append a final step that only
            restates the answer ("Solution: x = 2") — on screen
