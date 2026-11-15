@@ -133,7 +133,7 @@ check("hbse-12-2024 Q30 integrand is √tan x as printed",
 # Wave 66 changes no CSS/JS, so it must not move the delivery
 # pins: they stay whatever the tree carries (?v=36 / v13 in
 # the Wave-66 working copy; the original tree has since moved
-# to ?v=37 / v14 under Waves 67/68, whose bump this wave
+# to ?v=38 / v14 under Waves 67/68, whose bump this wave
 # neither needs nor touches).
 print("== 2. Delivery pins (present, not moved by Wave 66) ==")
 base = (ROOT / "templates" / "base.html").read_text()

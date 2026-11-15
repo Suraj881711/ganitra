@@ -22,8 +22,8 @@ Checks:
     Hinglish train 90 km/h, profit % — values exact, intro
     present only for word problems, answer never duplicated.
  4. Template/CSS pins — plain + intro hooks, no explanation
-    paragraph, no notebook panel in the chat flow, 4 example
-    chips whose questions all solve, pins ?v=37 / v14.
+    paragraph, no notebook panel in the chat flow, NO example
+    chips (Wave-69 removal on Suraj's order), pins ?v=38 / v15.
  5. Mini-battery — 24 known-value questions across topics
     and languages stay EXACT (the full 515 + 984 batteries
     were diffed per-item during the wave: 0 verdict flips,
@@ -164,18 +164,19 @@ check("no explanation paragraph in chat",
       'className = "explain"' not in INDEX)
 check("no notebook panel in chat",
       '"steps notebook"' not in INDEX and "makeHwToggle" not in INDEX)
-check("4 example chips", INDEX.count('class="example-chip"') == 4)
-check("pins ?v=37 / v14", "v='37'" in BASE
-      and 'GANITRA_CACHE = "ganitra-static-v14"' in SW)
-check("wave68 CSS present", ".example-chip" in CSS
+check("no example chips (Wave 69)", INDEX.count('class="example-chip"') == 0
+      and 'id="example-chips"' not in INDEX)
+check("pins ?v=38 / v15", "v='38'" in BASE
+      and 'GANITRA_CACHE = "ganitra-static-v15"' in SW)
+check("wave68 CSS present", ".example-chip" not in CSS
       and ".plain-reply" in CSS and ".answer-intro" in CSS)
 
-print("== 7. chip questions solve ==")
-check("chip quadratic", _solve_friendly(
+print("== 7. sample questions solve ==")
+check("sample quadratic", _solve_friendly(
     "Solve x² - 5x + 6 = 0")["answer"] == "x = 2, x = 3")
-check("chip percentage", _solve_friendly(
+check("sample percentage", _solve_friendly(
     "15% of 240 kitna hoga?")["answer"] == "36")
-check("chip hindi train", "90 km/h" in _solve_friendly(
+check("sample hindi train", "90 km/h" in _solve_friendly(
     "एक ट्रेन 360 km की दूरी 4 घंटे में तय करती है। "
     "उसकी चाल ज्ञात कीजिए।")["answer"])
 

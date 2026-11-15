@@ -27,7 +27,7 @@ like the real exam paper:
 3. [Figure] markers where a question leans on a figure
    printed in the real paper that the data does not hold:
    33 across the library (census in ganitra-wave63-notes.md).
-4. Delivery pins ?v=35 / cache ganitra-static-v14.
+4. Delivery pins ?v=35 / cache ganitra-static-v15.
 
 Run:  python3 verify_wave63.py
 """
@@ -82,9 +82,9 @@ print("== 1. Pins and sheet assets ==")
 base = (ROOT / "templates" / "base.html").read_text()
 sw = (ROOT / "static" / "sw.js").read_text()
 css = (ROOT / "static" / "style.css").read_text()
-check("stylesheet pin ?v=37", "v='37'" in base)
+check("stylesheet pin ?v=38", "v='38'" in base)
 check("service worker cache v13",
-      'GANITRA_CACHE = "ganitra-static-v14"' in sw)
+      'GANITRA_CACHE = "ganitra-static-v15"' in sw)
 check("sheet partial exists",
       (ROOT / "templates" / "_paper_sheet.html").exists())
 for sel in (".exam-sheet", ".sheet-section", ".q-figure", ".q-or"):
