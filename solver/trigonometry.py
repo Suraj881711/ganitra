@@ -71,6 +71,12 @@ def solve_trigonometry(question: str):
         # famous identity in the chapter.
         text = re.sub(r"\b(prove|verify|show)\b(\s+that)?", "",
                       q, flags=re.I)
+        # Wave 47: the sentence's trailing full stop turns
+        # "sec^2 A." into sec(A)**2.0 — a float exponent,
+        # which trigsimp cannot cancel against tan^2 A + 1,
+        # so "Prove that tan^2 A + 1 = sec^2 A" was still
+        # reported "Not an identity" after the Wave 42 fix.
+        text = text.strip().rstrip(".")
         if deg:
             text, _ = _convert_degrees(text)
         left, right = text.split("=", 1)
@@ -147,6 +153,55 @@ def solve_trigonometry(question: str):
         _val = sp.Rational(_raw) if "/" in _raw else \
             sp.nsimplify(float(_raw), rational=True)
         if _val > 0 and (_fn == "tan" or _val < 1):
+            _tail = qlow[qlow.index("find"):]
+            # Wave 47: the ANGLE itself is the unknown ("If
+            # sin theta = 1/2, find the value of theta in
+            # degrees", "If tan A = 1, find the value of A") —
+            # the triangle code below answered with the OTHER
+            # ratios instead of the angle (Wave 35 audit #160,
+            # #163). The ask patterns name the angle (or the
+            # word "angle") as the object of "find / value of";
+            # "find the value of tan theta" does NOT match —
+            # there the object is the ratio, as before.
+            _ang_raw = mr.group(2)
+            if re.search(
+                    r"\bvalue\s+of\s+(?:the\s+)?"
+                    + re.escape(_ang_raw) + r"\b",
+                    _tail) or re.search(
+                    r"\bfind\s+(?:the\s+)?(?:angle|theta|θ)\b",
+                    _tail) or re.search(
+                    r"^find\s+(?:the\s+)?"
+                    + re.escape(_ang_raw)
+                    + r"(?:\s+in\s+(?:degrees|radians))?"
+                      r"\s*\.?\s*$", _tail):
+                _inv = {"sin": sp.asin, "cos": sp.acos,
+                        "tan": sp.atan}[_fn](_val)
+                if "radian" in qlow:
+                    steps = [
+                        f"{_fn} {_ang} = {fmt(_val)} is given.",
+                        f"So {_ang} = {_fn}^-1({fmt(_val)}) "
+                        f"= {fmt(_inv)} radians.",
+                    ]
+                    return {
+                        "type": "trigonometry",
+                        "op": "inverse_angle",
+                        "answer": f"{_ang} = {fmt(_inv)} radians",
+                        "value": float(_inv), "steps": steps}
+                _degf = float(_inv * 180 / sp.pi)
+                _deg_s = fmt_num(int(round(_degf))) \
+                    if abs(_degf - round(_degf)) < 1e-9 \
+                    else fmt_num(round(_degf, 2))
+                steps = [
+                    f"{_fn} {_ang} = {fmt(_val)} is given.",
+                    f"So {_ang} = {_fn}^-1({fmt(_val)}) "
+                    f"= {_deg_s}° (the acute / principal "
+                    f"value).",
+                ]
+                return {
+                    "type": "trigonometry",
+                    "op": "inverse_angle",
+                    "answer": f"{_ang} = {_deg_s}°",
+                    "value": _degf, "steps": steps}
             if _fn == "sin":
                 _opp, _hyp = _val.p, _val.q
                 _adj = sp.sqrt(_hyp ** 2 - _opp ** 2)
@@ -184,6 +239,42 @@ def solve_trigonometry(question: str):
             if not _asked:
                 _asked = [f for f in ("sin", "cos", "tan")
                           if f != _fn]
+            # Wave 47: a SUM of ratios is asked ("find cos A
+            # + tan A") — the components were listed but never
+            # added (audit #443; cos A + tan A = 5·sqrt(3)/6).
+            # Only when two or more ratio mentions are joined
+            # purely by "+" in the ask.
+            _mentions = []
+            for _f in ("sin", "cos", "tan"):
+                for _mm in re.finditer(
+                        rf"\b{_f}\s*{re.escape(mr.group(2))}\b",
+                        _tail):
+                    _mentions.append((_mm.start(), _f))
+            _mentions.sort()
+            _seq = [f for _, f in _mentions]
+            if len(_seq) >= 2:
+                _between = _tail[_mentions[0][0]:
+                                 _mentions[-1][0]]
+                if "+" in _between and "-" not in _between \
+                        and "/" not in _between:
+                    _total = sp.simplify(
+                        sum(_vals[f] for f in _seq))
+                    steps = [_given, _third]
+                    for f in _seq:
+                        steps.append(
+                            f"{f} {_ang} = {fmt(_vals[f])}")
+                    steps.append(
+                        "Add them: "
+                        + " + ".join(fmt(_vals[f])
+                                     for f in _seq)
+                        + f" = {fmt(_total)}")
+                    return {
+                        "type": "trigonometry",
+                        "op": "ratio_sum",
+                        "answer": fmt(_total),
+                        "value": float(_total),
+                        "steps": steps,
+                    }
             steps = [_given, _third]
             for f in _asked:
                 _num_name = {"sin": "opposite", "cos": "adjacent",
@@ -433,30 +524,51 @@ def solve_trigonometry(question: str):
                 "answer": f"{_r:g} degrees", "steps": steps,
                 "value": float(_r),
             }
-    _tan_sum = re.search(
+    # Wave 47: a sum of two or more tan^-1 terms, folded
+    # pairwise. The old regex matched only the FIRST two
+    # terms and silently dropped the rest — "tan^-1(1) +
+    # tan^-1(2) + tan^-1(3)" answered pi - atan(3), the
+    # first pair alone; the full sum is pi (audit #180).
+    _tan_terms = re.findall(
         r"tan\^-1\s*\(\s*(-?\d+(?:\.\d+)?(?:\s*/\s*"
-        r"\d+(?:\.\d+)?)?)\s*\)\s*\+\s*tan\^-1\s*\(\s*"
-        r"(-?\d+(?:\.\d+)?(?:\s*/\s*\d+(?:\.\d+)?)?)\s*\)",
-        qlow)
-    if _tan_sum:
-        _x = sp.Rational(_tan_sum.group(1).replace(" ", ""))
-        _y = sp.Rational(_tan_sum.group(2).replace(" ", ""))
-        if _x * _y != 1:
-            _val = sp.atan((_x + _y) / (1 - _x * _y))
-            if _x * _y > 1:
-                _val = _val + sp.pi
-            steps = [
-                "Formula: tan^-1 x + tan^-1 y = tan^-1("
-                "(x + y)/(1 - xy)).",
-                f"= tan^-1(({fmt(_x)} + {fmt(_y)}) / (1 - "
-                f"{fmt(_x * _y)})) = {fmt(_val)}",
-            ]
-            return {
-                "type": "trigonometry",
-                "op": "inverse_trig_formula",
-                "answer": fmt(_val), "steps": steps,
-                "value": float(_val),
-            }
+        r"\d+(?:\.\d+)?)?)\s*\)", qlow)
+    if len(_tan_terms) >= 2:
+        _rest = re.sub(
+            r"tan\^-1\s*\(\s*-?\d+(?:\.\d+)?(?:\s*/\s*"
+            r"\d+(?:\.\d+)?)?\s*\)", "", qlow)
+        _rest = re.sub(
+            r"\b(evaluate|find|value of|calculate)\b", "",
+            _rest).strip(" +?.=")
+        if not _rest:
+            _rats = [sp.Rational(t.replace(" ", ""))
+                     for t in _tan_terms]
+            _t = _rats[0]
+            _k = 0
+            _fold_ok = True
+            for _y in _rats[1:]:
+                if _t * _y == 1:
+                    _fold_ok = False
+                    break
+                if _t * _y > 1:
+                    _k += 1
+                _t = (_t + _y) / (1 - _t * _y)
+            if _fold_ok:
+                _val = sp.atan(_t) + _k * sp.pi
+                steps = [
+                    "Formula: tan^-1 x + tan^-1 y = "
+                    "tan^-1((x + y)/(1 - xy)), adding pi "
+                    "whenever xy > 1.",
+                    "Applying it term by term to "
+                    + " + ".join(
+                        f"tan^-1({fmt(_r)})" for _r in _rats)
+                    + f" gives {fmt(_val)}.",
+                ]
+                return {
+                    "type": "trigonometry",
+                    "op": "inverse_trig_formula",
+                    "answer": fmt(_val), "steps": steps,
+                    "value": float(_val),
+                }
     _inv = re.search(
         r"(sec|cosec|csc|cot|sin|cos|tan)\^-1\s*\(?\s*"
         r"(-?\d+(?:\.\d+)?(?:\s*/\s*\d+(?:\.\d+)?)?"

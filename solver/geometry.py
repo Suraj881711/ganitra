@@ -32,6 +32,23 @@ def _param_flex(q, names):
     return None
 
 
+def _solid_height(q, word):
+    """The height belonging to one named solid in a combined-
+    solid sentence (Wave 47): "cylinder of radius 4 cm and
+    height 6 cm" (height stated after the solid's name) or
+    "the height of the cone is 4 cm" (height stated before
+    it). Returns a float or None."""
+    m = re.search(rf"\b{word}\b[\s\S]{{0,90}}?height\s+"
+                  r"(\d+(?:\.\d+)?)", q)
+    if m:
+        return float(m.group(1))
+    m = re.search(rf"height\s+of\s+(?:the\s+|a\s+|an\s+)?"
+                  rf"{word}\s+is\s+(\d+(?:\.\d+)?)", q)
+    if m:
+        return float(m.group(1))
+    return None
+
+
 def _three_sides(q):
     """The three side lengths after the word "side(s)", tolerating
     units and filler ("sides of a triangle are 5 cm, 12 cm and
@@ -149,9 +166,19 @@ def _mensuration_extra(q):
                         r"(\d+(?:\.\d+)?)", q)
         mh2 = re.search(r"cone\s+of\s+height\s+"
                         r"(\d+(?:\.\d+)?)", q)
-        if r is None or not (mh1 and mh2):
+        # Wave 47: the NCERT sentence form states the radius
+        # first ("a cylinder of radius 4 cm and height 6 cm
+        # with a cone of the same radius and height 3 cm") —
+        # the strict "cylinder of height N" regex missed it
+        # and the cone was silently dropped (audit #206:
+        # 301.59 cylinder-only instead of 351.86). Fall back
+        # to each solid's own stated height.
+        h1 = float(mh1.group(1)) if mh1 else \
+            _solid_height(q, "cylinder")
+        h2 = float(mh2.group(1)) if mh2 else \
+            _solid_height(q, "cone")
+        if r is None or h1 is None or h2 is None:
             return None
-        h1, h2 = float(mh1.group(1)), float(mh2.group(1))
         v1 = PI * r * r * h1
         v2 = PI * r * r * h2 / 3
         steps = [
@@ -164,6 +191,57 @@ def _mensuration_extra(q):
             f"= {fmt_num(v1 + v2)}",
         ]
         return "combined volume", fmt_num(v1 + v2), steps
+
+    # ---- Combined solids with a hemisphere (Wave 47) --------
+    # Audit #10: hemisphere combinations had no pattern at
+    # all — a "cylinder with a hemisphere on top" fell to the
+    # single-solid branches and only one part was counted.
+    # Volume only; the shared radius comes from the sentence.
+    if "hemisphere" in q and (
+            "mounted" in q or "made of" in q or "placed on" in q
+            or "surmounted" in q or "consists of" in q
+            or "on top" in q or "total volume" in q) and (
+            "surface" not in q):
+        r = _param_flex(q, ["radius", "r"])
+        if r is None:
+            _diam = _param_flex(q, ["diameter"])
+            if _diam is not None:
+                r = _diam / 2
+        if r is not None and "cylinder" in q:
+            h = _solid_height(q, "cylinder")
+            if h is not None:
+                v1 = PI * r * r * h
+                v2 = 2 * PI * r ** 3 / 3
+                steps = [
+                    f"Volume of the cylinder part = pi·r^2·h "
+                    f"= pi × {fmt_num(r)}^2 × {fmt_num(h)} "
+                    f"= {fmt_num(v1)}",
+                    f"Volume of the hemisphere part = "
+                    f"(2/3)·pi·r^3 = (2/3) × pi × "
+                    f"{fmt_num(r)}^3 = {fmt_num(v2)}",
+                    f"Total volume = {fmt_num(v1)} + "
+                    f"{fmt_num(v2)} = {fmt_num(v1 + v2)}",
+                ]
+                return "combined volume", fmt_num(v1 + v2), \
+                    steps
+        if r is not None and "cone" in q:
+            h = _solid_height(q, "cone")
+            if h is not None:
+                v1 = PI * r * r * h / 3
+                v2 = 2 * PI * r ** 3 / 3
+                steps = [
+                    f"Volume of the cone part = "
+                    f"(1/3)·pi·r^2·h = (1/3) × pi × "
+                    f"{fmt_num(r)}^2 × {fmt_num(h)} "
+                    f"= {fmt_num(v1)}",
+                    f"Volume of the hemisphere part = "
+                    f"(2/3)·pi·r^3 = (2/3) × pi × "
+                    f"{fmt_num(r)}^3 = {fmt_num(v2)}",
+                    f"Total volume = {fmt_num(v1)} + "
+                    f"{fmt_num(v2)} = {fmt_num(v1 + v2)}",
+                ]
+                return "combined volume", fmt_num(v1 + v2), \
+                    steps
 
     # ---- Hemisphere --------------------------------------------
     if "hemisphere" in q:

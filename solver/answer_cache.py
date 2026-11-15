@@ -21,15 +21,44 @@ Design — deliberately small and safe:
 - Deep copies both ways: callers mutate results (session history,
   fallback), so the stored copy can never be poisoned by a caller
   and a served copy can never corrupt the store.
-- Bounded LRU: at most 200 entries; the oldest is dropped when
-  full, so memory cannot grow without bound.
+- Bounded LRU: at most 1000 entries; the oldest is dropped when
+  full, so memory cannot grow without bound. Wave 48 measured
+  real result dicts at ~1.1 KB mean / ~1.6 KB max (deep size over
+  a 65-question battery sample), so 1000 entries cost ~1-2 MB —
+  a whole school re-asks the same NCERT questions, and the old
+  200-entry bound evicted them long before the day was out.
+
+Negative cache (Wave 48, Wave-45 audit Part B item 3):
+- The positive cache above never stores fallback outcomes, so a
+  question the solver cannot answer re-paid the full solve +
+  fallback-layer cost on EVERY re-ask — and students re-ask
+  unsolved questions (the chat UI has a Retry button).
+- A separate, short-TTL store keeps the finished fallback result
+  (the dict ``fallback.with_fallback`` produced, flagged
+  ``fallback: True``) for 10 minutes under the SAME normalised
+  key. ``with_fallback`` is a pure function of the question text
+  — no user, session or account data ever enters these results
+  (personalisation is layered on by the routes, outside the
+  result dict) — so, like the positive cache, entries are shared
+  across users and contain nothing user-specific.
+- Real solver answers are never filed here (they keep the
+  positive LRU behaviour), and neither are bank-verified answers
+  if a future seam flags them as fallback-shaped: a verified
+  answer is a real answer, not a failure.
+- Same graph safety and deep-copy rules as the positive cache;
+  bounded at 500 entries, LRU-evicted. The short TTL bounds how
+  long an improved solver (or a newly-set AI key) takes to be
+  re-tried on a previously-failed question.
 """
 import copy
 import re
+import time
 from collections import OrderedDict
 from pathlib import Path
 
-_MAX_ENTRIES = 200
+_MAX_ENTRIES = 1000
+_NEG_MAX_ENTRIES = 500
+_NEG_TTL_SECONDS = 600
 _GRAPHS_DIR = Path(__file__).resolve().parent.parent / "static" / "graphs"
 _GRAPH_NAME_RE = re.compile(r"graphs/(plot_[A-Za-z0-9_.\-]+\.png)")
 
@@ -97,8 +126,88 @@ def clear_cache():
     _cache.clear()
     _stats["hits"] = 0
     _stats["misses"] = 0
+    clear_negative_cache()
 
 
 def cache_stats():
     return {"entries": len(_cache), "hits": _stats["hits"],
-            "misses": _stats["misses"], "max_entries": _MAX_ENTRIES}
+            "misses": _stats["misses"], "max_entries": _MAX_ENTRIES,
+            "negative_entries": len(_neg_cache),
+            "negative_hits": _neg_stats["hits"],
+            "negative_misses": _neg_stats["misses"],
+            "negative_max_entries": _NEG_MAX_ENTRIES,
+            "negative_ttl_seconds": _NEG_TTL_SECONDS}
+
+
+# --- Negative cache: fallback outcomes, short TTL ----------------
+
+_neg_cache = OrderedDict()
+_neg_stats = {"hits": 0, "misses": 0}
+
+
+def _is_negative_worthy(result):
+    """Only finished fallback outcomes are stored: dicts the
+    fallback layer flagged (``fallback: True``). Real solver
+    answers never carry the flag; bank-verified answers (a later
+    seam may flag them fallback-shaped) are real answers wearing
+    the flag, so they are refused explicitly. AI-seam answers
+    (Gemini/Groq) are refused too: they are produced by a live
+    external service whose availability — key set or not, quota,
+    failover chain — is decided per ask by the seam itself, so
+    pinning one in the failure cache would serve an AI answer in
+    contexts where the seam would now fail or refuse (and vice
+    versa). The deterministic honest-layer outcomes underneath
+    (similar / concept / guide / salvage / science / non-maths)
+    are pure functions of the question and are what this cache
+    exists for."""
+    if not isinstance(result, dict):
+        return False
+    if not result.get("fallback"):
+        return False
+    if result.get("verified"):
+        return False
+    if result.get("ai_generated"):
+        return False
+    if result.get("fallback_kind") in ("bank", "gemini", "groq"):
+        return False
+    return _graphs_exist(result)
+
+
+def get_negative(question):
+    """Return a deep copy of the cached fallback outcome for
+    question, or None on a miss / expired / stale-graph entry."""
+    key = _cache_key(question)
+    entry = _neg_cache.get(key)
+    if entry is None:
+        _neg_stats["misses"] += 1
+        return None
+    stored_at, result = entry
+    if time.monotonic() - stored_at > _NEG_TTL_SECONDS \
+            or not _graphs_exist(result):
+        # Expired, or a graph file it names was cleaned up —
+        # drop the entry and let the caller re-run the solve.
+        del _neg_cache[key]
+        _neg_stats["misses"] += 1
+        return None
+    _neg_stats["hits"] += 1
+    _neg_cache.move_to_end(key)
+    return copy.deepcopy(result)
+
+
+def put_negative(question, result):
+    """Store a deep copy of a fallback outcome for the TTL;
+    silently skip anything that is not one."""
+    if not _is_negative_worthy(result):
+        return False
+    key = _cache_key(question)
+    _neg_cache[key] = (time.monotonic(), copy.deepcopy(result))
+    _neg_cache.move_to_end(key)
+    while len(_neg_cache) > _NEG_MAX_ENTRIES:
+        _neg_cache.popitem(last=False)
+    return True
+
+
+def clear_negative_cache():
+    _neg_cache.clear()
+    _neg_stats["hits"] = 0
+    _neg_stats["misses"] = 0

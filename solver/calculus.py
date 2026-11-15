@@ -6,7 +6,7 @@ import re
 import sympy as sp
 from sympy import S, diff, dsolve, idiff, integrate, limit, symbols
 
-from .expression_parser import fmt, parse_expression
+from .expression_parser import fmt, fmt_num, parse_expression
 
 _x = symbols("x")
 
@@ -27,7 +27,7 @@ def _poly_terms(expr, var):
 
 def _derivative_steps(expr, var):
     terms = _poly_terms(expr, var)
-    result = diff(expr, var)
+    result = _textbook_trig(diff(expr, var))
     if terms is not None:
         steps = [f"Take the derivative of {fmt(expr)} term by term "
                  f"with respect to {var}, using the power rule "
@@ -196,6 +196,23 @@ def _ode(q: str):
         "answer": f"y = {fmt(rhs_sol)}",
         "steps": steps,
     }
+
+
+def _textbook_trig(deriv):
+    """Wave 47: present Pythagorean derivative results the
+    textbook way — tan^2(u) + 1 as sec^2(u) and cot^2(u) + 1
+    as csc^2(u). d/dx tan x otherwise displays as
+    tan(x)^2 + 1, which students (and answer checks) read
+    as unfinished (audit #379)."""
+    try:
+        _w = sp.Wild("w")
+        return deriv.replace(
+            sp.tan(_w) ** 2 + 1, sp.sec(_w) ** 2).replace(
+            -sp.tan(_w) ** 2 - 1, -sp.sec(_w) ** 2).replace(
+            sp.cot(_w) ** 2 + 1, sp.csc(_w) ** 2).replace(
+            -sp.cot(_w) ** 2 - 1, -sp.csc(_w) ** 2)
+    except Exception:
+        return deriv
 
 
 def solve_calculus(question: str):
@@ -385,6 +402,32 @@ def solve_calculus(question: str):
         except Exception:
             pass
 
+    # Wave 47: "Find dy/dx if y = (3x + 2)^5" is plain
+    # differentiation. It must be handled BEFORE the ODE
+    # block below: _ode tries to read the right side as a
+    # differential equation and raises on it, and the
+    # implicit block's left side ("Find dy/dx if y") does
+    # not parse either — the question errored out with no
+    # answer at all (audit #272).
+    _mdy = re.search(r"dy/dx\s+if\s+y\s*=\s*(.+)$", q, re.I)
+    if _mdy:
+        try:
+            _dexpr = parse_expression(
+                _mdy.group(1).strip().rstrip("."))
+            _dvar = _guess_symbol(_dexpr) or symbols("x")
+            _dd = _textbook_trig(diff(_dexpr, _dvar))
+            return {
+                "type": "calculus", "op": "derivative",
+                "answer": fmt(_dd), "value": fmt(_dd),
+                "steps": [f"y = {fmt(_dexpr)}",
+                          f"Differentiate both sides with "
+                          f"respect to {_dvar} (chain rule "
+                          f"where needed).",
+                          f"dy/dx = {fmt(_dd)}"],
+                "latex": sp.latex(_dd)}
+        except Exception:
+            pass
+
     # Differential equations first: dy/dx / y' / y'' forms, or an ODE
     # written in implicit form ("y'' + y = 0"). The "for" exclusion keeps
     # implicit differentiation ("find dy/dx for x^2 + y^2 = 25") out, but
@@ -420,6 +463,54 @@ def solve_calculus(question: str):
                 "steps": steps,
             }
 
+    # Wave 47: limits in words — "Evaluate the limit of
+    # (x^2 - 9)/(x - 3) as x tends to 3" (the notation
+    # block below only reads lim x->3 forms; the prose
+    # forms errored on the whole question — audit
+    # #273-#276).
+    _mlim = re.search(
+        r"limit\s+of\s+(.+?)\s+as\s+([a-zA-Z])\s+"
+        r"(?:tends?\s+to|approaches|→|->)\s*"
+        r"(infinity|inf|-?\d+(?:\.\d+)?)\s*\.?$", _qlow)
+    if _mlim:
+        try:
+            _lvar = symbols(_mlim.group(2))
+            _lexpr = parse_expression(_mlim.group(1))
+            _lto = S.Infinity if _mlim.group(3) in (
+                "infinity", "inf") else sp.Rational(
+                _mlim.group(3))
+            _lval = sp.limit(_lexpr, _lvar, _lto)
+            if _lval.is_number and not _lval.has(
+                    S.NaN, S.Infinity, -S.Infinity, sp.zoo):
+                _lsteps = [
+                    f"Find the limit of {fmt(_lexpr)} as "
+                    f"{_mlim.group(2)} -> {fmt(_lto)}.",
+                ]
+                try:
+                    _lsub = _lexpr.subs(_lvar, _lto)
+                    if _lsub.is_number and not _lsub.has(
+                            S.NaN, S.Infinity, -S.Infinity):
+                        _lsteps.append(
+                            f"Direct substitution gives "
+                            f"{fmt(_lsub)}, which is the "
+                            f"limit.")
+                    else:
+                        _lsteps.append(
+                            "Direct substitution gives an "
+                            "indeterminate form, so simplify "
+                            "first (factor/cancel or use a "
+                            "standard limit).")
+                except Exception:
+                    pass
+                _lsteps.append(f"Limit = {fmt(_lval)}")
+                return {"type": "calculus", "op": "limit",
+                        "answer": fmt(_lval),
+                        "value": float(_lval),
+                        "steps": _lsteps,
+                        "latex": sp.latex(_lval)}
+        except Exception:
+            pass
+
     # Limit: "limit x->0 of sin(x)/x", "lim x->0 sin(x)/x"
     m = re.search(
         r"lim(?:it)?[^a-zA-Z0-9]*([a-zA-Z])\s*(?:->|→|➜)\s*([^\s,]+)", q, re.I
@@ -432,6 +523,13 @@ def solve_calculus(question: str):
         expr_text = re.split(r"\bof\b|:", q, maxsplit=1, flags=re.I)[-1]
         expr_text = re.split(r"\bof\b|:", expr_text, maxsplit=1, flags=re.I)[-1] if False else expr_text
         expr_text = re.sub(r"lim(?:it)?\s*[a-zA-Z]\s*(?:->|→|➜)\s*[^\s,]+", "", expr_text, flags=re.I)
+        # Wave 47: "Evaluate lim x->2 (x^3 - 8)/(x - 2)"
+        # kept its "Evaluate" lead-in in the expression
+        # text and failed to parse (audit #274).
+        expr_text = re.sub(
+            r"^\s*(?:evaluate|find|calculate|compute|"
+            r"determine)\s+(?:the\s+)?", "", expr_text,
+            flags=re.I).strip().rstrip(".")
         expr = parse_expression(expr_text)
         val = limit(expr, var, to_val)
         steps = [f"Find lim {var}->{fmt(to_val)} of {fmt(expr)}"]
@@ -459,6 +557,224 @@ def solve_calculus(question: str):
             "steps": steps,
             "latex": sp.latex(val),
         }
+
+    # Wave 47: applications of derivatives — rate of change
+    # ("Find the rate of change of the area of a circle with
+    # respect to its radius when r = 5 cm" was hijacked by
+    # the plain area pattern and answered with the area
+    # itself, 25·pi; correct dA/dr = 2·pi·r = 31.4159 —
+    # audit #383) and tangent/normal basics ("slope of the
+    # tangent to y = x^2 at x = 3" had no pattern — #286).
+    if "rate of change" in _qlow:
+        _mpoint = re.search(
+            r"(?:when|at)\s+([a-z])\s*=\s*(-?\d+(?:\.\d+)?)",
+            _qlow)
+        _named47 = [
+            (r"area of (?:a |the )?circle", "r", "pi*r^2",
+             "Area of a circle: A = pi·r^2"),
+            (r"circumference of (?:a |the )?circle", "r",
+             "2*pi*r", "Circumference: C = 2·pi·r"),
+            (r"volume of (?:a |the )?sphere", "r",
+             "(4/3)*pi*r^3",
+             "Volume of a sphere: V = (4/3)·pi·r^3"),
+            (r"surface area of (?:a |the )?sphere", "r",
+             "4*pi*r^2", "Surface area: S = 4·pi·r^2"),
+            (r"volume of (?:a |the )?cube", "s", "s^3",
+             "Volume of a cube: V = s^3"),
+            (r"area of (?:a |the )?square", "s", "s^2",
+             "Area of a square: A = s^2"),
+        ]
+        _etxt = _var = _label = None
+        for _pat, _vn, _et, _lab in _named47:
+            if re.search(_pat, _qlow):
+                _etxt, _var, _label = _et, _vn, _lab
+                break
+        if _etxt is None:
+            _mg = re.search(
+                r"rate of change of\s+(.+?)\s+with\s+respect"
+                r"\s+to\s+(?:its\s+)?([a-z])\b", _qlow)
+            if _mg:
+                _etxt, _var = _mg.group(1), _mg.group(2)
+                _label = f"Quantity: {_etxt}"
+        if _etxt is not None and _var:
+            try:
+                _vs = symbols(_var)
+                _expr = parse_expression(_etxt)
+                _deriv = diff(_expr, _vs)
+                steps = [
+                    _label + ".",
+                    f"Differentiate with respect to {_var}: "
+                    f"{fmt(_deriv)}",
+                ]
+                if _mpoint and _mpoint.group(1) == _var:
+                    _pv = sp.Rational(_mpoint.group(2))
+                    _val = _deriv.subs(_vs, _pv)
+                    steps.append(
+                        f"At {_var} = {fmt(_pv)}: "
+                        f"{fmt(_val)} ≈ "
+                        f"{fmt_num(float(_val))}")
+                    _ans = (f"{fmt(_val)} ≈ "
+                            f"{fmt_num(float(_val))}"
+                            if _val.has(sp.pi)
+                            else fmt(_val))
+                    return {"type": "calculus",
+                            "op": "rate_of_change",
+                            "answer": _ans,
+                            "value": float(_val),
+                            "steps": steps}
+                return {"type": "calculus",
+                        "op": "rate_of_change",
+                        "answer": fmt(_deriv),
+                        "value": fmt(_deriv), "steps": steps}
+            except Exception:
+                pass
+
+    if ("tangent" in _qlow or "normal" in _qlow) \
+            and "curve" in _qlow:
+        _meq = re.search(r"y\s*=\s*(.+)", q)
+        _mx = re.search(
+            r"(?:at|when)\s+(?:the\s+point\s+)?\(?\s*"
+            r"(?:x\s*=\s*)?(-?\d+(?:\.\d+)?)", _qlow)
+        if _meq and _mx:
+            _etext = re.split(
+                r"\s+(?:at|when)\s+", _meq.group(1))[0] \
+                .strip().rstrip(".")
+            try:
+                _xs = symbols("x")
+                _f = parse_expression(_etext)
+                _x0 = sp.Rational(_mx.group(1))
+                _y0 = _f.subs(_xs, _x0)
+                _dfull = diff(_f, _xs)
+                _m = _dfull.subs(_xs, _x0)
+                _want_normal = "normal" in _qlow
+                if "slope" in _qlow or "equation" not in _qlow:
+                    if _want_normal:
+                        if _m == 0:
+                            return {
+                                "type": "calculus",
+                                "op": "normal_slope",
+                                "answer": "undefined (the "
+                                          "tangent is "
+                                          "horizontal, so the "
+                                          "normal is vertical)",
+                                "steps": [
+                                    f"y = {fmt(_f)}, so "
+                                    f"dy/dx = {fmt(_dfull)}",
+                                    f"At x = {fmt(_x0)} the "
+                                    f"tangent's slope is 0, "
+                                    f"so the normal is "
+                                    f"vertical and its slope "
+                                    f"is undefined."]}
+                        _mn = -1 / _m
+                        steps = [
+                            f"y = {fmt(_f)}, so dy/dx = "
+                            f"{fmt(_dfull)}",
+                            f"Slope of the tangent at x = "
+                            f"{fmt(_x0)}: m = {fmt(_m)}",
+                            f"Slope of the normal = -1/m = "
+                            f"{fmt(_mn)}",
+                        ]
+                        return {"type": "calculus",
+                                "op": "normal_slope",
+                                "answer": fmt(_mn),
+                                "value": float(_mn),
+                                "steps": steps}
+                    steps = [
+                        f"y = {fmt(_f)}, so dy/dx = "
+                        f"{fmt(_dfull)}",
+                        f"Slope of the tangent at x = "
+                        f"{fmt(_x0)} is dy/dx there = "
+                        f"{fmt(_m)}",
+                    ]
+                    return {"type": "calculus",
+                            "op": "tangent_slope",
+                            "answer": fmt(_m),
+                            "value": float(_m), "steps": steps}
+                _mm = _m
+                _kind = "tangent"
+                if _want_normal:
+                    _kind = "normal"
+                    if _m == 0:
+                        _line = None
+                    else:
+                        _mm = -1 / _m
+                if _want_normal and _m == 0:
+                    return {
+                        "type": "calculus", "op": "normal_eq",
+                        "answer": f"x = {fmt(_x0)}",
+                        "steps": [
+                            f"The tangent at x = "
+                            f"{fmt(_x0)} is horizontal, so "
+                            f"the normal is the vertical "
+                            f"line x = {fmt(_x0)}."]}
+                _line = sp.expand(_y0 + _mm * (_xs - _x0))
+                steps = [
+                    f"y = {fmt(_f)}, so dy/dx = "
+                    f"{fmt(_dfull)}",
+                    f"At x = {fmt(_x0)}: y = {fmt(_y0)} and "
+                    f"the {_kind}'s slope is {fmt(_mm)}",
+                    f"Equation: y - {fmt(_y0)} = "
+                    f"{fmt(_mm)}(x - {fmt(_x0)}), i.e. "
+                    f"y = {fmt(_line)}",
+                ]
+                return {"type": "calculus",
+                        "op": f"{_kind}_eq",
+                        "answer": f"y = {fmt(_line)}",
+                        "steps": steps}
+            except Exception:
+                pass
+
+    # Wave 47: maximum / minimum value of f(x) — "Find the
+    # maximum value of the function f(x) = 2x^3 - 15x^2 +
+    # 36x + 1" had no pattern and fell back (audit #285).
+    # Solve f'(x) = 0, apply the second-derivative test,
+    # and report the extreme value.
+    if ("maximum value" in _qlow or "minimum value" in _qlow) \
+            and "f(x)" in _qlow.replace(" ", ""):
+        _want_max = "maximum value" in _qlow
+        _mfx = re.search(r"f\(\s*x\s*\)\s*=\s*(.+)$", q, re.I)
+        if _mfx:
+            try:
+                _xs = symbols("x")
+                _f = parse_expression(
+                    _mfx.group(1).strip().rstrip("."))
+                if _f.free_symbols <= {_xs}:
+                    _d1 = diff(_f, _xs)
+                    _d2 = diff(_d1, _xs)
+                    _crit = [r for r in sp.solve(_d1, _xs)
+                             if r.is_real]
+                    _hits = []
+                    for _r in _crit:
+                        _s = _d2.subs(_xs, _r)
+                        if (_want_max and _s < 0) or \
+                                (not _want_max and _s > 0):
+                            _hits.append(
+                                (_r, _f.subs(_xs, _r), _s))
+                    if _hits:
+                        _kind = "maximum" if _want_max \
+                            else "minimum"
+                        _best = (max if _want_max else min)(
+                            _hits, key=lambda h: h[1])
+                        steps = [
+                            f"f(x) = {fmt(_f)}",
+                            f"f'(x) = {fmt(_d1)}; setting "
+                            f"f'(x) = 0 gives x = "
+                            + ", ".join(fmt(h[0])
+                                        for h in _hits)
+                            + " (second-derivative test).",
+                            f"f''({fmt(_best[0])}) = "
+                            f"{fmt(_best[2])} confirms a local "
+                            f"{_kind} at x = {fmt(_best[0])}.",
+                            f"f({fmt(_best[0])}) = "
+                            f"{fmt(_best[1])}",
+                        ]
+                        return {"type": "calculus",
+                                "op": f"{_kind}_value",
+                                "answer": fmt(_best[1]),
+                                "value": float(_best[1]),
+                                "steps": steps}
+            except Exception:
+                pass
 
     # Partial derivative
     m = re.search(
@@ -491,12 +807,13 @@ def solve_calculus(question: str):
     if m:
         var = symbols(m.group(1))
         expr = parse_expression(m.group(2))
+        _dres = _textbook_trig(diff(expr, var))
         return {
             "type": "calculus",
             "op": "derivative",
-            "answer": fmt(diff(expr, var)),
+            "answer": fmt(_dres),
             "steps": _derivative_steps(expr, var),
-            "latex": sp.latex(diff(expr, var)),
+            "latex": sp.latex(_dres),
         }
 
     # "derivative of ..." / "differentiate ..."
@@ -504,19 +821,46 @@ def solve_calculus(question: str):
         text = re.sub(
             r"\b(derivative\s+of|differentiate)\b", "", q, flags=re.I
         )
+        # Wave 47: "Find the derivative of sin x" kept its
+        # "Find the" lead-in after the phrase removal, and
+        # the parser choked on the leftover words ('Find
+        # the  sin x.') — the derivative of sin x, e^(3x)
+        # and log x all errored (Wave 35 audit #268 and its
+        # neighbours). Strip the command lead-in and the
+        # sentence's trailing full stop.
+        text = re.sub(
+            r"^\s*(?:find|evaluate|calculate|compute|"
+            r"determine)\s+(?:the\s+)?", "", text,
+            flags=re.I)
+        text = re.sub(r"^\s*the\s+", "", text, flags=re.I)
+        text = text.strip().rstrip(".")
+        # Wave 47: the parser reads a bare "e" as a symbol,
+        # so "e^(3x)" differentiated to 3·e^(3x)·log(e)
+        # (shown with a stray /e). When the student writes
+        # e^... it means Euler's number — swap the symbol
+        # for E before differentiating (audit #269).
+        def _euler(expr, src):
+            if re.search(r"\be\s*\^", src):
+                _es = [s for s in expr.free_symbols
+                       if str(s) == "e"]
+                if _es:
+                    return expr.subs(_es[0], sp.E)
+            return expr
+
         m2 = re.search(r"(.+?)\s+with\s+respect\s+to\s+([a-zA-Z])", text, re.I)
         if m2:
-            expr = parse_expression(m2.group(1))
+            expr = _euler(parse_expression(m2.group(1)), text)
             var = symbols(m2.group(2))
         else:
-            expr = parse_expression(text)
+            expr = _euler(parse_expression(text), text)
             var = _guess_symbol(expr)
+        _dres = _textbook_trig(diff(expr, var))
         return {
             "type": "calculus",
             "op": "derivative",
-            "answer": fmt(diff(expr, var)),
+            "answer": fmt(_dres),
             "steps": _derivative_steps(expr, var),
-            "latex": sp.latex(diff(expr, var)),
+            "latex": sp.latex(_dres),
         }
 
     # Integral: "integrate x^2", "integrate x from 0 to 1", "integral of x"

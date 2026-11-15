@@ -1037,13 +1037,61 @@ def _bells_lcm(q):
 
 
 def _train_crossing(q):
+    # Wave 47: the TRAIN's length is the unknown — platform
+    # length, crossing time and speed are all given ("A train
+    # crosses a platform 180 m long in 15 seconds travelling
+    # at 60 km/h. Find the length of the train."). The loose
+    # length match below grabbed the PLATFORM's 180 m as the
+    # train's own length and answered a speed, 86.4 km/h
+    # (Wave 35 audit #263; correct length 70 m).
+    if "length of the train" in q:
+        _mpl = re.search(
+            r"(?:platform|bridge|tunnel)\s+(?:of\s+length\s+)?("
+            + _NUM + r")\s*m", q)
+        _mtm = re.search(r"in\s+(" + _NUM + r")\s*seconds?", q)
+        _mv = re.search(r"(" + _NUM + r")\s*(km/h|m/s)", q)
+        if _mpl and _mtm and _mv:
+            _P, _T = _num(_mpl.group(1)), _num(_mtm.group(1))
+            _V = _num(_mv.group(1))
+            _vms = _V * 5 / 18 if _mv.group(2) == "km/h" \
+                else _V
+            _dist = _vms * _T
+            _L = _dist - _P
+            if _L > 0:
+                steps = [
+                    f"Speed = {fmt_num(_V)} "
+                    f"{_mv.group(2)}"
+                    + (f" = {fmt_num(_V)} × 5/18 = "
+                       f"{fmt_num(_vms)} m/s"
+                       if _mv.group(2) == "km/h" else ""),
+                    f"While crossing the platform the train "
+                    f"covers (its own length + platform length) "
+                    f"= speed × time = {fmt_num(_vms)} × "
+                    f"{fmt_num(_T)} = {fmt_num(_dist)} m",
+                    f"Length of the train = {fmt_num(_dist)} "
+                    f"- {fmt_num(_P)} = {fmt_num(_L)} m",
+                ]
+                return {"type": "applied",
+                        "op": "train_length",
+                        "answer": f"{fmt_num(_L)} m",
+                        "steps": steps, "value": float(_L)}
     mt = re.search(r"train\s+of\s+length\s+(" + _NUM + r")\s*m",
-                   q) or re.search(
-                       r"train[\s\S]{0,20}?(" + _NUM + r")\s*m\s+"
-                       r"long", q)
-    if not mt:
+                   q)
+    L = None
+    if mt:
+        L = _num(mt.group(1))
+    else:
+        _loose = re.search(
+            r"train([\s\S]{0,20}?)(" + _NUM + r")\s*m\s+long",
+            q)
+        # Wave 47: the loose form must not swallow a following
+        # platform/bridge length as the train's own (see the
+        # audit #263 note above).
+        if _loose and not re.search(
+                r"platform|bridge|tunnel", _loose.group(1)):
+            L = _num(_loose.group(2))
+    if L is None:
         return None
-    L = _num(mt.group(1))
 
     def _finish(dist_m, T, label):
         v = dist_m / T
@@ -1618,6 +1666,53 @@ def _work_together(q):
         return None
     if "efficient" in q:
         return None  # the efficiency family owns that story
+    # Wave 47: together-time + ONE worker's solo time given,
+    # the OTHER worker's solo time asked ("A and B together
+    # can do a work in 8 days. A alone can do it in 12 days.
+    # In how many days can B alone do it?"). The two-number
+    # path below read 8 and 12 as the two solo times and
+    # answered 24/5 (Wave 35 audit #259; correct 24).
+    _mt = re.search(r"together[^.]{0,60}?in\s+(" + _NUM
+                    + r")\s+days", q)
+    _ms = re.search(r"(\w+)\s+alone[^.]{0,60}?in\s+(" + _NUM
+                    + r")\s+days", q)
+    if _mt and _ms:
+        from fractions import Fraction as F
+        _T = F(str(_mt.group(1)))
+        _A = F(str(_ms.group(2)))
+        _solo = _ms.group(1)
+        _ask = re.search(r"can\s+(\w+)\s+alone", q) or \
+            re.search(r"(\w+)\s+alone\s+(?:do|does|take|"
+                      r"finish)", q)
+        if _ask and _ask.group(1) == _solo:
+            steps = [
+                f"{_solo.capitalize()} alone is already given "
+                f"to take {_frac_str(_A)} days.",
+            ]
+            return {"type": "applied", "op": "work_together",
+                    "answer": f"{_frac_str(_A)} days",
+                    "steps": steps, "value": float(_A)}
+        if _A > _T:
+            _other = _T * _A / (_A - _T)
+            _rate = 1 / _T - 1 / _A
+            _who = _ask.group(1).capitalize() if _ask \
+                else "The other worker"
+            steps = [
+                f"Together they finish in {_frac_str(_T)} "
+                f"days, so in 1 day they do "
+                f"1/{_frac_str(_T)} of the work.",
+                f"{_solo.capitalize()} alone does "
+                f"1/{_frac_str(_A)} of the work in 1 day.",
+                f"{_who}'s rate = 1/{_frac_str(_T)} - "
+                f"1/{_frac_str(_A)} = {_frac_str(_rate)} of "
+                f"the work per day.",
+                f"Days needed alone = {_frac_str(_other)} days"
+                + (f" ≈ {float(_other):.2f} days"
+                   if _other.denominator != 1 else ""),
+            ]
+            return {"type": "applied", "op": "work_together",
+                    "answer": f"{_frac_str(_other)} days",
+                    "steps": steps, "value": float(_other)}
     days = [float(v) for v in re.findall(
         r"in\s+(" + _NUM + r")\s+days", q)]
     if len(days) != 2:

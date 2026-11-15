@@ -354,6 +354,86 @@ def solve_sequences(question: str):
                           "3, 6, 12'.",
                 "steps": []}
 
+    # Wave 47: sum and product of the first three GP terms
+    # given, ratio (or terms) asked — "The sum of the first
+    # three terms of a GP is 39 and their product is 729.
+    # Find the common ratio." With terms a/r, a, ar the
+    # product is a^3 and the sum gives r + 1/r = S/a - 1, a
+    # quadratic in r (Wave 35 audit #123 — it fell back
+    # with "I need the first term and common ratio").
+    if kind == "GP" and not terms:
+        _ms = re.search(
+            r"sum of (?:the )?first three terms[^.]*?"
+            r"\bis\s+(-?\d+(?:\.\d+)?)", q)
+        _mp = re.search(
+            r"product[^.]*?\bis\s+(-?\d+(?:\.\d+)?)", q)
+        if _ms and _mp:
+            from fractions import Fraction as _F
+            _S = _F(str(_ms.group(1)))
+            _P = _F(str(_mp.group(1)))
+            _a = None
+            if _P.denominator == 1:
+                _pi = int(_P)
+                _root = round(abs(_pi) ** (1 / 3))
+                for _cand in (_root - 1, _root, _root + 1):
+                    if _cand ** 3 == abs(_pi):
+                        _a = _F(_cand if _pi >= 0
+                                else -_cand)
+                        break
+            if _a:
+                _m = _S / _a - 1  # r + 1/r
+                _disc = _m * _m - 4
+                if _disc >= 0:
+                    _sq = sp.sqrt(sp.Rational(
+                        _disc.numerator, _disc.denominator))
+                    if _sq.is_number and \
+                            _sq ** 2 == _disc:
+                        _sqF = _F(_sq.p, _sq.q)
+                        _r1 = (_m + _sqF) / 2
+                        _r2 = (_m - _sqF) / 2
+
+                        def _rat(v):
+                            return fmt_num(sp.Rational(
+                                v.numerator, v.denominator))
+
+                        _t1, _t2, _t3 = _a / _r1, _a, _a * _r1
+                        steps = [
+                            "Take the three terms as a/r, "
+                            "a, ar.",
+                            f"Product: (a/r) × a × (a·r) = "
+                            f"a^3 = {_rat(_P)}, so a = "
+                            f"{_rat(_a)}.",
+                            f"Sum: a/r + a + a·r = "
+                            f"{_rat(_S)} gives r + 1/r = "
+                            f"{_rat(_m)}.",
+                            f"So r^2 - {_rat(_m)}·r + 1 = 0, "
+                            f"giving r = {_rat(_r1)} or "
+                            f"r = {_rat(_r2)}.",
+                            f"With r = {_rat(_r1)} the terms "
+                            f"are {_rat(_t1)}, {_rat(_t2)}, "
+                            f"{_rat(_t3)}.",
+                        ]
+                        if "ratio" in q:
+                            _ans = f"{_rat(_r1)} or " \
+                                   f"{_rat(_r2)}" \
+                                if _r1 != _r2 else _rat(_r1)
+                            return {
+                                "type": "sequences",
+                                "op": "gp_sum_product",
+                                "answer": _ans,
+                                "value": float(_r1),
+                                "steps": steps}
+                        return {
+                            "type": "sequences",
+                            "op": "gp_sum_product",
+                            "answer": f"{_rat(_t1)}, "
+                                      f"{_rat(_t2)}, "
+                                      f"{_rat(_t3)}",
+                            "value": [float(_t1),
+                                      float(_t2),
+                                      float(_t3)],
+                            "steps": steps}
+
     a = terms[0] if terms else params.get("a")
     if kind == "AP":
         d = ratio_diff if terms else params.get("d")

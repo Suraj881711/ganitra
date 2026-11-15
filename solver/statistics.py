@@ -1375,6 +1375,85 @@ def solve_statistics(question: str):
                     "answer": fmt_num(_excl),
                     "value": float(_excl), "steps": steps}
 
+    # Wave 47: a wrongly-recorded observation ("The mean of
+    # 10 observations is 25. If one observation 36 was
+    # wrongly recorded as 63, find the correct mean."). The
+    # generic list-mean below averaged every number in the
+    # sentence (10, 25, 36, 63) and answered 33.5 (Wave 35
+    # audit #218; correct 22.3).
+    if _mm and ("wrongly" in ql or "incorrectly" in ql
+                or "mistakenly" in ql):
+        _n47 = int(_mm.group(1))
+        _mean47 = float(_mm.group(2))
+        _bad = re.search(
+            r"(\d+(?:\.\d+)?)\s+was\s+(?:wrongly|incorrectly|"
+            r"mistakenly)\s+(?:recorded|written|taken|entered|"
+            r"read)\s+as\s+(\d+(?:\.\d+)?)", ql)
+        _right = _wrong = None
+        if _bad:
+            _right, _wrong = float(_bad.group(1)), \
+                float(_bad.group(2))
+        else:
+            _bad2 = re.search(
+                r"(?:recorded|written|taken|entered)\s+as\s+"
+                r"(\d+(?:\.\d+)?)\s+instead\s+of\s+"
+                r"(\d+(?:\.\d+)?)", ql)
+            if _bad2:
+                _wrong, _right = float(_bad2.group(1)), \
+                    float(_bad2.group(2))
+        if _right is not None:
+            _total47 = _n47 * _mean47
+            _corr = (_total47 - _wrong + _right) / _n47
+            steps = [
+                f"Sum of the {_n47} observations (with the "
+                f"wrong entry) = {_n47} × {fmt_num(_mean47)} "
+                f"= {fmt_num(_total47)}",
+                f"Correct sum = {fmt_num(_total47)} - "
+                f"{fmt_num(_wrong)} + {fmt_num(_right)} = "
+                f"{fmt_num(_total47 - _wrong + _right)}",
+                f"Correct mean = "
+                f"{fmt_num(_total47 - _wrong + _right)} ÷ "
+                f"{_n47} = {fmt_num(_corr)}",
+            ]
+            return {"type": "statistics",
+                    "op": "mean_wrongly_recorded",
+                    "answer": fmt_num(_corr),
+                    "value": float(_corr), "steps": steps}
+
+    # Wave 47: one more person joins and the mean moves
+    # ("The mean weight of 8 students is 50 kg. When the
+    # teacher's weight is included, the mean becomes 52 kg.
+    # Find the teacher's weight."). The generic list-mean
+    # averaged 8, 50 and 52 and answered 36.6667 (audit
+    # #225; correct 68).
+    if "includ" in ql:
+        _mi = re.search(
+            r"mean\s+(?:weight\s+|marks?\s+|height\s+)?of\s+"
+            r"(\d+)\s+(?:students|persons|people|boys|girls|"
+            r"children|men|women)\s+is\s+(\d+(?:\.\d+)?)", ql)
+        _mb = re.search(r"becomes\s+(\d+(?:\.\d+)?)", ql)
+        if _mi and _mb:
+            _n48 = int(_mi.group(1))
+            _old = float(_mi.group(2))
+            _new = float(_mb.group(1))
+            _person = (_n48 + 1) * _new - _n48 * _old
+            _who = "teacher" if "teacher" in ql else "new person"
+            steps = [
+                f"Total of the {_n48} values = {_n48} × "
+                f"{fmt_num(_old)} = {fmt_num(_n48 * _old)}",
+                f"Total after including the {_who} = "
+                f"{_n48 + 1} × {fmt_num(_new)} = "
+                f"{fmt_num((_n48 + 1) * _new)}",
+                f"The {_who}'s value = "
+                f"{fmt_num((_n48 + 1) * _new)} - "
+                f"{fmt_num(_n48 * _old)} = {fmt_num(_person)}",
+            ]
+            return {"type": "statistics",
+                    "op": "mean_included_person",
+                    "answer": fmt_num(_person) + (
+                        " kg" if "kg" in ql else ""),
+                    "value": float(_person), "steps": steps}
+
     # Wave 33: the probability gate used to be the literal
     # substring "probab" — Hindi/Hinglish asks carry
     # प्रायिकता / संभावना / sambhavna instead, and "chance"
@@ -1424,6 +1503,23 @@ def solve_statistics(question: str):
         op = "mean"
     if op:
         nums = _extract_list(q)
+        # Wave 47: a colon-introduced list IS the data — the
+        # sentence's own count is not ("The marks of 15
+        # students are: 41, 39, ... . Find the median." — the
+        # whole-sentence extraction swept the 15 in and the
+        # median came out 50 instead of 52; audit #223). The
+        # stated-count drop covers the same pollution when
+        # there is no colon.
+        if "[" not in q and ":" in q:
+            _after = _extract_list(q.split(":", 1)[1])
+            if len(_after) >= 3:
+                nums = _after
+        _mc = re.search(
+            r"\bof\s+(\d+)\s+(?:students|observations|numbers|"
+            r"items|values|persons|people)\b", ql)
+        if _mc and len(nums) == int(_mc.group(1)) + 1 \
+                and nums[0] == int(_mc.group(1)):
+            nums = nums[1:]
         # For std/variance questions the numbers are the data itself.
         out = _stats_result(op, nums)
         if out:

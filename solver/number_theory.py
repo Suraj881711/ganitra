@@ -23,6 +23,31 @@ def _all_ints(text: str):
 def solve_number_theory(question: str):
     q = question.lower()
 
+    # Wave 47: "How many factors does 36 have?" — the count
+    # of divisors, tau(n) = product of (exponent + 1) over
+    # the prime factorisation. This ask never reached this
+    # solver at all and the arithmetic simplifier turned the
+    # sentence into a letter-product (Wave 35 audit #314-317:
+    # 36 -> 9, 48 -> 10, 27 -> 4, 100 -> 9).
+    if re.search(r"(how\s+many|number\s+of|total\s+number\s+of)"
+                 r"\s+(factors|divisors)\b", q):
+        n = _first_int(question)
+        if n is not None and n >= 1:
+            f = factorint(n)
+            count = 1
+            for e in f.values():
+                count *= e + 1
+            steps = [
+                f"Prime factorisation: {n} = {_factor_str(n)}",
+                "Number of factors = (each exponent + 1), "
+                "all multiplied: "
+                + " × ".join(f"({e} + 1)" for e in f.values())
+                + f" = {count}",
+            ]
+            return {"type": "number_theory", "op": "factor_count",
+                    "answer": str(count), "value": count,
+                    "steps": steps}
+
     # Modulo: "17 mod 5", "17 modulo 5", "remainder when 17 is divided by 5"
     m = re.search(r"(\d+)\s*(?:mod|modulo)\s*(\d+)", q) or re.search(
         r"remainder\s+when\s+(\d+)\s+is\s+divided\s+by\s+(\d+)", q)

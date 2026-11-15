@@ -196,7 +196,14 @@ def route_intent(question: str) -> str:
             r"differentiate|integration|integral|integrate|"
             r"\blimit\b|\blim\b|d/d|partial"
             r"|continu\w*|differentiab\w*)", q) or re.search(
-            r"\bintegrat\w*\b.+\b(graph|shade|plot)\b", q):
+            r"\bintegrat\w*\b.+\b(graph|shade|plot)\b", q) or \
+            re.search(r"rate\s+of\s+change", q) or re.search(
+            r"slope\s+of\s+(the\s+)?(tangent|normal)\b", q) or \
+            re.search(
+            r"equation\s+of\s+(the\s+)?(tangent|normal)\b", q) or \
+            re.search(
+            r"(maximum|minimum)\s+value\s+of\s+(the\s+)?"
+            r"(function\s+)?f\s*\(\s*x\s*\)", q):
         return "calculus"
 
     # Linear algebra
@@ -677,6 +684,25 @@ def _solve_question_uncached(question: str):
         except Exception:
             out = None
         if out is not None and out.get("op") == "ogive_median":
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 47: "How many factors does 36 have?" never reached
+    # number theory — the intent strip-check rejected it (the
+    # sentence keeps its words) and the arithmetic simplifier
+    # returned a letter-product of the question (audit
+    # #314-317). The divisor-count pattern lives in
+    # solver/number_theory.py; try it FIRST for count asks
+    # and accept only its own op.
+    if re.search(
+            r"(how\s+many|number\s+of|total\s+number\s+of)"
+            r"\s+(factors|divisors)\b", working, re.I):
+        try:
+            out = solve_number_theory(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") == "factor_count":
             if was_translated:
                 out["interpreted_as"] = translated
             return out
