@@ -94,6 +94,7 @@ CONCEPTS = [
         "id": "trig_identity",
         "keywords": ("sin^2", "sin²", "sin 2 + cos",
                      "trig identity", "trigonometric identity",
+                     "identity kya",
                      "त्रिकोणमितीय सर्वसमिका"),
         "title": "Trigonometric Identity: sin²θ + cos²θ = 1",
         "formula": "sin²θ + cos²θ = 1 (true for every angle θ)",
@@ -206,7 +207,8 @@ CONCEPTS = [
         "keywords": ("hcf", "lcm", "महत्तम समापवर्तक",
                      "लघुत्तम समापवर्त्य", "highest common factor",
                      "lowest common multiple",
-                     "least common multiple"),
+                     "least common multiple", "hcf aur lcm",
+                     "hcf lcm me antar", "hcf kya", "lcm kya"),
         "title": "HCF and LCM",
         "formula": "HCF = largest number dividing all the given "
                    "numbers; LCM = smallest number divisible by "
@@ -231,7 +233,7 @@ CONCEPTS = [
         "id": "prime_composite",
         "keywords": ("prime number", "composite number",
                      "अभाज्य संख्या", "भाज्य संख्या",
-                     "abhaajy", "abajya", "abhayj", "prime no"),
+                     "abhaajy", "abajya", "abhayj", "abhajya", "prime no"),
         "title": "Prime and Composite Numbers",
         "formula": "Prime: a number greater than 1 with exactly "
                    "two factors — 1 and itself. Composite: a "
@@ -272,7 +274,8 @@ CONCEPTS = [
         "id": "simple_interest",
         "keywords": ("simple interest", "साधारण ब्याज",
                      "sadharan byaj", "saadharan byaaj", "byaj",
-                     "ब्याज"),
+                     "ब्याज", "sadharan byaj kya",
+                     "byaj kaise nikalte", "byaj kese"),
         "title": "Simple Interest",
         "formula": "SI = (P × R × T) / 100,  Amount = P + SI",
         "explain": "P = principal (starting money), R = rate % "
@@ -290,7 +293,9 @@ CONCEPTS = [
     {
         "id": "percentage",
         "keywords": ("percentage", "प्रतिशत", "pratishat",
-                     "percent kya", "percent kaise"),
+                     "percent kya", "percent kaise",
+                     "percent ka matlab", "pratishat ka matlab",
+                     "percent kya hota", "percentage ka matlab"),
         "title": "Percentage",
         "formula": "x% of N = (x/100) × N;  Percentage = "
                    "(part / whole) × 100",
@@ -311,7 +316,9 @@ CONCEPTS = [
         "keywords": ("mean median mode", "median", "mode kya",
                      "mean kya", "माध्य", "माध्यिका", "बहुलक",
                      "maadhya", "madhyika", "ausat aur", "ausat",
-                     "औसत"),
+                     "औसत", "mean aur median", "ausat aur madhyika",
+                     "bahulak kya", "bahulak", "mode kya hota",
+                     "median kya hota"),
         "title": "Mean, Median and Mode",
         "formula": "Mean = (sum of all values) / (number of "
                    "values); Median = middle value after sorting; "
@@ -333,7 +340,9 @@ CONCEPTS = [
     {
         "id": "probability",
         "keywords": ("probability", "प्रायिकता", "prayikta",
-                     "prayekta", "संभावना", "sambhavna"),
+                     "prayekta", "संभावना", "sambhavna",
+                     "probability kaise", "probability kese",
+                     "sambhavna kaise", "probability kya hoti"),
         "title": "Probability",
         "formula": "Probability = (number of favourable outcomes) "
                    "/ (total number of equally likely outcomes)",
@@ -358,7 +367,10 @@ CONCEPTS = [
                      "n-th term", "समांतर श्रेढ़ी", "गुणोत्तर श्रेढ़ी",
                      "समांतर श्रेणी", "ज्यामितीय श्रेणी",
                      "samaantar shreni", "ap ka formula",
-                     "gp ka formula", "ap kya hoti", "gp kya hoti"),
+                     "gp ka formula", "ap kya hoti", "gp kya hoti",
+                     "ap kya hota", "gp kya hota", "ap aur gp",
+                     "ap kya hai", "gp kya hai", "common difference",
+                     "gp ka sum formula", "ap ka nth"),
         "title": "AP and GP: nth Term",
         "formula": "AP: aₙ = a + (n - 1)d  (same difference d "
                    "added each time).  GP: aₙ = a × r^(n-1)  "
@@ -379,7 +391,9 @@ CONCEPTS = [
         "keywords": ("speed distance", "distance speed",
                      "चाल और दूरी", "chaal doori", "chaal aur doori",
                      "doori samay", "चाल दूरी", "दूरी और समय",
-                     "speed ka formula", "distance ka formula"),
+                     "speed ka formula", "distance ka formula",
+                     "speed distance time", "chaal doori samay",
+                     "speed doori"),
         "title": "Speed, Distance and Time",
         "formula": "Distance = Speed × Time;  Speed = Distance / "
                    "Time;  Time = Distance / Speed",
@@ -399,7 +413,10 @@ CONCEPTS = [
     {
         "id": "trigonometry_basics",
         "keywords": ("trigonometry", "त्रिकोणमिति",
-                     "trikonmiti"),
+                     "trikonmiti", "sin cos tan", "trig ratio",
+                     "trikonmiti kya", "trigonometry kya",
+                     "cosec", "secant", "cosecant",
+                     "sec aur cosec"),
         "title": "Trigonometry — the Basic Ratios",
         "formula": "In a right triangle, for angle θ:  sin θ = "
                    "opposite/hypotenuse,  cos θ = "
@@ -477,6 +494,785 @@ CONCEPTS = [
                       "c² = a² + b²",
                       "It has a full proof, so it is a theorem"],
             "answer": "Pythagoras theorem is a theorem",
+        },
+    },
+    # ---- Wave 59: Hinglish deep-training concept entries ----
+    # Appended AFTER the Wave 18 entries: find_concept returns
+    # the first match in list order, so every older match keeps
+    # winning exactly as before.
+    {
+        "id": "variance_sd",
+        "keywords": ("variance", "standard deviation",
+                     "prasaran", "manak vichalan"),
+        "title": "Variance and Standard Deviation",
+        "formula": "Variance = average of (each value - mean)²; "
+                   "Standard Deviation = √Variance",
+        "explain": "They measure how spread out the data is. "
+                   "SD = 0 means every value is the same.",
+        "hinglish": "Data kitna phaila hua hai, ye variance aur "
+                    "SD batate hain — zyada SD matlab zyada "
+                    "bikhraav.",
+        "example": {
+            "q": "Find the variance of 2, 4, 6 (mean = 4).",
+            "steps": ["Squared gaps: (2-4)², (4-4)², (6-4)² "
+                      "= 4, 0, 4",
+                      "Variance = (4 + 0 + 4) / 3 = 8/3 ≈ 2.67"],
+            "answer": "Variance ≈ 2.67, SD ≈ 1.63",
+        },
+    },
+    {
+        "id": "ogive",
+        "keywords": ("ogive", "toj"),
+        "title": "Ogive (Cumulative Frequency Curve)",
+        "formula": "Plot cumulative frequency against the upper "
+                   "class limit ('less than' ogive); the median "
+                   "is where the two ogives cross.",
+        "explain": "An ogive is the smooth curve of running "
+                   "totals (cumulative frequencies). It is mainly "
+                   "used to read the median from a graph.",
+        "hinglish": "Sanchayi barambarta (cumulative frequency) "
+                    "ko graph par banane se ogive banta hai — "
+                    "isse madhyika aasani se milti hai.",
+        "example": {
+            "q": "Frequencies 3, 5, 2 — write the cumulative "
+                 "frequencies.",
+            "steps": ["Running totals: 3, 3 + 5 = 8, 8 + 2 = 10"],
+            "answer": "Cumulative frequencies: 3, 8, 10",
+        },
+    },
+    {
+        "id": "function_basics",
+        "keywords": ("function kya", "function hota",
+                     "function ka matlab", "falan kya"),
+        "title": "What is a Function?",
+        "formula": "A function gives exactly ONE output for "
+                   "every input: y = f(x).",
+        "explain": "Think of it as a machine: you put in x, you "
+                   "get one fixed answer f(x). The same input can "
+                   "never give two different outputs.",
+        "hinglish": "Function ek machine jaisa hai — ek input "
+                    "daalo, hamesha ek hi pakka output milega.",
+        "example": {
+            "q": "If f(x) = x + 3, find f(5).",
+            "steps": ["Put x = 5: f(5) = 5 + 3 = 8"],
+            "answer": "f(5) = 8",
+        },
+    },
+    {
+        "id": "domain_range",
+        "keywords": ("domain aur range", "domain range",
+                     "prant aur parisar"),
+        "title": "Domain and Range of a Function",
+        "formula": "Domain = all allowed inputs (x values); "
+                   "Range = all outputs the function actually "
+                   "gives.",
+        "explain": "Domain asks 'which x can I put in?', range "
+                   "asks 'which y values can come out?'.",
+        "hinglish": "Domain matlab kaunsi x value daal sakte "
+                    "hain, range matlab kaunsi y value bahar "
+                    "aayegi.",
+        "example": {
+            "q": "Domain and range of f(x) = x² (real x)?",
+            "steps": ["x can be any real number; x² is never "
+                      "negative",
+                      "Range = all y ≥ 0"],
+            "answer": "Domain = all real numbers, Range = [0, ∞)",
+        },
+    },
+    {
+        "id": "surd",
+        "keywords": ("surd", "karni"),
+        "title": "Surds (Karni)",
+        "formula": "A surd is an irrational root: √2, √3, ∛5 — "
+                   "roots that cannot be written as a simple "
+                   "fraction.",
+        "explain": "√4 = 2 is NOT a surd (it comes out exact), "
+                   "but √5 is, because it never ends or repeats "
+                   "as a decimal.",
+        "hinglish": "Jo mool (root) exact na nikle — jaise √2, "
+                    "√3 — wahi karni (surd) hai.",
+        "example": {
+            "q": "Simplify √12.",
+            "steps": ["√12 = √(4 × 3) = 2√3"],
+            "answer": "√12 = 2√3",
+        },
+    },
+    {
+        "id": "radian",
+        "keywords": ("radian", "degree kitne radian",
+                     "degree aur radian"),
+        "title": "Radians",
+        "formula": "π radians = 180°, so 1 radian ≈ 57.3° and "
+                   "1° = π/180 radian.",
+        "explain": "The radian is the SI unit of angle: it is "
+                   "the angle made when the arc length equals "
+                   "the radius.",
+        "hinglish": "Radian kon naapne ki dusri unit hai — π "
+                    "radian matlab 180 degree.",
+        "example": {
+            "q": "Convert 90° to radians.",
+            "steps": ["90 × π/180 = π/2"],
+            "answer": "90° = π/2 radian",
+        },
+    },
+    {
+        "id": "sequence_series",
+        "keywords": ("sequence aur series", "sequence aur shreni",
+                     "anukram aur shreni", "sequence kya",
+                     "series kya"),
+        "title": "Sequence vs Series",
+        "formula": "Sequence = an ordered list (2, 4, 6, ...); "
+                   "Series = the SUM of its terms (2 + 4 + 6).",
+        "explain": "Same numbers, two ideas: the list itself is "
+                   "the sequence, adding them makes the series.",
+        "hinglish": "Anukram sirf kram me likhi sankhyaye hain; "
+                    "unhi ka yog bana do to woh shreni (series) "
+                    "ho gayi.",
+        "example": {
+            "q": "Sequence 1, 3, 5 — its series?",
+            "steps": ["Add them: 1 + 3 + 5 = 9"],
+            "answer": "Series = 1 + 3 + 5 = 9",
+        },
+    },
+    {
+        "id": "sets_basics",
+        "keywords": ("union aur intersection", "samuchchay",
+                     "set kya", "empty set", "universal set",
+                     "cardinal number of set"),
+        "title": "Sets: Union, Intersection, Empty & Universal",
+        "formula": "A ∪ B = elements in A or B; A ∩ B = elements "
+                   "in both; n(A) = number of elements in A.",
+        "explain": "The empty set { } (or ∅) has no elements; "
+                   "the universal set U holds every element "
+                   "under discussion.",
+        "hinglish": "Union me dono set ke saare tatva, "
+                    "intersection me sirf common wale aate hain.",
+        "example": {
+            "q": "A = {1, 2}, B = {2, 3}. Find A ∪ B and A ∩ B.",
+            "steps": ["A ∪ B = {1, 2, 3}", "A ∩ B = {2}"],
+            "answer": "A ∪ B = {1, 2, 3}, A ∩ B = {2}",
+        },
+    },
+    {
+        "id": "subset_concept",
+        "keywords": ("subset", "upasamuchchay"),
+        "title": "Subset (Upasamuchchay)",
+        "formula": "B ⊆ A when EVERY element of B is also in A. "
+                   "A set with n elements has 2^n subsets.",
+        "explain": "Every set is a subset of itself, and the "
+                   "empty set is a subset of every set.",
+        "hinglish": "Chhota set jiske saare tatva bade set me "
+                    "bhi hon — wahi uska upasamuchchay hai.",
+        "example": {
+            "q": "How many subsets does {1, 2} have?",
+            "steps": ["2² = 4: { }, {1}, {2}, {1, 2}"],
+            "answer": "4 subsets",
+        },
+    },
+    {
+        "id": "events_types",
+        "keywords": ("mutually exclusive", "impossible event",
+                     "certain event", "sure event",
+                     "nishchit ghatna", "asambhav ghatna"),
+        "title": "Types of Events",
+        "formula": "Sure event: P = 1; Impossible event: P = 0; "
+                   "Mutually exclusive events can never happen "
+                   "together.",
+        "explain": "Getting a head and a tail in ONE coin toss "
+                   "are mutually exclusive — only one can occur.",
+        "hinglish": "Jo ghatna pakki ghatti hai uski probability "
+                    "1, jo ho hi nahi sakti uski 0 hoti hai.",
+        "example": {
+            "q": "P(getting 7 on one die)?",
+            "steps": ["A die has only 1-6, so 7 is impossible"],
+            "answer": "P = 0 (impossible event)",
+        },
+    },
+    {
+        "id": "sample_space",
+        "keywords": ("sample space", "pratidarsh samashti"),
+        "title": "Sample Space",
+        "formula": "Sample space S = the set of ALL possible "
+                   "outcomes of an experiment.",
+        "explain": "For one coin: S = {H, T}. For one die: "
+                   "S = {1, 2, 3, 4, 5, 6}. Probabilities are "
+                   "counted inside this set.",
+        "hinglish": "Kisi prayog ke saare sambhavit parinaam "
+                    "milakar sample space banta hai.",
+        "example": {
+            "q": "Sample space of tossing two coins?",
+            "steps": ["S = {HH, HT, TH, TT} — 4 outcomes"],
+            "answer": "S = {HH, HT, TH, TT}",
+        },
+    },
+    {
+        "id": "similar_congruent",
+        "keywords": ("congruent", "sarvangsam", "samroop",
+                     "similar triangles"),
+        "title": "Similar vs Congruent Triangles",
+        "formula": "Similar = same shape, sizes may differ "
+                   "(angles equal, sides in proportion). "
+                   "Congruent = same shape AND same size.",
+        "explain": "Every congruent pair is similar, but a "
+                   "similar pair need not be congruent.",
+        "hinglish": "Samroop matlab aakar ek jaisa; sarvangsam "
+                    "matlab aakar ke saath naap bhi bilkul ek "
+                    "jaisa.",
+        "example": {
+            "q": "Sides 3-4-5 and 6-8-10: similar or congruent?",
+            "steps": ["Ratios 3:6 = 4:8 = 5:10 = 1:2, sizes "
+                      "differ"],
+            "answer": "Similar, not congruent",
+        },
+    },
+    {
+        "id": "conjugate",
+        "keywords": ("conjugate", "sanyugmi"),
+        "title": "Conjugate of a Surd / Complex Number",
+        "formula": "Conjugate of a + √b is a - √b; of a + bi is "
+                   "a - bi. Their product is always rational "
+                   "(or real).",
+        "explain": "Multiplying by the conjugate removes the "
+                   "root (or the i) — that is how denominators "
+                   "are rationalised.",
+        "hinglish": "Beech wala chinh badal do — + ka - — wahi "
+                    "sanyugmi hai; guna karne par karni khatm "
+                    "ho jati hai.",
+        "example": {
+            "q": "Conjugate of 3 + √5?",
+            "steps": ["Flip the sign: 3 - √5"],
+            "answer": "3 - √5",
+        },
+    },
+    {
+        "id": "complex_basics",
+        "keywords": ("complex number", "sammishra sankhya",
+                     "imaginary number", "kalpanik sankhya",
+                     "iota"),
+        "title": "Complex Numbers and i (Iota)",
+        "formula": "i = √(-1), so i² = -1. A complex number is "
+                   "a + bi: a = real part, b = imaginary part.",
+        "explain": "Complex numbers were created because "
+                   "x² = -1 has no real answer. |a + bi| "
+                   "(modulus) = √(a² + b²).",
+        "hinglish": "i matlab √-1; a + bi me a asal bhaag hai "
+                    "aur b kalpanik bhaag.",
+        "example": {
+            "q": "Modulus of 3 + 4i?",
+            "steps": ["√(3² + 4²) = √25 = 5"],
+            "answer": "|3 + 4i| = 5",
+        },
+    },
+    {
+        "id": "matrix_basics",
+        "keywords": ("matrix", "avyooh"),
+        "title": "Matrix and its Order",
+        "formula": "A matrix is a rectangular array of numbers. "
+                   "Order = rows × columns. Two matrices add "
+                   "only when their orders are equal.",
+        "explain": "A 2×3 matrix has 2 rows and 3 columns. "
+                   "Addition/subtraction is element-by-element "
+                   "and needs the same order.",
+        "hinglish": "Matrix sankhyaon ki aayatakar vyavastha "
+                    "hai; order pehle rows, phir columns se "
+                    "likhte hain.",
+        "example": {
+            "q": "Order of [[1, 2, 3], [4, 5, 6]]?",
+            "steps": ["2 rows, 3 columns"],
+            "answer": "Order = 2 × 3",
+        },
+    },
+    {
+        "id": "midpoint_section",
+        "keywords": ("midpoint formula", "madhya bindu ka sutra",
+                     "section formula"),
+        "title": "Midpoint and Section Formula",
+        "formula": "Midpoint of (x₁,y₁), (x₂,y₂) = "
+                   "((x₁+x₂)/2, (y₁+y₂)/2).",
+        "explain": "The midpoint is just the average of the "
+                   "two x's and the average of the two y's.",
+        "hinglish": "Beech wala bindu dono x ka ausat aur dono "
+                    "y ka ausat hota hai.",
+        "example": {
+            "q": "Midpoint of (2, 4) and (6, 8)?",
+            "steps": ["((2+6)/2, (4+8)/2) = (4, 6)"],
+            "answer": "(4, 6)",
+        },
+    },
+    {
+        "id": "distance_formula",
+        "keywords": ("distance formula", "doori ka sutra"),
+        "title": "Distance Formula",
+        "formula": "Distance between (x₁,y₁) and (x₂,y₂) = "
+                   "√((x₂-x₁)² + (y₂-y₁)²).",
+        "explain": "It is Pythagoras' theorem applied to the "
+                   "gap between the two points.",
+        "hinglish": "Do binduo ki doori asal me Pythagoras se "
+                    "hi aati hai — x ka antar aur y ka antar.",
+        "example": {
+            "q": "Distance between (0, 0) and (3, 4)?",
+            "steps": ["√(3² + 4²) = √25 = 5"],
+            "answer": "5 units",
+        },
+    },
+    {
+        "id": "ci_vs_si",
+        "keywords": ("compound interest", "chakravridhi byaj",
+                     "compound interest aur simple interest",
+                     "ci aur si"),
+        "title": "Compound Interest (and how it differs from SI)",
+        "formula": "Amount = P(1 + R/100)^T; CI = Amount - P. "
+                   "In SI the interest is on P only; in CI it "
+                   "is on P + past interest.",
+        "explain": "That 'interest on interest' is why CI is "
+                   "always a little more than SI for the same "
+                   "P, R, T (after the first year).",
+        "hinglish": "Chakravridhi byaj me har saal byaj par bhi "
+                    "byaj lagta hai, isliye SI se zyada hota hai.",
+        "example": {
+            "q": "CI on ₹1000 at 10% for 2 years?",
+            "steps": ["Amount = 1000 × (1.1)² = 1210",
+                      "CI = 1210 - 1000 = 210"],
+            "answer": "CI = ₹210",
+        },
+    },
+    {
+        "id": "pi_concept",
+        "keywords": ("π", "pi ki value", "what is pi",
+                     "pi ka matlab"),
+        "title": "What is Pi (π)?",
+        "formula": "π = circumference / diameter of ANY circle "
+                   "≈ 3.14159 (school value 22/7).",
+        "explain": "Whatever the circle's size, its boundary "
+                   "is always π times its diameter.",
+        "hinglish": "Pi har gol ki paridhi aur vyas ka ratio "
+                    "hai — hamesha ek hi, lagbhag 3.14159.",
+        "example": {
+            "q": "Circumference of a circle with diameter 7?",
+            "steps": ["C = π × d = (22/7) × 7 = 22"],
+            "answer": "22 units",
+        },
+    },
+    {
+        "id": "profit_loss",
+        "keywords": ("profit aur loss", "labh aur hani",
+                     "labh hani", "profit loss kya"),
+        "title": "Profit and Loss",
+        "formula": "Profit = SP - CP; Loss = CP - SP; "
+                   "Profit % = (Profit / CP) × 100.",
+        "explain": "Percent is ALWAYS calculated on the cost "
+                   "price (CP), never on the selling price.",
+        "hinglish": "Bechne ki keemat kharid se zyada to labh, "
+                    "kam to hani — percent hamesha kharid "
+                    "keemat par nikalta hai.",
+        "example": {
+            "q": "Bought for ₹400, sold for ₹500. Profit %?",
+            "steps": ["Profit = 100; % = 100/400 × 100 = 25%"],
+            "answer": "25% profit",
+        },
+    },
+    {
+        "id": "discount_concept",
+        "keywords": ("discount kese", "discount kaise",
+                     "discount kya", "chhoot kese",
+                     "discount ka matlab"),
+        "title": "How Discount Works",
+        "formula": "Discount = Marked Price - Selling Price; "
+                   "Discount % is always on the marked price.",
+        "explain": "A 20% discount on ₹500 means you pay "
+                   "500 - 100 = ₹400.",
+        "hinglish": "Chhoot ankit mulya (tag wali keemat) par "
+                    "milti hai; dena padta hai keemat minus "
+                    "chhoot.",
+        "example": {
+            "q": "₹800 par 25% discount — kitna dena hoga?",
+            "steps": ["Discount = 200; pay 800 - 200 = 600"],
+            "answer": "₹600",
+        },
+    },
+    {
+        "id": "slope_concept",
+        "keywords": ("slope kya", "dhal kya", "slope (dhal)"),
+        "title": "Slope of a Line",
+        "formula": "Slope m = (y₂ - y₁) / (x₂ - x₁) — how steep "
+                   "the line is.",
+        "explain": "Bigger slope = steeper line. A horizontal "
+                   "line has slope 0; a vertical line's slope is "
+                   "undefined.",
+        "hinglish": "Dhal batati hai ki line kitni khadi (steep) "
+                    "hai — y ka badlav ÷ x ka badlav.",
+        "example": {
+            "q": "Slope through (1, 2) and (3, 8)?",
+            "steps": ["(8 - 2) / (3 - 1) = 6/2 = 3"],
+            "answer": "Slope = 3",
+        },
+    },
+    {
+        "id": "poly_zeroes",
+        "keywords": ("zeroes ka matlab", "shunyak ka matlab",
+                     "polynomial ke zeroes", "zeroes (shunyak)"),
+        "title": "Zeroes of a Polynomial",
+        "formula": "A zero of p(x) is a value of x where "
+                   "p(x) = 0. For x² + bx + c style quadratics: "
+                   "sum of zeroes = -b/a, product = c/a.",
+        "explain": "Graphically, the zeroes are the x-points "
+                   "where the graph cuts the x-axis.",
+        "hinglish": "x ki woh value jispar polynomial ki value "
+                    "zero ho jaye — wahi uska shunyak hai.",
+        "example": {
+            "q": "Zeroes of x² - 5x + 6?",
+            "steps": ["(x - 2)(x - 3) = 0, so x = 2 or 3"],
+            "answer": "Zeroes are 2 and 3",
+        },
+    },
+    {
+        "id": "poly_degree",
+        "keywords": ("polynomial ki degree", "degree kya hoti",
+                     "bahupad ki ghaat", "degree of polynomial"),
+        "title": "Degree of a Polynomial",
+        "formula": "Degree = the HIGHEST power of x in the "
+                   "polynomial.",
+        "explain": "Degree 1 = linear, 2 = quadratic, 3 = "
+                   "cubic. The degree also caps how many zeroes "
+                   "the polynomial can have.",
+        "hinglish": "Sabse badi ghaat (power) hi polynomial ki "
+                    "degree hoti hai.",
+        "example": {
+            "q": "Degree of 4x³ + 2x + 7?",
+            "steps": ["Highest power is 3"],
+            "answer": "Degree = 3 (cubic)",
+        },
+    },
+    {
+        "id": "data_frequency",
+        "keywords": ("data kya", "frequency kya", "barambarta",
+                     "class interval", "varg antaral",
+                     "data hota hai"),
+        "title": "Data, Frequency and Class Interval",
+        "formula": "Data = collected facts/numbers. Frequency "
+                   "= how many times a value occurs. A class "
+                   "interval groups values, e.g. 10-20.",
+        "explain": "Statistics starts by organising raw data "
+                   "into classes and counting frequencies.",
+        "hinglish": "Jama ki gayi jaankari data hai; koi value "
+                    "kitni baar aayi, wahi uski barambarta hai.",
+        "example": {
+            "q": "Frequency of 5 in 2, 5, 3, 5, 5?",
+            "steps": ["5 appears 3 times"],
+            "answer": "Frequency of 5 = 3",
+        },
+    },
+    {
+        "id": "heron_concept",
+        "keywords": ("heron",),
+        "title": "Heron's Formula",
+        "formula": "Area = √(s(s-a)(s-b)(s-c)), where "
+                   "s = (a+b+c)/2 is the semi-perimeter.",
+        "explain": "Use it when all three sides of a triangle "
+                   "are known but the height is not.",
+        "hinglish": "Teeno side pata hon aur unchai na pata ho, "
+                    "tab Heron ka formula area deta hai.",
+        "example": {
+            "q": "Area of a 3-4-5 triangle?",
+            "steps": ["s = 6; √(6 × 3 × 2 × 1) = √36 = 6"],
+            "answer": "6 square units",
+        },
+    },
+    {
+        "id": "tangent_concept",
+        "keywords": ("tangent (sparsh", "sparsh rekha kya",
+                     "tangent kya"),
+        "title": "Tangent to a Circle",
+        "formula": "A tangent touches the circle at exactly "
+                   "ONE point, and the radius to that point is "
+                   "perpendicular to it.",
+        "explain": "From one outside point, the two tangents "
+                   "to a circle are always equal in length.",
+        "hinglish": "Sparsh rekha vritt ko sirf ek bindu par "
+                    "chhooti hai aur trijya uspar lamb (90°) "
+                    "hoti hai.",
+        "example": {
+            "q": "Tangent length from a point 13 cm from the "
+                 "centre, radius 5 cm?",
+            "steps": ["√(13² - 5²) = √144 = 12"],
+            "answer": "12 cm",
+        },
+    },
+    {
+        "id": "sector_concept",
+        "keywords": ("sector kya", "trijyakhand", "sector ("),
+        "title": "Sector and Segment of a Circle",
+        "formula": "Sector area = (θ/360°) × πr². A sector is "
+                   "the 'pizza slice'; a segment is the part cut "
+                   "off by a chord.",
+        "explain": "The sector's share of the full circle is "
+                   "exactly its angle's share of 360°.",
+        "hinglish": "Do trijya aur chaap se ghira hissa sector "
+                    "(trijyakhand) hota hai.",
+        "example": {
+            "q": "Sector area: r = 6, θ = 90°?",
+            "steps": ["(90/360) × π × 36 = 9π ≈ 28.27"],
+            "answer": "≈ 28.27 square units",
+        },
+    },
+    {
+        "id": "log_concept",
+        "keywords": ("log kya", "logarithm", "laghuganak",
+                     "log (logarithm)"),
+        "title": "What is a Logarithm?",
+        "formula": "log_b(x) asks: 'b to what power gives x?' "
+                   "log₂8 = 3 because 2³ = 8.",
+        "explain": "A logarithm is just the exponent written "
+                   "the other way round: if b^y = x, then "
+                   "log_b(x) = y.",
+        "hinglish": "Log matlab ghaat ko ulta puchhna — 2 ki "
+                    "kaunsi power 8 degi? log₂8 = 3.",
+        "example": {
+            "q": "Find log₁₀100.",
+            "steps": ["10² = 100, so the power is 2"],
+            "answer": "log₁₀100 = 2",
+        },
+    },
+    {
+        "id": "linear_eq_concept",
+        "keywords": ("linear equation kya", "rekhik samikaran",
+                     "do charo wali", "pair of linear"),
+        "title": "Linear Equations",
+        "formula": "A linear equation has degree 1: ax + by + "
+                   "c = 0. A pair of them can have one solution, "
+                   "none, or infinitely many.",
+        "explain": "Its graph is always a straight line — "
+                   "that is where the name 'linear' comes from.",
+        "hinglish": "Jiski sabse badi power 1 ho, woh rekhik "
+                    "samikaran hai; graph hamesha seedhi line "
+                    "banta hai.",
+        "example": {
+            "q": "Solve 2x + 4 = 10.",
+            "steps": ["2x = 6, so x = 3"],
+            "answer": "x = 3",
+        },
+    },
+    {
+        "id": "derivative_concept",
+        "keywords": ("derivative kya", "derivative hota",
+                     "avakalan kya"),
+        "title": "What is a Derivative?",
+        "formula": "The derivative f'(x) is the rate of change "
+                   "of f at x — the slope of its graph there. "
+                   "d/dx (xⁿ) = n·xⁿ⁻¹.",
+        "explain": "Speed is the derivative of distance; "
+                   "acceleration is the derivative of speed.",
+        "hinglish": "Derivative matlab koi cheez kitni tezi se "
+                    "badal rahi hai, usi pal par.",
+        "example": {
+            "q": "Derivative of x³?",
+            "steps": ["3 × x² = 3x²"],
+            "answer": "3x²",
+        },
+    },
+    {
+        "id": "integral_concept",
+        "keywords": ("integral ka matlab", "integral kya",
+                     "samakalan kya", "integral hota",
+                     "integration derivative ka ulta"),
+        "title": "What is an Integral?",
+        "formula": "Integration is the reverse of "
+                   "differentiation; ∫xⁿ dx = xⁿ⁺¹/(n+1) + C. A "
+                   "definite integral gives the area under a "
+                   "curve.",
+        "explain": "If the derivative breaks a quantity into "
+                   "its rate, the integral adds the rate back "
+                   "up into the quantity.",
+        "hinglish": "Samakalan derivative ka ulta hai — rate "
+                    "ko jodkar asal matra wapas milti hai.",
+        "example": {
+            "q": "∫ x² dx?",
+            "steps": ["x³/3 + C"],
+            "answer": "x³/3 + C",
+        },
+    },
+    {
+        "id": "limit_concept",
+        "keywords": ("limit kya", "limit hoti", "seema kya"),
+        "title": "What is a Limit?",
+        "formula": "lim (x→a) f(x) = the value f(x) approaches "
+                   "as x gets closer and closer to a.",
+        "explain": "The function may not even be defined AT a "
+                   "(like (x²-4)/(x-2) at x = 2), yet it clearly "
+                   "approaches a value near a.",
+        "hinglish": "Limit woh value hai jiske paas function "
+                    "pahunchta hai jab x kisi point ke bilkul "
+                    "kareeb jata hai.",
+        "example": {
+            "q": "lim (x→2) (x² - 4)/(x - 2)?",
+            "steps": ["(x-2)(x+2)/(x-2) = x + 2 → 4"],
+            "answer": "4",
+        },
+    },
+    {
+        "id": "exponent_rules",
+        "keywords": ("exponent", "ghaat ke niyam", "ghaatank"),
+        "title": "Laws of Exponents",
+        "formula": "aᵐ × aⁿ = aᵐ⁺ⁿ; aᵐ ÷ aⁿ = aᵐ⁻ⁿ; "
+                   "(aᵐ)ⁿ = aᵐⁿ; a⁰ = 1; a⁻ⁿ = 1/aⁿ.",
+        "explain": "Same base: multiplying adds the powers, "
+                   "dividing subtracts them.",
+        "hinglish": "Aadhar ek ho to guna me ghaate judti "
+                    "hain, bhaag me ghatti hain.",
+        "example": {
+            "q": "2³ × 2⁴?",
+            "steps": ["2⁷ = 128"],
+            "answer": "128",
+        },
+    },
+    {
+        "id": "determinant_concept",
+        "keywords": ("determinant kya", "saaranik"),
+        "title": "What is a Determinant?",
+        "formula": "For [[a, b], [c, d]]: det = ad - bc. It is "
+                   "ONE number computed from a square matrix.",
+        "explain": "A determinant of 0 means the matrix cannot "
+                   "be inverted and its equations have no unique "
+                   "solution.",
+        "hinglish": "Determinant matrix se nikla ek khaas "
+                    "number hai — 2×2 ke liye ad - bc.",
+        "example": {
+            "q": "det [[2, 3], [1, 4]]?",
+            "steps": ["2×4 - 3×1 = 8 - 3 = 5"],
+            "answer": "5",
+        },
+    },
+    {
+        "id": "axes_quadrants",
+        "keywords": ("quadrant", "chaturthansh",
+                     "x-axis aur y-axis", "aksh kya"),
+        "title": "Axes and Quadrants",
+        "formula": "The x-axis and y-axis divide the plane "
+                   "into 4 quadrants. On the y-axis x = 0; on "
+                   "the x-axis y = 0.",
+        "explain": "Quadrants go anti-clockwise from the top "
+                   "right: I (+,+), II (-,+), III (-,-), IV (+,-).",
+        "hinglish": "Do aksh plane ko 4 hisso (quadrants) me "
+                    "baant-te hain; y-axis par x hamesha 0 "
+                    "hota hai.",
+        "example": {
+            "q": "Which quadrant is (-3, 5) in?",
+            "steps": ["x negative, y positive → Quadrant II"],
+            "answer": "Quadrant II",
+        },
+    },
+    {
+        "id": "angle_sum_property",
+        "keywords": ("teeno kono ka yog", "konon ka yog 180",
+                     "angle sum property"),
+        "title": "Angle Sum Property of a Triangle",
+        "formula": "The three angles of any triangle always "
+                   "add up to 180°.",
+        "explain": "So if two angles are known, the third is "
+                   "simply 180° minus their sum.",
+        "hinglish": "Kisi bhi tribhuj ke teeno kono ka yog "
+                    "hamesha 180 degree hi hota hai.",
+        "example": {
+            "q": "Angles 60° and 50° — third angle?",
+            "steps": ["180 - 60 - 50 = 70°"],
+            "answer": "70°",
+        },
+    },
+    {
+        "id": "right_triangle",
+        "keywords": ("samkon tribhuj kise", "samkon tribhuj kya",
+                     "right triangle kya"),
+        "title": "Right-Angled Triangle",
+        "formula": "A triangle with ONE angle exactly 90°. The "
+                   "side opposite it (the longest) is the "
+                   "hypotenuse.",
+        "explain": "All of Pythagoras and basic trigonometry "
+                   "lives inside right-angled triangles.",
+        "hinglish": "Jis tribhuj ka ek kon pura 90 degree ho, "
+                    "wohi samkon tribhuj hai.",
+        "example": {
+            "q": "Sides 3, 4, 5 — right-angled?",
+            "steps": ["3² + 4² = 25 = 5² — yes"],
+            "answer": "Yes, right-angled",
+        },
+    },
+    {
+        "id": "area_vs_perimeter",
+        "keywords": ("kshetrafal aur parimaap",
+                     "area aur perimeter", "area and perimeter"),
+        "title": "Area vs Perimeter",
+        "formula": "Perimeter = length of the boundary (in "
+                   "cm); Area = surface covered (in cm²).",
+        "explain": "Fencing a field uses the perimeter; "
+                   "tiling its floor uses the area.",
+        "hinglish": "Parimaap kinare ki lambai hai, kshetrafal "
+                    "andar bhari hui jagah.",
+        "example": {
+            "q": "Rectangle 5 × 3: perimeter and area?",
+            "steps": ["P = 2(5 + 3) = 16; A = 5 × 3 = 15"],
+            "answer": "Perimeter 16, Area 15",
+        },
+    },
+    {
+        "id": "mensuration_formulas",
+        "keywords": ("volume formula", "aayatan ka formula",
+                     "aayatan (volume) kya", "aayatan kya hota",
+                     "surface area aur volume",
+                     "surface area formula",
+                     "ka volume cylinder"),
+        "title": "Volume and Surface Area — the Main Formulas",
+        "formula": "Cuboid V = l×b×h; Cylinder V = πr²h; Cone "
+                   "V = (1/3)πr²h; Sphere V = (4/3)πr³, "
+                   "surface = 4πr².",
+        "explain": "Volume is the space INSIDE (cm³); surface "
+                   "area is the skin OUTSIDE (cm²). A cone is "
+                   "exactly one-third of its cylinder.",
+        "hinglish": "Aayatan andar ki jagah hai, prasth "
+                    "kshetrafal bahar ki satah — dono alag "
+                    "cheezein hain.",
+        "example": {
+            "q": "Volume of a cylinder, r = 7, h = 10?",
+            "steps": ["π × 49 × 10 ≈ 1539.38"],
+            "answer": "≈ 1539.38 cubic units",
+        },
+    },
+    {
+        "id": "ratio_proportion",
+        "keywords": ("ratio aur proportion",
+                     "anupat aur samanupat", "ratio proportion"),
+        "title": "Ratio vs Proportion",
+        "formula": "A ratio compares two quantities (3:4). A "
+                   "proportion says two ratios are EQUAL "
+                   "(3:4 = 6:8).",
+        "explain": "In a proportion, cross-products are equal: "
+                   "if a:b = c:d then a×d = b×c.",
+        "hinglish": "Anupat sirf tulna hai; samanupat me do "
+                    "anupat barabar hote hain.",
+        "example": {
+            "q": "Is 2:3 = 4:6 a proportion?",
+            "steps": ["2 × 6 = 12 and 3 × 4 = 12 — equal"],
+            "answer": "Yes, it is a proportion",
+        },
+    },
+    {
+        "id": "coordinate_geometry_concept",
+        "keywords": ("coordinate geometry",
+                     "nirdeshank jyamiti"),
+        "title": "Coordinate Geometry",
+        "formula": "Points are written as (x, y); distance "
+                   "between (x1, y1) and (x2, y2) is "
+                   "√((x2−x1)² + (y2−y1)²).",
+        "explain": "Coordinate geometry studies shapes with "
+                   "numbers: every point has an x (horizontal) "
+                   "and a y (vertical) position, and distances, "
+                   "midpoints and areas are found with formulas.",
+        "hinglish": "Coordinate geometry me har bindu ko "
+                    "(x, y) se likhte hain aur doori, madhy "
+                    "bindu aadi formula se nikalte hain.",
+        "example": {
+            "q": "Distance between (0, 0) and (3, 4)?",
+            "steps": ["√((3−0)² + (4−0)²) = √(9 + 16) = √25"],
+            "answer": "5",
         },
     },
 ]

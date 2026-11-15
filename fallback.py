@@ -269,6 +269,23 @@ def _is_nonmaths(question):
             "play both" in q or "play neither" in q
             or "power set" in q):
         return False
+    # Wave 59: Hinglish story dressing — sets/ages/geometry
+    # word problems mention cricket or football as scene
+    # colour ("30 ladke cricket khelte hain... dono khelte
+    # hain, kitne ladke?", a brother who "cricket khelta
+    # hai" in an ages story, a sphere described as a
+    # football). Digits + a quantitative ask + a maths
+    # context word is a maths question, not sports chat.
+    if any(ch.isdigit() for ch in q) and (
+            "kitna" in q or "kitne" in q or "kitni" in q
+            or "how many" in q or "how much" in q) and any(
+            w in q for w in (
+                "dono", "khelte", "khelta", "umar", "yog",
+                "antar", "trijya", "volume", "kshetrafal",
+                "paridhi", "doori", "unchai", "anupat",
+                "anupaat", "sambhavna", "probability",
+                "ausat", "byaj", "speed", "train")):
+        return False
     return any(kw in q for kw in _NONMATHS_KEYWORDS)
 
 
