@@ -76,8 +76,8 @@
 /* Wave 63: typed exam-paper sheet CSS — stylesheet ?v=35
    (cache already v12 in this tree via Wave 62). */
 /* Wave 64: Hindi-medium papers — cache v13, stylesheet ?v=36. */
-/* Wave 68: chat answer overhaul CSS — cache v14, stylesheet ?v=37. */
-var GANITRA_CACHE = "ganitra-static-v14";
+/* Wave 69: example chips removed (Suraj) — cache v15, stylesheet ?v=38. */
+var GANITRA_CACHE = "ganitra-static-v15";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();
