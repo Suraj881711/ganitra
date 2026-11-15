@@ -25,9 +25,9 @@ scenes have always used — #scene-stage in the chat empty state:
 3. The logo on the 3D plaque is the app's own
    /static/logo-full-t.png, byte-for-byte the file it has
    always been (hashes asserted below).
-4. Service worker: cache ganitra-static-v13; /static/models/
+4. Service worker: cache ganitra-static-v14; /static/models/
    bypasses the worker cache (HTTP cache + the ?v=61 pin in
-   scene3d.js govern freshness). Stylesheet pin ?v=36.
+   scene3d.js govern freshness). Stylesheet pin ?v=37.
 
 No solver file changed; answer behaviour is untouched.
 
@@ -42,8 +42,8 @@ comment there). Wave 62B's own assertions live in
 verify_wave62b.py.
 
 MERGE-4 (Waves 62B+63+64+65): the pin checks below were
-reconciled to the merged pins — stylesheet ?v=36, cache
-ganitra-static-v13 (Wave 64's Hindi-papers CSS is the newest).
+reconciled to the merged pins — stylesheet ?v=37, cache
+ganitra-static-v14 (Wave 64's Hindi-papers CSS is the newest).
 
 Run:  python3 verify_wave61.py
 """
@@ -196,10 +196,10 @@ check("CSS: canvas is pointer-free (Wave 62 — no orbit; taps hit the stage)",
       "touch-action: pan-y" not in css and ".boy-writer-3d" in css)
 
 sw = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
-check("SW cache v13", 'GANITRA_CACHE = "ganitra-static-v13"' in sw)
+check("SW cache v13", 'GANITRA_CACHE = "ganitra-static-v14"' in sw)
 check("SW bypasses /static/models/", '"/static/models/"' in sw)
 base = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
-check("stylesheet pin ?v=36", "v='36'" in base)
+check("stylesheet pin ?v=37", "v='37'" in base)
 
 for vend in ["vendor/three.module.js",
              "vendor/addons/loaders/GLTFLoader.js",
@@ -223,7 +223,7 @@ page = client.get("/").get_data(as_text=True)
 check("served chat page has the 3D layer", 'id="scene-3d"' in page)
 check("served chat page has the import map", "vendor/three.module.js" in page)
 check("served chat page keeps the 2D stage", 'id="scene-stage"' in page)
-check("served page pins stylesheet ?v=36", "style.css?v=36" in page)
+check("served page pins stylesheet ?v=37", "style.css?v=37" in page)
 for url in ["/static/scene3d.js", "/static/vendor/three.module.js",
             "/static/models/lion.glb", "/static/models/boy.glb",
             "/static/models/tiger.glb", "/static/models/eagle.glb"]:

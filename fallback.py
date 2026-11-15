@@ -197,6 +197,18 @@ def _is_junk(question, result):
     if re.fullmatch(r"[a-z](\*\*\d+)?(\*[a-z](\*\*\d+)?)+",
                     compact):
         return len(letters) >= 5
+    # Wave 68: Devanagari letter-soup — a bare Hindi word
+    # ("बताओ") letter-multiplied by sympy ("ओ*त*ब*ा") slipped
+    # under the Latin thresholds (4 factors, no exponents,
+    # and the plain-product regex is Latin-only). A product
+    # of 4+ distinct single NON-Latin letters/marks with no
+    # digit anywhere in the answer is soup, never a genuine
+    # solution (real symbolic answers use Latin symbols).
+    if not any(ch.isdigit() for ch in ans) \
+            and ("*" in ans or "·" in ans):
+        nonlatin = {f for f in factors if ord(f) > 127}
+        if len(nonlatin) >= 4:
+            return True
     return False
 
 
@@ -223,11 +235,20 @@ _GREETING_EXACT = {
     "tumhara naam kya hai", "good morning", "good evening",
     "good afternoon", "good night", "bye", "ok", "okay",
     "haan", "yes", "no", "nahi",
+    # Wave 68: Devanagari small talk — "नमस्ते" alone used to
+    # fall through to the long guide card because the exact
+    # set only knew the Roman spellings.
+    "नमस्ते", "नमस्कार", "हेलो", "हाय", "धन्यवाद", "शुक्रिया",
+    "कैसे हो", "कैसे हो आप", "तुम कौन हो", "तुम्हारा नाम",
+    "तुम्हारा नाम क्या है", "अलविदा", "शुभ प्रभात",
+    "शुभ रात्रि", "हाँ", "नहीं", "ठीक है",
 }
 
 _GREETING_STARTS = ("hello", "hi ", "hey ", "namaste", "good morning",
                     "good evening", "good afternoon", "thank you",
-                    "thanks", "kaise ho", "how are you")
+                    "thanks", "kaise ho", "how are you",
+                    "नमस्ते", "नमस्कार", "धन्यवाद", "शुक्रिया",
+                    "कैसे हो", "शुभ प्रभात")
 
 _HINDI_MARKERS = ("kya", "hai", "ho", "kaise", "tum", "mera",
                   "ka", "ki", "batao", "samjhao", "dhanyavaad",
@@ -242,13 +263,41 @@ def _looks_hindi(question):
     return bool(words & set(_HINDI_MARKERS))
 
 
+# Extra Roman-Hindi markers used ONLY for flavour choice:
+# _HINDI_MARKERS misses everyday Hinglish words like "kuch",
+# "bata", "sawal", "kitna" — "kuch bhi bata do" read as
+# English and got the English reply line.
+_FLAVOUR_MARKERS = set(_HINDI_MARKERS) | {
+    "kuch", "bata", "chahiye", "sawal", "jawab", "kitna",
+    "kitne", "kitni", "wala", "wali", "mujhe", "hain",
+    "dunga", "hoga", "hogi", "raha", "rahi", "mera", "mere",
+}
+
+
+def _flavour(question):
+    """Wave 68: the script flavour of a question — "dev"
+    (Devanagari Hindi), "roman" (Hinglish in Latin letters)
+    or "en". The friendly one-line replies (greeting,
+    maths-only guard, not-found) are written per flavour, so
+    a Devanagari question no longer gets a Roman-Hindi reply
+    (the mixed-language mess Suraj flagged on 15 Nov 2026)
+    and a Hinglish question gets Hinglish back."""
+    q = str(question or "")
+    if any("ऀ" <= ch <= "ॿ" for ch in q):
+        return "dev"
+    if _looks_hindi(q):
+        return "roman"
+    words = set(re.findall(r"[a-z]+", q.lower()))
+    return "roman" if words & _FLAVOUR_MARKERS else "en"
+
+
 def _greeting_kind(question):
     """Return a greeting key when the WHOLE message (short, no
     digits, no operators) is small talk, else None. A greeting
     glued to a real question ("hello, solve 2+2") is NOT small
     talk — the salvage layer handles those."""
     q = str(question or "").strip().lower()
-    q = re.sub(r"[!?.,;:\"]+", "", q).strip()
+    q = re.sub(r"[!?.,;:\"।]+", "", q).strip()
     if not q or any(ch.isdigit() for ch in q):
         return None
     if any(ch in q for ch in "+-*/^=<>%"):
@@ -271,6 +320,12 @@ _NONMATHS_KEYWORDS = (
     "aasmaan neela", "news", "khabar", "meaning of love",
     "girlfriend", "boyfriend", "joke", "chutkula",
     "who won", "match ka score", "score kya",
+    # Wave 68: the same topics in Devanagari — "भारत की
+    # राजधानी क्या है?" used to miss every Roman keyword and
+    # land on the long guide card.
+    "राजधानी", "प्रधानमंत्री", "प्रधान मंत्री", "राष्ट्रपति",
+    "मौसम", "फ़िल्म", "फिल्म", "गाना", "चुटकुला",
+    "मैच का स्कोर",
 )
 
 
@@ -298,13 +353,22 @@ def _is_nonmaths(question):
     # context word is a maths question, not sports chat.
     if any(ch.isdigit() for ch in q) and (
             "kitna" in q or "kitne" in q or "kitni" in q
-            or "how many" in q or "how much" in q) and any(
+            or "how many" in q or "how much" in q
+            or "कितना" in q or "कितने" in q or "कितनी" in q) and any(
             w in q for w in (
                 "dono", "khelte", "khelta", "umar", "yog",
                 "antar", "trijya", "volume", "kshetrafal",
                 "paridhi", "doori", "unchai", "anupat",
                 "anupaat", "sambhavna", "probability",
-                "ausat", "byaj", "speed", "train")):
+                "ausat", "byaj", "speed", "train",
+                # Wave 68: the same maths-context words in
+                # Devanagari, so a Hindi sets/ages/geometry
+                # story that merely mentions a game stays a
+                # maths question.
+                "दोनों", "खेलते", "खेलता", "उम्र", "योग",
+                "अंतर", "त्रिज्या", "आयतन", "क्षेत्रफल",
+                "परिधि", "दूरी", "ऊँचाई", "अनुपात",
+                "संभावना", "औसत", "ब्याज", "चाल")):
         return False
     return any(kw in q for kw in _NONMATHS_KEYWORDS)
 
@@ -318,6 +382,24 @@ def _friendly_result(kind, answer, steps, hindi):
         "fallback": True,
         "fallback_kind": kind,
     }
+
+
+def _plain_result(kind, answer, hindi, steps=None):
+    """Wave 68: a PLAIN reply — the chat renders it as one
+    simple bubble line (plus any guidance lines in `steps` as
+    quiet sub-lines), never as an answer card with a badge,
+    steps panel, advice or icon row. Suraj's rule (15 Nov
+    2026): greetings, the maths-only guard, gibberish and
+    unsolved questions get ONE short line, nothing more.
+    `plain_reply` is the sentinel the chat renderer keys on;
+    the classic pages render the same text plainly too.
+    Merge-5: the result ALSO carries Wave 67's `plain` flag,
+    so both waves' renderers and i18n gates (result_is_plain)
+    treat it as the same one-line reply."""
+    result = _friendly_result(kind, answer, steps or [], hindi)
+    result["plain_reply"] = True
+    result["plain"] = True
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -361,79 +443,99 @@ def _not_found_result(question, hindi, lang=None):
         "steps": [],
         "fallback": True,
         "fallback_kind": "not_found",
+        # Merge-5: Wave 68's chat renderer keys on plain_reply,
+        # Wave 67's on plain / the not_found kind — carry both
+        # flags so the one line renders plainly everywhere.
+        "plain": True,
+        "plain_reply": True,
     }
 
 
+_GREETING_LINES = {
+    "default": {
+        "en": "Hello! 😊 I'm doing great. Send me a maths "
+              "question and I'll solve it step by step.",
+        "roman": "Namaste! 😊 Main bilkul theek hoon. Apna "
+                 "maths ka sawal bhejo — main step-by-step "
+                 "hal dunga.",
+        "dev": "नमस्ते! 😊 मैं बिल्कुल ठीक हूँ। अपना गणित का "
+               "सवाल भेजिए — मैं चरण-दर-चरण हल दूँगा।",
+    },
+    "thanks": {
+        "en": "You're welcome! 😊 Send me another maths "
+              "question any time.",
+        "roman": "Koi baat nahi! 😊 Kuch aur maths ka sawal "
+                 "ho to bhejo.",
+        "dev": "कोई बात नहीं! 😊 और कोई गणित का सवाल हो तो "
+               "भेजिए।",
+    },
+    "who": {
+        "en": "I'm Ganitra — your maths friend. Type or "
+              "photograph any maths question and I'll solve "
+              "it step by step.",
+        "roman": "Main Ganitra hoon — tumhara maths dost. "
+                 "Koi bhi ganit ka sawal likho ya photo bhejo, "
+                 "main step-by-step hal dunga.",
+        "dev": "मैं Ganitra हूँ — आपका गणित दोस्त। कोई भी "
+               "गणित का सवाल लिखिए या फ़ोटो भेजिए, मैं "
+               "चरण-दर-चरण हल दूँगा।",
+    },
+    "bye": {
+        "en": "Bye! 👋 Whenever maths gets stuck, I'm right "
+              "here.",
+        "roman": "Bye! 👋 Jab bhi maths me atak jao, main "
+                 "yahi hoon.",
+        "dev": "अलविदा! 👋 जब भी गणित में अटकें, मैं यहीं हूँ।",
+    },
+}
+
+
 def _greeting_result(question, hindi):
+    # Merge-5 (decided rule 1): a greeting gets Wave 68's
+    # friendly per-flavour ONE line with plain rendering —
+    # NOT Wave 67's "Answer not found." (a friendly hello
+    # deserves a friendly line).
     g = _greeting_kind(question)
     if g is None:
         return None
+    flavour = _flavour(question)
     if g in ("thank you", "thanks", "dhanyavaad", "dhanyavad",
-             "shukriya"):
-        if hindi:
-            return _friendly_result(
-                "greeting",
-                "Koi baat nahi! 😊 Kuch aur maths ka sawal hai to "
-                "bhejo, main hal karke deta hoon.",
-                [], hindi)
-        return _friendly_result(
-            "greeting",
-            "You're welcome! 😊 Send me any maths question and "
-            "I'll solve it step by step.",
-            [], hindi)
-    if g in ("tum kaun ho", "who are you", "your name",
-             "tumhara naam", "tumhara naam kya hai"):
-        if hindi:
-            return _friendly_result(
-                "greeting",
-                "Main Ganitra hoon — tumhara maths dost. Koi bhi "
-                "ganit ka sawal likho, photo bhejo ya bolkar puchho; "
-                "main step-by-step hal dunga.",
-                [], hindi)
-        return _friendly_result(
-            "greeting",
-            "I am Ganitra — your maths friend. Type, speak or "
-            "photograph any maths question and I'll solve it step "
-            "by step.",
-            [], hindi)
-    if g in ("bye",):
-        return _friendly_result(
-            "greeting",
-            "Bye! 👋 Jab bhi maths me atak jao, main yahi hoon.",
-            [], hindi)
-    if hindi:
-        return _friendly_result(
-            "greeting",
-            "Namaste! 😊 Main bilkul theek hoon. Apna maths ka "
-            "sawal bhejo — jaise '2x + 3 = 7' ya '240 ka 15% "
-            "kitna hoga' — main step-by-step hal dunga.",
-            [], hindi)
-    return _friendly_result(
-        "greeting",
-        "Hello! 😊 I'm doing great. Send me a maths question — "
-        "like 'solve 2x + 3 = 7' or 'what is 15% of 240' — and "
-        "I'll solve it step by step.",
-        [], hindi)
-
-
-def _nonmaths_result(hindi):
-    # Wave 67: ONE line only — the maths-only guard sentence
-    # itself. The old second half ("try me with sin 30…") is
-    # gone, and plain=True keeps the chat bubble to this line.
-    if hindi:
-        result = _friendly_result(
-            "nonmaths",
-            "Ye sawal maths ka nahi hai — Ganitra sirf Maths "
-            "ke sawal hal karta hai।",
-            [], hindi)
+             "shukriya", "धन्यवाद", "शुक्रिया"):
+        group = "thanks"
+    elif g in ("tum kaun ho", "who are you", "your name",
+               "tumhara naam", "tumhara naam kya hai",
+               "तुम कौन हो", "तुम्हारा नाम",
+               "तुम्हारा नाम क्या है"):
+        group = "who"
+    elif g in ("bye", "अलविदा"):
+        group = "bye"
     else:
-        result = _friendly_result(
-            "nonmaths",
-            "That's not a maths question — Ganitra only "
-            "solves Maths.",
-            [], hindi)
-    result["plain"] = True
-    return result
+        group = "default"
+    return _plain_result(
+        "greeting", _GREETING_LINES[group][flavour], hindi)
+
+
+_NONMATHS_LINES = {
+    # Merge-5 (decided rule 3): ONE guard line in the
+    # question's own flavour, plain rendering (Wave 68
+    # behaviour, Wave 67's plain flag preserved via
+    # _plain_result). The en/roman texts are Wave 67's
+    # trimmed guard sentences verbatim (pinned by
+    # test_wave67); the Devanagari line is Wave 68's, so a
+    # Hindi question gets a Hindi guard line.
+    "en": "That's not a maths question — Ganitra only "
+          "solves Maths.",
+    "roman": "Ye sawal maths ka nahi hai — Ganitra sirf Maths "
+             "ke sawal hal karta hai।",
+    "dev": "यह सवाल गणित का नहीं है — मैं सिर्फ़ गणित के "
+           "सवाल हल करता हूँ। 😊 कोई गणित का सवाल भेजिए, "
+           "चरण-दर-चरण हल दूँगा।",
+}
+
+
+def _nonmaths_result(question, hindi):
+    return _plain_result(
+        "nonmaths", _NONMATHS_LINES[_flavour(question)], hindi)
 
 
 # ---------------------------------------------------------------------------
@@ -450,85 +552,94 @@ def _nonmaths_result(hindi):
 # ---------------------------------------------------------------------------
 
 def _science_result(question, hindi):
+    # Merge-5: Wave 68's per-flavour version, kept as-is;
+    # _plain_result now also sets Wave 67's `plain` flag,
+    # so the guard renders plainly under both waves.
+    # Wave 68: the topic line now comes in the question's own
+    # script (a Devanagari Physics question used to get the
+    # Roman-Hindi line), and the result is a PLAIN reply: the
+    # guard line plus the formula guidance as quiet sub-lines
+    # — no answer card, no extra invitation step (the guard
+    # line already says what Ganitra does). The guidance
+    # content itself is Wave 20's, unchanged.
     q = str(question or "").lower()
+    flavour = _flavour(question)
     if "refractive" in q or "speed of light" in q \
             or "ray of light" in q or "light ray" in q:
-        topic, steps = "optics", [
+        steps = [
             "Formula (guidance): refractive index of B with "
             "respect to A, n = (speed of light in A) ÷ "
             "(speed of light in B).",
             "So speed in B = (speed in A) ÷ n — put your values "
             "into this formula and the Physics answer follows.",
         ]
-        if hindi:
-            topic_line = ("Ye Physics (Prakash / Optics) ka sawal "
-                          "hai — Ganitra sirf Maths ke sawal hal "
-                          "karta hai, isliye main iska nakli hal "
-                          "nahi dunga. 😊")
-        else:
-            topic_line = ("This is a Physics (Light / Optics) "
-                          "question — Ganitra only solves Maths, "
-                          "so I won't fake an answer for it. 😊")
+        topic_line = {
+            "en": "This is a Physics (Light / Optics) "
+                  "question — Ganitra only solves Maths, "
+                  "so I won't fake an answer for it. 😊",
+            "roman": "Ye Physics (Prakash / Optics) ka sawal "
+                     "hai — Ganitra sirf Maths ke sawal hal "
+                     "karta hai, isliye main iska nakli hal "
+                     "nahi dunga. 😊",
+            "dev": "यह Physics (प्रकाश / Optics) का सवाल है — "
+                   "Ganitra सिर्फ़ Maths के सवाल हल करता है, "
+                   "इसलिए मैं इसका नकली हल नहीं दूँगा। 😊",
+        }[flavour]
     elif any(w in q for w in ("velocity", "acceleration", "force",
                               "newton", "momentum", "friction",
                               "gravity", "kinetic energy",
                               "potential energy")):
-        topic, steps = "motion", [
+        steps = [
             "Useful formulas (guidance): speed v = distance ÷ "
             "time; acceleration a = (v − u) ÷ t; force F = "
             "mass × acceleration.",
         ]
-        topic_line = ("This is a Physics (Motion / Force) "
-                      "question — Ganitra only solves Maths, "
-                      "so I won't fake an answer for it. 😊")
-        if hindi:
-            topic_line = ("Ye Physics (Gati / Bal) ka sawal hai "
-                          "— Ganitra sirf Maths ke sawal hal "
-                          "karta hai, isliye main iska nakli hal "
-                          "nahi dunga. 😊")
+        topic_line = {
+            "en": "This is a Physics (Motion / Force) "
+                  "question — Ganitra only solves Maths, "
+                  "so I won't fake an answer for it. 😊",
+            "roman": "Ye Physics (Gati / Bal) ka sawal hai "
+                     "— Ganitra sirf Maths ke sawal hal "
+                     "karta hai, isliye main iska nakli hal "
+                     "nahi dunga. 😊",
+            "dev": "यह Physics (गति / बल) का सवाल है — "
+                   "Ganitra सिर्फ़ Maths के सवाल हल करता है, "
+                   "इसलिए मैं इसका नकली हल नहीं दूँगा। 😊",
+        }[flavour]
     elif any(w in q for w in ("voltage", "ampere", "resistance",
                               "ohm", "electric current", "circuit",
                               "capacitor")):
-        topic, steps = "electricity", [
+        steps = [
             "Useful formula (guidance): Ohm's law — V = I × R "
             "(voltage = current × resistance).",
         ]
-        topic_line = ("This is a Physics (Electricity) question "
-                      "— Ganitra only solves Maths, so I won't "
-                      "fake an answer for it. 😊")
-        if hindi:
-            topic_line = ("Ye Physics (Bijli / Electricity) ka "
-                          "sawal hai — Ganitra sirf Maths ke sawal "
-                          "hal karta hai, isliye main iska nakli "
-                          "hal nahi dunga. 😊")
+        topic_line = {
+            "en": "This is a Physics (Electricity) question "
+                  "— Ganitra only solves Maths, so I won't "
+                  "fake an answer for it. 😊",
+            "roman": "Ye Physics (Bijli / Electricity) ka "
+                     "sawal hai — Ganitra sirf Maths ke sawal "
+                     "hal karta hai, isliye main iska nakli "
+                     "hal nahi dunga. 😊",
+            "dev": "यह Physics (बिजली / Electricity) का सवाल "
+                   "है — Ganitra सिर्फ़ Maths के सवाल हल करता "
+                   "है, इसलिए मैं इसका नकली हल नहीं दूँगा। 😊",
+        }[flavour]
     else:
-        topic, steps = "general", []
-        topic_line = ("This is a Science question — Ganitra "
-                      "only solves Maths, so I won't fake an "
-                      "answer for it. 😊")
-        if hindi:
-            topic_line = ("Ye Science ka sawal hai — Ganitra "
-                          "sirf Maths ke sawal hal karta hai, "
-                          "isliye main iska nakli hal nahi "
-                          "dunga. 😊")
-    if hindi:
-        steps = steps + [
-            "Maths ka koi sawal ho to bhejo — jaise 'train ki "
-            "speed' wala sum ya 'x^2 - 5x + 6 = 0' — main "
-            "step-by-step hal dunga."]
-    else:
-        steps = steps + [
-            "Send me any Maths question — like a train "
-            "speed–distance sum or 'x^2 - 5x + 6 = 0' — and "
-            "I'll solve it step by step."]
-    result = _friendly_result("science", topic_line, steps, hindi)
-    # Wave 67: the chat shows ONLY the one-line refusal (the
-    # topic_line, with the "Ganitra sirf Maths / only solves
-    # Maths" wording). The formula-guidance steps stay in the
-    # payload for the full-solution page — the guard itself is
-    # unchanged (test_science_guard still proves it).
-    result["plain"] = True
-    return result
+        steps = []
+        topic_line = {
+            "en": "This is a Science question — Ganitra "
+                  "only solves Maths, so I won't fake an "
+                  "answer for it. 😊",
+            "roman": "Ye Science ka sawal hai — Ganitra "
+                     "sirf Maths ke sawal hal karta hai, "
+                     "isliye main iska nakli hal nahi "
+                     "dunga. 😊",
+            "dev": "यह Science का सवाल है — Ganitra सिर्फ़ "
+                   "Maths के सवाल हल करता है, इसलिए मैं इसका "
+                   "नकली हल नहीं दूँगा। 😊",
+        }[flavour]
+    return _plain_result("science", topic_line, hindi, steps)
 
 
 # ---------------------------------------------------------------------------
@@ -889,13 +1000,31 @@ _VAGUE_WORDS = {
 }
 
 
+_VAGUE_WORDS_DEV = {
+    "समझाओ", "समझा", "बताओ", "बता", "बताइए", "हल", "करो",
+    "कर", "दो", "कुछ", "भी", "एक", "गणित", "सवाल", "यह",
+    "ये", "वाला", "वाली", "इसको", "उसको", "अभी", "कृपया",
+    "मदद",
+}
+
+
 def _is_vague(question):
     words = re.findall(r"[a-z]+", str(question or "").lower())
-    if not words or len(words) > 6:
+    if words:
+        if len(words) > 6:
+            return False
+        if any(ch.isdigit() for ch in str(question or "")):
+            return False
+        return all(w in _VAGUE_WORDS for w in words)
+    # Wave 68: the same test for Devanagari asks — "समझाओ"
+    # alone used to fall to the not-found line instead of
+    # the friendly send-your-question reply.
+    dev_words = re.findall(r"[ऀ-ॿ]+", str(question or ""))
+    if not dev_words or len(dev_words) > 6:
         return False
     if any(ch.isdigit() for ch in str(question or "")):
         return False
-    return all(w in _VAGUE_WORDS for w in words)
+    return all(w in _VAGUE_WORDS_DEV for w in dev_words)
 
 
 _KNOWN_WORDS = _VAGUE_WORDS | _FILLER_WORDS | {
@@ -927,66 +1056,43 @@ def _is_gibberish(question):
     return len(unknown) >= 2 and len(unknown) == len(words)
 
 
+# Wave 68 (Suraj, 15 Nov 2026 — the rule Wave 67 also
+# implements): when nothing solved, the reply is ONE short
+# line in the question's own language/script. No guide card,
+# no "questions I solve for sure" panel, no tips, no advice.
+_NOT_FOUND_LINES = {
+    "en": "Answer not found.",
+    "roman": "Answer nahi mila.",
+    "dev": "उत्तर नहीं मिला।",
+}
+
+_VAGUE_LINES = {
+    "en": "Of course! 😊 Just send me your full maths "
+          "question — like 'solve 2x + 3 = 7' — and I'll "
+          "solve it step by step.",
+    "roman": "Bilkul! 😊 Apna maths ka sawal poora likh kar "
+             "bhejo — jaise 'solve 2x + 3 = 7' — main "
+             "step-by-step hal dunga.",
+    "dev": "बिल्कुल! 😊 अपना गणित का सवाल पूरा लिखकर भेजिए "
+           "— जैसे '2x + 3 = 7 हल कीजिए' — मैं चरण-दर-चरण "
+           "हल दूँगा।",
+}
+
+
 def _guide_result(question, hindi, kind):
+    flavour = _flavour(question)
     if kind == "vague":
-        if hindi:
-            return _friendly_result(
-                "vague",
-                "Bilkul samjha dunga! 😊 Bas apna maths ka sawal "
-                "poora likh kar bhejo — jaise 'solve 2x + 3 = 7' "
-                "ya 'ek train 60 km/h se 2 ghante me kitni door "
-                "jayegi'. Photo bhejoge to wo bhi chalega.",
-                ["Example: '240 ka 15% kitna hoga' likhne par "
-                 "main har step ke saath hal deta hoon."], hindi)
-        return _friendly_result(
-            "vague",
-            "Of course I'll explain! 😊 Just send the full maths "
-            "question — like 'solve 2x + 3 = 7' or 'a train goes "
-            "60 km/h for 2 hours, how far does it go'. A photo "
-            "of the question works too.",
-            ["Tip: writing the numbers clearly ('15% of 240') "
-             "gets you a full step-by-step solution."], hindi)
-    if kind == "gibberish":
-        if hindi:
-            return _friendly_result(
-                "gibberish",
-                "Ye kuch samajh nahi aaya 😅 — lagta hai words "
-                "idhar-udhar ho gaye hain. Apna maths ka sawal "
-                "ek baar saaf-saaf likh kar bhejo, main turant "
-                "hal dunga.",
-                ["Aise likho: '2x + 3 = 7', 'sin 30', ya "
-                 "'240 ka 15 pratishat'."], hindi)
-        return _friendly_result(
-            "gibberish",
-            "Hmm, that didn't look like a maths question 😅 — "
-            "the words seem jumbled. Type your maths question "
-            "once more, clearly, and I'll solve it right away.",
-            ["Try writing it like: '2x + 3 = 7', 'sin 30', or "
-             "'15% of 240'."], hindi)
-    if hindi:
-        return _friendly_result(
-            "guide",
-            "Is sawal ka exact hal abhi mujhse nahi ban paya — "
-            "maafi chahta hoon. 🙏 Ek baar sawal ko thoda saaf "
-            "likh kar bhejo (numbers aur kya nikalna hai, bas "
-            "itna), main poori koshish karunga.",
-            ["Aise sawal main pakka hal karta hoon: samikaran "
-             "(2x + 3 = 7), pratishat (15% of 240), sin/cos, "
-             "kshetrafal, ausat, aur Class 0-12 ke roz ke sawal.",
-             "Photo wala sawal bhej rahe ho to text ko ek baar "
-             "check karke bhejo — kabhi-kabhi ek number galat "
-             "padh liya jata hai."], hindi)
-    return _friendly_result(
-        "guide",
-        "I couldn't solve this exact question yet — sorry about "
-        "that. 🙏 Please type it once more a little more clearly "
-        "(the numbers and what to find), and I'll give it my "
-        "full try.",
-        ["Questions I solve for sure: equations (2x + 3 = 7), "
-         "percentages (15% of 240), sin/cos, areas, averages, "
-         "and everyday Class 0-12 maths.",
-         "If this came from a photo, check the read text once — "
-         "sometimes one number gets misread."], hindi)
+        return _plain_result(
+            "vague", _VAGUE_LINES[flavour], hindi)
+    # "gibberish" (letter-soup / jumbled words) and "guide"
+    # (a real question nothing could solve — the AI brains
+    # above get their chance first, since kind "guide" is in
+    # _GEMINI_KINDS and this result is only settled when they
+    # return None): both are the same honest one-liner. The
+    # fallback_kind is preserved for analytics/tests; the
+    # content is the Wave 67/68 not-found line.
+    return _plain_result(
+        kind, _NOT_FOUND_LINES[flavour], hindi)
 
 
 # ---------------------------------------------------------------------------
@@ -1064,15 +1170,15 @@ def with_fallback(question, result, lang=None):
     # Layer 0 / 0b run before the solver result is even looked
     # at: the solver's letter-products for "hi" / "what is the
     # capital of india" are not answers at all.
-    # Wave 67: small talk is not a solved question either —
-    # Suraj's rule ("kuch bhi likh diya to bas not found bolo")
-    # gives a greeting the same one line as gibberish. (The
-    # Wave-18 greeting texts in _greeting_result are retired,
-    # not deleted, so the history stays readable.)
-    if _greeting_kind(question) is not None:
-        return _not_found_result(question, hindi, lang)
+    # Merge-5 (decided rule 1): a greeting is NOT "not found" —
+    # Wave 68's friendly per-flavour one line is served (kind
+    # "greeting", plain rendering). Wave 67's collapse of
+    # greetings to the not-found line is superseded here.
+    greeting = _greeting_result(question, hindi)
+    if greeting is not None:
+        return greeting
     if _is_nonmaths(question):
-        return _nonmaths_result(hindi)
+        return _nonmaths_result(question, hindi)
 
     if _is_real(question, result):
         return result
@@ -1135,13 +1241,16 @@ def with_fallback(question, result, lang=None):
             return ai_result
 
     # Wave 67: whatever honest layer is still standing here —
-    # a similar example, a vague ask, gibberish, the general
-    # guide — means the student's OWN question was not solved,
-    # so the whole answer collapses to the one not-found line.
+    # a similar example, gibberish, the general guide — means
+    # the student's OWN question was not solved, so the whole
+    # answer collapses to the one not-found line.
     # A concept card is a real answer (formula + worked
     # example for the exact concept asked) and is served as-is.
+    # Merge-5 (decided rule 1): a VAGUE ask no longer collapses
+    # — _guide_result already settled it as Wave 68's friendly
+    # per-flavour line (kind "vague", plain rendering).
     if result_out.get("fallback_kind") in (
-            "similar", "vague", "gibberish", "guide"):
+            "similar", "gibberish", "guide"):
         return _not_found_result(question, hindi, lang)
     return result_out
 

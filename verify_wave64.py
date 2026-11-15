@@ -29,7 +29,7 @@ with the Hindi figure-reference phrases: 12 across the four
 papers (2 + 3 + 4 + 3). Zero external links, as everywhere
 in the papers flow. CSS changed (medium chip + Devanagari
 sheet font fallbacks), so the delivery pins moved to
-?v=36 / cache ganitra-static-v13.
+?v=37 / cache ganitra-static-v14.
 
 Run:  python3 verify_wave64.py
 """
@@ -97,9 +97,9 @@ print("== 2. Delivery pins ==")
 base = (ROOT / "templates" / "base.html").read_text()
 sw = (ROOT / "static" / "sw.js").read_text()
 css = (ROOT / "static" / "style.css").read_text()
-check("stylesheet pin ?v=36", "v='36'" in base)
+check("stylesheet pin ?v=37", "v='37'" in base)
 check("service worker cache v13",
-      'GANITRA_CACHE = "ganitra-static-v13"' in sw)
+      'GANITRA_CACHE = "ganitra-static-v14"' in sw)
 check("medium chip CSS", ".paper-medium" in css)
 check("Devanagari sheet font fallback",
       "Noto Serif Devanagari" in css)

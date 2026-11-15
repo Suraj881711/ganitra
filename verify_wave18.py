@@ -135,34 +135,42 @@ BATTERY = [
     ("2 + 2 kitna hota hai batao please", "salvage", "4"),
     ("please solve this equation for me 4x - 8 = 16 batao",
      "salvage", "x = 6"),
-    # Similar example — honestly labelled, different numbers
+    # Wave 67 (Suraj, 15 Nov 2026): everything below that is
+    # NOT a real answer — the similar example, gibberish, the
+    # guide — collapses to the ONE-LINE not-found answer
+    # (kind "not_found"). The rows keep their original
+    # questions; only the expected outcome changed. Non-maths
+    # keeps its own one-line guard wording.
+    # Merge-5 (decided rule 1): greetings and vague asks are
+    # the exception — Wave 68's friendly per-flavour ONE line
+    # (kinds "greeting" / "vague"), NOT "Answer not found."
     ("ek ladke ke paas 50 rupaye hai usne 3 chocolate 10 rupaye "
-     "ki kharidi kitne bache", "similar", "Similar example"),
-    # Greetings / small talk
+     "ki kharidi kitne bache", "not_found", "Answer nahi mila."),
+    # Greetings / small talk -> Wave 68's friendly line (Merge-5)
     ("hello", "greeting", "Hello"),
     ("hi", "greeting", "Hello"),
     ("kaise ho", "greeting", "Namaste"),
-    ("thank you", "greeting", "welcome"),
+    ("thank you", "greeting", "You're welcome"),
     ("tum kaun ho", "greeting", "Ganitra"),
     ("namaste", "greeting", "Namaste"),
-    # Non-maths — friendly maths-only reply, no fake answer
+    # Non-maths — one-line maths-only guard, no fake answer
     ("what is the capital of india", "nonmaths", "maths"),
     ("cricket ka score kya hai", "nonmaths", "maths"),
-    ("photosynthesis kya hai", "nonmaths", "ganit"),
+    ("photosynthesis kya hai", "nonmaths", "Ganitra sirf Maths"),
     ("why is sky blue", "nonmaths", "maths"),
-    # Gibberish
-    ("asdf qwer zxq", "gibberish", "maths question"),
-    ("xkcd blah zzz", "gibberish", "maths question"),
-    ("blorp snizzle wumpus", "gibberish", "maths question"),
-    # Vague asks
+    # Gibberish -> the one line (Wave 67)
+    ("asdf qwer zxq", "not_found", "Answer not found."),
+    ("xkcd blah zzz", "not_found", "Answer not found."),
+    ("blorp snizzle wumpus", "not_found", "Answer not found."),
+    # Vague asks -> Wave 68's friendly line (Merge-5 rule 1)
     ("ye wala samjhao", "vague", "sawal"),
     ("samjhao", "vague", "sawal"),
-    ("solve this", "vague", "explain"),
-    ("help me", "vague", "explain"),
-    # Guide — the honest last resort, still a real reply
-    ("?", "guide", "couldn't solve"),
-    ("what is the formula for volume of sphere", "guide",
-     "couldn't solve"),
+    ("solve this", "vague", "full maths question"),
+    ("help me", "vague", "full maths question"),
+    # Guide cases -> the one line (Wave 67)
+    ("?", "not_found", "Answer not found."),
+    ("what is the formula for volume of sphere", "not_found",
+     "Answer not found."),
 ]
 
 for q, want_kind, want_text in BATTERY:
@@ -176,11 +184,12 @@ for q, want_kind, want_text in BATTERY:
           ok_kind and ok_text and ok_show and flag_ok,
           f"kind={kind_of(r)} ans={str(r.get('answer', ''))[:44]!r}")
 
-# Empty-ish input still gets a friendly, non-error reply.
+# Empty-ish input still gets a presentable, non-error reply
+# (Wave 67: the one-line not-found answer).
 for q in ("", "   "):
     r = fallback_answer(q)
-    check(f"battery [guide] empty {q!r}",
-          kind_of(r) == "guide" and presentable(r),
+    check(f"battery [not_found] empty {q!r}",
+          kind_of(r) == "not_found" and presentable(r),
           f"kind={kind_of(r)}")
 
 # --- Honesty: labels on the non-exact layers ----------------------------------
@@ -192,10 +201,14 @@ for q in ("", "   "):
 r = fallback_answer(
     "ek ladke ke paas 50 rupaye hai usne 3 chocolate 10 rupaye "
     "ki kharidi kitne bache")
-steps_text = " ".join(r.get("steps") or [])
-check("similar example is labelled + asks for exact numbers",
-      str(r.get("answer", "")).startswith("Similar example")
-      and "exact" in steps_text)
+# Wave 67: this question used to prove the similar example was
+# honestly labelled; it now proves the stronger honesty rule —
+# an unsolved question gets NO dressed-up answer at all, just
+# the one not-found line and no steps.
+check("unparseable gets the one-line not-found, nothing else",
+      str(r.get("answer", "")) == "Answer nahi mila."
+      and r.get("fallback_kind") == "not_found"
+      and not (r.get("steps") or []))
 r = fallback_answer(
     "my homework says find x when 3x + 7 = 22 please help me batao")
 check("salvage says it solved the maths part",
@@ -244,17 +257,19 @@ check("api concept ask is NOT the unsolvable card",
 
 r = client.post("/api/solve", json={"question": "hello"})
 d = r.get_json() or {}
-check("api greeting -> ok",
+# Merge-5 (rule 1): a greeting gets Wave 68's friendly line,
+# kind "greeting" — not Wave 67's not-found line.
+check("api greeting -> ok (Merge-5: friendly greeting line)",
       d.get("ok") is True
       and (d.get("result") or {}).get("fallback_kind")
       == "greeting")
 
 r = client.post("/api/solve", json={"question": "asdf qwer zxq"})
 d = r.get_json() or {}
-check("api gibberish -> ok friendly reply, not error card",
+check("api gibberish -> ok one-line reply, not error card",
       d.get("ok") is True
       and (d.get("result") or {}).get("fallback_kind")
-      == "gibberish")
+      == "not_found")
 
 r = client.post("/api/solve", json={"question": "2+2*5"})
 d = r.get_json() or {}

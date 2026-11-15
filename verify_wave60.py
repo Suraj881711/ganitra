@@ -28,7 +28,7 @@ no timed test asked before throwing typed answers away.
    link next to the print button.
 4. i18n: nav_back + nav_back_test_confirm in all six UI
    languages. Delivery pins bumped for the new CSS:
-   stylesheet ?v=35, service-worker cache ganitra-static-v13.
+   stylesheet ?v=35, service-worker cache ganitra-static-v14.
 
 No solver file changed; answer behaviour is untouched.
 
@@ -226,9 +226,9 @@ ROOT = Path(__file__).parent
 base = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
 sw = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
 css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
-check("stylesheet pin ?v=35", "v='36'" in base)
+check("stylesheet pin ?v=35", "v='37'" in base)
 check("service worker cache v11",
-      'GANITRA_CACHE = "ganitra-static-v13"' in sw)
+      'GANITRA_CACHE = "ganitra-static-v14"' in sw)
 check(".backnav-btn is a 44px+ pill in the app tokens",
       ".backnav-btn" in css and "min-height: 44px" in css
       and "var(--accent)" in css)

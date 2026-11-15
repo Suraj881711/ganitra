@@ -8,11 +8,15 @@ paragraph, Teacher's Advice, the icon row. His order: unsolved
 "Answer nahi mila."), nothing else.
 
 Checks:
-  A. payload level — gibberish / small talk / vague /
-     unsolvable inputs collapse to fallback_kind "not_found"
-     with exactly the one line in the right language and no
-     steps; the AI chain still runs before the line (proven
-     in test_wave37/41; here: no keys -> the line);
+  A. payload level — gibberish / unsolvable inputs collapse
+     to fallback_kind "not_found" with exactly the one line
+     in the right language and no steps; the AI chain still
+     runs before the line (proven in test_wave37/41; here:
+     no keys -> the line);
+  A2. Merge-5 (decided rule 1) — greetings / small talk and
+     vague asks do NOT collapse: they get Wave 68's friendly
+     per-flavour one line (kinds "greeting" / "vague", plain
+     rendering), still one line and no steps;
   B. guards — science / nonmaths keep their own one-line
      wording with plain=True, science payload guidance intact;
   C. API level — /api/solve JSON for gibberish carries no
@@ -70,9 +74,6 @@ print("== A. not-solved inputs -> exactly one line ==")
 CASES = [
     ("If tu gfuf", "Answer not found."),
     ("asdf qwer", "Answer not found."),
-    ("hello bro", "Answer not found."),
-    ("thank you", "Answer not found."),
-    ("samjhao", "Answer nahi mila."),
     ("कुछ भी लिख दिया बकवास", "उत्तर नहीं मिला।"),
     ("ek ladke ke paas 50 rupaye hai usne 3 chocolate 10 "
      "rupaye ki kharidi kitne bache", "Answer nahi mila."),
@@ -86,6 +87,32 @@ for q, line in CASES:
           res.get("fallback_kind") == "not_found"
           and res.get("answer") == line
           and res.get("steps") == [],
+          f"kind={res.get('fallback_kind')} ans={res.get('answer')!r}")
+
+print("== A2. Merge-5 rule 1: greetings / vague -> friendly line ==")
+FRIENDLY_CASES = [
+    ("hello bro", "greeting",
+     "Hello! 😊 I'm doing great. Send me a maths question "
+     "and I'll solve it step by step."),
+    ("thank you", "greeting",
+     "You're welcome! 😊 Send me another maths question "
+     "any time."),
+    ("नमस्ते", "greeting",
+     "नमस्ते! 😊 मैं बिल्कुल ठीक हूँ। अपना गणित का सवाल "
+     "भेजिए — मैं चरण-दर-चरण हल दूँगा।"),
+    ("samjhao", "vague",
+     "Bilkul! 😊 Apna maths ka sawal poora likh kar bhejo "
+     "— jaise 'solve 2x + 3 = 7' — main step-by-step hal "
+     "dunga."),
+]
+for q, kind, line in FRIENDLY_CASES:
+    res = fallback_answer(q)
+    check(f"friendly line: {q[:32]!r}",
+          res.get("fallback_kind") == kind
+          and res.get("answer") == line
+          and res.get("steps") == []
+          and res.get("plain_reply") is True
+          and res.get("plain") is True,
           f"kind={res.get('fallback_kind')} ans={res.get('answer')!r}")
 
 for lang, line in (("bn", "উত্তর পাওয়া যায়নি।"),

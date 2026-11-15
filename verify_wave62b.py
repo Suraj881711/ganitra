@@ -47,7 +47,7 @@ ganitra-static-v12; model pin ?v=62 — eagle.glb is the
 same file Wave 62 shipped).
 
 MERGE-4 (Waves 62B+63+64+65): the pin checks in §5 assert
-the merged pins — stylesheet ?v=36, cache ganitra-static-v13
+the merged pins — stylesheet ?v=37, cache ganitra-static-v14
 (Wave 64's Hindi-papers CSS is the newest). Model pin ?v=62
 unchanged.
 
@@ -184,9 +184,9 @@ check("sprite writer paths intact in index.html",
 
 # --- 5. Pins ----------------------------------------------------------
 print("== 5. Pins (merge-4 reconciled) ==")
-check("stylesheet pin ?v=36", "v='36'" in base)
-check("SW cache ganitra-static-v13",
-      'GANITRA_CACHE = "ganitra-static-v13"' in sw)
+check("stylesheet pin ?v=37", "v='37'" in base)
+check("SW cache ganitra-static-v14",
+      'GANITRA_CACHE = "ganitra-static-v14"' in sw)
 check("model pin ?v=62 (eagle.glb unchanged)", "MODEL_V = '62'" in s3d)
 
 # --- 6. Served page ----------------------------------------------------
@@ -205,7 +205,7 @@ check("served page carries the stage + 3D layer",
       'id="scene-stage"' in page and 'id="scene-3d"' in page)
 check("served page carries the eagle-only director gate",
       "__sceneEagleOnly3D" in page)
-check("served page pins stylesheet ?v=36", "style.css?v=36" in page)
+check("served page pins stylesheet ?v=37", "style.css?v=37" in page)
 for url in ("/static/scene3d.js", "/static/logo-g-t.png",
             "/static/models/eagle.glb", "/static/models/tiger.glb",
             "/static/models/lion.glb", "/static/models/boy.glb",

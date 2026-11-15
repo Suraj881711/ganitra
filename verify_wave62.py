@@ -32,7 +32,7 @@ motion must read as real):
    Canvas is pointer-events:none; composer and cards are
    untouched. Pins: stylesheet ?v=35, cache ganitra-static-v12.
    (Merge-4: the pin checks below assert the merged pins —
-   stylesheet ?v=36, cache ganitra-static-v13, Wave 64's CSS
+   stylesheet ?v=37, cache ganitra-static-v14, Wave 64's CSS
    being the newest.)
 
 CLIP AUDIT + WALK AUTHORING (measured, see
@@ -244,9 +244,9 @@ check("parked in 62B: scene3d.js does not load the cats/boy",
 
 # --- 5. Pins + logo integrity ----------------------------------
 print("== 5. Pins and the frozen logo ==")
-check("stylesheet pin ?v=36", "v='36'" in base)
-check("SW cache ganitra-static-v13",
-      'GANITRA_CACHE = "ganitra-static-v13"' in sw)
+check("stylesheet pin ?v=37", "v='37'" in base)
+check("SW cache ganitra-static-v14",
+      'GANITRA_CACHE = "ganitra-static-v14"' in sw)
 check("SW still bypasses /static/models/", '"/static/models/"' in sw)
 for name, want in [("logo-full-t.png", "15def831bc209625d6a9ce99a7e68587"),
                    ("logo-full.png", "8ffea6f4e42d3d3b1bd8552e26579c4c")]:
@@ -273,7 +273,7 @@ check("served page carries the 3D layer + stage",
       'id="scene-3d"' in page and 'id="scene-stage"' in page)
 check("served page carries the writer hook",
       "__ganitraBoyWriter3D" in page)
-check("served page pins stylesheet ?v=36", "style.css?v=36" in page)
+check("served page pins stylesheet ?v=37", "style.css?v=37" in page)
 for url in ("/static/scene3d.js", "/static/models/lion.glb",
             "/static/models/boy.glb", "/static/models/tiger.glb",
             "/static/models/eagle.glb", "/static/scene-boy.webp"):

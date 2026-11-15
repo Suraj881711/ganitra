@@ -1,3 +1,5 @@
+import re
+
 from flask import Blueprint, request, jsonify, session
 from i18n import (LANG_NAMES, SPEECH_LANGS, advice_for,
                   explanation_for, get_strings, normalise_lang,
@@ -77,6 +79,58 @@ def _solve_friendly(question, lang=None):
     result = with_fallback(question, result, lang=lang)
     put_negative(question, result)
     return result
+
+
+# --- Wave 68: the opening framing line ---------------------------------
+# The chat card used to open with the i18n "explanation"
+# sentence, which merely restates the final answer ("The
+# final answer is X — follow the steps above") — so the
+# answer appeared twice and the card opened with clutter.
+# Wave 68 replaces it with the solver's OWN first step when
+# that step is a givens/framing line of a word problem
+# ("Let the original speed be x km/h…", "Cost price (CP) =
+# Rs 800, selling price (SP) = Rs 920"): the line that says
+# what is given and what is being set up, in the solver's
+# own words — never paraphrased, never invented. Bare
+# computations get no intro; their first step IS the work.
+
+_WORD_TYPES = {"applied", "word_problem"}
+
+
+def _intro_for(result, question):
+    """The framing first step of a solved word problem, or
+    None. Conservative on purpose: a real solve only (never
+    a fallback result), at least two steps (the intro is
+    lifted OUT of the steps list in the chat, so the working
+    must remain), a word-problem shape, and a first step
+    that is a "Let …" / "Given …" framing or a clean list
+    of labelled assignments whose values contain no
+    computation."""
+    if not isinstance(result, dict):
+        return None
+    if result.get("fallback") or result.get("fallback_kind"):
+        return None
+    steps = result.get("steps") or []
+    if len(steps) < 2:
+        return None
+    first = str(steps[0]).strip()
+    if not first or len(first) > 180:
+        return None
+    if result.get("type") not in _WORD_TYPES \
+            and len(str(question or "").split()) < 6:
+        return None
+    if first.startswith(("Let ", "Given ")):
+        return first
+    parts = first.split(", ")
+    if len(parts) <= 4 and all(
+            re.match(r"^[^=]+=[^=]+$", p) for p in parts) \
+            and not any(mark in first
+                        for mark in ("×", "÷", "·")) \
+            and not re.search(r"\d\s*[-+]\s*\d", first):
+        # No computed value either: "Add all values: 3 + 6 +
+        # 9 + 12 = 30" is a working step, not a givens line.
+        return first
+    return None
 
 
 # --- Wave 9: auto language ---------------------------------------------
@@ -232,6 +286,13 @@ def api_solve():
     return jsonify({
         "ok": True,
         "result": result,
+        # Wave 68: "intro" is the card's opening line (the
+        # solver's own givens/framing step for word problems,
+        # else None). "explanation" is still sent for payload
+        # compatibility (stored chats, the classic pages) but
+        # the chat no longer renders it — it restated the
+        # final answer, duplicating the answer line.
+        "intro": _intro_for(result, question),
         "explanation": explanation_for(result, lang),
         "advice": advice_for(result, lang),
         # Wave 12: genuinely-different extra methods for this
