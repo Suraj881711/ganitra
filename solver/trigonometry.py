@@ -199,6 +199,25 @@ def _heights_distances56(q, qlow):
                         ],
                         "answer_label": "Height of the tower"}
         return None
+    # Wave 59: tower height + angle of elevation -> the
+    # distance of the point from the foot (the inverse of
+    # the schema below; it had no form at all).
+    if "angle of elevation" in qlow and "distance" in qlow:
+        mh = re.search(num + r"\s*m(?:etres?|eters?)?\s+"
+                       r"(?:tall|high)", qlow) or re.search(
+                           r"height[^.]*?" + num +
+                           r"\s*m(?:etres?|eters?)?\b", qlow)
+        ma = re.search(r"elevation[^.]*?" + ang, qlow) or \
+            re.search(ang, qlow)
+        if mh and ma:
+            h, t = float(mh.group(1)), float(ma.group(1))
+            val = h / math.tan(math.radians(t))
+            return _r(val, [
+                f"tan {fmt_num(t)}° = height / distance "
+                f"from the foot.",
+                f"Distance = {fmt_num(h)} / tan "
+                f"{fmt_num(t)}° = {fmt_num(round(val, 3))} m",
+            ], "Distance from the foot of the tower")
     # Tower/building from a point D away at elevation θ.
     if "angle of elevation" in qlow:
         m = re.search(num + r"\s*m(?:etres?|eters?)?\s+"

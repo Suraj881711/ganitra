@@ -129,6 +129,32 @@ def solve_number_theory(question: str):
             return {"type": "number_theory", "op": "lcm",
                     "answer": str(l), "value": l, "steps": steps}
 
+    # Wave 59: the PRODUCT of HCF and LCM asked directly
+    # ("12 aur 16 ka HCF guna LCM kitna hoga?") — the
+    # together-branch below read it as a both-values ask and
+    # echoed "HCF = 4, LCM = 48". For two numbers the product
+    # is just the numbers' own product.
+    if ("hcf" in q or "gcd" in q) and "lcm" in q and re.search(
+            r"(?:hcf|gcd)\s*(?:guna|×|x|\*|times)|"
+            r"product\s+of\s+(?:the\s+)?(?:hcf|gcd)", q):
+        nums = _all_ints(question)
+        if len(nums) >= 2:
+            a, b = nums[0], nums[1]
+            import math
+            g = math.gcd(a, b)
+            l = a * b // g
+            steps = [
+                "For two numbers: HCF × LCM = first number "
+                "× second number",
+                f"HCF = {g}, LCM = {l}",
+                f"HCF × LCM = {g} × {l} = {a * b} "
+                f"(= {a} × {b})",
+            ]
+            return {"type": "number_theory",
+                    "op": "hcf_lcm_product",
+                    "answer": str(a * b), "value": a * b,
+                    "steps": steps}
+
     # Wave 30: HCF and LCM asked TOGETHER ("Find the HCF and
     # LCM of 12 and 18") — the HCF branch below used to fire
     # alone and the LCM was silently never given.

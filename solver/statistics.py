@@ -457,6 +457,22 @@ def _probability(q: str):
     if _hindi is not None:
         return _hindi
 
+    # Wave 59: "a number is chosen from 1 to N, find the
+    # probability that it is a multiple of K / divisible by K".
+    _mch = re.search(r"from\s+1\s+to\s+(\d+)", ql)
+    _mk = re.search(r"multiple\s+of\s+(\d+)", ql) or \
+        re.search(r"divisible\s+by\s+(\d+)", ql)
+    if _mch and _mk and "probability" in ql:
+        _n = int(_mch.group(1))
+        _k = int(_mk.group(1))
+        if _n >= 1 and _k >= 1:
+            _cnt = _n // _k
+            return _prob_answer(Fraction(_cnt, _n), [
+                f"Total outcomes = {_n} (numbers 1 to {_n})",
+                f"Favourable outcomes = {_cnt} (every "
+                f"{_k}th number)",
+            ])
+
     # Wave 58: the abstract union formula — "P(A) = 0.3 and
     # P(B) = 0.4, A and B mutually exclusive, find P(A or B)"
     # and the general form with P(A and B) given. Formula-
@@ -1678,6 +1694,67 @@ def solve_statistics(question: str):
                     "op": "mean_excluded",
                     "answer": fmt_num(_excl),
                     "value": float(_excl), "steps": steps}
+
+    # Wave 59: combined mean of two groups ("the mean of 10
+    # numbers is 12 and the mean of 20 numbers is 18, find
+    # the combined mean") — the generic paths averaged the
+    # two means (15), which is wrong unless the groups are
+    # equal. Weighted by group size.
+    _mc59 = re.search(
+        r"mean\s+of\s+(\d+)\s+(?:numbers|observations|values)"
+        r"\s+is\s+(\d+(?:\.\d+)?)\s+and\s+(?:the\s+)?mean\s+of"
+        r"\s+(\d+)\s+(?:numbers|observations|values)\s+is\s+"
+        r"(\d+(?:\.\d+)?)", ql)
+    if _mc59 and "combined" in ql:
+        _n1, _m1 = int(_mc59.group(1)), float(_mc59.group(2))
+        _n2, _m2 = int(_mc59.group(3)), float(_mc59.group(4))
+        _comb = (_n1 * _m1 + _n2 * _m2) / (_n1 + _n2)
+        steps = [
+            f"Sum of the first group = {_n1} × "
+            f"{fmt_num(_m1)} = {fmt_num(_n1 * _m1)}",
+            f"Sum of the second group = {_n2} × "
+            f"{fmt_num(_m2)} = {fmt_num(_n2 * _m2)}",
+            f"Combined mean = ({fmt_num(_n1 * _m1)} + "
+            f"{fmt_num(_n2 * _m2)}) / ({_n1} + {_n2}) = "
+            f"{fmt_num(_comb)}",
+        ]
+        return {"type": "statistics", "op": "combined_mean",
+                "answer": fmt_num(_comb), "value": _comb,
+                "steps": steps}
+    # Wave 59: total from a stated average ("the average of
+    # 5 numbers is 12, find their sum") — sum = n × mean.
+    _ms59 = re.search(
+        r"average\s+of\s+(\d+)\s+(?:numbers|values)\s+is\s+"
+        r"(\d+(?:\.\d+)?)", ql)
+    if _ms59 and ("sum" in ql or "total" in ql):
+        _n59, _m59 = int(_ms59.group(1)), float(_ms59.group(2))
+        _tot59 = _n59 * _m59
+        return {"type": "statistics", "op": "sum_from_average",
+                "answer": fmt_num(_tot59), "value": _tot59,
+                "steps": [
+                    f"Sum = number of values × average = "
+                    f"{_n59} × {fmt_num(_m59)} = "
+                    f"{fmt_num(_tot59)}"]}
+    # Wave 59: P(not E) from P(E) ("if P(E) = 3/6, find
+    # P(not E)") — the complement rule; salvage used to
+    # guess at the fraction.
+    _mp59 = re.search(r"p\(\s*([a-z])\s*\)\s*=\s*"
+                      r"(\d+(?:\.\d+)?(?:\s*/\s*\d+(?:\.\d+)?)?)",
+                      ql)
+    if _mp59 and re.search(r"p\(\s*not\s+" + _mp59.group(1)
+                           + r"\s*\)", ql):
+        from fractions import Fraction as _F59
+        _pv = _F59(_mp59.group(2).replace(" ", ""))
+        if 0 <= _pv <= 1:
+            _nv = 1 - _pv
+            return {"type": "statistics",
+                    "op": "probability_not",
+                    "answer": f"{_nv} ≈ {float(_nv):.4f}",
+                    "value": float(_nv),
+                    "steps": [
+                        "P(not E) = 1 - P(E) (the complement "
+                        "rule)",
+                        f"= 1 - {_pv} = {_nv}"]}
 
     # Wave 47: a wrongly-recorded observation ("The mean of
     # 10 observations is 25. If one observation 36 was

@@ -34,7 +34,10 @@ def _cardinality56(q: str):
     how many play neither?"). solve_sets used to answer
     "Give me two sets" to all of these."""
     # Power set: |P(A)| = 2^n.
-    if "power set" in q:
+    # Wave 59: the plain subsets count is the same 2^n —
+    # "a set has 5 elements, how many subsets does it have"
+    # had no form (only the words "power set" triggered it).
+    if "power set" in q or "subset" in q:
         m = re.search(r"(\d+)\s+elements", q)
         if m:
             n = int(m.group(1))
@@ -112,6 +115,21 @@ def _cardinality56(q: str):
             return {"type": "sets", "op": "cardinality",
                     "answer": str(val), "value": val,
                     "steps": steps}
+        # Wave 59: "find n(only A)" — elements in A but not B.
+        _only59 = re.search(r"only\s+(?:in\s+)?([a-z])\b", q)
+        if mi and _only59:
+            inter = int(mi.group(3))
+            base = a if _only59.group(1) == names[0] else b
+            val = base - inter
+            steps = [
+                f"Elements only in {_only59.group(1).upper()} "
+                f"= n({_only59.group(1).upper()}) - "
+                f"n(A ∩ B)",
+                f"= {base} - {inter} = {val}",
+            ]
+            return {"type": "sets", "op": "cardinality",
+                    "answer": str(val), "value": val,
+                    "steps": steps}
     return None
 
 
@@ -137,6 +155,13 @@ def solve_sets(question: str):
         res = A & B
         steps.append("Intersection = elements common to both A and B.")
         op = "intersection"
+    elif re.search(r"only\s+in\s+a\b", q):
+        # Wave 59: "elements only in A" is the difference
+        # A - B; it used to fall into the union default.
+        res = A - B
+        steps.append("Only in A = elements of A that are not "
+                     "in B (the difference A - B).")
+        op = "difference"
     elif "difference" in q or re.search(r"\bA\s*-\s*B\b", question):
         res = A - B
         steps.append("Difference A - B = elements in A but not in B.")

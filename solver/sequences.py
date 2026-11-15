@@ -74,9 +74,9 @@ def solve_sequences(question: str):
                                    "श्रेणी")) \
         or re.search(r"sama?ntar|shreni|shredi|shrenee", _ql) \
         or re.search(r"\d+\s*(?:वां|वाँ|वीं|वा)\s*पद", _qn) \
-        or re.search(r"\d+\s*(?:va|wa|vaa)\s+pad\b", _ql) \
-        or re.search(r"पदों\s*का\s*योग|padon\s+ka\s+"
-                     r"(?:yog|jod)", _ql)
+        or re.search(r"\d+\s*(?:va|wa|vaa)\s+(?:pad|term)\b", _ql) \
+        or re.search(r"पदों\s*का\s*योग|padon?\s+ka\s+"
+                     r"(?:yog|jod|sum)", _ql)
     _next42 = "अगला पद" in _qn or "agla pad" in _ql \
         or "next term" in _ql or "ke baad" in _ql
     if _terms42 and _kind42 in ("AP", "GP") and \
@@ -135,8 +135,8 @@ def solve_sequences(question: str):
                         "steps": steps}
             _mn = re.search(r"(\d+)\s*(?:वां|वाँ|वीं|वा)\s*"
                             r"पद", _qn) \
-                or re.search(r"(\d+)\s*(?:va|wa|vaa)\s+pad\b",
-                             _ql)
+                or re.search(r"(\d+)\s*(?:va|wa|vaa)\s+"
+                             r"(?:pad|term)\b", _ql)
             if _mn:
                 _n = int(_mn.group(1))
                 _val = _a42 + (_n - 1) * _d42
@@ -151,6 +151,176 @@ def solve_sequences(question: str):
                         "op": "ap_nth_term",
                         "answer": fmt_num(_val), "value": _val,
                         "steps": steps}
+        # Wave 59: the GP half of this block was missing —
+        # a written GP ("GP 2, 6, 18, ... ka 5wa pad") fell
+        # through to the English-only code below. Mirror of
+        # the AP branches: a_n = a·r^(n-1), S_n = a(r^n - 1)/
+        # (r - 1) for r != 1 (a·n when r == 1).
+        if _kind42 == "GP":
+            _r42 = _d42
+            _msum = re.search(r"(?:पहले|प्रथम)\s*(\d+)\s*पद",
+                              _qn) \
+                or re.search(r"pehle\s+(\d+)\s+pad", _ql) \
+                or re.search(r"(\d+)\s*पदों\s*का\s*योग", _qn) \
+                or re.search(r"(\d+)\s*padon?\s+ka\s+"
+                             r"(?:yog|jod|sum)", _ql)
+            if _msum and ("योग" in _qn or "जोड़" in _qn
+                          or "yog" in _ql or "jod" in _ql
+                          or "sum" in _ql):
+                _n = int(_msum.group(1))
+                if _r42 == 1:
+                    _val = _a42 * _n
+                else:
+                    _val = _a42 * (_r42 ** _n - 1) / (_r42 - 1)
+                steps = [
+                    f"GP with a = {fmt_num(_a42)}, "
+                    f"r = {fmt_num(_r42)}",
+                    "Sum of first n terms: S_n = a(r^n - 1) / "
+                    "(r - 1)",
+                    f"S_{_n} = {fmt_num(_a42)} × "
+                    f"({fmt_num(_r42)}^{_n} - 1) / "
+                    f"({fmt_num(_r42)} - 1) = {fmt_num(_val)}",
+                ]
+                return {"type": "sequences", "op": "gp_sum",
+                        "answer": fmt_num(_val), "value": _val,
+                        "steps": steps}
+            _mn = re.search(r"(\d+)\s*(?:वां|वाँ|वीं|वा)\s*"
+                            r"पद", _qn) \
+                or re.search(r"(\d+)\s*(?:va|wa|vaa)\s+"
+                             r"(?:pad|term)\b", _ql)
+            if _mn:
+                _n = int(_mn.group(1))
+                _val = _a42 * (_r42 ** (_n - 1))
+                steps = [
+                    f"GP with a = {fmt_num(_a42)}, "
+                    f"r = {fmt_num(_r42)}",
+                    "nth term: a_n = a × r^(n - 1)",
+                    f"a_{_n} = {fmt_num(_a42)} × "
+                    f"{fmt_num(_r42)}^{_n - 1} = "
+                    f"{fmt_num(_val)}",
+                ]
+                return {"type": "sequences",
+                        "op": "gp_nth_term",
+                        "answer": fmt_num(_val), "value": _val,
+                        "steps": steps}
+
+    # --- Wave 59: Roman-Hindi parameters without a written
+    # series — "jis AP ka pehla pad 5 aur antar 2 hai, uska
+    # 12wa term kitna hoga?", "GP me pehla pad 2 hai aur har
+    # baar 3 guna ho jata hai, 5wa pad?", "... pehle 10 pado
+    # ka yog". The English param code below needs "first term
+    # is ..." wording; these asks state the same facts in
+    # Hinglish.
+    _mfd2 = re.search(r"first term of an ap is "
+                      r"(-?\d+(?:\.\d+)?) and the "
+                      r"(\d+)(?:st|nd|rd|th) term is "
+                      r"(-?\d+(?:\.\d+)?)", _ql)
+    if _mfd2 and "common difference" in _ql:
+        _a = float(_mfd2.group(1))
+        _n = int(_mfd2.group(2))
+        _v = float(_mfd2.group(3))
+        _d = (_v - _a) / (_n - 1)
+        return {"type": "sequences",
+                "op": "ap_common_difference",
+                "answer": fmt_num(_d), "value": _d,
+                "steps": [
+                    f"a_{_n} = a + (n - 1)d: {_v:g} = "
+                    f"{_a:g} + {_n - 1}d",
+                    f"d = ({_v:g} - {_a:g}) / {_n - 1} = "
+                    f"{fmt_num(_d)}"]}
+    _mwt2 = re.search(r"first term of an ap is "
+                      r"(-?\d+(?:\.\d+)?) and the common "
+                      r"difference is (-?\d+(?:\.\d+)?),?\s*"
+                      r"which term is (-?\d+(?:\.\d+)?)", _ql)
+    if _mwt2:
+        _a = float(_mwt2.group(1))
+        _d = float(_mwt2.group(2))
+        _v = float(_mwt2.group(3))
+        if _d != 0:
+            _n = (_v - _a) / _d + 1
+            if _n == int(_n) and _n >= 1:
+                _n = int(_n)
+                _suf = {1: "st", 2: "nd", 3: "rd"}.get(
+                    _n % 10 if _n % 100 not in (11, 12, 13)
+                    else 0, "th")
+                return {"type": "sequences",
+                        "op": "ap_which_term",
+                        "answer": f"The {_n}{_suf} term",
+                        "value": _n,
+                        "steps": [
+                            f"a_n = a + (n - 1)d: {_v:g} = "
+                            f"{_a:g} + (n - 1) × {_d:g}",
+                            f"n = {_n}"]}
+    _pa59 = re.search(r"(?:pehla|pehle)\s+pad\s+(?:hai\s+)?"
+                      r"(-?\d+(?:\.\d+)?)", _ql)
+    if _pa59 and ("ap" in _ql or "gp" in _ql
+                  or "antar" in _ql or "ratio" in _ql
+                  or re.search(r"guna\s+ho\s+ja\w+", _ql)):
+        _a59 = float(_pa59.group(1))
+        _md59 = re.search(r"antar\s+(?:hai\s+)?"
+                          r"(-?\d+(?:\.\d+)?)", _ql)
+        _mr59 = re.search(r"ratio\s+(?:hai\s+)?"
+                          r"(-?\d+(?:\.\d+)?)", _ql) \
+            or re.search(r"har\s+baar\s+(-?\d+(?:\.\d+)?)\s+"
+                         r"guna\s+ho\s+ja\w+", _ql)
+        _is_gp = "gp" in _ql or _mr59 is not None
+        _mn59 = re.search(r"(\d+)\s*(?:va|wa|vaa)\s+"
+                          r"(?:pad|term)\b", _ql)
+        _ms59 = re.search(r"pehle\s+(\d+)[^0-9]{0,30}?"
+                          r"padon?\s+ka\s+(?:yog|jod|sum)", _ql)
+        if _is_gp and _mr59 is not None:
+            _r59 = float(_mr59.group(1))
+            if _mn59:
+                _n = int(_mn59.group(1))
+                _val = _a59 * (_r59 ** (_n - 1))
+                return {"type": "sequences",
+                        "op": "gp_nth_term",
+                        "answer": fmt_num(_val), "value": _val,
+                        "steps": [
+                            f"GP with a = {fmt_num(_a59)}, "
+                            f"r = {fmt_num(_r59)}",
+                            "nth term: a_n = a × r^(n - 1)",
+                            f"a_{_n} = {fmt_num(_a59)} × "
+                            f"{fmt_num(_r59)}^{_n - 1} = "
+                            f"{fmt_num(_val)}"]}
+            if _ms59:
+                _n = int(_ms59.group(1))
+                _val = _a59 * _n if _r59 == 1 else \
+                    _a59 * (_r59 ** _n - 1) / (_r59 - 1)
+                return {"type": "sequences", "op": "gp_sum",
+                        "answer": fmt_num(_val), "value": _val,
+                        "steps": [
+                            f"GP with a = {fmt_num(_a59)}, "
+                            f"r = {fmt_num(_r59)}",
+                            "Sum of first n terms: S_n = "
+                            "a(r^n - 1) / (r - 1)",
+                            f"S_{_n} = {fmt_num(_val)}"]}
+        if not _is_gp and _md59 is not None:
+            _d59 = float(_md59.group(1))
+            if _mn59:
+                _n = int(_mn59.group(1))
+                _val = _a59 + (_n - 1) * _d59
+                return {"type": "sequences",
+                        "op": "ap_nth_term",
+                        "answer": fmt_num(_val), "value": _val,
+                        "steps": [
+                            f"AP with a = {fmt_num(_a59)}, "
+                            f"d = {fmt_num(_d59)}",
+                            "nth term: a_n = a + (n - 1)d",
+                            f"a_{_n} = {fmt_num(_a59)} + "
+                            f"({_n} - 1) × {fmt_num(_d59)} = "
+                            f"{fmt_num(_val)}"]}
+            if _ms59:
+                _n = int(_ms59.group(1))
+                _val = _n * (2 * _a59 + (_n - 1) * _d59) / 2
+                return {"type": "sequences", "op": "ap_sum",
+                        "answer": fmt_num(_val), "value": _val,
+                        "steps": [
+                            f"AP with a = {fmt_num(_a59)}, "
+                            f"d = {fmt_num(_d59)}",
+                            "Sum of first n terms: S_n = n/2 · "
+                            "(2a + (n - 1)d)",
+                            f"S_{_n} = {fmt_num(_val)}"]}
 
     # --- Wave 56: named-series sums, common difference
     # from two terms, and the explicit-series AP sum.
@@ -395,21 +565,45 @@ def solve_sequences(question: str):
     # the a= / r= forms, so these asks got "I need the first
     # term and common ratio" despite stating both.
     if "a" not in params:
-        _mw = re.search(r"first\s+term\s+is\s+(-?\d+(?:\.\d+)?)", q)
+        _mw = re.search(r"first\s+term\s+(?:is\s+)?(-?\d+(?:\.\d+)?)", q)
         if _mw:
             _v = float(_mw.group(1))
             params["a"] = int(_v) if _v == int(_v) else _v
     if "r" not in params:
-        _mw = re.search(r"common\s+ratio\s+is\s+(-?\d+(?:\.\d+)?)", q)
+        _mw = re.search(r"common\s+ratio\s+(?:is\s+)?(-?\d+(?:\.\d+)?)", q)
         if _mw:
             _v = float(_mw.group(1))
             params["r"] = int(_v) if _v == int(_v) else _v
     if "d" not in params:
-        _mw = re.search(r"common\s+difference\s+is\s+"
+        _mw = re.search(r"common\s+difference\s+(?:is\s+)?"
                         r"(-?\d+(?:\.\d+)?)", q)
         if _mw:
             _v = float(_mw.group(1))
             params["d"] = int(_v) if _v == int(_v) else _v
+    # Wave 59: common difference from the first term and one
+    # later term ("first term is 2 and the 5th term is 14,
+    # find the common difference") — d = (a_n - a) / (n - 1).
+    if "common difference" in q and "a" in params \
+            and "d" not in params:
+        _mfd = re.search(r"(\d+)(?:st|nd|rd|th)\s+term\s+is\s+"
+                         r"(-?\d+(?:\.\d+)?)", q)
+        if _mfd and int(_mfd.group(1)) > 1:
+            _n = int(_mfd.group(1))
+            _v = (float(_mfd.group(2)) - float(params["a"])) \
+                / (_n - 1)
+            params["d"] = int(_v) if _v == int(_v) else _v
+            return {"type": "sequences",
+                    "op": "ap_common_difference",
+                    "answer": fmt_num(params["d"]),
+                    "value": params["d"],
+                    "steps": [
+                        f"a_{_n} = a + (n - 1)d, so "
+                        f"{fmt_num(float(_mfd.group(2)))} = "
+                        f"{fmt_num(float(params['a']))} + "
+                        f"({_n} - 1)d",
+                        f"d = ({fmt_num(float(_mfd.group(2)))} "
+                        f"- {fmt_num(float(params['a']))}) / "
+                        f"{_n - 1} = {fmt_num(params['d'])}"]}
     if kind is None:
         if "gp" in q or "geometric" in q:
             kind = "GP"
