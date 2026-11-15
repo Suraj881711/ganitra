@@ -33,6 +33,7 @@ import papers_data
 import practice_gen
 from test_mode import (TEST_TIME_LIMIT, TOPIC_LABELS as TEST_TOPICS,
                        check_test_answer, generate_test, worked_steps)
+from solver.answer_cache import get_negative, put_negative
 from solver.router import solve_question
 from fallback import with_fallback
 from langdetect_local import detect_language_confident
@@ -254,6 +255,36 @@ def create_app():
     @app.route("/apple-touch-icon.png")
     def ganitra_apple_touch_icon():
         return app.send_static_file("logo-mark.png")
+
+    # Wave 50 (SEO basics): let search engines find the public
+    # site. robots.txt allows everything and points at the
+    # sitemap; the sitemap lists ONLY pages an anonymous visitor
+    # can actually open (verified 200s) — account pages such as
+    # /papers, /practice-mode, /chats and /account redirect
+    # anonymous visitors to the sign-in gate, so listing them
+    # would send crawlers to a login page. Personal session
+    # pages (/history, /mistakes, /parent-report) render the
+    # visitor's own state and are likewise left out.
+    SITE_ORIGIN = "https://suraj881711.pythonanywhere.com"
+    SITEMAP_PATHS = ["/", "/topics", "/board", "/practice", "/test"]
+
+    @app.route("/robots.txt")
+    def ganitra_robots():
+        body = ("User-agent: *\n"
+                "Allow: /\n"
+                "\n"
+                f"Sitemap: {SITE_ORIGIN}/sitemap.xml\n")
+        return Response(body, mimetype="text/plain")
+
+    @app.route("/sitemap.xml")
+    def ganitra_sitemap():
+        urls = "".join(
+            f"<url><loc>{SITE_ORIGIN}{path}</loc></url>"
+            for path in SITEMAP_PATHS)
+        body = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+                '<urlset xmlns="http://www.sitemaps.org/schemas/'
+                f'sitemap/0.9">{urls}</urlset>\n')
+        return Response(body, mimetype="application/xml")
 
     # Wave 14: browser caching for static assets ONLY — the logo,
     # CSS and graph PNGs (graph files are content-hash named, so
@@ -905,19 +936,26 @@ def create_app():
         detected, solid = detect_language_confident(question)
         if solid and detected != _lang():
             session["lang"] = detected
-        result = solve_question(question)
-        # Wave 5b: on failure, gently re-ask once with a hint; the
-        # second result decides what the student sees.
-        if solve_failed(question, result):
-            retry = solve_question(_ask_again(question))
-            if not solve_failed(question, retry):
-                result = retry
-        # Wave 18: no dead-end — failures, letter-soup "answers"
-        # and soft non-answers become honest fallback answers
-        # (salvage / concept / similar example / friendly guide),
-        # so the error card below is now only a last resort that
-        # the fallback itself could not cover.
-        result = with_fallback(question, result)
+        # Wave 48: same negative-cache seam as api._solve_friendly
+        # — a recently-failed question serves its finished fallback
+        # result instead of re-paying the whole solve.
+        result = get_negative(question)
+        if result is None:
+            result = solve_question(question)
+            # Wave 5b: on failure, gently re-ask once with a hint;
+            # the second result decides what the student sees.
+            if solve_failed(question, result):
+                retry = solve_question(_ask_again(question))
+                if not solve_failed(question, retry):
+                    result = retry
+            # Wave 18: no dead-end — failures, letter-soup
+            # "answers" and soft non-answers become honest fallback
+            # answers (salvage / concept / similar example /
+            # friendly guide), so the error card below is now only
+            # a last resort that the fallback itself could not
+            # cover.
+            result = with_fallback(question, result)
+            put_negative(question, result)
         failed = solve_failed(question, result)
         session["last_question"] = question
         session["last_result"] = result
@@ -1173,13 +1211,17 @@ def create_app():
         if len(question) > _QUESTION_LIMIT:
             flash(_t()["flash_too_long"])
             return redirect(url_for("index"))
-        result = solve_question(question)
-        if solve_failed(question, result):
-            retry = solve_question(_ask_again(question))
-            if not solve_failed(question, retry):
-                result = retry
-        # Wave 18: same no-dead-end fallback as /solve.
-        result = with_fallback(question, result)
+        # Wave 48: negative-cache seam, as in /solve above.
+        result = get_negative(question)
+        if result is None:
+            result = solve_question(question)
+            if solve_failed(question, result):
+                retry = solve_question(_ask_again(question))
+                if not solve_failed(question, retry):
+                    result = retry
+            # Wave 18: same no-dead-end fallback as /solve.
+            result = with_fallback(question, result)
+            put_negative(question, result)
         failed = solve_failed(question, result)
         session["last_question"] = question
         session["last_result"] = result

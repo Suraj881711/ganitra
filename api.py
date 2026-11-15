@@ -4,6 +4,7 @@ from i18n import (LANG_NAMES, SPEECH_LANGS, advice_for,
                   result_unsolvable, solve_failed, teach_for)
 from langdetect_local import detect_language_confident
 from fallback import with_fallback
+from solver.answer_cache import get_negative, put_negative
 from solver.methods import alternate_methods
 from solver.router import solve_question
 from speedups import methods_nonblocking
@@ -54,13 +55,26 @@ def _solve_friendly(question):
     layer (fallback.with_fallback) — real solver answers come
     back untouched; failures, letter-soup "answers", soft
     non-answers, greetings and non-maths asks become an honest
-    fallback answer instead of the error card."""
+    fallback answer instead of the error card.
+
+    Wave 48: a question whose final outcome was a fallback
+    answer is remembered in the answer cache's negative store
+    for a few minutes — a Retry tap (or a classmate asking the
+    same unsolved question) is then served the identical result
+    instead of re-paying solve x2 + fallback layers every time.
+    Real solver answers never enter that store; they keep the
+    positive answer-cache behaviour inside solve_question."""
+    cached = get_negative(question)
+    if cached is not None:
+        return cached
     result = solve_question(question)
     if solve_failed(question, result):
         retry = solve_question(f"{question} find the value")
         if not solve_failed(question, retry):
             result = retry
-    return with_fallback(question, result)
+    result = with_fallback(question, result)
+    put_negative(question, result)
+    return result
 
 
 # --- Wave 9: auto language ---------------------------------------------

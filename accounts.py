@@ -516,13 +516,58 @@ def _chat_rows(user_id):
     return threads
 
 
+def _chats_fast_count(user_id, aggregate):
+    """Wave 48: one indexed aggregate over the chats table —
+    ``aggregate`` is a SQL expression over a chats row. Returns
+    None when the fast path cannot answer (no chats table, or
+    the expression needs a column this database predates), so
+    the caller can fall back to the legacy thread parse."""
+    conn = _connect()
+    try:
+        exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table'"
+            " AND name = 'chats'").fetchone()
+        if not exists:
+            return 0
+        if aggregate == "user_turns":
+            cols = {row[1] for row in
+                    conn.execute("PRAGMA table_info(chats)")}
+            if "user_turns" not in cols:
+                return None
+            sql = ("SELECT COALESCE(SUM(user_turns), 0) FROM chats"
+                   " WHERE user_id = ?")
+        else:
+            sql = "SELECT COUNT(*) FROM chats WHERE user_id = ?"
+        row = conn.execute(sql, (user_id,)).fetchone()
+        return int(row[0])
+    except sqlite3.Error:
+        return None
+    finally:
+        conn.close()
+
+
 def questions_count(user_id):
     """How many questions the student has asked across ALL his
-    saved chats (stored user turns). Feeds the menu stats line."""
+    saved chats (stored user turns). Feeds the menu stats line.
+
+    Wave 48: answered by one indexed SUM over the per-chat
+    user_turns counters chats.py maintains at save time — no
+    thread is parsed. The legacy parse below remains only as a
+    fallback for a database whose chats table predates the
+    counter column (chats.py backfills it on first connect)."""
+    fast = _chats_fast_count(user_id, "user_turns")
+    if fast is not None:
+        return fast
     return sum(1 for thread in _chat_rows(user_id) for msg in thread
                if isinstance(msg, dict) and msg.get("role") == "user")
 
 
 def chats_count(user_id):
-    """How many chats the student has (menu stats line)."""
+    """How many chats the student has (menu stats line).
+
+    Wave 48: a plain COUNT(*) — the old code parsed every stored
+    thread just to count the rows."""
+    fast = _chats_fast_count(user_id, "count")
+    if fast is not None:
+        return fast
     return len(_chat_rows(user_id))

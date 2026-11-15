@@ -79,7 +79,40 @@ def _connect():
     conn.execute(_SCHEMA)
     for statement in _INDEXES:
         conn.execute(statement)
+    _ensure_user_turns_column(conn)
     return conn
+
+
+def _user_turns(messages):
+    """How many stored turns in a thread are the student's own
+    (role == "user") — the number accounts.questions_count sums."""
+    return sum(1 for m in messages or []
+               if isinstance(m, dict) and m.get("role") == "user")
+
+
+def _ensure_user_turns_column(conn):
+    """Wave 48: per-chat counter of stored user turns, kept so
+    accounts.questions_count is one indexed SUM instead of a
+    full JSON parse of every thread. The column is added (and
+    backfilled from the stored threads, exactly once) the first
+    time a database created before this wave is opened; after
+    that, save_chat maintains it on every write, and deleting a
+    chat removes its count with the row — no counter drift.
+    Runs on every connect as a single PRAGMA probe; the ALTER +
+    backfill happen only when the column is missing."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(chats)")}
+    if "user_turns" in cols:
+        return
+    conn.execute(
+        "ALTER TABLE chats ADD COLUMN user_turns"
+        " INTEGER NOT NULL DEFAULT 0")
+    rows = conn.execute("SELECT id, messages_json FROM chats").fetchall()
+    for row in rows:
+        conn.execute(
+            "UPDATE chats SET user_turns = ? WHERE id = ?",
+            (_user_turns(_parse_messages(row["messages_json"])),
+             row["id"]))
+    conn.commit()
 
 
 def init_db():
@@ -204,8 +237,10 @@ def save_chat(user_id, chat_id, messages):
     try:
         cur = conn.execute(
             "UPDATE chats SET messages_json = ?, title = ?,"
-            " updated_at = ? WHERE id = ? AND user_id = ?",
-            (payload, title, _now(), chat_id, user_id))
+            " user_turns = ?, updated_at = ?"
+            " WHERE id = ? AND user_id = ?",
+            (payload, title, _user_turns(messages), _now(),
+             chat_id, user_id))
         conn.commit()
         if cur.rowcount == 0:
             return None
