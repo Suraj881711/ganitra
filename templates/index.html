@@ -120,14 +120,23 @@
                carries while chasing the tiger, then throws away. #}
             <span class="scene-stick" id="scene-stick"
               aria-hidden="true"></span>
-            {# Wave 61: the 3D stage layer. Empty until
-               static/scene3d.js lazily loads the four real
-               models and swaps the stage to 3D (the stage gets
-               .scene-3d-on; CSS then hides the 2D sprites and
-               this layer fades in). Until that moment — and
-               forever on any failure — the 2D scenes above run
-               exactly as before. Absolutely positioned, so it
-               can never move the composer or the cards. #}
+            {# Wave 61/62: the 3D stage layer. Empty until
+               static/scene3d.js lazily loads and swaps the
+               stage to 3D (the stage gets .scene-3d-on; CSS
+               then hides the 2D sprites and this layer fades
+               in). Wave 62: the 3D layer performed the
+               DIRECTOR's scenes with the four real models.
+               Wave 62B (Suraj's final spec): the 3D layer now
+               loads ONLY the eagle model and performs only
+               the eagle scene — perch / carry / kiss around
+               the G itself, no board — while the tiger, lion
+               and boy stay 2D-only (above) and parked in 3D.
+               Same triggers, same timings; the canvas is
+               pointer-events:none, so taps still land on the
+               stage itself. Until activation — and forever on
+               any failure — the 2D scenes above run exactly
+               as before. Absolutely positioned, so it can
+               never move the composer or the cards. #}
             <div class="scene-3d" id="scene-3d"
               aria-hidden="true"></div>
           </div>
@@ -868,17 +877,35 @@
       function addTypingBoy(node) {
         try {
           if (!node || node.querySelector(".boy-writer")) return;
-          var boy = document.createElement("img");
-          boy.className = "boy-writer in-typing on";
-          boy.width = 54;   /* Wave 25: attribute-level size */
-          boy.height = 54;  /* (see showBoyWriter's note).    */
-          boy.src = "/static/scene-boy.webp?v=29";  /* Wave 28: versioned sprite URL */
-          boy.alt = "";
-          boy.setAttribute("aria-hidden", "true");
-          boy.addEventListener("error", function () {
-            boy.classList.remove("on");
-            node.classList.remove("boy-host");
-          });
+          /* Wave 62: prefer the real-3D writer boy (scene3d.js
+             paints him into a small canvas, same writing rock)
+             once his model has loaded; until then — and forever
+             on any failure — the 2D sprite boy serves as before.
+             Wave 62B: the 3D writer is retired (the boy is out
+             of the 3D scene) — scene3d.js never defines the
+             hook now, so the sprite below always serves,
+             exactly the pre-61 behaviour. */
+          var boy = null;
+          if (window.__ganitraBoyWriter3D) {
+            try { boy = window.__ganitraBoyWriter3D(); }
+            catch (e) { boy = null; }
+          }
+          if (boy) {
+            boy.className = "boy-writer in-typing on boy-writer-3d";
+            boy.setAttribute("aria-hidden", "true");
+          } else {
+            boy = document.createElement("img");
+            boy.className = "boy-writer in-typing on";
+            boy.width = 54;   /* Wave 25: attribute-level size */
+            boy.height = 54;  /* (see showBoyWriter's note).    */
+            boy.src = "/static/scene-boy.webp?v=29";  /* Wave 28: versioned sprite URL */
+            boy.alt = "";
+            boy.setAttribute("aria-hidden", "true");
+            boy.addEventListener("error", function () {
+              boy.classList.remove("on");
+              node.classList.remove("boy-host");
+            });
+          }
           node.classList.add("boy-host");
           node.appendChild(boy);
         } catch (e) { /* decoration only — never break typing */ }
@@ -1255,21 +1282,37 @@
             window.clearTimeout(boyRailTimer); boyRailTimer = null;
           }
           if (!boyWriter) {
-            boyWriter = document.createElement("img");
-            boyWriter.className = "boy-writer at-board";
-            /* Wave 25: attribute-level size too — the sprite
-               is a 1600px file; if the stylesheet is missing
-               or stale he must still not blow up to full
-               card width. CSS governs when present. */
-            boyWriter.width = 82;
-            boyWriter.height = 82;
-            boyWriter.src = "/static/scene-boy.webp?v=29";  /* Wave 28: versioned sprite URL */
-            boyWriter.alt = "";
-            boyWriter.setAttribute("aria-hidden", "true");
-            boyWriter.addEventListener("error", function () {
-              boyBroken = true;
-              hideBoyWriter();
-            });
+            /* Wave 62: prefer the real-3D writer boy (a small
+               canvas painted by scene3d.js, same writing rock,
+               same rail) once his model has loaded; the 2D
+               sprite below remains the fallback. Wave 62B:
+               the hook is never defined now (the boy left the
+               3D scene), so the sprite always serves — the
+               pre-61 behaviour. */
+            if (window.__ganitraBoyWriter3D) {
+              try { boyWriter = window.__ganitraBoyWriter3D(); }
+              catch (e) { boyWriter = null; }
+            }
+            if (boyWriter) {
+              boyWriter.className = "boy-writer at-board boy-writer-3d";
+              boyWriter.setAttribute("aria-hidden", "true");
+            } else {
+              boyWriter = document.createElement("img");
+              boyWriter.className = "boy-writer at-board";
+              /* Wave 25: attribute-level size too — the sprite
+                 is a 1600px file; if the stylesheet is missing
+                 or stale he must still not blow up to full
+                 card width. CSS governs when present. */
+              boyWriter.width = 82;
+              boyWriter.height = 82;
+              boyWriter.src = "/static/scene-boy.webp?v=29";  /* Wave 28: versioned sprite URL */
+              boyWriter.alt = "";
+              boyWriter.setAttribute("aria-hidden", "true");
+              boyWriter.addEventListener("error", function () {
+                boyBroken = true;
+                hideBoyWriter();
+              });
+            }
             stepsDet.appendChild(boyWriter);
           }
           stepsDet.classList.add("boy-host");
@@ -2279,14 +2322,38 @@
        this director included — a slow or hung CDN postponed
        all of it. It carries defer now (OCR is only ever
        invoked on a student's file pick, long after parsing).
+       Wave 62 (Suraj rejected Wave 61's free-orbit clearing):
+       this director is again the ONLY scene system — same
+       schedule, triggers and timings. When the 3D layer
+       (scene3d.js) has loaded the four real models it performs
+       these very scenes with them, watching the .playing-*
+       classes; the lion joins the rotation then (he is
+       "broken" until activation — see SCENE-LOGIC below).
+       Wave 62B (Suraj's final spec, same day): the 3D layer
+       now loads ONLY the eagle and performs ONLY the eagle
+       scene (perch / carry / kiss on the G itself). On
+       activation it marks tiger/boy/lion broken and sets
+       window.__sceneEagleOnly3D, which pickSceneName consults
+       so the rotation lives on the one scene. A pure-2D visit
+       is byte-for-byte the Wave 62 behaviour.
        */
     (function () {
       /* SCENE-LOGIC-BEGIN */
-      var SCENE_ORDER = ["eagle", "tiger", "chase"];
+      /* Wave 62: a fourth scene joins the rotation — "lion".
+         The lion has no 2D sprite and no CSS keyframes: his
+         scene exists only as a 3D performance (scene3d.js
+         watches the .playing-lion class). He starts out marked
+         broken (below), so in a pure-2D visit the rotation is
+         exactly the pre-62 one; scene3d.js un-breaks him via
+         window.__sceneSetBroken the moment the 3D layer
+         activates. The director's schedule, triggers and
+         timings are otherwise unchanged from Waves 23-28. */
+      var SCENE_ORDER = ["eagle", "tiger", "chase", "lion"];
       /* Wave 27: durations trimmed ~20% (5400/8600/11200 ->
          4400/6900/9000) so the scenes feel lively, not
          sluggish — the CSS keyframes carry the same values. */
-      var SCENE_MS = { eagle: 4400, tiger: 6900, chase: 9000 };
+      var SCENE_MS = { eagle: 4400, tiger: 6900, chase: 9000,
+                       lion: 6900 };
       function _rand(rand) {
         return (typeof rand === "number" && rand >= 0 && rand < 1)
           ? rand : Math.random();
@@ -2299,7 +2366,8 @@
       var SCENE_SPRITES = {
         eagle: ["eagle"],
         tiger: ["tiger", "boy"],
-        chase: ["tiger", "boy"]
+        chase: ["tiger", "boy"],
+        lion: ["lion", "boy"]
       };
       function scenePlayable(name, broken) {
         if (!broken) return true;
@@ -2317,6 +2385,20 @@
         var pool = SCENE_ORDER.filter(function (n) {
           return n !== prev && scenePlayable(n, broken);
         });
+        if (!pool.length && window.__sceneEagleOnly3D) {
+          /* Wave 62B: in 3D mode the eagle performs ALONE —
+             scene3d.js has marked tiger/boy/lion broken, so
+             the no-repeat rule above would empty the pool
+             after a single scene and stop the jungle. With
+             exactly one playable scene, repeating it IS the
+             rotation. This branch is gated on the flag, which
+             only the 3D layer ever sets: a pure-2D visit keeps
+             the exact pre-62 behaviour (pool empty -> null ->
+             scenes stop). */
+          pool = SCENE_ORDER.filter(function (n) {
+            return scenePlayable(n, broken);
+          });
+        }
         if (!pool.length) return null;
         return pool[Math.floor(_rand(rand) * pool.length)];
       }
@@ -2356,6 +2438,15 @@
          leave the rotation — see scenePlayable above. */
       var broken = {};
       function markBroken(shortName) { broken[shortName] = true; }
+      /* Wave 62: the lion has no sprite to fail — he is 3D-only.
+         He starts broken (out of the rotation); scene3d.js
+         un-breaks him on activation and would re-break him if
+         the 3D layer ever went away. */
+      broken.lion = true;
+      window.__sceneSetBroken = function (name, isBroken) {
+        if (isBroken) broken[name] = true;
+        else delete broken[name];
+      };
 
       function emptyAlive() {
         return !!document.getElementById("chat-empty")
@@ -2487,15 +2578,18 @@
   </script>
 
   <script>
-    /* ---------- Wave 61: 3D Logo Jungle bootstrap ----------
-       Lazily imports static/scene3d.js (the real-3D version of
-       this stage, ported from the verified prototype) once the
-       page is idle AND the stage is on screen. Until the module
-       has loaded all four models, the Wave 23-28 2D director
-       above runs untouched; if anything here fails — no idle
-       callback, no IntersectionObserver, no dynamic import,
-       reduced motion — the 2D scene simply stays, silently.
-       The chat never waits on any of this. */
+    /* ---------- Wave 61/62: 3D Logo Jungle bootstrap -------
+       Lazily imports static/scene3d.js once the page is idle
+       AND the stage is on screen. Wave 62: the module performs
+       the Wave 23 director's own scenes with the real 3D
+       models (fixed camera, old choreography) — it does not
+       bring a scene system of its own. Wave 62B: it loads and
+       performs ONLY the eagle (the other models stay parked).
+       Until the module has loaded the eagle model, the Wave
+       23-28 2D director above runs untouched; if anything here
+       fails — no idle callback, no IntersectionObserver, no
+       dynamic import, reduced motion — the 2D scene simply
+       stays, silently. The chat never waits on any of this. */
     (function () {
       try {
         var stage = document.getElementById("scene-stage");

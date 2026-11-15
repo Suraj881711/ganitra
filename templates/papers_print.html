@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ganitra — {{ t.papers_gen_title.format(n=paper.class_num) }}</title>
     <style>
-      body { font-family: Georgia, "Times New Roman", serif;
+      body { font-family: Georgia, "Times New Roman",
+             "Noto Serif Devanagari", "Nirmala UI", serif;
              color: #25324e; background: #fff; margin: 48px auto;
              max-width: 760px; padding: 0 24px; line-height: 1.65;
              font-size: 16px; }
@@ -24,6 +25,43 @@
                    cursor: pointer;
                    border: 1px solid #8a6414; background: #fdf6dd;
                    border-radius: 12px; }
+      /* Wave 63: the typed exam-paper sheet (stored papers) —
+         same rules as static/style.css .exam-sheet, duplicated
+         here because this view is standalone. */
+      .exam-sheet { color: #111; line-height: 1.6; }
+      .sheet-code { text-align: center; font-size: 13.5px;
+                    letter-spacing: .03em; margin: 0 0 10px; }
+      .sheet-subject { text-align: center; font-size: 24px;
+                       margin: 0 0 4px; text-transform: uppercase; }
+      .sheet-classline { text-align: center; font-size: 15px;
+                         margin: 0 0 10px; }
+      .sheet-marksrow { display: flex; justify-content: flex-end;
+                        border-top: 2.5px solid #111;
+                        border-bottom: 1px solid #111;
+                        padding: 5px 2px; font-weight: bold;
+                        margin: 0 0 18px; }
+      .sheet-instr-title { font-size: 16.5px; margin: 0 0 6px;
+                           text-decoration: underline; }
+      .sheet-instr { margin: 0 0 8px; padding-left: 22px; }
+      .sheet-instr li { margin: 3px 0; }
+      .sheet-section { text-align: center; font-size: 19px;
+                       margin: 30px 0 2px; letter-spacing: .06em; }
+      .sheet-secsub { text-align: center; font-style: italic;
+                      font-size: 14.5px; margin: 0 0 10px; }
+      .exam-sheet .paper-q { display: flex; gap: 10px;
+                             padding: 7px 0; page-break-inside: avoid; }
+      .exam-sheet .q-num { font-weight: bold; min-width: 30px;
+                           text-align: right; }
+      .exam-sheet .q-body { flex: 1; }
+      .exam-sheet .q-line { margin: 0 0 4px; text-align: justify; }
+      .exam-sheet .q-or { text-align: center; font-weight: bold;
+                          margin: 5px 0; }
+      .exam-sheet .q-figure { text-align: center;
+                              border: 1.5px dashed #888; color: #444;
+                              padding: 16px 0; margin: 8px auto;
+                              max-width: 300px; font-style: italic; }
+      .exam-sheet .q-marks { font-weight: bold; min-width: 22px;
+                             text-align: right; }
       @media print { .no-print { display: none !important; } }
     </style>
     <script>
@@ -33,6 +71,16 @@
             async></script>
   </head>
   <body>
+  {% if stored %}
+    {# Wave 63: a stored previous paper, printed in the same
+       typed exam-paper layout as its in-app page. #}
+    {% include "_paper_sheet.html" %}
+    <p class="no-print" style="margin-top: 28px;">
+      <a class="print-btn" href="/papers/{{ stored.id }}"
+         style="display: inline-block; text-decoration: none; margin-right: 10px;">← {{ t.nav_back }}</a>
+      <button class="print-btn" onclick="window.print()">{{ t.print_btn }}</button>
+    </p>
+  {% else %}
     <p class="brand">Ganitra</p>
     <h1>{{ t.papers_gen_title.format(n=paper.class_num) }}</h1>
     <p class="muted">{{ t.papers_gen_sub.format(papers=paper.based_on.papers) }}</p>
@@ -58,7 +106,8 @@
           {% if q.answer_key.kind == "solver" %}
             {{ t.papers_answer_label }}: {{ q.answer_key.answer }}
           {% elif q.answer_key.kind == "scheme" %}
-            {{ q.answer_key.text }}: {{ q.answer_key.url }}
+            {# Wave 63: no external URLs in the papers flow. #}
+            {{ q.answer_key.text }} — {{ q.origin }}
           {% else %}
             {{ q.answer_key.text }}
           {% endif %}
@@ -79,6 +128,7 @@
          style="display: inline-block; text-decoration: none; margin-right: 10px;">← {{ t.nav_back }}</a>
       <button class="print-btn" onclick="window.print()">{{ t.print_btn }}</button>
     </p>
+  {% endif %}
 
     <footer>{{ t.print_footer }} · Ganitra</footer>
     <script>

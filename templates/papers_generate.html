@@ -63,7 +63,10 @@
               {% if q.answer_key.kind == "solver" %}
                 {{ t.papers_answer_label }}: {{ q.answer_key.answer }}
               {% elif q.answer_key.kind == "scheme" %}
-                <a href="{{ q.answer_key.url }}" target="_blank" rel="noopener">{{ q.answer_key.text }}</a>
+                {# Wave 63: no external links in the papers flow —
+                   the source paper itself is in the library above
+                   (the question's origin tag names it). #}
+                {{ q.answer_key.text }} — {{ q.origin }}
               {% else %}
                 {{ q.answer_key.text }}
               {% endif %}

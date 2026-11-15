@@ -1,29 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
-  {# Wave 16: one real previous paper — questions grouped by
-     section, each with its NCERT chapter + marks. #}
+  {# Wave 63: the page IS the paper — typed out like the real
+     exam paper (see _paper_sheet.html). No external links: the
+     source is named as plain text for provenance, and the
+     transcription note stays visible above the sheet. #}
   <div class="card">
     <a class="back" href="/papers">{{ t.papers_back }}</a>
-    <h2>{{ paper.board }} · {{ t.board_class_word }} {{ paper.class_num }} · {{ paper.year }}</h2>
-    <p class="muted">{{ paper.set_label }} · {{ paper.questions | length }} {{ t.papers_questions_word }} · {{ total_marks }} {{ t.papers_marks_word }}</p>
-    <p class="muted">{{ t.papers_source_label }}:
-      <a href="{{ paper.source_url }}" target="_blank"
-         rel="noopener">{{ paper.source_name }}</a></p>
+    <p class="muted">{{ t.papers_source_label }}: {{ paper.source_name }}</p>
     <p class="muted">{{ paper.note }}</p>
+    <p><a class="board-opt" href="/papers/print?paper={{ paper.id }}"
+          target="_blank" rel="noopener">{{ t.papers_print_btn }}</a></p>
+  </div>
 
-    {% for sec in sections %}
-      <h3>{{ sec.title }}</h3>
-      {% for q in sec.questions %}
-        <div class="paper-q">
-          <p><strong>Q{{ q.number }}.</strong> {{ q.text }}</p>
-          <p class="q-meta">
-            <span class="q-chip">{{ t.papers_chapter_word }}: {{ chapters[q.chapter] }}</span>
-            <span class="q-chip">{{ q.marks }} {{ t.papers_marks_word }}</span>
-          </p>
-        </div>
-      {% endfor %}
-    {% endfor %}
+  {% include "_paper_sheet.html" %}
 
+  <div class="card">
     <a class="back" href="/papers">{{ t.papers_back }}</a>
   </div>
 {% endblock %}

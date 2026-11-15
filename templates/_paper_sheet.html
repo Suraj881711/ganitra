@@ -1,0 +1,44 @@
+{# Wave 63: one stored previous paper typed out like the real
+   exam paper. Shared by paper_view.html (inside the app chrome)
+   and papers_print.html (?paper=<id>, standalone print view).
+   Everything printed here comes from papers_data via app.py's
+   _paper_sheet view-model: the code/set line, subject, class,
+   board, year, maximum marks, the instruction lines and every
+   question exactly as stored (display line-breaks only). A
+   question whose printed figure is not in the data gets the
+   [Figure] marker. Time allowed is not in the data and is
+   therefore not printed. #}
+<div class="exam-sheet">
+  <p class="sheet-code">{{ sheet.set_label }}</p>
+  <h1 class="sheet-subject">{{ sheet.subject }}</h1>
+  <p class="sheet-classline">{{ sheet.class_label }} {{ sheet.class_num }} &middot; {{ sheet.board }} &middot; {{ sheet.year }}</p>
+  <p class="sheet-marksrow"><span>{{ sheet.marks_label }} : {{ sheet.full_marks }}</span></p>
+
+  <h2 class="sheet-instr-title">{{ sheet.instructions_title }}</h2>
+  <ol class="sheet-instr">
+    {% for line in sheet.instructions %}
+      <li>{{ line }}</li>
+    {% endfor %}
+  </ol>
+
+  {% for sec in sheet.sections %}
+    <h2 class="sheet-section">{{ sec.heading }}</h2>
+    {% if sec.subtitle %}<p class="sheet-secsub">{{ sec.subtitle }}</p>{% endif %}
+    {% for q in sec.questions %}
+      <div class="paper-q">
+        <span class="q-num">{{ q.number }}.</span>
+        <div class="q-body">
+          {% for kind, text in q.lines %}
+            {% if kind == "or" %}
+              <p class="q-or">{{ text }}</p>
+            {% else %}
+              <p class="q-line">{{ text }}</p>
+            {% endif %}
+          {% endfor %}
+          {% if q.has_figure %}<p class="q-figure">[Figure]</p>{% endif %}
+        </div>
+        <span class="q-marks">{{ q.marks }}</span>
+      </div>
+    {% endfor %}
+  {% endfor %}
+</div>
