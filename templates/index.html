@@ -149,6 +149,26 @@
             <p class="empty-sub">{{ t.chat_welcome }}</p>
           {% endif %}
 
+          {# Wave 68: tappable example questions on the empty
+             state — four real questions across languages and
+             topics (English algebra, Hinglish percentage, a
+             Hindi word problem, English geometry), so a new
+             student sees at a glance what to ask and in which
+             language. They are content, not UI chrome: the
+             same four show in every UI language, demonstrating
+             that all three ask-styles work. One tap fills the
+             composer and sends (handler in the chat script). #}
+          <div class="example-chips" id="example-chips">
+            <button type="button" class="example-chip"
+              data-q="Solve x² - 5x + 6 = 0">Solve x² - 5x + 6 = 0</button>
+            <button type="button" class="example-chip"
+              data-q="15% of 240 kitna hoga?">15% of 240 kitna hoga?</button>
+            <button type="button" class="example-chip"
+              data-q="एक ट्रेन 360 km की दूरी 4 घंटे में तय करती है। उसकी चाल ज्ञात कीजिए।">एक ट्रेन 360 km की दूरी 4 घंटे में तय करती है। उसकी चाल ज्ञात कीजिए।</button>
+            <button type="button" class="example-chip"
+              data-q="Find the area of a circle with radius 7 cm">Find the area of a circle with radius 7 cm</button>
+          </div>
+
           {% if saathi_edit or (not saathi_name and not saathi_skipped) %}
             {# Wave 10: a signed-in student's name/class come from
                his account — the optional first-visit card must
@@ -373,6 +393,24 @@
         // BOTTOM of the screen (Suraj's layout), not under the
         // greeting.
         document.body.classList.add("chat-active");
+      }
+
+      /* ---------- Wave 68: example-question chips ----------
+         One tap on an empty-state example fills the composer
+         with that exact question and sends it through the
+         normal submit path (same as typing it). The chips
+         live inside #chat-empty, so they vanish with it. */
+      var chipsEl = document.getElementById("example-chips");
+      if (chipsEl) {
+        chipsEl.addEventListener("click", function (ev) {
+          var btn = ev.target && ev.target.closest
+            ? ev.target.closest(".example-chip") : null;
+          if (!btn || solving) return;
+          box.value = btn.getAttribute("data-q")
+            || btn.textContent.trim();
+          box.dispatchEvent(new Event("input"));
+          if (form.requestSubmit) form.requestSubmit();
+        });
       }
 
       /* ---------- Wave 11: multi-chat (account threads) ----------
@@ -830,31 +868,11 @@
         } catch (e) { /* localStorage unavailable: stay silent */ }
       }
 
-      /* ---------- ✍️ Copy Style (handwriting) for chat steps ------
-         Same localStorage key as the answer page, so the choice is
-         shared. Default ON; the toggle switches back to clean print. */
-      var HW_KEY = "ganitra-handwriting";
-      function hwOn() {
-        try {
-          return window.localStorage.getItem(HW_KEY) !== "off";
-        } catch (e) { return true; }
-      }
-      function makeHwToggle(ol) {
-        var btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "hw-toggle";
-        btn.textContent = CHAT.handwriting;
-        btn.setAttribute("aria-pressed", hwOn() ? "true" : "false");
-        btn.addEventListener("click", function () {
-          var on = !ol.classList.contains("handwriting-on");
-          ol.classList.toggle("handwriting-on", on);
-          btn.setAttribute("aria-pressed", on ? "true" : "false");
-          try {
-            window.localStorage.setItem(HW_KEY, on ? "on" : "off");
-          } catch (e) { /* ignore */ }
-        });
-        return btn;
-      }
+      /* Wave 68: the chat's ✍️ Copy Style (handwriting)
+         toggle is GONE — the notebook panel inside chat
+         answers was removed by Suraj's chat-overhaul order.
+         The classic answer page keeps its own toggle and
+         the shared localStorage key, untouched. */
 
       function addBubble(cls, text) {
         var div = document.createElement("div");
@@ -1040,23 +1058,32 @@
           question = data.question || data._q || "";
         }
         var result = data.result || {};
-        /* Wave 67 (Suraj, 15 Nov 2026): a question that was NOT
-           solved gets ONE short line and nothing else — no
-           badge, no card, no steps section, no handwriting /
-           print tools, no icon row, no Teacher's Advice. The
-           sentinel rides on the result itself: fallback_kind
-           "not_found" (the not-found line) or plain === true
-           (the maths-only guard lines). Old saved chats carry
-           neither flag, so their stored long fallbacks still
-           render exactly as they were saved. */
-        if (result.fallback_kind === "not_found"
-            || result.plain === true) {
-          var plainDiv = document.createElement("div");
-          plainDiv.className = "bubble bot";
-          var plainP = document.createElement("p");
-          plainP.textContent = result.answer || "";
-          plainDiv.appendChild(plainP);
-          log.appendChild(plainDiv);
+        /* Merge-5 (Waves 67 + 68, Suraj, 15 Nov 2026): PLAIN
+           replies — greetings, vague asks, the maths-only
+           guard, science guidance and the one-line not-found —
+           render as ONE simple bubble: the reply line, plus
+           any guidance lines as quiet sub-lines. No badge card,
+           no steps panel, no handwriting / print tools, no
+           advice, no icon row, no full-solution link. The
+           server flags these three ways (all set together by
+           fallback.py): result.plain_reply (Wave 68),
+           result.plain (Wave 67) or fallback_kind "not_found"
+           (Wave 67) — any one of them means plain. Old saved
+           chats carry none of the flags, so their stored long
+           fallbacks still render exactly as they were saved. */
+        if (result.plain_reply || result.plain === true
+            || result.fallback_kind === "not_found") {
+          var plain = document.createElement("div");
+          plain.className = "bubble bot plain-reply";
+          [result.answer].concat(result.steps || [])
+            .forEach(function (line, i) {
+              if (!line) return;
+              var p = document.createElement("p");
+              p.className = i === 0 ? "plain-main" : "plain-sub";
+              p.textContent = line;
+              plain.appendChild(p);
+            });
+          log.appendChild(plain);
           scrollLog();
           return;
         }
@@ -1079,6 +1106,22 @@
             displaySteps.pop();
           }
         }
+        /* Wave 68: the opening framing line. The server
+           sends data.intro — the solver's own givens/framing
+           first step for word problems — and the card shows
+           it as a lead-in line above the working. It is
+           LIFTED out of the steps list (never shown twice);
+           copy and narration keep using displaySteps, which
+           still holds every step in order. */
+        var introText = (!result.fallback && data.intro)
+          ? String(data.intro) : "";
+        var boardSteps = displaySteps.slice();
+        if (introText && boardSteps.length > 1
+            && boardSteps[0] === introText) {
+          boardSteps = boardSteps.slice(1);
+        } else {
+          introText = "";
+        }
         var div = document.createElement("div");
         div.className = "bubble bot";
 
@@ -1092,12 +1135,13 @@
            21/22/23 hooks untouched), but nothing is appended
            while building: the pieces are collected here and put
            into the DOM in ONE reading sequence at the end —
-           badge → explanation → steps → graph → plain answer
+           badge → intro (Wave 68: the givens/framing line,
+           when there is one) → steps → graph → plain answer
            line (all inside the bordered card), then the icon
            row BELOW/OUTSIDE the card, Teacher's Advice
            (hidden until its bulb sign is tapped), the
            more-methods panel and the full-solution link. */
-        var explEl = null;
+        var introEl = null;
         var adviceEl = null;
         var graphImg = null;
         var stepsSection = null;
@@ -1131,11 +1175,17 @@
            last line of the solve inside the card. Teach
            still drives it (teach-wait / teach-now). */
 
-        if (data.explanation) {
-          var expl = document.createElement("p");
-          expl.className = "explain";
-          expl.textContent = data.explanation;
-          explEl = expl;
+        /* Wave 68: the old explanation paragraph is GONE
+           from the card — it only restated the final answer
+           ("The final answer is X — follow the steps
+           above"), duplicating the answer line. In its
+           place, the intro line (when the server sent one)
+           opens the card with what is given / being set up. */
+        if (introText) {
+          var intro = document.createElement("p");
+          intro.className = "answer-intro";
+          intro.textContent = introText;
+          introEl = intro;
         }
 
         if (data.advice) {
@@ -1657,17 +1707,20 @@
           graphImg = img;
         }
 
-        if (displaySteps.length) {
-          var tools = document.createElement("div");
-          tools.className = "steps-tools";
+        if (boardSteps.length) {
           var ol = document.createElement("ol");
           stepsOl = ol;
           /* Wave 24, final word (Suraj, 13 Nov 2026 ~00:11
              IST): NO numbering on the steps — no badges, no
              markers; the solution lines simply flow in
              order, one under another. */
-          ol.className = "steps notebook"
-            + (hwOn() ? " handwriting-on" : "");
+          /* Wave 68: NO notebook/copy-style panel inside
+             chat answers any more — no ruled paper, no
+             handwriting toggle, no print link in the card.
+             (The classic answer PAGE keeps its copy style;
+             this is the chat flow only.) The steps are a
+             plain clean list. */
+          ol.className = "steps";
           /* Wave 26: the no-numbering rule is ALSO pinned
              inline on the list itself. The stylesheet rule
              (ol.steps { list-style: none }) is the primary
@@ -1677,19 +1730,18 @@
              Suraj banned outright, so they are now
              impossible even with no stylesheet at all. */
           ol.style.listStyleType = "none";
-          displaySteps.forEach(function (step) {
+          boardSteps.forEach(function (step) {
             var li = document.createElement("li");
             li.textContent = step;
+            /* Wave 68: a verification line the solver itself
+               computed ("Check: …") gets a quiet ✓ styling —
+               presentation only, the text is untouched. */
+            if (/^(check|verify|verification)\s*:/i
+                .test(step)) {
+              li.className = "step-verify";
+            }
             ol.appendChild(li);
           });
-          tools.appendChild(makeHwToggle(ol));
-          var plink = document.createElement("a");
-          plink.className = "back";
-          plink.target = "_blank";
-          plink.rel = "noopener";
-          plink.href = "/solution/print?style=hand";
-          plink.textContent = CHAT.printCopy;
-          tools.appendChild(plink);
           var det = document.createElement("details");
           stepsDet = det;
           /* Wave 24: the steps are the FIRST thing in the
@@ -1702,7 +1754,6 @@
           var sum = document.createElement("summary");
           sum.textContent = CHAT.steps;
           det.appendChild(sum);
-          det.appendChild(tools);
           det.appendChild(ol);
           stepsSection = det;
         }
@@ -1724,7 +1775,7 @@
         /* Wave 24: THE reading sequence — the only place the
            pieces enter the DOM, in exactly this order. The
            CARD (the bubble) holds ONLY the solve: badge →
-           explanation → steps → graph → the plain answer
+           intro → steps → graph → the plain answer
            line. Everything else lives OUTSIDE the card, in
            the wrap directly beneath it (Suraj, 13 Nov 2026
            ~00:15 IST: "uske neeche karna hai"): the icon row
@@ -1732,7 +1783,7 @@
            Advice — hidden until its bulb sign is tapped —
            and more-methods), then the full-solution link. */
         div.appendChild(badge);
-        if (explEl) div.appendChild(explEl);
+        if (introEl) div.appendChild(introEl);
         if (stepsSection) div.appendChild(stepsSection);
         if (graphImg) div.appendChild(graphImg);
         div.appendChild(ans);

@@ -42,12 +42,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;600;700&family=Kalam:wght@400;700&family=Caveat:wght@500;700&display=swap"
           rel="stylesheet" />
     {# Wave 26: the stylesheet URL carries a version query
-       (?v=36 — Wave 43 bumped it to 30, merge-2 to 31, Wave 55 to 32 for
+       (?v=37 — Wave 43 bumped it to 30, merge-2 to 31, Wave 55 to 32 for
        Wave 49's chat-box CSS, Wave 60 to 33 for the back bar, Wave 61
        to 34 for the 3D stage layer, Waves 62+63 to 35 for the old-scene
        3D layer and the typed exam-paper sheet, Wave 64 to 36 for the
        Hindi-medium papers (medium chip + Devanagari sheet font
-       fallbacks); merge-4 reconciled the pins to ?v=36 / v13).
+       fallbacks); merge-4 reconciled the pins to ?v=36 / v13;
+       Wave 68 to 37 for the chat answer overhaul CSS).
        PythonAnywhere serves /static/ with
        "Cache-Control: public, max-age=86400", so the plain
        URL could be replayed from a browser's HTTP cache for
@@ -58,7 +59,7 @@
        brand-new cache key everywhere, so this deploy's CSS
        lands on the very next page load. BUMP THE NUMBER on
        every future style.css change. #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='36') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='37') }}" />
     {% block head_extra %}{% endblock %}
     <style>
       .lang-switch { display: inline-flex; align-items: center; gap: .45rem;
