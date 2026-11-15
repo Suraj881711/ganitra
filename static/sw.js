@@ -71,7 +71,12 @@
    to ~17 MB each they stay out of Cache Storage, and their
    freshness is pinned by the ?v= query scene3d.js requests
    plus the server's own HTTP cache headers. */
-var GANITRA_CACHE = "ganitra-static-v11";
+/* Wave 62: the old scene system performed by the 3D cast —
+   cache v12, stylesheet ?v=35. */
+/* Wave 63: typed exam-paper sheet CSS — stylesheet ?v=35
+   (cache already v12 in this tree via Wave 62). */
+/* Wave 64: Hindi-medium papers — cache v13, stylesheet ?v=36. */
+var GANITRA_CACHE = "ganitra-static-v13";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();
