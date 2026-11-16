@@ -48,6 +48,12 @@ _SAATHI_NAME_LIMIT = 30
 # Wave 10: after this many failed login attempts for one name in a
 # session, further attempts get the friendly "try later" message.
 _LOGIN_ATTEMPT_LIMIT = 8
+# Wave 70 (Suraj, 16 Nov 2026): the Logo Jungle scene is OFF —
+# "scene se eagle bhi hata do, bilkul khali kar do". The empty
+# state shows only the still logo + greeting. All scene code,
+# sprites and models stay in the repo, parked behind this flag;
+# flip it to True to bring the scene back.
+SCENE_ENABLED = False
 
 
 def _signin(mode="signup", error=None, form=None, fav_error=False):
@@ -522,6 +528,9 @@ def create_app():
             "user_has_photo": bool(_uid and accounts.get_photo(_uid)),
             "board_display": BOARD_NAMES.get(
                 session.get("board", "cbse"), "CBSE"),
+            # Wave 70: Logo Jungle scene kill-switch (see
+            # SCENE_ENABLED at the top of this file).
+            "scene_enabled": SCENE_ENABLED,
             "saathi_edit": request.args.get("saathi") == "edit",
             "saathi_greeting": _personal_line(
                 strings, "saathi_welcome_name", "chat_welcome",
