@@ -648,6 +648,119 @@ def _square_cube_word(question):
     return out
 
 
+def _wave73_word_arithmetic(question):
+    """Wave 73 (Suraj, 16 Nov 2026): the bol-chaal arithmetic
+    students actually type on chat. "5 into 4" (Indian school
+    English for 5 x 4) was parsed by SymPy's implicit
+    multiplication as 5*i*n*t*o*4 and SERVED as the answer
+    "20*i*n*o*t"; "50 ka aadha" -> "50*a**3*d*h"; "9 ka varg"
+    -> "9*a*g*r*v"; and plain Hindi subtraction phrasings
+    ("5 mein se 3 ghatao", "50 se 20 ghatao") fell to
+    not-found. Each pattern below is a whole-ask shape with
+    the numbers directly around the operator word, so real
+    word problems (whose numbers are never arranged like
+    this) cannot fire them. Steps stay plain, like the
+    other word patterns in this module.
+    """
+    from fractions import Fraction
+    q = str(question or "").lower()
+    N = r"(-?\d+(?:\.\d+)?)"
+
+    def _mk(op, expr_txt, val, step):
+        out = {"type": "arithmetic", "op": op,
+               "expression": expr_txt,
+               "answer": fmt_num(val), "numeric": float(val),
+               "steps": [step]}
+        if isinstance(val, Fraction) and val.denominator != 1:
+            out["fraction"] = f"{val.numerator}/{val.denominator}"
+        return out
+
+    # A into B (multiplication) / A aur B guna (trailing guna)
+    m = re.search(N + r"\s+into\s+" + N, q) or re.search(
+        N + r"\s+aur\s+" + N + r"\s+guna\b", q)
+    if m:
+        a, b = Fraction(m.group(1)), Fraction(m.group(2))
+        return _mk("multiply", f"{fmt_num(a)} × {fmt_num(b)}",
+                   a * b,
+                   f"{fmt_num(a)} × {fmt_num(b)} = {fmt_num(a * b)}")
+    # A ka aadha (half)
+    m = re.search(N + r"\s+ka\s+aadha\b", q)
+    if m:
+        a = Fraction(m.group(1))
+        return _mk("half", f"{fmt_num(a)} / 2", a / 2,
+                   f"{fmt_num(a)} ka aadha = {fmt_num(a)} ÷ 2 "
+                   f"= {fmt_num(a / 2)}")
+    # A ka dugna / double of A
+    m = re.search(N + r"\s+ka\s+dugna\b", q) or re.search(
+        r"\bdouble\s+of\s+" + N, q)
+    if m:
+        a = Fraction(m.group(1))
+        return _mk("double", f"2 × {fmt_num(a)}", 2 * a,
+                   f"{fmt_num(a)} ka dugna = 2 × {fmt_num(a)} "
+                   f"= {fmt_num(2 * a)}")
+    # A ka varg (square) / A ka ghan (cube) — Hindi siblings
+    # of _square_cube_word's "ka square / ka cube".
+    m = re.search(N + r"\s+ka\s+(varg|ghan)\b", q)
+    if m:
+        a = Fraction(m.group(1))
+        power = 2 if m.group(2) == "varg" else 3
+        factors = " × ".join(fmt_num(a) for _ in range(power))
+        return _mk("square_of" if power == 2 else "cube_of",
+                   f"{fmt_num(a)}^{power}", a ** power,
+                   f"{fmt_num(a)} ka "
+                   f"{'varg' if power == 2 else 'ghan'} = "
+                   f"{factors} = {fmt_num(a ** power)}")
+    # Subtraction, Hindi bol-chaal:
+    # "A mein/me se B ghatao|nikalo|gaya" / "A se B ghatao"
+    m = re.search(N + r"\s+(?:mein|me)\s+se\s+" + N +
+                  r"\s+(?:ghatao?|ghata\s*do|nikalo?|nikal\s*do|"
+                  r"gaya|gaye|nikla)\b", q) or re.search(
+                      N + r"\s+se\s+" + N +
+                      r"\s+(?:ghatao?|ghata\s*do)\b", q)
+    if m:
+        a, b = Fraction(m.group(1)), Fraction(m.group(2))
+        return _mk("subtract", f"{fmt_num(a)} - {fmt_num(b)}",
+                   a - b,
+                   f"{fmt_num(a)} - {fmt_num(b)} = {fmt_num(a - b)}")
+    # difference of A and B (school convention: |A - B|)
+    m = re.search(r"\bdifference\s+of\s+" + N + r"\s+and\s+" + N, q)
+    if m:
+        a, b = Fraction(m.group(1)), Fraction(m.group(2))
+        hi, lo = max(a, b), min(a, b)
+        return _mk("subtract", f"{fmt_num(hi)} - {fmt_num(lo)}",
+                   hi - lo,
+                   f"{fmt_num(hi)} - {fmt_num(lo)} "
+                   f"= {fmt_num(hi - lo)}")
+    return None
+
+
+_MATH_WORDS73 = {
+    "sin", "cos", "tan", "cot", "sec", "csc", "log", "ln",
+    "exp", "sqrt", "pi", "theta", "alpha", "beta", "gamma",
+    "delta", "lambda", "mu", "phi", "omega", "root",
+}
+
+
+def _is_word_soup73(text, expr):
+    """Wave 73: True when an expression's free symbols are
+    just the letters of the ordinary words in the question —
+    SymPy's implicit multiplication turned the words into a
+    letter product ("5 into 4" -> 20*i*n*t*o; the sentence
+    "5 mein se 3 ghata" -> 15*a**2*e**2*g*h*i*...). Fires
+    only when the question's non-maths words TOGETHER cover
+    every symbol and there are at least two symbols, so
+    genuine algebra (a single variable, or symbols no word
+    in the question spells out) never trips it."""
+    syms = {str(s) for s in expr.free_symbols}
+    if len(syms) < 2:
+        return False
+    covered = set()
+    for w in re.findall(r"[a-zA-Z]+", str(text).lower()):
+        if len(w) >= 2 and w not in _MATH_WORDS73:
+            covered |= syms & set(w)
+    return covered == syms
+
+
 def solve_arithmetic(question):
     # Wave 56 command schemas first: they are whole-question
     # anchored, so they can never shadow a plain expression.
@@ -686,6 +799,9 @@ def solve_arithmetic(question):
     _sc = _square_cube_word(question)
     if _sc is not None:
         return _sc
+    _w73 = _wave73_word_arithmetic(question)
+    if _w73 is not None:
+        return _w73
     _cleaned = _strip_hinglish_filler(question)
     if _cleaned is not None:
         question = _cleaned
@@ -718,6 +834,15 @@ def solve_arithmetic(question):
     if not hasattr(expr, "free_symbols"):
         raise ValueError(f"Could not parse expression: {question!r}")
     if expr.free_symbols:
+        # Wave 73: word-soup defence — if the "symbols" are
+        # just the letters of one ordinary word in the
+        # question ("5 into 4" -> 20*i*n*t*o), this was never
+        # an algebraic expression; refuse it so the question
+        # falls through like any unsolved ask instead of
+        # serving a letter product as the answer.
+        if _is_word_soup73(text, expr):
+            raise ValueError(
+                f"Could not parse expression: {question!r}")
         # A symbolic expression reached arithmetic: simplify it instead.
         simplified = sp.simplify(expr)
         return {
