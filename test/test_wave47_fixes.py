@@ -122,9 +122,10 @@ def test_cone_hemisphere_volume():
 
 
 def test_plain_hemisphere_unchanged():
+    # Wave 99: radius 7 -> pi = 22/7 -> 718.667 (was 718.378).
     a = _ans("Find the volume of a hemisphere of radius "
              "7 cm.")
-    assert "718.378" in a
+    assert "718.667" in a
 
 
 # ------------------------------------------------------ 3. train / work

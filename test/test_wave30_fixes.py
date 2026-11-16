@@ -165,10 +165,12 @@ CASES = [
     ("The angle of elevation of the top of a tower from a "
      "point 30 m away from the foot of the tower is 30 "
      "degrees. Find the height of the tower.", "17.32"),
+    # Wave 99 (pi policy): C = 44 -> pi = 22/7 -> 154 (was
+    # 154.06); cylinder radius 7 -> TSA 748 (was 747.69).
     ("Find the area of a circle whose circumference is "
-     "44 cm.", "154.06"),
+     "44 cm.", "154"),
     ("The radius of a cylinder is 7 cm and its height is "
-     "10 cm. Find its total surface area.", "747.69"),
+     "10 cm. Find its total surface area.", "748"),
     ("The sides of a triangle are 5 cm, 12 cm and 13 cm. "
      "Find its area.", "30"),
     ("Find the coordinates of the point which divides the "
@@ -208,12 +210,17 @@ def test_battery_category_exact(question, want):
         f"contain {want!r}")
 
 
-# --- 4. Honesty: the similar layer still exists, still last ---
+# --- 4. Honesty: an unparseable question never gets a fake
+# answer. Wave 30 pinned the labelled similar example here;
+# Wave 67 (Suraj: unsolved = one line, nothing else) replaced
+# that presentation with the not-found line — the honesty
+# property this section exists for is unchanged and stronger:
+# no similar example is dressed up as the student's answer.
 
 def test_genuinely_unparseable_still_gets_labelled_fallback():
     res = _solve_friendly(
         "ek ladke ke paas 50 rupaye hai usne 3 chocolate 10 "
         "rupaye ki kharidi kitne bache")
-    assert res.get("fallback_kind") == "similar"
-    assert str(res.get("answer", "")).startswith(
-        "Similar example")
+    assert res.get("fallback_kind") == "not_found"
+    assert str(res.get("answer", "")) == "Answer nahi mila."
+    assert not (res.get("steps") or [])

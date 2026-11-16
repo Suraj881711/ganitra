@@ -124,7 +124,9 @@ def test_solve_friendly_serves_repeat_failure_from_negative(monkeypatch):
         return {"type": "solver", "op": "error",
                 "answer": "Could not solve", "steps": []}
 
-    def fake_fallback(question, result):
+    def fake_fallback(question, result, lang=None,
+                      student_class=None):
+        # Wave 67: with_fallback grew the optional lang kwarg.
         calls["fallback"] += 1
         return _fallback_result()
 
@@ -150,7 +152,8 @@ def test_solve_friendly_never_negative_caches_real_answers(monkeypatch):
 
     monkeypatch.setattr(api, "solve_question", fake_solve)
     monkeypatch.setattr(api, "with_fallback",
-                        lambda question, result: result)
+                        lambda question, result, lang=None,
+        student_class=None: result)
     assert _solve_friendly("2+2") == real
     assert _solve_friendly("2+2") == real
     assert calls["solve"] == 2  # re-solved (positive cache's domain)

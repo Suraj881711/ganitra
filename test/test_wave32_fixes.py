@@ -163,23 +163,27 @@ def test_complementary_angle_ratio():
     ("Find the total surface area of a frustum of a cone "
      "with radii 8 cm and 4 cm and height 6 cm.",
      "frustum tsa", "523.18"),
+    # Wave 99 (pi policy): radii 7 / 14 are multiples of 7, so
+    # these now use pi = 22/7 and give the clean textbook
+    # values (718.667, 462, 1232, 220, 374, 440) instead of
+    # the true-pi decimals asserted before.
     ("Find the volume of a hemisphere of radius 7 cm.",
-     "hemisphere volume", "718.378"),
+     "hemisphere volume", "718.667"),
     ("Find the total surface area of a hemisphere of "
      "radius 7 cm.",
-     "hemisphere tsa", "461.814"),
+     "hemisphere tsa", "462"),
     ("Find the curved surface area of a hemisphere of "
      "radius 14 cm.",
-     "hemisphere csa", "1231.5"),
+     "hemisphere csa", "1232"),
     ("Find the curved surface area of a cone with "
      "radius 7 cm and slant height 10 cm.",
-     "cone csa", "219.911"),
+     "cone csa", "220"),
     ("Find the total surface area of a cone with "
      "radius 7 cm and slant height 10 cm.",
-     "cone tsa", "373.85"),
+     "cone tsa", "374"),
     ("Find the curved surface area of a cylinder with "
      "radius 7 cm and height 10 cm.",
-     "cylinder csa", "439.823"),
+     "cylinder csa", "440"),
     ("Find the volume of a cuboid with length 10 cm, "
      "breadth 8 cm and height 6 cm.",
      "cuboid volume", "480"),
@@ -190,12 +194,14 @@ def test_complementary_angle_ratio():
      "of height 5 cm and a cone of height 4 cm mounted on "
      "it, both of radius 3 cm.",
      "combined volume", "179.071"),
+    # Wave 99: sector (22/7 part) = 154; segment = 154 - 98
+    # (the triangle part never involves pi) = 56.
     ("Find the area of a sector of a circle with "
      "radius 14 cm and angle 90 degrees.",
-     "sector area", "153.938"),
+     "sector area", "154"),
     ("Find the area of a segment of a circle with "
      "radius 14 cm and angle 90 degrees.",
-     "segment area", "55.938"),
+     "segment area", "56"),
     ("Find the length of an arc of a circle with "
      "radius 10 cm and angle 60 degrees.",
      "arc length", "10.472"),
@@ -207,15 +213,19 @@ def test_mensuration_topics(q, op, needle):
 def test_existing_cylinder_tsa_not_hijacked_back():
     # The generic cylinder branch owns TSA — the new CSA
     # branch must not steal it.
+    # Wave 99: radius 7 -> pi = 22/7, TSA = 748 (was 747.6991
+    # with true pi).
     r = _r("Find the total surface area of a cylinder with "
            "radius 7 cm and height 10 cm.")
-    assert "747.6991" in str(r.get("answer", "")), r
+    assert "748" in str(r.get("answer", "")), r
 
 
 def test_existing_sphere_volume_intact():
+    # Wave 99: radius 7 -> pi = 22/7, volume = 1437.33
+    # (was 1436.755 with true pi).
     r = _r("Find the volume of a sphere of radius 7 cm.")
     assert r.get("op") == "volume"
-    assert "1436.755" in str(r.get("answer", "")), r
+    assert "1437.33" in str(r.get("answer", "")), r
 
 
 # -----------------------------------------------------------------

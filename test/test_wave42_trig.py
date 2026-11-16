@@ -103,8 +103,14 @@ def test_simplify_sin2_plus_cos2_theta():
 
 # --- The flagship identity proof (audit #161) ------------------
 def test_prove_sin2_plus_cos2_is_identity():
-    res = _res("Prove that sin^2 A + cos^2 A = 1.")
-    assert res["answer"].startswith("Identity verified")
+    # Wave 95: the bare solver verdict is upgraded by the
+    # proof layer to a full derivation, so this one case no
+    # longer goes through _res (which asserts solver-only
+    # answers for the rest of this file).
+    res = _solve_friendly("Prove that sin^2 A + cos^2 A = 1.")
+    assert res["answer"].startswith("sin^2 A + cos^2 A = 1")
+    assert "identity proved" in res["answer"]
+    assert res.get("fallback_kind") == "proof"
 
 
 def test_prove_non_identity_stays_rejected():

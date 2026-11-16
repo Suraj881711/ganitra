@@ -288,9 +288,11 @@ def test_collinear_find_k():
 
 
 def test_ring_area_and_rectangle_diagonal():
+    # Wave 99: both radii multiples of 7 -> pi = 22/7 ->
+    # ring area 462 (was 461.81... with true pi).
     assert _ans("Find the area between two concentric "
                 "circles of radii 7 cm and 14 cm."
-                ).startswith("461.81")
+                ).startswith("462")
     a = _ans("A rectangular park is to be designed whose "
              "breadth is 3 m less than its length. Its "
              "diagonal is 60 m more than the shorter side "
