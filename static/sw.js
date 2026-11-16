@@ -77,7 +77,13 @@
    (cache already v12 in this tree via Wave 62). */
 /* Wave 64: Hindi-medium papers — cache v13, stylesheet ?v=36. */
 /* Wave 69: example chips removed (Suraj) — cache v15, stylesheet ?v=38. */
-var GANITRA_CACHE = "ganitra-static-v15";
+/* Wave 75: cache v16, stylesheet ?v=39 — the bump purges
+   every older cache (including any stale cached page
+   shell) on Suraj's phone after his 16 Nov menu report:
+   the menu panel rules were already correct live, but a
+   pre-Wave-72 cached shell could still replay the old
+   unstyled menu. No CSS content change rides along. */
+var GANITRA_CACHE = "ganitra-static-v16";
 
 self.addEventListener("install", function (event) {
   self.skipWaiting();
