@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>{{ t.weak_heading }}</h2>
+    {% if ranked %}
+      <p class="muted">{{ t.weak_intro }}</p>
+      {% if gen_failed %}
+        <p class="bad">{{ t.weak_gen_failed }}</p>
+      {% endif %}
+      {% for r in ranked %}
+        <div class="practice-q">
+          <p><strong>{{ loop.index }}. {{ r.label }}</strong>
+            · {{ r.count }} {{ t.weak_mistakes_word }}</p>
+        </div>
+      {% endfor %}
+      <div class="board-actions">
+        <form method="post" action="/weak-topics/start" class="inline-form">
+          <button type="submit" class="board-opt">{{ t.weak_start_btn }}</button>
+        </form>
+        <a class="board-opt" href="/mistakes">{{ t.nav_mistakes }}</a>
+      </div>
+    {% else %}
+      <p class="muted">{{ t.weak_empty }}</p>
+      <div class="board-actions">
+        <a class="board-opt" href="/practice">{{ t.quiz_heading }}</a>
+        <a class="board-opt" href="/test">{{ t.practice_heading }}</a>
+      </div>
+    {% endif %}
+    <a class="back" href="/">{{ t.back_to_solver }}</a>
+  </div>
+{% endblock %}

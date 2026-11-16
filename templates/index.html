@@ -282,7 +282,15 @@
      long after parsing; defer keeps the guarantee that page
      init never waits on a CDN. #}
   <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-  <script>
+  {# Wave 98: the offline basics evaluator (kam-net mode). A
+     plain script tag — NOT defer — so window.GanitraOffline
+     exists before the chat script below runs. The service
+     worker caches it with the other /static/ code, and
+     precaches it on install, so it is there when the net
+     is not. It is used ONLY when /api/solve cannot be
+     reached; a server answer always wins. #}
+  <script src="{{ url_for('static', filename='offline.js') }}"></script>
+    <script>
     (function () {
       var L = {{ js_t | tojson }};
       var VOICE_BTN = {{ voice_label | tojson }};
@@ -306,6 +314,7 @@
                     {{ t.error_tip2 | tojson }},
                     {{ t.error_tip3 | tojson }}],
         errorRetry: {{ t.error_retry_btn | tojson }},
+        offlineNote: {{ t.chat_offline_note | tojson }},
         moreMethods: {{ t.mm_more | tojson }},
         otherHeading: {{ t.mm_other_heading | tojson }},
         methodLabel: {{ t.mm_method_label | tojson }},
@@ -1124,6 +1133,7 @@
         var introEl = null;
         var adviceEl = null;
         var graphImg = null;
+        var figureEl = null;
         var stepsSection = null;
 
         var badge = document.createElement("span");
@@ -1687,6 +1697,28 @@
           graphImg = img;
         }
 
+        /* Wave 86: the labelled diagram for a mensuration
+           solve (figures.py, attached server-side only when
+           the shape + dimensions are unambiguous and the
+           figure's numbers reproduce the answer). The SVG is
+           generated server-side from formatted numbers and
+           fixed words only — no user text is ever
+           interpolated — so innerHTML is safe here; the
+           caption is set as text. It sits in the graph's
+           place in the reading sequence: inside the card,
+           after the steps, before the answer line. */
+        if (result.figure && result.figure.svg) {
+          var fig = document.createElement("figure");
+          fig.className = "answer-figure";
+          fig.innerHTML = result.figure.svg;
+          if (result.figure.caption) {
+            var cap = document.createElement("figcaption");
+            cap.textContent = result.figure.caption;
+            fig.appendChild(cap);
+          }
+          figureEl = fig;
+        }
+
         if (boardSteps.length) {
           var ol = document.createElement("ol");
           stepsOl = ol;
@@ -1766,6 +1798,7 @@
         if (introEl) div.appendChild(introEl);
         if (stepsSection) div.appendChild(stepsSection);
         if (graphImg) div.appendChild(graphImg);
+        if (figureEl) div.appendChild(figureEl);
         div.appendChild(ans);
         var wrap = document.createElement("div");
         wrap.className = "answer-wrap";
@@ -1873,6 +1906,7 @@
         if (ui.handwriting_btn) CHAT.handwriting = ui.handwriting_btn;
         if (ui.print_copy_link) CHAT.printCopy = ui.print_copy_link;
         if (ui.error_heading) CHAT.errorHeading = ui.error_heading;
+        if (ui.chat_offline_note) CHAT.offlineNote = ui.chat_offline_note;
         if (ui.error_intro) CHAT.errorIntro = ui.error_intro;
         if (ui.error_tip1) {
           CHAT.errorTips = [ui.error_tip1, ui.error_tip2,
@@ -1979,14 +2013,30 @@
         }
         box.value = "";
         box.style.height = "auto";
-        fetch("/api/solve", {
+        /* Wave 98: a fetch that hangs forever on a dying
+           connection must still END — after 45 s (long past
+           the 6 s waking note, generous for a cold free-tier
+           server) the request is aborted and the offline
+           path below takes over. Browsers without
+           AbortController simply get no timeout. */
+        var solveCtl = null, solveTimer = null;
+        var fetchOpts = {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question: question })
-        }).then(function (resp) {
+        };
+        if (window.AbortController) {
+          solveCtl = new AbortController();
+          fetchOpts.signal = solveCtl.signal;
+          solveTimer = window.setTimeout(function () {
+            try { solveCtl.abort(); } catch (e) {}
+          }, 45000);
+        }
+        fetch("/api/solve", fetchOpts).then(function (resp) {
           return resp.json();
         }).then(function (data) {
           if (wakeTimer) window.clearTimeout(wakeTimer);
+          if (solveTimer) window.clearTimeout(solveTimer);
           typing.remove();
           solving = false;
           // Wave 9: the server may have auto-switched the site
@@ -2010,12 +2060,43 @@
           if (data) recordTurn({ role: "bot", data: data });
           box.focus();
         }).catch(function () {
-          // Network/API trouble: fall back to the classic page.
+          // Network/API trouble (or the Wave-98 timeout):
+          // the server could not answer, so the browser's
+          // own basic evaluator gets ONE chance — basic sums
+          // only, in the same house style. Anything beyond
+          // basics gets the honest offline one-liner, never
+          // a guessed answer. Only when the evaluator itself
+          // is unavailable (its script never loaded) does the
+          // old classic-page fallback remain.
           if (wakeTimer) window.clearTimeout(wakeTimer);
+          if (solveTimer) window.clearTimeout(solveTimer);
           typing.remove();
           solving = false;
-          box.value = question;
-          form.submit();
+          var off = null;
+          try {
+            if (window.GanitraOffline) {
+              off = window.GanitraOffline.solve(question);
+            }
+          } catch (e) { off = null; }
+          if (off) {
+            var odata = {
+              ok: true, offline: true, _q: question,
+              result: { type: off.type, op: off.op,
+                        steps: off.steps, answer: off.answer }
+            };
+            addAnswerBubble(question, odata);
+            dhyaanSolved();
+            recordTurn({ role: "bot", data: odata });
+          } else if (window.GanitraOffline) {
+            addBubble("bot", CHAT.offlineNote
+              || "Internet is not available right now — "
+                 + "please check your connection and try again.");
+          } else {
+            box.value = question;
+            form.submit();
+            return;
+          }
+          box.focus();
         });
       });
 
@@ -2047,6 +2128,118 @@
         if (stickBottom) scrollLog(true);
       });
 
+      /* Wave 84: spoken-maths normalisation — a dictated question
+         lands in the composer as TEXT the student can read and
+         edit before solving, so common spoken forms fold to the
+         symbols a typing student (and the solver) uses:
+         "x square" -> "x^2", "12 bata 3" -> "12/3",
+         "5 guna 4" -> "5×4". Conservative by design: only
+         well-known mappings, operator words fold only between
+         operands, digit values are never altered (Devanagari
+         digits fold to ASCII, same value), and ambiguous words
+         ("aur", bare "by", number words like "five") are left
+         exactly as heard. */
+      // WAVE84-SPEECH-NORMALISE-BEGIN
+      function normalizeSpokenMaths(text) {
+        if (!text) return "";
+        var t = String(text).replace(/\s+/g, " ").trim();
+        if (!t) return "";
+        // Devanagari digits -> ASCII (same values; one script
+        // for every rule below and for the solver).
+        t = t.replace(/[०-९]/g, function (d) {
+          return String(d.charCodeAt(0) - 0x966);
+        });
+        // Protect "square root" / "cube root" — the solver reads
+        // those phrases as-is; the square/cube rules below must
+        // not eat them.
+        t = t.replace(/\bsquare root\b/gi, "\u0001SQRT\u0001");
+        t = t.replace(/\bcube root\b/gi, "\u0001CBRT\u0001");
+        // Powers: "x to the power 3", "2 power 3", "x ka varg",
+        // "5 का वर्ग", "a squared", "5 square".
+        var POW = { two: 2, three: 3, four: 4, five: 5, six: 6,
+                    seven: 7, eight: 8, nine: 9, ten: 10 };
+        t = t.replace(/([a-z0-9])\s+to the power\s+(?:of\s+)?(\d+|two|three|four|five|six|seven|eight|nine|ten)\b/gi,
+          function (m, base, p) {
+            return base + "^" + (POW[String(p).toLowerCase()] || p);
+          });
+        t = t.replace(/([a-z0-9])\s+power\s+(\d+)/gi, "$1^$2");
+        t = t.replace(/([a-z0-9])\s+ka\s+varg\b/gi, "$1^2");
+        t = t.replace(/([a-z0-9])\s+ka\s+square\b/gi, "$1^2");
+        t = t.replace(/([a-z0-9])\s+ka\s+ghan\b/gi, "$1^3");
+        t = t.replace(/([0-9a-zA-Z])\s*का\s*वर्ग/g, "$1^2");
+        t = t.replace(/([0-9a-zA-Z])\s*का\s*घन/g, "$1^3");
+        t = t.replace(/([a-z0-9]+)\s+squared\b/gi, "$1^2");
+        t = t.replace(/([a-z0-9]+)\s+cubed\b/gi, "$1^3");
+        t = t.replace(/([a-z0-9]+)\s+(square|cube)\b/gi,
+          function (m, base, w) {
+            var b = base.toLowerCase();
+            // "a square" / "the square" (the shape) must
+            // survive: bare square/cube folds only after a
+            // digit-bearing token (5, 2x) or an x/y/z variable.
+            if (/\d/.test(b) ||
+                (b.length === 1 && "xyz".indexOf(b) >= 0)) {
+              return base + (w.toLowerCase() === "square" ? "^2" : "^3");
+            }
+            return m;
+          });
+        // Decimal point: "3 point 5" -> "3.5".
+        t = t.replace(/(\d)\s+point\s+(\d)/gi, "$1.$2");
+        // Operator words fold only between operands. `letters`
+        // also allows a single-letter variable as an operand
+        // ("x plus 6"); digit-only folds stay stricter because
+        // words like "into"/"bata" appear in ordinary speech.
+        function opFold(src, word, sym, letters) {
+          var opnd = letters ? "(\\d+(?:\\.\\d+)?|[a-z])"
+                             : "(\\d+(?:\\.\\d+)?)";
+          var re = new RegExp("(^|[\\s(+\\-×/^])" + opnd + "\\s+" +
+                              word + "\\s+" + opnd + "(?![a-z0-9])", "gi");
+          for (var i = 0; i < 3; i++) {
+            var next = src.replace(re, function (m, pre, a, b) {
+              return pre + a + sym + b;
+            });
+            if (next === src) break;
+            src = next;
+          }
+          return src;
+        }
+        t = opFold(t, "divided by", "/", true);
+        t = opFold(t, "multiplied by", "×", true);
+        t = opFold(t, "plus", "+", true);
+        t = opFold(t, "minus", "-", true);
+        t = opFold(t, "into", "×", false);
+        t = opFold(t, "upon", "/", false);
+        t = opFold(t, "times", "×", false);
+        t = opFold(t, "(?:se\\s+)?guna", "×", false);
+        t = opFold(t, "bata", "/", false);
+        t = opFold(t, "ghata", "-", false);
+        t = opFold(t, "jod", "+", false);
+        t = opFold(t, "(?:से\\s+)?गुणा", "×", false);
+        t = opFold(t, "बटा", "/", false);
+        t = opFold(t, "घटा", "-", false);
+        t = opFold(t, "जोड़", "+", false);
+        t = opFold(t, "प्लस", "+", false);
+        t = opFold(t, "माइनस", "-", false);
+        // "10 me se 3 ghatao" / "10 में से 3 घटाओ" — the number
+        // being subtracted sits in the middle of the phrase.
+        t = t.replace(/(\d+(?:\.\d+)?)\s+(?:me|mein)\s+se\s+(\d+(?:\.\d+)?)\s+ghatao?\b/gi, "$1-$2");
+        t = t.replace(/(\d+(?:\.\d+)?)\s+se\s+(\d+(?:\.\d+)?)\s+ghatao?\b/gi, "$1-$2");
+        t = t.replace(/(\d+(?:\.\d+)?)\s*में\s*से\s*(\d+(?:\.\d+)?)\s*घटाओ/g, "$1-$2");
+        // Equals: "is equal to" / "equals" / "बराबर" / "barabar"
+        // (the last two only when a digit is present, so plain
+        // sentences about things being equal stay untouched).
+        t = t.replace(/\bis equal to\b/gi, "=");
+        t = t.replace(/\bequals\b/gi, "=");
+        if (/\d/.test(t)) {
+          t = t.replace(/\s+बराबर\s+/g, " = ");
+          t = t.replace(/\s+barabar\s+/gi, " = ");
+        }
+        // Restore the protected root phrases.
+        t = t.replace(/\u0001SQRT\u0001/g, "square root");
+        t = t.replace(/\u0001CBRT\u0001/g, "cube root");
+        return t.replace(/\s+/g, " ").trim();
+      }
+      // WAVE84-SPEECH-NORMALISE-END
+
       /* ---------- Voice input (Web Speech API, browser-side) ---------- */
       var micBtn = document.getElementById("mic-btn");
       var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -2056,34 +2249,63 @@
       } else {
         var recog = null;
         var listening = false;
-        function startRecognition(lang) {
-          recog = new SR();
-          recog.lang = lang;
-          recog.interimResults = false;
-          recog.maxAlternatives = 1;
-          recog.onresult = function (ev) {
+        /* Wave 84: try the student's UI language first, then
+           hi-IN, then en-IN — some browsers accept only a subset
+           of language tags and report language-not-supported. */
+        function speechLangs() {
+          var wanted = [SPEECH_LANG, "hi-IN", "en-IN"];
+          var out = [];
+          for (var i = 0; i < wanted.length; i++) {
+            if (wanted[i] && out.indexOf(wanted[i]) < 0) {
+              out.push(wanted[i]);
+            }
+          }
+          return out;
+        }
+        function startRecognition(langIdx) {
+          var langs = speechLangs();
+          var mine = new SR();
+          recog = mine;
+          mine.lang = langs[Math.min(langIdx, langs.length - 1)];
+          mine.interimResults = false;
+          mine.maxAlternatives = 1;
+          mine.onresult = function (ev) {
             var text = ev.results[0][0].transcript || "";
+            /* Wave 84: fold spoken maths ("x square", "12 bata
+               3") into typed symbols, then put it in the box —
+               appended after anything already typed — for the
+               student to check and edit before solving. */
+            text = normalizeSpokenMaths(text);
             if (text) {
+              if (box.value && box.value.trim()) {
+                text = box.value.replace(/\s+$/, "") + " " + text;
+              }
               box.value = text;
               box.dispatchEvent(new Event("input"));
+              box.focus();
               say(L.js_voice_heard.replace("{text}", text));
             }
           };
-          recog.onerror = function (ev) {
-            if (ev.error === "language-not-supported" && lang !== "en-IN") {
-              startRecognition("en-IN");  // fallback language
+          mine.onerror = function (ev) {
+            if (ev.error === "language-not-supported" &&
+                langIdx < langs.length - 1) {
+              startRecognition(langIdx + 1);  // next fallback language
               return;
             }
-            listening = false;
-            micBtn.classList.remove("mic-live");
+            if (recog === mine) {
+              listening = false;
+              micBtn.classList.remove("mic-live");
+            }
             say(ev.error === "not-allowed" ? L.js_voice_denied : L.js_voice_failed);
           };
-          recog.onend = function () {
-            listening = false;
-            micBtn.classList.remove("mic-live");
+          mine.onend = function () {
+            if (recog === mine) {
+              listening = false;
+              micBtn.classList.remove("mic-live");
+            }
           };
           try {
-            recog.start();
+            mine.start();
             listening = true;
             micBtn.classList.add("mic-live");
             say(L.js_voice_speak);
@@ -2091,7 +2313,7 @@
         }
         micBtn.addEventListener("click", function () {
           if (listening && recog) { recog.stop(); return; }
-          startRecognition(SPEECH_LANG);
+          startRecognition(0);
         });
       }
 
@@ -2140,6 +2362,44 @@
           })
           .catch(function () { say(L.js_photo_error); });
       }
+      /* Wave 83: SERVER-side OCR first (the pluggable backend
+         behind POST /photo-ocr). Where the server has a real
+         OCR engine this reads the photo without waiting on the
+         Tesseract.js CDN; where it has none (the reply code
+         "ocr_unavailable") — or the read fails — the browser
+         flow above takes over, unchanged. A LOW-confidence
+         server read is never solved blind: the recognised text
+         lands in the composer so the student can check and fix
+         it before pressing Solve. */
+      function ocrImageSmart(blob) {
+        if (!window.fetch || !window.FormData) {
+          ocrBlob(blob);
+          return;
+        }
+        say(L.js_photo_reading);
+        var fd = new FormData();
+        fd.append("file", blob);
+        window.fetch("/photo-ocr", { method: "POST", body: fd })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.kind === "text" && d.text) {
+              if (d.low_confidence) {
+                var q = document.getElementById("q");
+                if (q) {
+                  q.value = d.text;
+                  q.focus();
+                  say(L.js_photo_check);
+                  return;
+                }
+              }
+              sendQuestionText(d.text, "photo");
+            } else if (d && d.code === "too_large") {
+              say(L.js_file_too_large);
+            } else {
+              ocrBlob(blob);
+            }
+          })
+          .catch(function () { ocrBlob(blob); });
       function ocrBlob(blob, source) {
         if (typeof window.Tesseract === "undefined") {
           say(L.js_photo_unavailable);
@@ -2206,7 +2466,7 @@
         var isImage = (file.type &&
                        file.type.indexOf("image/") === 0) ||
           /\.(png|jpe?g|gif|webp|bmp|heic)$/.test(name);
-        if (isImage) ocrBlob(file);
+        if (isImage) ocrImageSmart(file);
         else extractFileOnServer(file);
         photoInput.value = "";
       });

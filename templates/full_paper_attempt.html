@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block backnav %}
+  {# Wave 88: this page IS a timed exam in progress (the form
+     below auto-submits when the timer ends), so — exactly like
+     the Board chapter test (Wave 60) — its back bar cannot come
+     from the path map: the fallback is this paper's page, and
+     the confirmation is always on while the form is on screen,
+     because leaving loses the typed answers. #}
+  <nav class="backnav">
+    <button type="button" class="backnav-btn" data-backnav
+            data-fallback="/papers/{{ paper.id }}"
+            data-confirm-msg="{{ t.nav_back_test_confirm }}"
+            aria-label="{{ t.nav_back }}"><span aria-hidden="true">←</span> {{ t.nav_back }}</button>
+  </nav>
+{% endblock %}
+{% block content %}
+  <div class="card">
+    <h2>Full Paper — Exam Mode 📝</h2>
+    <p class="muted"><strong>{{ paper.board }} ·
+      {{ paper.year }}</strong> — {{ paper.set_label }} ·
+      Class {{ paper.class_num }} · {{ total_marks }}
+      {{ t.papers_marks_word }}</p>
+    <div class="quiz-timer">{{ t.time_left }}
+      <span id="fp-timer">--:--:--</span></div>
+
+    <form method="post"
+          action="/papers/{{ paper.id }}/attempt/submit"
+          id="full-paper-form">
+      <input type="hidden" name="time_taken" id="fp-time-taken"
+             value="" />
+      {% for sec in view.sections %}
+        <h3>{{ sec.title }}</h3>
+        {% for q in sec.questions %}
+          <div class="practice-q">
+            <p><strong>Q{{ q.number }}.</strong>
+              <span class="muted">[{{ q.marks }}
+                {{ t.papers_marks_word }}]</span></p>
+            {% for kind, text in q.lines %}
+              {% if kind == "or" %}
+                <p class="q-or">{{ text }}</p>
+              {% else %}
+                <p class="q-line">{{ text }}</p>
+              {% endif %}
+            {% endfor %}
+            {% if q.has_figure %}<p class="q-figure">[Figure]</p>{% endif %}
+            {% if q.options %}
+              {% for label, text in q.options %}
+                <p><label>
+                  <input type="radio"
+                         name="answer_{{ q.index }}"
+                         value="{{ label }}" />
+                  ({{ label }}) {{ text }}
+                </label></p>
+              {% endfor %}
+            {% elif q.kind == "self" or q.kind == "assertion_reason" %}
+              <textarea name="answer_{{ q.index }}" rows="4"
+                        placeholder="{{ t.your_answer_ph }}"
+                        autocomplete="off"></textarea>
+            {% else %}
+              <input type="text" name="answer_{{ q.index }}"
+                     placeholder="{{ t.your_answer_ph }}"
+                     autocomplete="off" />
+            {% endif %}
+          </div>
+        {% endfor %}
+      {% endfor %}
+      <button type="submit">{{ t.submit_answers }}</button>
+    </form>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById("full-paper-form");
+      var timerEl = document.getElementById("fp-timer");
+      var takenEl = document.getElementById("fp-time-taken");
+      var total = {{ duration_seconds }};
+      var left = {{ remaining_seconds }};
+
+      function fmt(s) {
+        s = Math.max(0, s);
+        var h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60),
+            r = s % 60;
+        function pad(n) { return (n < 10 ? "0" : "") + n; }
+        return h + ":" + pad(m) + ":" + pad(r);
+      }
+
+      function stampTaken() {
+        /* Elapsed = the full duration minus what is left;
+           `left` ticks down in step with real time, and on a
+           fresh start remaining == duration, so this is the
+           honest time spent on the paper. */
+        takenEl.value = total - left;
+      }
+
+      timerEl.textContent = fmt(left);
+      var tick = setInterval(function () {
+        left -= 1;
+        timerEl.textContent = fmt(left);
+        if (left <= 0) {
+          clearInterval(tick);
+          stampTaken();
+          form.submit();
+        }
+      }, 1000);
+      form.addEventListener("submit", stampTaken);
+    })();
+  </script>
+{% endblock %}

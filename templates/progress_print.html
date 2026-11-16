@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="{{ lang }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ganitra — {{ t.progress_heading }}</title>
+    <style>
+      body { font-family: Georgia, "Times New Roman",
+             "Noto Serif Devanagari", "Nirmala UI", serif;
+             color: #25324e; background: #fff; margin: 48px auto;
+             max-width: 760px; padding: 0 24px; line-height: 1.65;
+             font-size: 16px; }
+      h1 { font-size: 22px; margin-bottom: 2px; }
+      h2 { font-size: 16px; margin-top: 26px; border-bottom: 1px solid #ccc;
+           padding-bottom: 4px; }
+      .brand { color: #8a6414; letter-spacing: .04em; font-size: 13px;
+               text-transform: uppercase; }
+      .muted { color: #555; }
+      table { border-collapse: collapse; margin: 10px 0; }
+      th, td { border: 1px solid #ccc; padding: 6px 14px;
+               text-align: left; }
+      th { background: #fdf6dd; }
+      ul { margin: 6px 0; padding-left: 21px; }
+      footer { margin-top: 36px; border-top: 1px solid #ccc;
+               padding-top: 10px; color: #555; font-size: 13px;
+               text-align: center; }
+      .print-btn { font: inherit; padding: 12px 22px; min-height: 48px;
+                   cursor: pointer;
+                   border: 1px solid #8a6414; background: #fdf6dd;
+                   border-radius: 12px; }
+      @media print { .no-print { display: none !important; } }
+    </style>
+  </head>
+  <body>
+    <p class="brand">Ganitra</p>
+    <h1>{{ t.progress_heading }}</h1>
+    <p><strong>{{ t.parent_student_label }}:</strong> {{ account_name }}{% if class_num %} · {{ t.progress_student_line.format(n=class_num) }}{% endif %}{% if board_text %} · {{ board_text }}{% endif %}</p>
+    {% if since_text %}
+      <p class="muted">{{ t.progress_since.format(date=since_text) }}</p>
+    {% endif %}
+
+    {% if progress.asked %}
+      <table>
+        <tr><th>{{ t.progress_asked_label }}</th>
+            <td id="print-asked">{{ progress.asked }}</td></tr>
+        <tr><th>{{ t.progress_answered_label }}</th>
+            <td id="print-answered">{{ progress.answered }}</td></tr>
+        <tr><th>{{ t.progress_chats_label }}</th>
+            <td>{{ progress.chats }}</td></tr>
+      </table>
+      <p class="muted">{{ t.progress_rate_text.format(pct=progress.answered_pct) }}</p>
+
+      <h2>{{ t.progress_weekly_heading }}</h2>
+      <table>
+        <tr><th>{{ t.progress_weekly_heading }}</th>
+            <th>{{ t.progress_asked_label }}</th></tr>
+        {% for w in progress.weeks %}
+          <tr><td>{{ w.label }}</td><td>{{ w.count }}</td></tr>
+        {% endfor %}
+      </table>
+
+      <h2>{{ t.parent_last_test_heading }}</h2>
+      {% if last_report %}
+        <p>{{ t.parent_last_test_label }}: <strong>{{ last_score_text }}</strong></p>
+        <p><strong>{{ t.parent_topics_label }}:</strong>
+          {% if last_report.lost_topics %}{{ last_report.lost_topics | join(", ") }}{% else %}{{ t.parent_none }}{% endif %}</p>
+      {% else %}
+        <p class="muted">{{ t.parent_last_test_none }}</p>
+      {% endif %}
+    {% else %}
+      <p class="muted">{{ t.progress_empty }}</p>
+    {% endif %}
+
+    <h2>{{ t.progress_weak_heading }}</h2>
+    {% if weak_topics %}
+      <ul>
+        {% for w in weak_topics %}<li>{{ w.label }} — {{ w.count }}</li>{% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">{{ t.progress_weak_empty }}</p>
+    {% endif %}
+    {% if mistakes_count %}
+      <p>{{ t.progress_notebook_line.format(n=mistakes_count) }}</p>
+    {% endif %}
+
+    <p class="no-print" style="margin-top: 28px;">
+      <a class="print-btn" href="/progress"
+         style="display: inline-block; text-decoration: none; margin-right: 10px;">← {{ t.nav_back }}</a>
+      <button class="print-btn" onclick="window.print()">{{ t.print_btn }}</button>
+    </p>
+
+    <footer>{{ t.print_footer }} · Ganitra</footer>
+    <script>
+      window.addEventListener("load", function () {
+        setTimeout(function () { window.print(); }, 600);
+      });
+    </script>
+  </body>
+</html>

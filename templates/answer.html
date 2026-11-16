@@ -111,6 +111,16 @@
            alt="Graph of the function" />
     {% endif %}
 
+    {# Wave 86: the labelled diagram for a mensuration solve
+       (figures.py) — server-generated SVG from the question's
+       own numbers, with a text caption naming the shape and
+       dimensions. #}
+    {% if result.figure %}
+      <figure class="answer-figure">{{ result.figure.svg | safe }}
+        <figcaption>{{ result.figure.caption }}</figcaption>
+      </figure>
+    {% endif %}
+
     <h2>{{ t.answer_heading }} <span class="badge">{{ result.type }}{% if result.op %} · {{ result.op }}{% endif %}</span></h2>
     <div class="final-answer">
       <p class="answer-big">

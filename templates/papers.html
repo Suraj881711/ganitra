@@ -32,6 +32,7 @@
           </p>
           <p class="muted">{{ row.paper.note }}</p>
           <a class="board-opt" href="/papers/{{ row.paper.id }}">{{ t.papers_view_btn }}</a>
+          <a class="board-opt" href="/papers/{{ row.paper.id }}/attempt">{{ t.papers_attempt_btn }}</a>
         </div>
       {% endfor %}
     {% endfor %}

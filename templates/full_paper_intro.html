@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+  {# Wave 88: Full Paper Mode — the start page for attempting
+     one whole stored board paper like an exam. The duration
+     shown is the paper's own stored duration when the data
+     carries one, else the board-standard 3 hours (see
+     full_paper.duration_for); it is always shown here before
+     the timer starts, never hidden. #}
+  <div class="card">
+    <h2>Full Paper — Exam Mode 📝</h2>
+    <p><strong>{{ paper.board }} · {{ paper.year }}</strong>
+      — {{ paper.set_label }}</p>
+    <p class="muted">
+      Class {{ paper.class_num }} · {{ question_count }}
+      {{ t.papers_questions_word }} · {{ total_marks }}
+      {{ t.papers_marks_word }} · ⏱ Time allowed:
+      <strong>{{ duration_label }}</strong>
+    </p>
+    <p class="muted">Attempt the whole paper in one sitting,
+      in paper order, just like the real exam. When the time
+      ends, the paper submits itself. Leaving the attempt page
+      before submitting loses your typed answers.</p>
+    <p class="muted">How checking works: questions Ganitra can
+      verify (MCQs and short answers) are checked by the solver
+      and scored. Long answers, proofs and case-study questions
+      are <strong>self-check</strong> — you compare your answer
+      with the model answer shown at the end, and they are not
+      counted in the auto-checked score. Wrong checked answers
+      are saved in your Mistake Notebook.</p>
+    {% if in_progress %}
+      <p class="bad">You already have an attempt of this paper
+        running. Starting again resets its timer.</p>
+    {% endif %}
+    <form method="post"
+          action="/papers/{{ paper.id }}/attempt/start">
+      <button type="submit">Start the paper</button>
+    </form>
+    <p><a class="back" href="/papers/{{ paper.id }}">
+      {{ t.papers_view_btn }}</a>
+      <a class="back" href="/papers">{{ t.papers_back }}</a></p>
+  </div>
+{% endblock %}

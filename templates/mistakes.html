@@ -14,12 +14,14 @@
       {% endfor %}
       <div class="board-actions">
         <a class="board-opt" href="/mistakes/practice">{{ t.mistakes_practice_btn }}</a>
+        <a class="board-opt" href="/weak-topics">{{ t.weak_heading }}</a>
         <form method="post" action="/mistakes/clear" class="inline-form">
           <button type="submit">{{ t.mistakes_clear_btn }}</button>
         </form>
       </div>
     {% else %}
       <p class="muted">{{ t.mistakes_empty }}</p>
+      <p><a class="back" href="/weak-topics">{{ t.weak_heading }}</a></p>
     {% endif %}
     <a class="back" href="/">{{ t.back_to_solver }}</a>
   </div>

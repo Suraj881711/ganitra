@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>{{ t.weak_heading }} — {{ t.result_heading }}</h2>
+    <p class="answer-big">{{ t.score_label }} {{ score }} / {{ total }}</p>
+
+    {% for row in rows %}
+      <div class="practice-q">
+        <p><strong>Q{{ loop.index }}.</strong> {{ row.question }}</p>
+        <p>{{ t.your_answer_label }}
+          {% if row.correct %}<span class="ok">✔ {{ row.given }}</span>
+          {% else %}<span class="bad">✘ {{ row.given or t.blank }}</span>
+          — {{ t.correct_answer_label }} <strong>{{ row.expected }}</strong>{% endif %}
+        </p>
+      </div>
+    {% endfor %}
+
+    {% if score < total %}
+      <p class="encourage-line">{{ saathi_encouragement }}</p>
+    {% endif %}
+
+    <div class="copycheck-card">
+      <h3>{{ t.weak_summary_heading }}</h3>
+      {% for tr in topic_rows %}
+        <p><strong>{{ tr.label }}</strong>
+          · {{ tr.correct }} / {{ tr.total }}
+          {% if tr.status == "improved" %}
+            · <span class="ok">{{ t.weak_improved_label }}</span>
+          {% else %}
+            · <span class="bad">{{ t.weak_still_label }}</span>
+          {% endif %}
+        </p>
+      {% endfor %}
+      {% if kind_rows %}
+        <p class="muted">{{ t.weak_kinds_label }}
+          {% for kr in kind_rows %}{{ kr.kind }} ({{ kr.correct }}/{{ kr.total }}){% if not loop.last %}, {% endif %}{% endfor %}
+        </p>
+      {% endif %}
+    </div>
+
+    <div class="board-actions">
+      <form method="post" action="/weak-topics/start" class="inline-form">
+        <button type="submit" class="board-opt">{{ t.weak_again_btn }}</button>
+      </form>
+      <a class="board-opt" href="/mistakes">{{ t.nav_mistakes }}</a>
+    </div>
+    <a class="back" href="/">{{ t.back_to_solver }}</a>
+  </div>
+{% endblock %}

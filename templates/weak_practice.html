@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="card">
+    <h2>{{ t.weak_heading }}</h2>
+    <p class="muted">{{ t.weak_set_intro }}</p>
+    <form method="post" action="/weak-topics/submit" id="weak-form">
+      {% for item in questions %}
+        <div class="practice-q">
+          <p><strong>Q{{ loop.index }}.</strong> {{ item.question }}</p>
+          <p class="muted">{{ item.topic_label }}</p>
+          <input type="text" name="answer_{{ loop.index0 }}"
+                 placeholder="{{ t.your_answer_ph }}" autocomplete="off" />
+        </div>
+      {% endfor %}
+      <button type="submit">{{ t.submit_answers }}</button>
+    </form>
+    <a class="back" href="/weak-topics">← {{ t.weak_heading }}</a>
+  </div>
+{% endblock %}

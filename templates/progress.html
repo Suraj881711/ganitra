@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block content %}
+  {# Wave 89: My Progress — the student's own record, built
+     only from data the app already stores (progress.py for
+     the account side; the session Mistake Notebook and last
+     test report for the rest). Cards reuse the Parent
+     Report's classes — no new CSS. #}
+  <div class="card progress-page" id="progress-page"
+       data-asked="{{ progress.asked }}"
+       data-answered="{{ progress.answered }}"
+       data-chats="{{ progress.chats }}">
+    <h2>{{ t.progress_heading }}</h2>
+    <p><strong>{{ t.parent_student_label }}:</strong> {{ account_name }}{% if class_num %} · {{ t.progress_student_line.format(n=class_num) }}{% endif %}{% if board_text %} · {{ board_text }}{% endif %}</p>
+    {% if since_text %}
+      <p class="muted">{{ t.progress_since.format(date=since_text) }}</p>
+    {% endif %}
+    <p class="muted">{{ t.progress_intro }}</p>
+
+    {% if progress.asked %}
+      <div class="parent-grid">
+        <section class="report-card">
+          <h3>{{ t.progress_asked_label }}</h3>
+          <p class="report-number" id="progress-asked">{{ progress.asked }}</p>
+        </section>
+
+        <section class="report-card">
+          <h3>{{ t.progress_answered_label }}</h3>
+          <p class="report-number" id="progress-answered">{{ progress.answered }}</p>
+          <p class="muted">{{ t.progress_rate_text.format(pct=progress.answered_pct) }}</p>
+        </section>
+
+        <section class="report-card">
+          <h3>{{ t.progress_chats_label }}</h3>
+          <p class="report-number" id="progress-chats">{{ progress.chats }}</p>
+        </section>
+
+        <section class="report-card">
+          <h3>{{ t.parent_last_test_heading }}</h3>
+          {% if last_report %}
+            <p>{{ t.parent_last_test_label }}:
+              <strong class="report-inline-number">{{ last_score_text }}</strong></p>
+            <p class="copycheck-remark">{{ t[last_report.remark_key] }}</p>
+            <p><strong>{{ t.parent_topics_label }}:</strong>
+              {% if last_report.lost_topics %}{{ last_report.lost_topics | join(", ") }}{% else %}{{ t.parent_none }}{% endif %}</p>
+          {% else %}
+            <p class="muted">{{ t.parent_last_test_none }}</p>
+          {% endif %}
+        </section>
+      </div>
+
+      <section class="report-card stars-card">
+        <h3>{{ t.progress_weekly_heading }}</h3>
+        <svg viewBox="0 0 320 132" width="100%" role="img"
+             aria-label="{{ t.progress_weekly_caption }}"
+             style="max-width: 480px; display: block;">
+          {% for w in progress.weeks %}
+            {% set h = (w.pct * 78) // 100 %}
+            <text x="{{ loop.index0 * 40 + 20 }}" y="{{ 100 - h }}"
+                  text-anchor="middle" font-size="10"
+                  fill="#25324e">{{ w.count }}</text>
+            <rect x="{{ loop.index0 * 40 + 7 }}" y="{{ 104 - h }}"
+                  width="26" height="{{ h }}"
+                  fill="{{ '#25324e' if w.current else '#8a6414' }}"></rect>
+            <text x="{{ loop.index0 * 40 + 20 }}" y="118"
+                  text-anchor="middle" font-size="8.5"
+                  fill="#555">{{ w.label }}</text>
+          {% endfor %}
+          <line x1="0" y1="104" x2="320" y2="104"
+                stroke="#ccc" stroke-width="1"></line>
+        </svg>
+        <p class="muted">{{ t.progress_weekly_caption }}</p>
+      </section>
+    {% else %}
+      <section class="report-card">
+        <h3>{{ t.progress_empty_heading }}</h3>
+        <p class="muted">{{ t.progress_empty }}</p>
+        <p><a class="board-opt" href="/">{{ t.progress_ask_btn }}</a></p>
+      </section>
+    {% endif %}
+
+    <section class="report-card stars-card">
+      <h3>{{ t.progress_weak_heading }}</h3>
+      {% if weak_topics %}
+        <ul class="report-list">
+          {% for w in weak_topics %}<li>{{ w.label }} — {{ w.count }}</li>{% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">{{ t.progress_weak_empty }}</p>
+      {% endif %}
+      {% if mistakes_count %}
+        <p>{{ t.progress_notebook_line.format(n=mistakes_count) }}</p>
+        <p><a class="board-opt" href="/mistakes">{{ t.progress_notebook_btn }}</a></p>
+      {% endif %}
+    </section>
+
+    <p>
+      <a class="board-opt" href="/progress/print">{{ t.progress_print_btn }}</a>
+    </p>
+    <a class="back" href="/">{{ t.back_to_solver }}</a>
+  </div>
+{% endblock %}
