@@ -26,12 +26,14 @@
      browser's cache for up to a day (seen live: the old eagle
      in its tan card on a fresh deploy). BUMP the sprite
      version on every wave that ships sprite changes. #}
+  {% if scene_enabled %}
   <link rel="preload" as="image"
         href="{{ url_for('static', filename='scene-eagle.webp', v='29') }}" />
   <link rel="preload" as="image"
         href="{{ url_for('static', filename='scene-tiger.webp', v='29') }}" />
   <link rel="preload" as="image"
         href="{{ url_for('static', filename='scene-boy.webp', v='29') }}" />
+  {% endif %}
   {# Wave 61: import map for the lazily-loaded 3D Logo Jungle
      (static/scene3d.js). The map itself is tiny and inert —
      nothing is fetched until the bootstrap at the end of this
@@ -93,11 +95,19 @@
              artwork is never edited; scenes only move its <img>
              with CSS transforms. Wordless on purpose — no new
              user-visible strings, so nothing to translate. #}
-          <div class="scene-stage" id="scene-stage">
+          {# Wave 70 (Suraj, 16 Nov 2026): the scene is OFF
+             ("scene se eagle bhi hata do, bilkul khali kar
+             do") — the stage renders ONLY the still logo. The
+             actors, stick and 3D layer render only when
+             scene_enabled, and without id="scene-stage" both
+             scene scripts inert themselves (each returns early
+             when that id is absent). Scene code stays parked. #}
+          <div class="scene-stage"{% if scene_enabled %} id="scene-stage"{% endif %}>
             <div class="empty-logo"><img class="empty-logo-img"
               id="scene-logo"
               src="{{ url_for('static', filename='logo-full-t.png') }}"
               alt="Ganitra" /></div>
+            {% if scene_enabled %}
             {# Wave 25: width/height attributes pin the actors
                to their stage sizes even if the stylesheet has
                not loaded (or a stale cached copy is served).
@@ -139,6 +149,7 @@
                never move the composer or the cards. #}
             <div class="scene-3d" id="scene-3d"
               aria-hidden="true"></div>
+            {% endif %}
           </div>
           {% if saathi_name %}
             <h2 class="empty-greeting">{{ saathi_greeting }}</h2>
