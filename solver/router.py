@@ -73,6 +73,12 @@ _HINGLISH_VARIANTS = {
     "samapvartya": "samapvartak", "parimaap": "parimap",
     "anupaat": "anupat", "madhyikaa": "madhyika",
     "sambhavana": "sambhavna", "pratisht": "pratishat",
+    # Wave 79: "kia" is the commonest Roman spelling of क्या in
+    # questions ("avrej kia hay"), and "avrej" is how "average"
+    # sounds written Roman-Hindi — its canonical maths word
+    # here is "ausat" (same cross-map pattern as prayikta ->
+    # sambhavna above).
+    "kia": "kya", "avrej": "ausat",
 }
 
 _HINGLISH_CANON = frozenset(_HINGLISH_VARIANTS.values()) | frozenset(
@@ -139,6 +145,11 @@ _EN_TYPOS = {
     "rectanguler": "rectangular", "simlify": "simplify",
     "volme": "volume", "calulate": "calculate",
     "deterime": "determine", "probabillity": "probability",
+    # Wave 79: phonetic spellings attested in the Wave 71
+    # audit family 7 — "eria" is एरिया written Roman (sibling
+    # of "aera" above), "circal" is "circle" as heard
+    # (सर्कल). Neither is a sealed held-out spelling.
+    "eria": "area", "circal": "circle",
 }
 
 # Words an rn->m or 1->l OCR repair may land on.
@@ -230,6 +241,13 @@ _NOSPACE_WORDS = sorted(
     key=len, reverse=True)
 
 
+# Wave 79: results a soft-c repair (s -> c before e/i) may land
+# on — known words only, exactly like the OCR repairs below.
+_SOFT_C_ACCEPT = frozenset(_HINGLISH_VARIANTS) \
+    | frozenset(_EN_TYPOS) | frozenset(_EN_TYPOS.values()) \
+    | _HINGLISH_CANON | _EN_VOCAB
+
+
 def _fold_word(w, hinglish_gate):
     """Fold one lowercase Latin token to its canonical spelling."""
     for _ in range(3):
@@ -253,6 +271,33 @@ def _fold_word(w, hinglish_gate):
                 w.replace("1", "l") in _EN_VOCAB:
             w = w.replace("1", "l")
             break
+        # Wave 79: soft-c confusion — the /s/ sound before e/i
+        # is spelled with s instead of c ("parsent", "persent",
+        # "sircle"). Fold only when the c-form is a known word,
+        # so real s-words (since, simple, sell, paise) never
+        # move. The sealed spelling "mesn" has no s before e/i
+        # and is untouched by this rule, as designed.
+        soft_c = None
+        for _i in range(len(w) - 1):
+            if w[_i] == "s" and w[_i + 1] in "ei":
+                _trial = w[:_i] + "c" + w[_i + 1:]
+                if _trial in _SOFT_C_ACCEPT:
+                    soft_c = _trial
+                    break
+        if soft_c is not None:
+            w = soft_c
+            continue
+        # Wave 79: Roman-Hindi -ay/-aw endings spell the same
+        # words as -ai/-ao ("hay" = hai, "bataw" = batao).
+        # Fold only when the result is a known Hinglish word,
+        # so English -ay/-aw words (day, way, saw, law) and
+        # canon words like "samay" never move.
+        if w.endswith(("ay", "aw")):
+            cand = w[:-1] + ("i" if w.endswith("ay") else "o")
+            if cand in _HINGLISH_CANON \
+                    or cand in _HINGLISH_VARIANTS:
+                w = cand
+                continue
         # Doubled letters collapsed ("kitnaaa", "joddd", "byajj").
         collapsed = re.sub(r"([a-z])\1+", r"\1", w)
         if collapsed != w and (collapsed in _HINGLISH_CANON
@@ -708,7 +753,12 @@ def normalize_hinglish(question: str) -> str:
                     f"{m.group(2)} hours, find its speed")
     # Time from distance + speed: "train ko 360 km jana hai,
     # speed 60 km/h hai, kitna time lagega?"
-    if "time" in ql or "samay" in ql:
+    # Wave 79: the same ask in hours form — "kitne ghante
+    # lagenge?" — carries neither "time" nor "samay"; the
+    # strict km-jana-hai + km/h regex below still has to
+    # match, so widening the gate to ghante+lag is safe.
+    if "time" in ql or "samay" in ql \
+            or ("ghante" in ql and "lag" in ql):
         m = re.search(r"(\d+(?:\.\d+)?)\s*km\s+jana\s+hai"
                       r"[^0-9]{0,40}?(\d+(?:\.\d+)?)\s*km/h", ql)
         if m:
