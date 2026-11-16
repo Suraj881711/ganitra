@@ -41,6 +41,573 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Inter:wght@400;600;700&family=Kalam:wght@400;700&family=Caveat:wght@500;700&display=swap"
           rel="stylesheet" />
+    {# Wave 72 (16 Nov 2026): CRITICAL CSS, inlined. Suraj
+       reported "menu achhe kaam nhi kar rha hai"; a live check
+       found the menu itself works, but on the free plan the
+       style.css request intermittently fails (502), so pages
+       arrive UNSTYLED and the menu shows as plain links
+       instead of its full-screen panel. These rules are
+       VERBATIM copies of the layout-critical rules from
+       static/style.css (root vars, header, the \u2630 menu,
+       chat shell, composer, back pill) placed BEFORE the
+       stylesheet link: when the sheet loads it overrides
+       them with the identical values (no design change);
+       when it fails, the page still lays out and the menu
+       still opens as a panel. Keep in sync if those rules
+       ever change in style.css. #}
+    <style id="wave72-critical">
+:root {
+  /* Wave-5 premium & comfort palette: soft warm white everywhere,
+     calm ink text (no harsh black), gold as the sparing accent and
+     muted teal as the calm secondary. */
+  --bg: #fdfaf3;
+  --card: #ffffff;
+  --text: #25324e;
+  --muted: #66738d;
+  --accent: #2f7d6e;
+  --line: #e9dfc9;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background:
+    radial-gradient(900px 420px at 85% -5%, rgba(231, 200, 119, .16), transparent 60%),
+    linear-gradient(180deg, #fffdf8 0%, var(--bg) 320px);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-size: 17px; line-height: 1.65;
+  margin: 0;
+}
+
+header { padding: 16px 24px; border-bottom: 1px solid var(--line); background: rgba(255, 253, 248, .9); }
+
+header h1 { margin: 0; font-size: 21px; }
+
+header a { color: var(--text); text-decoration: none; }
+
+main { padding: 28px 24px; max-width: 880px; margin: 0 auto; }
+
+.tool-note { font-size: 13px; color: var(--sub); }
+
+.chat-bar-tools .tool-note { flex: 1 1 auto; }
+
+@media (max-width: 560px) {
+  .hero { padding: 32px 18px 24px; }
+  .topic-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  main { padding: 20px 14px; }
+  .card { padding: 22px 18px; }
+  .bubble { max-width: 94%; padding: 13px 15px; }
+  .chat-log { max-height: 56vh; }
+  .chat-send { width: 100%; margin-left: 0; }
+  .board-opt { flex: 1 1 auto; justify-content: center; }
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; margin: 0;
+}
+
+/* The chat top bar (homepage only, rendered by index.html). */
+.chat-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 14px; min-height: 57px;
+}
+
+.chat-brand {
+  font-family: "Fraunces", Georgia, serif; font-size: 21px;
+  font-weight: 700; color: var(--text); text-decoration: none;
+  white-space: nowrap;
+}
+
+.nav-menu { position: relative; }
+
+.nav-menu-btn {
+  list-style: none; cursor: pointer; display: inline-flex;
+  align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 999px;
+  border: 1.5px solid #ddd3ba; background: #fff; font-size: 19px;
+  color: var(--text); box-shadow: 0 3px 10px rgba(22, 33, 58, .05);
+}
+
+.nav-menu-btn::-webkit-details-marker { display: none; }
+
+.nav-dropdown {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 60;
+  display: flex; flex-direction: column; min-width: 210px;
+  background: #fff; border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(101, 84, 40, .16); padding: 6px;
+  margin: 0;
+}
+
+.nav-dropdown a {
+  color: var(--text); font-weight: 600; font-size: 15.5px;
+  text-decoration: none; padding: 11px 14px; min-height: 44px;
+  border-radius: 9px; margin: 0; display: flex; align-items: center;
+}
+
+.nav-dropdown a:hover { background: #fdf6e3; }
+
+body.chat-page header { flex: none; }
+
+body.chat-page main.chat-main {
+  flex: 1 1 auto; display: flex; flex-direction: column;
+  min-height: 0; width: 100%; max-width: none;
+  margin: 0; padding: 0;
+}
+
+.chat-shell {
+  flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0;
+}
+
+.chat-scroll { flex: 1 1 auto; overflow-y: auto; min-height: 0; }
+
+body.chat-page .chat-log {
+  max-height: none; overflow: visible;
+  max-width: 800px; width: 100%; margin: 0 auto;
+  padding: 22px 16px 12px;
+}
+
+.chat-empty { text-align: center; padding: 6vh 8px 20px; }
+
+.empty-logo { font-size: 46px; line-height: 1.1; }
+
+/* Wave 8: final approved logo. The artwork's own background is cream
+   (#f3ebe0); the page bg is #fdfaf3 — close but visibly different, so
+   the full logo sits on its sampled cream tone with soft corners. */
+.chat-brand .brand-mark {
+  height: 30px; width: auto; vertical-align: middle;
+  /* Wave 12: the transparent (-t) mark needs no frame at all. */
+  margin-right: 2px;
+}
+
+.empty-logo-img {
+  /* Wave 12: transparent logo blends straight into the page —
+     no cream card, no border radius, no shadow frame. */
+  max-width: min(340px, 70vw); width: 100%; height: auto;
+  display: block; margin: 0 auto;
+}
+
+.empty-greeting {
+  font-family: "Fraunces", Georgia, serif;
+  font-size: clamp(25px, 4.6vw, 36px); line-height: 1.3;
+  margin: 12px 0 8px; color: var(--text);
+}
+
+.empty-sub {
+  color: var(--muted); font-size: 16.5px; line-height: 1.6;
+  max-width: 560px; margin: 0 auto;
+}
+
+/* Composer: fixed at the bottom of the viewport, always visible. */
+.composer-wrap {
+  flex: none; padding: 8px 14px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(253, 250, 243, 0), var(--bg) 32%);
+}
+
+body.chat-page .chat-form { max-width: 800px; margin: 0 auto; }
+
+body.chat-page .chat-bar {
+  display: flex; align-items: flex-end; gap: 2px;
+  margin-top: 0; border-radius: 28px;
+  /* Wave 12 (Suraj): the chatbox width matches the answer
+     cards above it. Wave 21: padding 5px -> 10px — the slim
+     bar felt cramped to type in; comfort wins. Wave 27:
+     roomier still (12px 14px), a larger radius and a tight
+     2px icon cluster — the Claude/ChatGPT comfort feel,
+     in the site's own warm design language. */
+  padding: 12px 14px;
+  box-shadow: 0 14px 34px rgba(101, 84, 40, .14);
+}
+
+body.chat-page .chat-bar textarea {
+  flex: 1 1 auto; min-width: 0; font-size: 16px; line-height: 1.55;
+  padding: 7px 8px; max-height: 160px;
+}
+
+body.chat-page .chat-bar-tools {
+  display: flex; flex-direction: row; flex: none;
+  gap: 2px; align-items: center; margin-top: 0;
+}
+
+.composer-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  /* Wave 12: slimmer bar — the icon buttons shrink with it.
+     Wave 27: a touch smaller again (40 -> 36px visual); the
+     Wave-27 block at the end of this file adds an invisible
+     halo so the tap target stays a comfortable ~40px. */
+  width: 36px; height: 36px; min-height: 36px; margin: 0; padding: 0;
+  border-radius: 999px; border: none; background: transparent;
+  font-size: 19px; cursor: pointer; color: var(--text);
+}
+
+.composer-btn:hover { background: #f6ead0; }
+
+.send-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; min-height: 36px; margin: 0; padding: 0;
+  border-radius: 999px; border: none; cursor: pointer;
+  /* Wave 27 (Suraj): NO highlight — the send sign is a plain
+     icon like the others, no filled accent circle, no shadow. */
+  background: transparent; color: var(--text); font-size: 17px;
+  box-shadow: none;
+}
+
+.send-btn:hover { background: #f6ead0; }
+
+body.chat-page .tool-note {
+  display: block; text-align: center; margin-top: 6px; min-height: 0;
+}
+
+@media (max-width: 560px) {
+  .chat-header { padding: 6px 10px; gap: 6px; }
+  .chat-brand { font-size: 19px; }
+  .header-tools { gap: 5px; }
+  .header-tools .dhyaan-label,
+  .header-tools .lang-label-text { display: none; }
+  .header-tools .dhyaan-pill { font-size: .8rem; padding: .15rem .5rem; }
+  .header-tools .saathi-pill { font-size: .82rem; }
+  .composer-wrap { padding: 6px 10px calc(8px + env(safe-area-inset-bottom)); }
+  body.chat-page .chat-log { padding: 16px 10px 10px; }
+  .chat-empty { padding-top: 4vh; }
+}
+
+body.chat-page .icon-btn svg { display: block; }
+
+/* Wave 27: the send sign used to be forced white on its
+   accent disc (color: #fff). The disc is gone, so it takes
+   the same accent colour as every other composer icon. */
+body.chat-page .send-btn.icon-btn { color: var(--accent); }
+
+/* Composer placement (Wave 11, Suraj's approved layout): in the
+   EMPTY state the composer sits directly under the greeting —
+   the shell is one column, the scroll area collapses and the
+   composer follows it; once chatting starts (body.chat-active)
+   the scroll area grows and the composer stays pinned at the
+   bottom of the screen. */
+body.chat-page:not(.chat-active) .chat-scroll { flex: 0 1 auto; }
+
+body.chat-page.chat-active .chat-scroll { flex: 1 1 auto; }
+
+body.chats-page header { flex: none; background: var(--bg); }
+
+body.chats-page main.chats-main {
+  flex: 1 1 auto; width: 100%; max-width: 860px;
+  margin: 0 auto; padding: 0; display: flex; flex-direction: column;
+}
+
+/* The overlay panel: covers the viewport while the menu is open.
+   On phones it is full-width; on wide screens the content column
+   is capped and centred instead of stretching edge to edge. */
+.nav-menu[open] .nav-dropdown {
+  position: fixed; inset: 0; z-index: 200;
+  overflow-y: auto; overflow-x: hidden;
+  background: var(--bg); border: none; border-radius: 0;
+  box-shadow: none; padding: 0; margin: 0;
+  display: block; min-width: 0; max-width: 100%;
+}
+
+.menu-panel-inner {
+  max-width: 640px; margin: 0 auto; width: 100%;
+  padding: 14px 20px 0; box-sizing: border-box;
+  min-height: 100%; display: flex; flex-direction: column;
+}
+
+.menu-panel-top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; flex-wrap: wrap; margin-bottom: 6px;
+}
+
+.menu-panel-title {
+  font-family: "Fraunces", Georgia, serif; font-size: 20px;
+  font-weight: 700; color: var(--text);
+}
+
+.menu-close {
+  margin: 0; width: 44px; height: 44px; min-height: 44px;
+  padding: 0; border-radius: 999px; border: 1.5px solid #ddd3ba;
+  background: #fff; color: var(--text); font-size: 17px;
+  cursor: pointer; display: inline-flex; align-items: center;
+  justify-content: center;
+}
+
+.menu-close:hover { background: #f6ead0; }
+
+.menu-profile {
+  display: flex; align-items: flex-start; gap: 16px;
+  flex-wrap: wrap; text-decoration: none; color: var(--text);
+  padding: 12px 2px 4px; min-width: 0;
+}
+
+.menu-profile-text {
+  display: flex; flex-direction: column; gap: 2px;
+  min-width: 0; flex: 1 1 180px;
+}
+
+.menu-name { font-size: 24px; font-weight: 700; line-height: 1.3;
+             overflow-wrap: anywhere; }
+
+.menu-verified {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 19px; height: 19px; border-radius: 50%;
+  border: 2px solid var(--accent); color: var(--accent);
+  font-size: 11px; font-weight: 800; vertical-align: middle;
+}
+
+.menu-line { font-size: 15.5px; line-height: 1.5; }
+
+.menu-line-dim { color: var(--muted, #66738d); font-size: 14.5px; }
+
+.menu-stats {
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  padding: 10px 2px; margin: 12px 0 6px;
+}
+
+.menu-stat-line { margin: 4px 0; font-size: 15.5px;
+                  color: var(--muted, #66738d); }
+
+.menu-stat-num { color: #2563eb; font-weight: 700; font-size: 17px; }
+
+.menu-items { display: flex; flex-direction: column; padding: 6px 0; }
+
+.menu-items > a {
+  color: var(--text); font-weight: 700; font-size: 17.5px;
+  text-decoration: none; padding: 13px 2px; min-height: 44px;
+  display: flex; align-items: center; border-radius: 8px;
+}
+
+.menu-items > a:hover { background: #fdf6e3; }
+
+.menu-lang { margin: 0; }
+
+.menu-lang-summary {
+  list-style: none; cursor: pointer; font-weight: 700;
+  font-size: 17.5px; color: var(--text); padding: 13px 2px;
+  min-height: 44px; display: flex; align-items: center;
+}
+
+.menu-lang-summary::-webkit-details-marker { display: none; }
+
+.menu-lang-summary:hover { background: #fdf6e3; }
+
+.menu-lang-row {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 2px 2px 12px;
+}
+
+.menu-lang-link {
+  color: var(--accent); font-weight: 600; font-size: 15px;
+  text-decoration: none; border: 1.5px solid #ddd3ba;
+  border-radius: 999px; padding: 9px 14px; min-height: 40px;
+  display: inline-flex; align-items: center; background: #fff;
+}
+
+.menu-lang-link:hover { border-color: #c9a24b; }
+
+.menu-settings-row {
+  display: flex; align-items: center; gap: 12px;
+  border-top: 1px solid var(--line); margin-top: auto;
+  padding: 16px 2px; color: var(--text); text-decoration: none;
+  font-weight: 700; font-size: 16.5px; min-height: 44px;
+}
+
+.menu-settings-row:hover { background: #fdf6e3; }
+
+.menu-gold-strip {
+  background: linear-gradient(92deg, #fdf3d8, #fbe9bb);
+  border-top: 1px solid #ecd9a0; color: #7a5a10;
+  text-align: center; font-size: 14.5px; font-weight: 600;
+  padding: 13px 10px; margin: 0 -20px;
+}
+
+@media (max-width: 560px) {
+  .acct-wrap { padding: 8px 13px 40px; }
+  .acct-row { flex-direction: column; align-items: stretch; }
+  .acct-row-edit { justify-content: flex-start; }
+  .menu-panel-inner { padding: 12px 14px 0; }
+  .menu-gold-strip { margin: 0 -14px; }
+  .menu-name { font-size: 21px; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Wave 15: menu polish — motion + press feedback only. The Wave-12
+   design (colours, order, layout) is Suraj's approved one and is
+   NOT changed here: the full-page menu now fades/slides in gently
+   instead of snapping open, every tappable row gets a smooth
+   hover/press feel, the stats numbers line up in tabular figures,
+   and the Settings gear can never be squished on a narrow phone.
+   (A <details> panel cannot animate its close in pure CSS — the
+   close stays instant; the open is what the student sees most.)
+   Reduced-motion students get no animation at all. */
+@keyframes ganitra-menu-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ganitra-menu-col-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.nav-menu[open] .nav-dropdown { animation: ganitra-menu-in .18s ease-out; }
+
+.nav-menu[open] .menu-panel-inner {
+  animation: ganitra-menu-col-in .22s ease-out;
+}
+
+.menu-items > a, .menu-lang-summary, .menu-settings-row,
+.menu-profile, .menu-close, .menu-lang-link, .nav-menu-btn {
+  transition: background-color .15s ease, border-color .15s ease,
+              transform .08s ease;
+}
+
+.menu-lang-summary { border-radius: 8px; }
+
+.menu-settings-row { border-radius: 8px; }
+
+.menu-settings-row svg { flex: none; }
+
+.menu-profile { border-radius: 10px; }
+
+.menu-items > a:active { background: #f6ead0; transform: scale(.99); }
+
+.menu-lang-summary:active { background: #f6ead0; }
+
+.menu-settings-row:active { background: #f6ead0; }
+
+.menu-profile:active { background: #fdf6e3; }
+
+.menu-close:active { background: #f6ead0; transform: scale(.94); }
+
+.menu-lang-link:active { transform: scale(.97); }
+
+.nav-menu-btn:active { transform: scale(.94); }
+
+.menu-stat-num { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-menu[open] .nav-dropdown,
+  .nav-menu[open] .menu-panel-inner { animation: none; }
+  .menu-items > a, .menu-lang-summary, .menu-settings-row,
+  .menu-profile, .menu-close, .menu-lang-link, .nav-menu-btn {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Wave 20 (Suraj, 12 Nov 2026): three fixes from his phone test.
+   (a) The top bar must never crowd out the ☰ button: on his
+       ~360px Brave screen the brand + "Today" pill + language
+       dropdown filled the bar and the menu button was pushed
+       off-screen. The bar now shrinks gracefully — brand text
+       truncates, the tools row may shrink, the ☰ and + never do —
+       and on small screens the ☰ moves to the FAR LEFT (his
+       approved mockup position), the Today pill hides (its
+       numbers also live inside the menu) and the language select
+       goes compact. On very narrow screens only the logo mark
+       shows, not the wordmark.
+   (b) The sign-in / sign-up page fits ONE phone screen without
+       scrolling: slightly smaller logo, fonts, paddings and gaps
+       on small screens only (desktop keeps the roomy look). */
+
+.chat-brand {
+  flex: 0 1 auto; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.header-tools .nav-menu,
+.header-tools .chats-plus { flex: none; }
+
+@media (max-width: 560px) {
+  /* ☰ pinned to the far left of the bar, always visible: the
+     details element is lifted out of the tools row (its open
+     panel is position:fixed, so this cannot disturb it) and
+     the bar reserves its space. :has() scopes this to bars
+     that actually carry a menu (the sign-in bar has none). */
+  .chat-header:has(.nav-menu) { position: relative; padding-left: 58px; }
+  .chat-header:has(.nav-menu) .nav-menu {
+    position: absolute; left: 7px; top: 50%;
+    transform: translateY(-50%); margin: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  /* The Today stats pill yields its space to the menu; the
+     same numbers are one tap away inside the menu itself. */
+  .header-tools .dhyaan-pill { display: none; }
+  .header-tools .lang-switch select {
+    max-width: 108px; min-height: 38px; padding: .25rem .35rem;
+    font-size: .85rem;
+  }
+  .nav-menu-btn { width: 42px; height: 42px; }
+}
+
+@media (max-width: 380px) {
+  /* Mark only — the "Ganitra" wordmark no longer fits beside
+     the tools; the logo mark alone carries the brand. */
+  .chat-brand { font-size: 0; }
+  .chat-brand .brand-mark { height: 30px; margin-right: 0; }
+}
+
+/* Wave 27: composer glyphs shrink once more (20/19 -> 17px)
+   and all four signs now share one size. */
+body.chat-page .chat-bar .composer-btn svg {
+  width: 17px; height: 17px;
+}
+
+body.chat-page .chat-bar .send-btn svg {
+  width: 17px; height: 17px;
+}
+
+body.chat-page .chat-bar textarea {
+  font-size: 13.5px; line-height: 1.55;
+}
+
+body.chat-page .chat-bar .composer-btn::after,
+body.chat-page .chat-bar .send-btn::after {
+  content: ""; position: absolute; inset: -2px;
+  border-radius: 999px;
+}
+
+/* (3) the composer docks at the bottom in every state;
+   the empty state centres in the space above it. */
+body.chat-page:not(.chat-active) .chat-scroll { flex: 1 1 auto; }
+
+body.chat-page .chat-log { min-height: 100%; box-sizing: border-box; }
+
+.chat-empty { margin: auto 0; padding: 0 8px 12px; }
+
+body.chat-page .chat-bar .composer-btn,
+body.chat-page .chat-bar .send-btn {
+  flex: none; width: 40px; height: 40px; min-height: 40px;
+}
+
+/* (8) notch sides for the composer wrap. */
+.composer-wrap {
+  padding-left: max(14px, env(safe-area-inset-left));
+  padding-right: max(14px, env(safe-area-inset-right));
+}
+
+@media (max-width: 560px) {
+  /* (5) message-area air on phones. */
+  body.chat-page .chat-log { padding: 20px 12px 24px; }
+  /* (8) notch sides, phone padding as the floor. */
+  .composer-wrap {
+    padding-left: max(10px, env(safe-area-inset-left));
+    padding-right: max(10px, env(safe-area-inset-right));
+  }
+}
+
+.backnav-btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  min-height: 44px; margin-top: 0; padding: 10px 18px 10px 14px;
+  background: #fff; color: var(--accent);
+  border: 1.5px solid #ddd3ba; border-radius: 999px;
+  font: inherit; font-size: 15px; font-weight: 700;
+  cursor: pointer; box-shadow: 0 4px 14px rgba(101, 84, 40, .10);
+}
+
+.backnav-btn:active { transform: translateY(1px); }
+    </style>
     {# Wave 26: the stylesheet URL carries a version query
        (?v=38 — Wave 43 bumped it to 30, merge-2 to 31, Wave 55 to 32 for
        Wave 49's chat-box CSS, Wave 60 to 33 for the back bar, Wave 61
