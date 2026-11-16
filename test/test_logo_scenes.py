@@ -70,7 +70,11 @@ def test_stage_markup_served_on_empty_chat(client):
     body = r.get_data(as_text=True)
     assert 'id="scene-logo"' in body
     # The logo still renders above the greeting (Wave-8 order).
-    assert body.index("logo-full-t.png") < body.index("empty-greeting")
+    # (Wave 72: compare against the greeting's class attribute
+    # — the bare word "empty-greeting" now also appears in the
+    # inlined critical CSS in <head>.)
+    assert body.index("logo-full-t.png") \
+        < body.index('class="empty-greeting"')
     # Wave 70 (Suraj, 16 Nov 2026): the scene is PARKED — the
     # stage id, the actors and the stick are NOT served; the
     # empty state is the still logo + greeting only. (The
