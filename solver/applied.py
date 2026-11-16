@@ -484,14 +484,24 @@ def _profit_loss(q):
     # percent — "a shopkeeper buys a cycle for 3600 rs and
     # sells it at 18% profit. selling price?" The buys/sells
     # chain below would read the 18 as the selling price.
+    # Wave 78: the same sale stated as "sells it at a loss
+    # of 8%" / "at a profit of 10%" — without this the chain
+    # below reads the 8 as the selling price and reports a
+    # nonsense 99% loss.
     _mbp = re.search(
         r"\bbuys?\b[\s\S]{0,50}?(?:" + _RS + r"\s*)?(" + _NUM
-        + r")[\s\S]{0,40}?\bsells?\b[\s\S]{0,30}?at\s+("
-        + _NUM + r")\s*%\s*(profit|loss)", q)
+        + r")[\s\S]{0,40}?\bsells?\b[\s\S]{0,30}?at\s+(?:a\s+)?"
+        r"(?:(" + _NUM + r")\s*%\s*(profit|loss)|(profit|loss)"
+        r"\s+of\s+(" + _NUM + r")\s*%)", q)
     if _mbp:
         _cp = float(_mbp.group(1))
-        _p = float(_mbp.group(2))
-        _sgn = 1 if _mbp.group(3) == "profit" else -1
+        if _mbp.group(2) is not None:
+            _p = float(_mbp.group(2))
+            _kind = _mbp.group(3)
+        else:
+            _kind = _mbp.group(4)
+            _p = float(_mbp.group(5))
+        _sgn = 1 if _kind == "profit" else -1
         _sp = _cp * (1 + _sgn * _p / 100)
         _sp = int(_sp) if _sp == int(_sp) else _sp
         return {"type": "applied", "op": "selling_price",
@@ -499,7 +509,7 @@ def _profit_loss(q):
                 "steps": [
                     f"Selling price = cost price × (1 "
                     f"{'+' if _sgn > 0 else '-'} "
-                    f"{_mbp.group(3)}/100) = {_cp:g} × "
+                    f"{_kind}/100) = {_cp:g} × "
                     f"{1 + _sgn * _p / 100:g}",
                     f"Selling price = Rs {_sp}"]}
     m = re.search(
@@ -1249,10 +1259,12 @@ def _discount(q):
     # "Sold at Rs S after a discount of d%" gives the selling
     # price directly; the marked price is S / (1 - d/100), and
     # with a cost price the chain continues to profit %.
+    # Wave 78: the price after "sold at/for" must not be a
+    # percent — "sold at 15% discount" used to read S = 15.
     ms = re.search(r"(?:sold|sells)\s+(?:at|for)\s+(?:"
-                   + _RS + r"\s*)?(" + _NUM + r")", q) or \
+                   + _RS + r"\s*)?(" + _NUM + r")(?!\s*%)", q) or \
         re.search(r"selling\s+price\s+(?:is\s+)?(?:"
-                  + _RS + r"\s*)?(" + _NUM + r")", q)
+                  + _RS + r"\s*)?(" + _NUM + r")(?!\s*%)", q)
     if ms:
         S = _num(ms.group(1))
         M = S / (1 - d / 100.0)
@@ -1350,6 +1362,23 @@ def _discount(q):
                     "steps": _steps, "value": _prof}
     off = M * d / 100.0
     sp_ = M - off
+    # Wave 78: when the question asks for the DISCOUNT itself
+    # ("how much discount does the customer get?", "what is
+    # the discount on ..."), the answer is the amount taken
+    # off, not the selling price.
+    if re.search(r"how\s+much\s+discount|what\s+is\s+the\s+"
+                 r"discount\b|discount\s+amount|amount\s+of\s+"
+                 r"discount|discount\s+(?:does|will|did)\b",
+                 q) and "percent" not in q \
+            and "selling" not in q:
+        return {"type": "applied", "op": "discount_amount",
+                "answer": f"Rs {fmt_num(off)}",
+                "steps": [
+                    f"Marked price = Rs {fmt_num(M)}, "
+                    f"discount = {fmt_num(d)}%",
+                    f"Discount = {fmt_num(d)}% of "
+                    f"{fmt_num(M)} = Rs {fmt_num(off)}"],
+                "value": off}
     steps = [
         f"Marked price = Rs {fmt_num(M)}, discount = "
         f"{fmt_num(d)}%",
@@ -1386,10 +1415,15 @@ def _percent_score(q):
 
 def _profit_loss_forms(q):
     # Sold at SP with a stated profit/loss % — find the CP.
+    # Wave 78: present-tense "sells ... for Rs S at a loss
+    # of P%" is the same form (the object may sit between
+    # the verb and "for" — "sells a table for Rs 1365"; the
+    # gap may not cross a digit or a sentence end), and
+    # "gain" is profit.
     m = re.search(
-        r"sold\s+(?:at|for)\s+(?:" + _RS + r"\s*)?(" + _NUM
-        + r")[\s\S]{0,40}?\b(profit|loss)\s+of\s+(" + _NUM
-        + r")\s*%", q)
+        r"(?:sold|sells)\b[^.\d]{0,25}?(?:at|for)\s+(?:"
+        + _RS + r"\s*)?(" + _NUM + r")[\s\S]{0,40}?"
+        r"\b(profit|gain|loss)\s+of\s+(" + _NUM + r")\s*%", q)
     if m:
         sp_, kind, p = _num(m.group(1)), m.group(2), \
             _num(m.group(3))
@@ -1419,7 +1453,7 @@ def _profit_loss_forms(q):
     # CP with a stated profit/loss % — find the SP.
     m = re.search(
         r"(?:cost\s+price|cp)\s+(?:is\s+)?(?:" + _RS + r"\s*)?("
-        + _NUM + r")[\s\S]{0,40}?\b(profit|loss)\s+of\s+("
+        + _NUM + r")[\s\S]{0,40}?\b(profit|gain|loss)\s+of\s+("
         + _NUM + r")\s*%", q)
     if m and "selling" in q:
         cp, kind, p = _num(m.group(1)), m.group(2), \
@@ -1442,7 +1476,7 @@ def _profit_loss_forms(q):
     # price is Rs 2000, find the selling price." (audit #256;
     # the block above needs CP first, % second).
     m = re.search(
-        r"\b(profit|loss)\s+of\s+(" + _NUM + r")\s*%"
+        r"\b(profit|gain|loss)\s+of\s+(" + _NUM + r")\s*%"
         r"[\s\S]{0,60}?(?:cost\s+price|cp)\s+(?:is\s+)?"
         r"(?:" + _RS + r"\s*)?(" + _NUM + r")", q)
     if m and "selling" in q:
@@ -4925,8 +4959,12 @@ def _wave65_schemas(q):
                     f"{fmt_num(1 - pct / 100)} = "
                     f"{fmt_num(orig)}"]}
     # --- Discount percent from marked & selling prices ----------
+    # Wave 78: the sold-for amount usually carries its own
+    # "Rs" ("sold for Rs 15300") — without the optional _RS
+    # the pattern could never match the textbook phrasing.
     m = re.search(r"(" + _NUM + r")\s*(?:" + _RS + r")?"
-                  r"[\s\S]{0,50}?sold\s+for\s+(" + _NUM + r")"
+                  r"[\s\S]{0,50}?sold\s+for\s+(?:" + _RS
+                  + r"\s*)?(" + _NUM + r")"
                   r"[\s\S]{0,50}?discount\s*(?:percent|%)", q)
     if m:
         mp_, sp_ = _num(m.group(1)), _num(m.group(2))
@@ -5438,6 +5476,261 @@ def _wave65_schemas(q):
     return None
 
 
+def _english_commercial(q):
+    """Wave 78: plain-English commercial-maths phrasings —
+    the Class 7-8 textbook shapes the Hinglish-first handlers
+    miss ("a shirt costs Rs 800 and is sold at 15% discount",
+    "marks it 20% above the cost price", "selling price is
+    Rs 616 and the cost price is Rs 560, find the profit
+    percent"). Registered LAST in _FAMILIES: every branch is
+    gated on a full labelled extraction (marked price / cost
+    price / selling price / discount %), so it only claims
+    questions no earlier family wanted. The method is the
+    standard one throughout: discount is taken on the marked
+    price, profit/loss percent on the cost price."""
+    if not re.search(r"discount|marked|profit|loss|gain|"
+                     r"%\s*off\b", q):
+        return None
+
+    def _amt(pat):
+        m = re.search(pat, q)
+        return _num(m.group(1)) if m else None
+
+    MP = _amt(r"marked\s+price\b[^.]{0,40}?(?:is|=)\s*(?:"
+              + _RS + r"\s*)?(" + _NUM + r")") \
+        or _amt(r"(?:marked|priced)\s+at\s+(?:" + _RS
+                + r"\s*)?(" + _NUM + r")") \
+        or _amt(r"\bmarks?\b[^.]{0,30}?\bat\s+(?:" + _RS
+                + r"\s*)?(" + _NUM + r")")
+    SP = _amt(r"selling\s+price\b[^.]{0,30}?(?:is|=)\s*(?:"
+              + _RS + r"\s*)?(" + _NUM + r")(?!\s*%)") \
+        or _amt(r"(?:sold|sells)\s+(?:at|for)\s+(?:" + _RS
+                + r"\s*)?(" + _NUM + r")(?!\s*%)")
+    CP = _amt(r"cost\s+price\b[^.]{0,40}?(?:is|=)\s*(?:"
+              + _RS + r"\s*)?(" + _NUM + r")") \
+        or _amt(r"\bbuys?\b[^.]{0,50}?(?:for\s+)?(?:" + _RS
+                + r"\s*)?(" + _NUM + r")") \
+        or _amt(r"\bbought\b[^.]{0,40}?(?:for\s+)?(?:" + _RS
+                + r"\s*)?(" + _NUM + r")") \
+        or _amt(r"\bpurchased\b[^.]{0,40}?(?:for\s+)?(?:"
+                + _RS + r"\s*)?(" + _NUM + r")")
+    md = re.search(r"discount\s+(?:of|is|rate\s+is|allowed\s+"
+                   r"of)\s+(" + _NUM + r")\s*(?:%|percent)", q) \
+        or re.search(r"(" + _NUM + r")\s*(?:%|percent)\s*"
+                     r"(?:discount|off)", q) \
+        or re.search(r"discount\s+(" + _NUM + r")\s*"
+                     r"(?:%|percent)", q)
+    d = _num(md.group(1)) if md else None
+    if MP is None and d is not None:
+        # "A shirt costs Rs 800 and is sold at 15% discount"
+        # — here "costs" states the price the discount acts
+        # on (the same reading discount_story65 uses).
+        MP = _amt(r"(?:costs|price\s+is)\s+(?:" + _RS
+                  + r"\s*)?(" + _NUM + r")")
+
+    ask_percent = "percent" in q or "percentage" in q
+    ask_discount_amt = bool(re.search(
+        r"how\s+much\s+discount|what\s+is\s+the\s+discount\b|"
+        r"discount\s+amount|amount\s+of\s+discount|"
+        r"discount\s+(?:does|will|did)\b", q))
+    ask_mp = bool(re.search(
+        r"(?:find|what\s+is|what\s+was)\b[^.]{0,30}?"
+        r"marked\s+price", q))
+
+    # --- Mark-up: CP raised by m% to get the marked price,
+    # optionally discounted afterwards (the marked_discount
+    # schema in _wave65_schemas needs the CP stated last;
+    # the textbook order is CP first).
+    mm = re.search(r"(" + _NUM + r")\s*%\s+above\s+(?:the\s+)?"
+                   r"cost", q)
+    if mm and CP:
+        mk = _num(mm.group(1))
+        MPc = CP * (1 + mk / 100.0)
+        if d is not None and 0 <= d < 100 \
+                and ("selling" in q or "sold" in q):
+            SPc = MPc * (1 - d / 100.0)
+            return {"type": "applied", "op": "markup_discount78",
+                    "answer": f"Rs {fmt_num(SPc)}",
+                    "steps": [
+                        f"Marked price = {fmt_num(CP)} × "
+                        f"(1 + {fmt_num(mk)}/100) = "
+                        f"Rs {fmt_num(MPc)}",
+                        f"Selling price = {fmt_num(MPc)} × "
+                        f"(1 - {fmt_num(d)}/100) = "
+                        f"Rs {fmt_num(SPc)}"],
+                    "value": SPc}
+        return {"type": "applied", "op": "markup78",
+                "answer": f"Rs {fmt_num(MPc)}",
+                "steps": [
+                    f"Marked price = cost price × (1 + "
+                    f"{fmt_num(mk)}/100) = {fmt_num(CP)} × "
+                    f"{fmt_num(1 + mk / 100.0)} = "
+                    f"Rs {fmt_num(MPc)}"],
+                "value": MPc}
+
+    # --- Discount on a known marked price -------------------
+    if d is not None and 0 <= d < 100 and MP:
+        off = MP * d / 100.0
+        SPc = MP - off
+        if CP and "profit" in q:
+            prof = SPc - CP
+            steps = [
+                f"Marked price = Rs {fmt_num(MP)}, discount "
+                f"= {fmt_num(d)}%, so the selling price is "
+                f"{fmt_num(MP)} × (1 - {fmt_num(d)}/100) = "
+                f"Rs {fmt_num(SPc)}",
+                f"Cost price = Rs {fmt_num(CP)}, so "
+                f"{'profit' if prof >= 0 else 'loss'} = "
+                f"Rs {fmt_num(abs(prof))}"]
+            if ask_percent and CP > 0:
+                pp = prof / CP * 100.0
+                steps.append(
+                    f"Profit percent = {fmt_num(prof)} / "
+                    f"{fmt_num(CP)} × 100 = {fmt_num(pp)}%")
+                return {"type": "applied",
+                        "op": "discount_profit78",
+                        "answer": f"{fmt_num(pp)}%",
+                        "steps": steps, "value": pp}
+            kind = "Profit" if prof >= 0 else "Loss"
+            return {"type": "applied",
+                    "op": "discount_profit78",
+                    "answer": f"{kind} of Rs "
+                              f"{fmt_num(abs(prof))}",
+                    "steps": steps, "value": abs(prof)}
+        if ask_discount_amt and not ask_percent:
+            return {"type": "applied",
+                    "op": "discount_amount78",
+                    "answer": f"Rs {fmt_num(off)}",
+                    "steps": [
+                        f"Marked price = Rs {fmt_num(MP)}, "
+                        f"discount = {fmt_num(d)}%",
+                        f"Discount = {fmt_num(d)}% of "
+                        f"{fmt_num(MP)} = Rs {fmt_num(off)}"],
+                    "value": off}
+        return {"type": "applied", "op": "discount78",
+                "answer": f"Rs {fmt_num(SPc)}",
+                "steps": [
+                    f"Marked price = Rs {fmt_num(MP)}, "
+                    f"discount = {fmt_num(d)}%",
+                    f"Discount amount = {fmt_num(d)}% of "
+                    f"{fmt_num(MP)} = Rs {fmt_num(off)}",
+                    f"Selling price = {fmt_num(MP)} - "
+                    f"{fmt_num(off)} = Rs {fmt_num(SPc)}"],
+                "value": SPc}
+
+    # --- Reverse discount: SP and d% given, MP asked --------
+    if d is not None and 0 <= d < 100 and SP and MP is None \
+            and (ask_mp or "marked" in q):
+        MPc = SP / (1 - d / 100.0)
+        return {"type": "applied", "op": "discount_reverse78",
+                "answer": f"Rs {fmt_num(MPc)}",
+                "steps": [
+                    f"The article sells for Rs {fmt_num(SP)} "
+                    f"after a discount of {fmt_num(d)}% on "
+                    f"the marked price.",
+                    f"So (100 - {fmt_num(d)})% of the marked "
+                    f"price = Rs {fmt_num(SP)}",
+                    f"Marked price = {fmt_num(SP)} × 100 / "
+                    f"{fmt_num(100 - d)} = Rs {fmt_num(MPc)}"],
+                "value": MPc}
+
+    # --- Discount percent from marked & selling prices ------
+    if MP and SP and "discount" in q and ask_percent and MP > 0:
+        pct = (MP - SP) / MP * 100.0
+        return {"type": "applied", "op": "discount_percent78",
+                "answer": f"{fmt_num(pct)}%",
+                "steps": [
+                    f"Discount = {fmt_num(MP)} - "
+                    f"{fmt_num(SP)} = Rs {fmt_num(MP - SP)}",
+                    f"Discount % = ({fmt_num(MP - SP)} / "
+                    f"{fmt_num(MP)}) × 100 = "
+                    f"{fmt_num(pct)}%"],
+                "value": pct}
+
+    # --- Profit / loss with the SP stated before the CP -----
+    if SP and CP and ("profit" in q or "loss" in q
+                      or "gain" in q):
+        diff = SP - CP
+        kind = "Profit" if diff > 0 else "Loss" if diff < 0 \
+            else "None"
+        if diff == 0:
+            return {"type": "applied", "op": "profit_loss78",
+                    "answer": "No profit, no loss",
+                    "steps": [
+                        f"Cost price (CP) = Rs {fmt_num(CP)}, "
+                        f"selling price (SP) = "
+                        f"Rs {fmt_num(SP)}",
+                        "SP = CP, so there is no profit and "
+                        "no loss."],
+                    "value": 0}
+        steps = [
+            f"Cost price (CP) = Rs {fmt_num(CP)}, selling "
+            f"price (SP) = Rs {fmt_num(SP)}",
+            f"{kind} = {'SP - CP' if diff > 0 else 'CP - SP'}"
+            f" = Rs {fmt_num(abs(diff))}"]
+        if ask_percent:
+            pct = abs(diff) / CP * 100.0
+            steps.append(
+                f"{kind} % = ({kind} ÷ CP) × 100 = "
+                f"({fmt_num(abs(diff))} ÷ {fmt_num(CP)}) × "
+                f"100 = {fmt_num(pct)}%")
+            return {"type": "applied",
+                    "op": "profit_loss_percent78",
+                    "answer": f"{fmt_num(pct)}%",
+                    "steps": steps, "value": pct}
+        return {"type": "applied", "op": "profit_loss78",
+                "answer": f"{kind} of Rs "
+                          f"{fmt_num(abs(diff))}",
+                "steps": steps, "value": abs(diff)}
+
+    # --- Profit / loss stated as a rupee amount, % asked ----
+    ma = re.search(r"\b(profit|loss|gain)\s+of\s+(?:" + _RS
+                   + r"\s*)?(" + _NUM + r")(?!\s*%)", q)
+    if ma and CP and ask_percent and CP > 0:
+        amt = _num(ma.group(2))
+        pct = amt / CP * 100.0
+        kind = "Profit" if ma.group(1) != "loss" else "Loss"
+        return {"type": "applied",
+                "op": "profit_loss_amount_pct78",
+                "answer": f"{fmt_num(pct)}%",
+                "steps": [
+                    f"Cost price = Rs {fmt_num(CP)}, "
+                    f"{kind.lower()} = Rs {fmt_num(amt)}",
+                    f"{kind} % = ({fmt_num(amt)} ÷ "
+                    f"{fmt_num(CP)}) × 100 = "
+                    f"{fmt_num(pct)}%"],
+                "value": pct}
+
+    # --- CP with a stated profit/loss %, SP asked (the CP
+    # statement carries words: "cost price of a bicycle is
+    # Rs 3200, it is sold at a profit of 12%").
+    mp2 = re.search(r"\b(profit|gain|loss)\s+of\s+(" + _NUM
+                    + r")\s*%", q)
+    if mp2 and CP and ("selling" in q or "sold" in q
+                       or "sells" in q):
+        kind, p = mp2.group(1), _num(mp2.group(2))
+        if kind == "loss":
+            if p >= 100:
+                return None
+            SPc = CP * (1 - p / 100.0)
+            steps = [f"SP = CP × (1 - loss/100) = "
+                     f"{fmt_num(CP)} × "
+                     f"{fmt_num(1 - p / 100.0)} = "
+                     f"Rs {fmt_num(SPc)}"]
+        else:
+            SPc = CP * (1 + p / 100.0)
+            steps = [f"SP = CP × (1 + profit/100) = "
+                     f"{fmt_num(CP)} × "
+                     f"{fmt_num(1 + p / 100.0)} = "
+                     f"Rs {fmt_num(SPc)}"]
+        return {"type": "applied", "op": "profit_loss_sp78",
+                "answer": f"Rs {fmt_num(SPc)}",
+                "steps": steps, "value": SPc}
+    return None
+
+
+
+
 _FAMILIES = (_hindi_word_problems,
              _ratio, _unitary_cost, _simple_interest,
              _simple_interest_hindi, _profit_loss,
@@ -5467,7 +5760,12 @@ _FAMILIES = (_hindi_word_problems,
              _hinglish_schemas,
              # Wave 65: trilingual word-schema net (gated
              # phrasings only; see _wave65_schemas).
-             _wave65_schemas)
+             _wave65_schemas,
+             # Wave 78: English commercial-maths net
+             # (discount / MP-CP-SP / profit & loss textbook
+             # phrasings; gated extractions only, fires only
+             # on what no earlier family claimed).
+             _english_commercial)
 
 
 def solve_applied(question: str):
