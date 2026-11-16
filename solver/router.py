@@ -16,6 +16,7 @@ from .calculus import solve_calculus
 from .complex_numbers import solve_complex
 from .distributions import solve_distributions
 from .exponents_logs import solve_exponents_logs
+from .expression_parser import wants_circumference
 from .geometry import solve_geometry
 from .junior import solve_junior
 from .linear_algebra import solve_linear_algebra
@@ -921,7 +922,7 @@ def normalize_hinglish(question: str) -> str:
             # "7 cm trijya wale vritt" — radius before the word.
             _mr = re.search(_N + r"\s*(?:cm|m|mm)?\s*"
                             r"(?:trijya|radius)\b", ql)
-        if _mr and ("paridhi" in ql or "circumference" in ql) \
+        if _mr and ("paridhi" in ql or wants_circumference(ql)) \
                 and "ring" not in ql and "segment" not in ql:
             return (f"circumference of a circle with radius "
                     f"{_mr.group(1)}")
@@ -930,7 +931,7 @@ def normalize_hinglish(question: str) -> str:
                 and "trijyakhand" not in ql \
                 and "ring" not in ql and "segment" not in ql:
             return f"area of a circle with radius {_mr.group(1)}"
-        if _md and ("paridhi" in ql or "circumference" in ql) \
+        if _md and ("paridhi" in ql or wants_circumference(ql)) \
                 and "ring" not in ql and "segment" not in ql:
             return (f"circumference of a circle with diameter "
                     f"{_md.group(1)} cm")

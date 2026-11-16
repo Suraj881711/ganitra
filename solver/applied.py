@@ -3748,6 +3748,64 @@ def _temperature(q):
     return None
 
 
+def _cuboid_capacity(q):
+    """Wave 74: cuboid volume / capacity from dimension
+    words — "a water tank is 80 cm long, 40 cm wide and
+    40 cm deep, how many litres of water can it hold?" No
+    earlier family claimed the long/wide/deep phrasing
+    (geometry's cuboid branch needs the word "cuboid"),
+    so the question fell through to the equation salvage
+    and its "(1000 cm^3 = 1 litre)" hint was "solved" as
+    an equation (Wave 71 audit, wrong case 2). Reads the
+    three dimension slots in either order ("80 cm long" /
+    "length is 80 cm"), each with its own unit or the
+    unit its neighbours share, and answers the volume —
+    in litres when litres / capacity are asked
+    (1000 cm^3 = 1 litre)."""
+    if not re.search(r"litres?|liters?|capacity|volume|"
+                     r"hold", q):
+        return None
+
+    def _dim(*words):
+        for w in words:
+            m = re.search(r"(\d+(?:\.\d+)?)\s*(cm|mm|m)?\s*"
+                          + w + r"\b", q)
+            if m:
+                return float(m.group(1)), m.group(2)
+            m = re.search(w + r"\s*(?:is\s*)?(\d+(?:\.\d+)?)"
+                          r"\s*(cm|mm|m)?\b", q)
+            if m:
+                return float(m.group(1)), m.group(2)
+        return None
+
+    dims = (_dim("long", "length"), _dim("wide", "breadth",
+                                         "width"),
+            _dim("deep", "depth", "high", "height"))
+    if any(d is None for d in dims):
+        return None
+    shared = next((u for _, u in dims if u), None)
+    if shared is None:
+        return None  # no unit anywhere: cannot convert
+    _to_cm = {"cm": 1.0, "m": 100.0, "mm": 0.1}
+    cms = [v * _to_cm[u or shared] for v, u in dims]
+    vol = cms[0] * cms[1] * cms[2]
+    steps = [f"Volume of a cuboid = length × breadth × "
+             f"height",
+             f"= {fmt_num(cms[0])} × {fmt_num(cms[1])} × "
+             f"{fmt_num(cms[2])} = {fmt_num(vol)} cm³"]
+    if re.search(r"litres?|liters?|capacity|hold", q):
+        litres = vol / 1000.0
+        steps.append(f"1000 cm³ = 1 litre, so capacity = "
+                     f"{fmt_num(vol)} ÷ 1000 = "
+                     f"{fmt_num(litres)} litres")
+        return {"type": "applied", "op": "cuboid_capacity",
+                "answer": f"{fmt_num(litres)} litres",
+                "steps": steps, "value": litres}
+    return {"type": "applied", "op": "cuboid_volume_dims",
+            "answer": f"{fmt_num(vol)} cm³",
+            "steps": steps, "value": vol}
+
+
 def _wrapped_equation(q, op_name):
     """Wave 56: an equation stated inside a Hindi / Hinglish
     wrapper — "समीकरण 3x - 4 = 11 को हल कीजिए",
@@ -3770,6 +3828,22 @@ def _wrapped_equation(q, op_name):
         return None
     eq = m.group(1).strip()
     if eq.count("=") != 1 or not re.search(r"[a-z]", eq):
+        return None
+    # Wave 74: a unit-conversion statement is not an
+    # equation. The "(1000 cm^3 = 1 litre)" hint inside a
+    # capacity question used to be extracted here and
+    # "solved" for the letter c of "cm", answering
+    # "c = 1/(1000·m^3)" (Wave 71 audit, wrong case 2). A
+    # real wrapped equation — this schema's own contract —
+    # has ONE unknown letter on its LHS; a measurement
+    # statement's letters are unit symbols (the c and m of
+    # cm, the k and m of km) and it carries a number+unit
+    # pair. Refuse both shapes.
+    _lhs74 = eq.split("=")[0]
+    if len(set(re.findall(r"[a-z]", _lhs74))) != 1:
+        return None
+    if re.search(r"\d\s*(?:cm|mm|km|ml|kg|litres?|liters?|"
+                 r"mins?|secs?|hrs?)\b", eq):
         return None
     try:
         from .algebra import solve_algebra
@@ -5388,7 +5462,8 @@ _FAMILIES = (_hindi_word_problems,
              # claims).
              _consecutive_sum, _item_cost, _fraction_word,
              _percent_change, _growth_decay, _si_doubles,
-             _angle_word, _temperature, _hindi_schemas,
+             _angle_word, _temperature, _cuboid_capacity,
+             _hindi_schemas,
              _hinglish_schemas,
              # Wave 65: trilingual word-schema net (gated
              # phrasings only; see _wave65_schemas).

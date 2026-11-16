@@ -29,9 +29,37 @@ _FILLER_LEAD = (
 )
 
 
+# Wave 74: circumference intent, tolerant of the common
+# misspellings ("circumferance", "circumfrence", ...): every
+# variant shares the stem "circumf". Exact-substring tests on
+# "circumference" used to send a misspelt circumference ask
+# down the AREA branch of the mensuration solver and compute
+# pi*r^2 instead of 2*pi*r (Wave 71 audit, wrong case 1).
+CIRCUMFERENCE_RE = re.compile(r"circumf\w*")
+
+
+def wants_circumference(text) -> bool:
+    """True when the text asks for a circumference, however
+    the word is spelt."""
+    return bool(CIRCUMFERENCE_RE.search(str(text).lower()))
+
+
 def clean_text(text: str) -> str:
     """Normalise unicode operators and strip filler wording."""
     t = str(text).strip()
+    # Wave 74: a fraction literal used as the DIVISOR must
+    # stay grouped. "1/7 ÷ 2/7" used to flatten (÷ -> /) into
+    # 1/7/2/7, which evaluates left-to-right as ((1/7)/2)/7 =
+    # 1/98 instead of (1/7)/(2/7) = 1/2 (Wave 71 audit, wrong
+    # case 3). "÷" is never part of a fraction, so a fraction
+    # right after it is the divisor as a whole; the same
+    # holds for a spaced "/" used as the division sign.
+    # Unspaced slash chains ("1/2/3") keep their conventional
+    # left-to-right reading.
+    t = re.sub(r"÷\s*(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)",
+               r"÷(\1/\2)", t)
+    t = re.sub(r"\s/\s+(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)",
+               r" / (\1/\2)", t)
     t = (
         t.replace("×", "*")
         .replace("÷", "/")

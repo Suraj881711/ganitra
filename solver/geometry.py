@@ -5,7 +5,8 @@ import re
 
 import sympy as sp
 
-from .expression_parser import extract_points, find_param, fmt, fmt_num
+from .expression_parser import (extract_points, find_param, fmt,
+                                fmt_num, wants_circumference)
 
 PI = math.pi
 
@@ -389,14 +390,14 @@ def _area_perimeter_volume(q: str):
     if extra is not None:
         return extra
     # ---- Circle ------------------------------------------------------
-    if "circle" in q or "circumference" in q:
+    if "circle" in q or wants_circumference(q):
         r = _param_flex(q, ["radius", "r"])
         d = find_param(q, ["diameter"])
         # Wave 59: the radius itself asked from a stated
         # diameter ("diameter is 14 cm, find its radius") —
         # the branch used to compute the area instead.
         if d is not None and "radius" in q \
-                and "circumference" not in q and "area" not in q:
+                and not wants_circumference(q) and "area" not in q:
             return "radius", fmt_num(d / 2), [
                 "Radius = diameter / 2",
                 f"= {fmt_num(d)} / 2 = {fmt_num(d / 2)}"]
@@ -407,6 +408,15 @@ def _area_perimeter_volume(q: str):
             # ("area of a circle whose circumference is 44 cm")
             # — recover r from C = 2·pi·r first.
             C = find_param(q, ["circumference"])
+            if C is None:
+                # Wave 74: the stated circumference under a
+                # misspelt name ("circumferance is 44 cm").
+                _mc = re.search(
+                    r"circumf\w*\s*(?:is|=|:)?\s*"
+                    r"(-?\d+(?:\.\d+)?)", q)
+                if _mc:
+                    _cs = _mc.group(1)
+                    C = float(_cs) if "." in _cs else int(_cs)
             if C is not None and "area" in q:
                 rr = C / (2 * PI)
                 val = PI * rr * rr
@@ -419,7 +429,7 @@ def _area_perimeter_volume(q: str):
                 ]
                 return "area", f"≈ {val:.4f}", steps
             return None
-        if "circumference" in q or "perimeter" in q:
+        if wants_circumference(q) or "perimeter" in q:
             val = 2 * PI * r
             steps = [f"Circumference = 2·pi·r = 2 × pi × {fmt_num(r)}",
                      f"= {fmt_num(val)} (approx) = {fmt_num(2 * r)}·pi "
@@ -1605,7 +1615,7 @@ def _wave65_geometry(q):
     m = re.search(r"diameter\s+(?:of\s+(?:a|the)\s+\w+\s+)?"
                   r"is\s+" + N, q)
     if m and "radius" in q and "area" not in q \
-            and "circumference" not in q:
+            and not wants_circumference(q):
         d = float(m.group(1))
         return _res("radius_from_diameter", fmt_num(d / 2),
                     d / 2,
