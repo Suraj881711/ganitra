@@ -3123,6 +3123,447 @@ def solve_question(question: str):
     return result
 
 
+# ---------------------------------------------------------------------------
+# Wave 77: chat-wrapper core pass — the wrapper-stripping
+# normaliser the Wave 71 audit found missing. Students wrap
+# solvable maths in conversation: "samikaran 2x + 3 = 7 hal karo",
+# "agar 2^x = 32 hai to x kitna hoga?", "800 rs wali cheez par
+# 25% ki chhoot hai, final price batao?", "oye 1/2 + 1/3 kitna
+# hoga plz yr?". The intent solvers read the wrapper words as
+# extra variables and answer with letter-soup ("a = 0",
+# "a = 2^(1/3)·(1/(g·h^2·…))") or a parse error, so 67 of the
+# audit's 88 salvage verdicts were exactly this family — the
+# fallback layer's salvage re-solved the extracted core but
+# served it flagged as a salvage, note and all. This pass runs
+# INSIDE the solver, at the very end of _solve_question_uncached,
+# and only when the primary result is a failure or letter-soup
+# (the same judgement the fallback layer makes in its _is_real):
+# it extracts the maths core — an equation, an evaluate-at
+# substitution, a "% of", an arithmetic chain, or the
+# filler-stripped whole — and solves THAT through the ordinary
+# pipeline, returning a genuine solver result. A primary result
+# that is already a real answer is never touched, so questions
+# the solver already solves stay byte-identical.
+#
+# Guards inherited from the salvage layer's hard lessons:
+# science questions are never carved up (their numbers are not
+# a maths sum hiding in the text); MCQ questions are left to
+# the Wave 76 layer; a bare assignment ("x = 4") is never
+# served as the answer to an evaluate-at question ("find the
+# value of 2x + 3 when x = 4" — the substitution candidate
+# answers 11 instead); and a two-fraction add/subtract ask
+# must yield the asked sum/difference, never an echoed
+# operand (Waves 52/58). The detectors below mirror
+# fallback.py's (_is_junk, _is_soft, _candidates) because the
+# fallback layer imports THIS module, not the other way round.
+# ---------------------------------------------------------------------------
+
+_W77_LOCAL = threading.local()
+
+_W77_FILLER_WORDS = {
+    "please", "plz", "batao", "bata", "samjhao", "samjha", "do",
+    "karo", "kar", "nikalo", "help", "me", "my", "homework",
+    "says", "say", "question", "sawal", "wala", "wali", "hai",
+    "kitna", "kitne", "hoga", "hoge", "chahiye", "mujhe", "mera",
+    "mere", "find", "the", "value", "what", "is", "when", "tell",
+    "usko", "isko", "yeh", "ye", "aur", "ka", "ki", "ke", "ko",
+    "se", "mein", "par", "bhi", "toh", "to", "a", "an",
+    "of", "for", "solve", "this", "that", "it", "just", "can",
+    "you", "could", "would", "dear", "teacher", "sir", "madam",
+    "bhai", "bro", "yar", "yaar", "abhi", "jaldi", "zara",
+    "thoda", "answer", "ans", "solution", "hal",
+    # Wave 77 additions, from the audit's wrapper inventory:
+    "samikaran", "agar", "krdo", "btao", "btaao", "bataao",
+}
+
+_W77_SOFT_PREFIXES = (
+    "tell me", "i need", "no word-problem pattern matched",
+    "give a number", "give me", "please tell", "please give",
+    "could not", "enter a", "try a form",
+)
+
+_W77_SYMBOLIC_COMMANDS = ("simplify", "expand", "factor",
+                          "factorise", "factorize", "collect")
+
+
+def _w77_single_letter_factors(ans):
+    """Mirror of fallback._single_letter_factors (Wave 58
+    version): distinct single letter/mark factors of a product
+    answer, in ANY script."""
+    import unicodedata
+    t = str(ans).replace("·", "*").replace(" ", "")
+    t = re.sub(r"\*\*\d+", "", t)
+    out = set()
+    for fac in t.split("*"):
+        fac = fac.strip("()")
+        if len(fac) == 1 and unicodedata.category(fac)[0] in (
+                "L", "M"):
+            out.add(fac)
+    return out
+
+
+def _w77_is_soup(question, result):
+    """Mirror of fallback._is_junk: letter-soup detection —
+    sympy turned the question's words into a product of single
+    letters. Kept exactly as conservative as the original."""
+    q = str(question or "").lower()
+    if any(cmd in q for cmd in _W77_SYMBOLIC_COMMANDS):
+        return False
+    ans = str((result or {}).get("answer", "") or "")
+    letters = set(re.findall(r"(?<![A-Za-z])[a-z](?![A-Za-z])",
+                             ans))
+    factors = _w77_single_letter_factors(ans)
+    if any(mark in ans for mark in ("**", "·", "^")):
+        if len(ans) >= 8 and len(letters | factors) >= 4:
+            return True
+        compact0 = ans.replace(" ", "").replace("·", "*")
+        if re.fullmatch(r"[A-Za-z](\*\*\d+)?"
+                        r"(\*[A-Za-z](\*\*\d+)?)+", compact0):
+            if len(set(re.findall(r"[A-Za-z]", compact0))) >= 3:
+                return True
+        parts = re.split(r"[*·]", ans)
+        frags = 0
+        for part in parts:
+            core = re.sub(r"\*\*\d+$", "", part.strip()) \
+                .strip("()")
+            if 1 <= len(core) <= 2 and \
+                    any(ord(c) > 127 for c in core):
+                frags += 1
+        if len(parts) >= 4 and frags >= 4:
+            return True
+    if ("*" in ans or "·" in ans) and len(factors) >= 5:
+        return True
+    compact = ans.replace(" ", "").replace("·", "*")
+    if re.fullmatch(r"[a-z](\*\*\d+)?(\*[a-z](\*\*\d+)?)+",
+                    compact):
+        return len(letters) >= 5
+    if not any(ch.isdigit() for ch in ans) \
+            and ("*" in ans or "·" in ans):
+        nonlatin = {f for f in factors if ord(f) > 127}
+        if len(nonlatin) >= 4:
+            return True
+    return False
+
+
+_W77_MATHY_TOKEN = re.compile(r"^[0-9a-zA-Z\.\+\-\*/\^\(\)%]+$")
+
+
+def _w77_mathy(token):
+    """Mirror of fallback._mathy: a token that can belong to
+    an equation (maths characters only, and it carries a
+    digit, is an operator, or is a short symbol)."""
+    t = token.strip(".,?!;:\"'")
+    if not t or not _W77_MATHY_TOKEN.match(t):
+        return False
+    if any(ch.isdigit() for ch in t):
+        return True
+    if t in ("+", "-", "*", "/", "=", "^", "(", ")", "x", "×"):
+        return True
+    return len(t) <= 3 and not t.isalpha() or (
+        len(t) <= 3 and t.lower() in ("x", "y", "z", "a", "b"))
+
+
+def _w77_extract_equation(question):
+    """Mirror of fallback._extract_equation: find "3x + 7 =
+    22" inside "my homework says find x when 3x + 7 = 22
+    please batao" — locate the '=' and expand token by token
+    while the neighbours are mathy."""
+    tokens = str(question or "").split()
+    for i, tok in enumerate(tokens):
+        if "=" not in tok:
+            continue
+        lo = i
+        while lo > 0 and _w77_mathy(tokens[lo - 1]):
+            lo -= 1
+        hi = i
+        while hi < len(tokens) - 1 and _w77_mathy(tokens[hi + 1]):
+            hi += 1
+        cand = " ".join(tokens[lo:hi + 1]).strip(" .,?!;:")
+        if any(ch.isdigit() for ch in cand) and \
+                any(ch.isalpha() for ch in cand.split("=")[0]):
+            return cand
+    return None
+
+
+_W77_ASSIGN = re.compile(
+    r"(?<![A-Za-z])([a-z])\s*=\s*(-?\d+(?:\.\d+)?)(?![\d.])")
+
+
+def _w77_evaluate_at(question):
+    """The evaluate-at shape: "find the value of 2x + 3 when
+    x = 4" -> the pure arithmetic candidate "2*(4) + 3".
+    Exactly one bare assignment, no other equation anywhere
+    in the text, and a leftover expression run that actually
+    uses the variable. Returns None for anything else — in
+    particular the bare assignment itself is NEVER the
+    candidate (the Wave 74 trap: salvage used to echo
+    "x = 4" for this question)."""
+    q = str(question or "")
+    assigns = list(_W77_ASSIGN.finditer(q))
+    if len(assigns) != 1:
+        return None
+    m = assigns[0]
+    var, val = m.group(1), m.group(2)
+    rest = (q[:m.start()] + " " + q[m.end():]).strip()
+    if "=" in rest:
+        return None
+    best = None
+    run = []
+
+    def flush():
+        nonlocal best
+        if run:
+            text = " ".join(run)
+            if var in re.findall(r"[a-z]", text) and \
+                    any(ch.isdigit() for ch in text):
+                if best is None or len(text) > len(best):
+                    best = text
+        run.clear()
+
+    for tok in rest.split():
+        if _w77_mathy(tok):
+            run.append(tok)
+        else:
+            flush()
+    flush()
+    if best is None:
+        return None
+    expr = best.strip(" .,?!;:")
+    expr = re.sub(r"(\d)\s*" + var + r"(?![a-z0-9])",
+                  r"\1*(" + val + ")", expr)
+    expr = re.sub(r"(?<![A-Za-z0-9])" + var + r"\s*\^",
+                  "(" + val + ")^", expr)
+    expr = re.sub(r"(?<![A-Za-z0-9])" + var + r"(?![a-z0-9])",
+                  "(" + val + ")", expr)
+    if var in re.findall(r"[a-z]", expr):
+        return None
+    return expr
+
+
+def _w77_strip_filler(question):
+    """Mirror of fallback._strip_filler with the Wave 77
+    filler additions."""
+    tokens = re.findall(r"[^\s]+", str(question or ""))
+    kept = [t for t in tokens
+            if t.strip(".,?!;:\"'").lower()
+            not in _W77_FILLER_WORDS]
+    return " ".join(kept).strip(" .,?!;:")
+
+
+def _w77_candidates(question):
+    """Possible maths cores inside a chat-wrapped question,
+    most specific first (mirrors fallback._candidates, plus
+    the evaluate-at substitution and Unicode-minus folding —
+    the audit's "Evaluate: 27 + 2 × 12 − 6" lost its last
+    term because the chain pattern never saw U+2212)."""
+    q = str(question or "").replace("−", "-").replace("–", "-")
+    # Bracketed tails are instructions, not question content
+    # ("[Use π = 22/7]", "[Take √3 = 1.73]"): left in, their
+    # numbers pose as chains/equations of their own.
+    q = re.sub(r"\[[^\]]*\]", " ", q)
+    out = []
+
+    def add(cand):
+        cand = (cand or "").strip(" .,?!;:")
+        if cand and cand not in out and any(ch.isdigit()
+                                            for ch in cand):
+            out.append(cand)
+
+    ev = _w77_evaluate_at(q)
+    if ev:
+        add(ev)
+    # A bare assignment left over after an evaluate-at match
+    # is the givens, never a candidate in its own right.
+    veto = None
+    assigns = list(_W77_ASSIGN.finditer(q))
+    if len(assigns) == 1:
+        rest = q[:assigns[0].start()] + " " + q[assigns[0].end():]
+        if "=" not in rest:
+            veto = assigns[0].group(0).strip(" .,?!;:")
+    equation = _w77_extract_equation(q)
+    if equation and equation != veto:
+        add(equation)
+    m = re.search(r"(\d+(?:\.\d+)?\s*%\s*of\s*\d+(?:\.\d+)?)",
+                  q, re.I)
+    if m:
+        add(m.group(1))
+    if not equation:
+        for m in re.finditer(
+                r"(\d+(?:\.\d+)?(?:\s*[-+\*/x×]\s*"
+                r"\d+(?:\.\d+)?)+)", q):
+            # A chain that runs into (or out of) a larger
+            # expression is a fragment, not the question:
+            # "5 - 2" inside "5 - 2√3" (the audit's
+            # prove-composite question salvaged its OTHER
+            # half), "(5 - 2)" inside "(5 - 2) × 4", a chain
+            # that is one side of an equation. Wave 20's
+            # scientific-notation case ("2 x 10^8" must never
+            # become "2 x 10") is the "^" member of this set.
+            # A neighbouring "=" only makes the chain a
+            # fragment when the OTHER side is an expression
+            # too ("[Use π = 22/7]", "2 + 3 = 5"): a labelled
+            # or trailed-off ask ("total = 45 + 37", "2 + 2
+            # = ?") is the chain itself.
+            j = m.end()
+            while j < len(q) and (q[j].isspace() or q[j] == ")"):
+                j += 1
+            if j < len(q) and q[j] in "+-*/x×√^":
+                continue
+            if j < len(q) and q[j] == "=":
+                k = j + 1
+                while k < len(q) and q[k].isspace():
+                    k += 1
+                if k < len(q) and (q[k].isdigit()
+                                   or q[k] in "(√π"):
+                    continue
+            j = m.start() - 1
+            while j >= 0 and (q[j].isspace() or q[j] == "("):
+                j -= 1
+            if j >= 0 and q[j] in "+-*/x×√^":
+                continue
+            if j >= 0 and q[j] == "=":
+                k = j - 1
+                while k >= 0 and q[k].isspace():
+                    k -= 1
+                if k >= 0 and (q[k].isdigit() or q[k] == ")"
+                               or q[k] in "√π"):
+                    continue
+            add(m.group(1))
+    add(_w77_strip_filler(q))
+    return out
+
+
+_W77_FRAC = r"\d+\s*/\s*\d+"
+
+
+def _w77_fraction_ask_value(question):
+    """Mirror of fallback._fraction_ask_value (Wave 52): the
+    exact value a two-fraction Add/Subtract question asks
+    for, or None."""
+    from fractions import Fraction
+    q = str(question or "").lower()
+    fracs = re.findall(_W77_FRAC, q)
+    if len(fracs) < 2:
+        return None
+    first = Fraction(fracs[0].replace(" ", ""))
+    second = Fraction(fracs[1].replace(" ", ""))
+    if re.search(r"\bsubtract\b", q):
+        return second - first
+    if re.search(r"\badd\b|\bsum\b", q):
+        return first + second
+    return None
+
+
+def _w77_result_value(result):
+    """Mirror of fallback._result_value: best-effort numeric
+    value of a result's answer."""
+    for key in ("value", "numeric"):
+        v = (result or {}).get(key)
+        if isinstance(v, (int, float)):
+            return float(v)
+    ans = str((result or {}).get("answer", "") or "")
+    m = re.search(r"(-?\d+)\s*/\s*(\d+)", ans)
+    if m and int(m.group(2)):
+        return int(m.group(1)) / int(m.group(2))
+    m = re.search(r"-?\d+(?:\.\d+)?", ans)
+    return float(m.group(0)) if m else None
+
+
+def _w77_needs_core(question, result):
+    """True when the primary result is not a genuine answer
+    to this question: a failure op, an empty/soft answer,
+    letter-soup, or an equation result that solved for a
+    letter from a wrapper word (or reported no solution)
+    while the question's own equation sits right there."""
+    if not isinstance(result, dict):
+        return False
+    op = result.get("op")
+    if op in ("error", "unknown"):
+        return True
+    ans = str(result.get("answer", "") or "")
+    if not ans.strip():
+        return True
+    if ans.strip().lower().startswith(_W77_SOFT_PREFIXES):
+        return True
+    if _w77_is_soup(question, result):
+        return True
+    if op == "equation":
+        eq = _w77_extract_equation(
+            str(question or "").replace("−", "-"))
+        if eq:
+            if "no solution" in ans.lower():
+                return True
+            solved = set(re.findall(r"(?:^|,)\s*([a-z])\s*=",
+                                    ans))
+            eq_vars = {c for c in eq.lower() if c.isalpha()}
+            if solved and eq_vars and solved.isdisjoint(eq_vars):
+                return True
+    return False
+
+
+def _w77_core_ok(question, result):
+    """A core candidate's result may replace the primary
+    result only when it is a clean solve in its own right:
+    no failure op, no soft/empty answer, no letter-soup,
+    and — for a two-fraction add/subtract ask — the asked
+    sum/difference rather than an echoed operand."""
+    if not isinstance(result, dict):
+        return False
+    if result.get("op") in ("error", "unknown"):
+        return False
+    ans = str(result.get("answer", "") or "")
+    if not ans.strip() or ans.strip().lower().startswith(
+            _W77_SOFT_PREFIXES):
+        return False
+    if _w77_is_soup(question, result):
+        return False
+    want = _w77_fraction_ask_value(question)
+    if want is not None:
+        got = _w77_result_value(result)
+        if got is None or abs(got - float(want)) > 0.01:
+            return False
+    return True
+
+
+def _w77_core_result(original, working):
+    """Solve the wrapper-stripped core of a chat-phrased
+    question through the ordinary pipeline; None when no
+    candidate produces a clean solve. Science questions are
+    never carved up (the salvage layer's Wave 20 rule) and
+    MCQ questions belong to the Wave 76 layer."""
+    if has_science_signal(original):
+        return None
+    try:
+        from mcq import extract_mcq
+        if extract_mcq(original) is not None:
+            return None
+    except Exception:
+        # mcq.py unavailable in this context: fall back to a
+        # plain marker check so option text is still never
+        # carved into a "core".
+        marks = set(re.findall(r"\(\s*([a-dA-D])\s*\)",
+                               str(original or "")))
+        if len(marks) >= 3:
+            return None
+    seen = set()
+    for src in (original, working):
+        seen.add(" ".join(str(src or "").split())
+                 .strip(" .,?!;:").lower())
+    for src in (original, working):
+        for cand in _w77_candidates(src):
+            key = " ".join(cand.split()).strip(" .,?!;:").lower()
+            if not key or key in seen:
+                continue
+            seen.add(key)
+            try:
+                res = solve_question(cand)
+            except Exception:
+                continue
+            if _w77_core_ok(original, res):
+                return res
+    return None
+
+
 def _solve_question_uncached(question: str):
     original = question
     # Wave 57: fold typing noise (Hinglish spellings, typos, OCR)
@@ -3722,6 +4163,32 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     alt["interpreted_as"] = translated
                 return alt
+        # Wave 77: chat-wrapper core pass — the primary
+        # result is a failure or letter-soup, so before it
+        # falls through to the fallback layer, solve the
+        # wrapper-stripped maths core (see the Wave 77
+        # section above) and serve THAT as the solver's own
+        # answer. The depth guard keeps a candidate's own
+        # solve from re-entering the pass. A core result
+        # that merely agrees with the primary on "no
+        # solution" never displaces it (byte-identical rule).
+        if getattr(_W77_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W77_LOCAL.depth = 1
+            try:
+                core = _w77_core_result(original, working)
+            except Exception:
+                core = None
+            finally:
+                _W77_LOCAL.depth = 0
+            if core is not None and not (
+                    "no solution" in str(
+                        core.get("answer", "")).lower()
+                    and "no solution" in str(
+                        result.get("answer", "")).lower()):
+                if was_translated:
+                    core.setdefault("interpreted_as", translated)
+                return core
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])
