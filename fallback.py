@@ -75,6 +75,7 @@ import re
 from fractions import Fraction
 
 from concepts import find_concept
+from concept_topics import topic_concept_result
 from i18n import get_strings, solve_failed
 from solver.router import has_science_signal, normalize_spelling, \
     solve_question
@@ -1210,7 +1211,23 @@ def with_fallback(question, result, lang=None):
     if salvaged is not None:
         return salvaged
 
-    concept = _concept_result(question, hindi)
+    # Wave 75: the topics-library concept layer
+    # (concept_topics.py). A genuine concept ask — definition,
+    # formula, how-to, difference, why — is answered from the
+    # app's own topics library (the topic's method + its
+    # verified worked example) instead of the small concepts.py
+    # card. It sits here, after the solver, the bank and
+    # salvage, so a concrete problem has already had every
+    # real chance to solve; its own gate + vetoes keep it from
+    # ever capturing one. On no confident topic match the
+    # Wave-18 concepts.py card runs exactly as before.
+    concept = None
+    try:
+        concept = topic_concept_result(question)
+    except Exception:
+        concept = None
+    if concept is None:
+        concept = _concept_result(question, hindi)
     if concept is not None:
         result_out = concept
     else:
@@ -1233,7 +1250,12 @@ def with_fallback(question, result, lang=None):
     # gets the same question before we settle. Exact solves,
     # salvage, greetings, non-maths and science replies have
     # all returned earlier, so neither brain can reach them.
-    if result_out.get("fallback_kind") in _GEMINI_KINDS:
+    # Wave 75: a topics-library concept answer (source
+    # "topics") is verified in-app content (Wave 55) — like
+    # the bank, it is exempt from the AI upgrade below, which
+    # could otherwise rewrite it and burn free quota.
+    if result_out.get("fallback_kind") in _GEMINI_KINDS \
+            and result_out.get("source") != "topics":
         ai_result = _gemini_answer(question, hindi)
         if ai_result is None:
             ai_result = _groq_answer(question, hindi)

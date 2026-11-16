@@ -87,8 +87,8 @@ for gone in ('id="scene-stage"', 'id="scene-3d"',
 check("no sprite preloads served",
       'rel="preload"' not in page and "scene-eagle.webp" not in page
       and "scene-tiger.webp" not in page)
-check("pins unchanged ?v=38 / v15",
-      "style.css?v=38" in page)
+check("pins ?v=39 / v16 (Wave 75 cache purge)",
+      "style.css?v=39" in page)
 
 from api import _solve_friendly  # noqa: E402
 r = _solve_friendly("एक ट्रेन 60 km की दूरी 1.5 घंटे में तय करती है। "
