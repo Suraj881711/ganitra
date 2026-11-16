@@ -5687,6 +5687,758 @@ _MH10ALG_2025_EN = [
     _q(5, "E", 3, "pair-of-linear-equations", "Solve any one of the following subquestions: (i) Draw the graphs representing the equation 2x = y + 2 and 4x + 3y = 24 on the same graph paper. Find the area of the triangle formed by these lines and the X-axis. (ii) The following pie-diagram shows percentage of persons according to blood group in a blood group checking camp (O 45%, A 20%, B 30%, AB 5% in the printed pie-diagram). Answer the following questions: (a) Find the measure of central angle for each blood group. (b) Find the total number of persons, if there are 600 persons of blood group B."),
 ]
 
+# ---------------------------------------------------------------------------
+# GSEB Class 10 Mathematics (Standard) — February–March 2025,
+# Code 12 (E), Series S-1910. Full text: AglaSem Docs (see
+# source_url in the entry below). All 54 questions transcribed
+# from the English text of the paper; the printed "(For Blind
+# Students Only)" alternatives are stored inside their parent
+# questions. Wave 94.
+# ---------------------------------------------------------------------------
+_GSEB10_2025_EN = [
+    _q(1, "A", 1, "real-numbers",
+       "If HCF (96, k) = 4 and LCM (96, k) = 9696 then k = ______. "
+       "(A) 96 (B) 440 (C) 404 (D) 4"),
+    _q(2, "A", 1, "polynomials",
+       "If α and β are zeros of Quadratic polynomial 6x² − 3 − 7x "
+       "then 1/α + 1/β = ______. (A) −7/3 (B) 3/6 (C) −7/6 (D) 2"),
+    _q(3, "A", 1, "pair-of-linear-equations",
+       "If 27x + 63y = 45 and 63x + 27y = 135 then x + y = ______. "
+       "(A) 90 (B) 180 (C) 2 (D) 1/2"),
+    _q(4, "A", 1, "quadratic-equations",
+       "If the discriminant of 2x² + 5x − k = 0 is 81 then "
+       "k = ______. (A) 5 (B) 7 (C) −7 (D) −5"),
+    _q(5, "A", 1, "arithmetic-progressions",
+       "Statement P : The sum of first n odd natural numbers is "
+       "n². Statement Q : The sum of first n even natural numbers "
+       "is n(n + 1). (A) Statement P is correct and Q is "
+       "incorrect. (B) Statement Q is correct and P is incorrect. "
+       "(C) Both Statements P and Q are correct. (D) Both "
+       "Statements P and Q are incorrect."),
+    _q(6, "A", 1, "triangles",
+       "PQ || RS in trapezium PQRS and PR and QS intersect at "
+       "point O. If OP = 6, OQ = 9 and OR = 8 then OS = ______. "
+       "(A) 58/9 (B) 12 (C) 58/8 (D) 11 (For Blind Students "
+       "Only) For Δ ABC and Δ PQR, AB/PQ = BC/QR = AC/PR. "
+       "Δ ABC and Δ PQR are similar by ______ condition. "
+       "(A) ASA (B) AAA (C) SAS (D) SSS"),
+    _q(7, "A", 1, "coordinate-geometry",
+       "The distance between origin and point P (36, 15) is "
+       "______. (39, 51, 21)"),
+    _q(8, "A", 1, "introduction-to-trigonometry",
+       "tan²θ − sec²θ = ______. (1, −1, 0)"),
+    _q(9, "A", 1, "circles",
+       "A quadrilateral ABCD circumscribes a circle. If AB = 6, "
+       "BC = 8, CD = 5 then AD = ______. (3, 11, 8) (For Blind "
+       "Students Only) ______ tangents can be drawn to a circle "
+       "from its centre. (0, 1, 2)"),
+    _q(10, "A", 1, "areas-related-to-circles",
+       "The length of the minute hand of a clock is 14 cm. The "
+       "area swept by the minute hand in 5 minutes is ______ "
+       "sq.cm. (154, 154/3, 77)"),
+    _q(11, "A", 1, "surface-areas-and-volumes",
+       "If the ratio of areas of two spheres is 1:2 then the "
+       "ratio of their volumes will be ______. "
+       "(2:√2, 1:2√2, 3:2√2)"),
+    _q(12, "A", 1, "statistics",
+       "Z − M = ______ × (M − x̄). (2, 3, 4)"),
+    _q(13, "A", 1, "probability",
+       "State whether the following statement is true or false: "
+       "If P(A) = (0.8)² then P(Ā) = (0.2)²."),
+    _q(14, "A", 1, "pair-of-linear-equations",
+       "State whether the following statement is true or false: "
+       "The graph of pair of linear equations x + 2y − 4 = 0 and "
+       "2x + 4y − 12 = 0 is parallel lines."),
+    _q(15, "A", 1, "quadratic-equations",
+       "State whether the following statement is true or false: "
+       "x² + 3x + 1 = (x − 2)² is a quadratic equation."),
+    _q(16, "A", 1, "coordinate-geometry",
+       "State whether the following statement is true or false: "
+       "The distance of point (3, −4) from Y - axis is 3."),
+    _q(17, "A", 1, "surface-areas-and-volumes",
+       "If Curved surface area of cylinder = 1/3 × Total surface "
+       "area of cylinder then what is the relation between its "
+       "height and radius?"),
+    _q(18, "A", 1, "statistics",
+       "If Z + M = 40 and Z − M = 4 then find the mean."),
+    _q(19, "A", 1, "real-numbers",
+       "If p, q, r are prime numbers then what will be their "
+       "LCM?"),
+    _q(20, "A", 1, "quadratic-equations",
+       "If the roots of quadratic equation 6x² − 13x + m = 0 are "
+       "reciprocals of each other then find the value of m."),
+    _q(21, "A", 1, "polynomials",
+       "Match the following: Column A — P(x) = x³ + x²; "
+       "Column B — Number of Zeros: (a) 1 (b) 2 (c) 3"),
+    _q(22, "A", 1, "polynomials",
+       "Match the following: Column A — P(x) = x³ − x; "
+       "Column B — Number of Zeros: (a) 1 (b) 2 (c) 3"),
+    _q(23, "A", 1, "introduction-to-trigonometry",
+       "Match the following: Column A — tan θ × cos θ; "
+       "Column B: (a) 2cos²θ − 1 (b) 1 (c) sin θ"),
+    _q(24, "A", 1, "introduction-to-trigonometry",
+       "Match the following: Column A — cos²θ − sin²θ; "
+       "Column B: (a) 2cos²θ − 1 (b) 1 (c) sin θ"),
+    _q(25, "B", 2, "real-numbers",
+       "Prove that 2 + 3√5 is irrational."),
+    _q(26, "B", 2, "pair-of-linear-equations",
+       "Solve 2x + 3y = 11 and x − 2y = −12 and hence find the "
+       "value of ‘m’ for which y = mx + 3."),
+    _q(27, "B", 2, "quadratic-equations",
+       "Find the value of k for the quadratic equation "
+       "kx (x − 2) + 6 = 0 if it has two equal roots."),
+    _q(28, "B", 2, "quadratic-equations",
+       "Find two numbers whose sum is 27 and product is 182."),
+    _q(29, "B", 2, "arithmetic-progressions",
+       "Find the 10th term from the last term of the A.P. : "
+       "3, 8, 13, ...., 253."),
+    _q(30, "B", 2, "introduction-to-trigonometry",
+       "If sin (A − B) = 1/2 and cos (A + B) = 1/2, "
+       "0° < A + B ≤ 90°, A > B, find A and B."),
+    _q(31, "B", 2, "introduction-to-trigonometry",
+       "Prove that (sin A + cosec A)² + (cos A + sec A)² = "
+       "7 + tan²A + cot²A."),
+    _q(32, "B", 2, "circles",
+       "Two concentric circles are of radii 5 cm and 13 cm. "
+       "Find the length of the chord of the larger circle which "
+       "touches the smaller circle. (Only for Blind Students) "
+       "Define i) Concentric Circles ii) Length of a Tangent"),
+    _q(33, "B", 2, "surface-areas-and-volumes",
+       "2 cubes each of volume 64 cm³ are joined end to end. "
+       "Find the total surface area of the resulting cuboid."),
+    _q(34, "B", 2, "statistics",
+       "If the mean of observations x, x + 3, x + 6, x + 9 and "
+       "x + 12 is 10 then find x."),
+    _q(35, "B", 2, "statistics",
+       "Find median if n = 53, l = 60, f = 7, cf = 22 and "
+       "h = 10."),
+    _q(36, "B", 2, "probability",
+       "It is given that in a group of 3 students, the "
+       "probability of 2 students not having the same birthday "
+       "is 0.992. What is the probability that the 2 students "
+       "have the same birthday?"),
+    _q(37, "B", 2, "probability",
+       "A lot consists of 144 ball pens of which 20 are "
+       "defective and the others are good. Heer will buy a pen "
+       "if it is good, but will not buy if it is defective. The "
+       "shopkeeper draws one pen at random and gives it to her. "
+       "What is the probability that i) she will buy it? "
+       "ii) she will not buy it?"),
+    _q(38, "C", 3, "polynomials",
+       "Find the zeros of the polynomial x² − 5 and verify the "
+       "relationship between the zeros and the coefficients."),
+    _q(39, "C", 3, "polynomials",
+       "If the zeros of polynomial are 2 + √3 and 2 − √3 then "
+       "find the polynomial."),
+    _q(40, "C", 3, "arithmetic-progressions",
+       "The sum of the 4th and 8th terms of an AP is 24 and the "
+       "sum of the 6th and 10th terms is 44. Find the first 3 "
+       "terms of the AP."),
+    _q(41, "C", 3, "arithmetic-progressions",
+       "Students of a school were determined to reduce air "
+       "pollution. A tree plantation program was arranged for "
+       "it by the school. It was decided that the number of "
+       "trees, that each section of each class will plant, will "
+       "be the same as the class in which they are studying "
+       "e.g. a section of class I will plant 1 tree, a section "
+       "of class II will plant 2 trees and so on till class "
+       "XII. There are three sections of each class. How many "
+       "trees will be planted by the students?"),
+    _q(42, "C", 3, "coordinate-geometry",
+       "If A and B are (−2, −2) and (2, −4) respectively, find "
+       "the coordinates of P such that AP = 3/7 AB and P lies "
+       "on the line segment AB."),
+    _q(43, "C", 3, "circles",
+       "Prove that the lengths of tangents drawn from an "
+       "external point to a circle are equal. (For Blind "
+       "Students Only) Answer the following questions : "
+       "i) Define tangent of a circle. ii) Two circles touch "
+       "each other externally at one point. How many common "
+       "tangents can be drawn to them? iii) How many tangents "
+       "can a circle have?"),
+    _q(44, "C", 3, "circles",
+       "A triangle ABC is drawn to circumscribe a circle of "
+       "radius 4 cm such that the segments BD and DC into which "
+       "BC is divided by the point of contact D are of lengths "
+       "8 cm and 6 cm respectively (see fig.). Find the sides "
+       "AB and AC. [Figure] (For Blind Students Only) Answer "
+       "the following questions : i) Define secant of a circle. "
+       "ii) ⊙(P, r₁) and ⊙(Q, r₂) touch each other externally "
+       "at one point. Find the length of PQ. iii) A circle can "
+       "have ______ parallel tangents at the most."),
+    _q(45, "C", 3, "areas-related-to-circles",
+       "A chord of a circle having length 10 cm subtends a "
+       "right angle at the centre. Find the area of the "
+       "corresponding: i) Minor segment ii) Major sector "
+       "(Use π = 3.14)"),
+    _q(46, "C", 3, "probability",
+       "Two dice, one blue and one gray, are thrown at the same "
+       "time. Find the following probabilities. i) Sum of the "
+       "digits on dice is 13. ii) Same digit on both dice. "
+       "iii) Product of digits on dice is even."),
+    _q(47, "D", 4, "pair-of-linear-equations",
+       "Nihan hires a taxi to visit his uncle's house. The taxi "
+       "charges in a city consist of a fixed charge together "
+       "with the charge for the distance covered. His uncle's "
+       "house is 10 km from his house and for that he pays "
+       "₹105. From there he goes to his grandfather's house. "
+       "His grandfather's house is 15 km from his uncle's "
+       "house. He pays ₹155 for this travel. What are the fixed "
+       "charges and the charge per km? Nihan returns to his "
+       "house from his grandfather's house. His house is 25 km "
+       "from grandfather's house. How much taxi fare will he "
+       "pay?"),
+    _q(48, "D", 4, "pair-of-linear-equations",
+       "The sum of a two-digit number and the number obtained "
+       "by reversing the digits is 66. If the digits of the "
+       "number differ by 2, find the number. How many such "
+       "numbers are there?"),
+    _q(49, "D", 4, "triangles",
+       "State and prove Thales theorem. (Only for Blind "
+       "Students) Answer the following questions: i) State the "
+       "fundamental theorem of proportionality. ii) State SAS "
+       "condition for similarity of triangles. iii) Define "
+       "similarity of triangles. iv) Give 2 examples of figure "
+       "that are not similar."),
+    _q(50, "D", 4, "some-applications-of-trigonometry",
+       "Anil's height is 90 cm. He is walking away from the "
+       "base of a lamp - post at a speed of 1.2 m/s. If the "
+       "lamp is 3.6 m above the ground, find the length of his "
+       "shadow after 4 seconds. (Only for Blind Students) "
+       "Answer the following questions: i) Give 2 examples of "
+       "similar figures. ii) State AAA condition for similarity "
+       "of triangles. iii) If a line divides any two sides of a "
+       "triangle in the same ratio then what is the relation "
+       "between the line and third side? iv) State SSS "
+       "condition for similarity of triangles."),
+    _q(51, "D", 4, "some-applications-of-trigonometry",
+       "A straight highway leads to the foot of a tower. Rudra, "
+       "who is standing at the top of the tower observes a car "
+       "at an angle of depression of 30°, which is approaching "
+       "the foot of the tower with a uniform speed. Six seconds "
+       "later, the angle of depression of the car is found to "
+       "be 60°. Find the time taken by the car to reach the "
+       "foot of the tower from this point. (Only for Blind "
+       "Students) Answer the following questions: i) Define the "
+       "angle of elevation. ii) Define the line of sight. "
+       "iii) A person is standing at the centre of line joining "
+       "2 buildings A and B. He observes the top of both "
+       "buildings. The angles of elevation are 30° and 60° for "
+       "A and B respectively. Which building is taller? iv) On "
+       "observing from top of a tower, the angle of depression "
+       "of a car moving towards the tower is decreasing. Is "
+       "this statement True or False?"),
+    _q(52, "D", 4, "surface-areas-and-volumes",
+       "A vessel is in the form of an inverted cone. Its height "
+       "is 8 cm and the radius of its top, which is open, is "
+       "5 cm. It is filled with water up to the brim. Two "
+       "friends Yash and Akash are playing with lead shots near "
+       "it. Yash drops lead shots, each of which is a sphere of "
+       "radius 0.5 cm into the vessel, one-fourth of the water "
+       "flows out. Find the number of lead shots dropped in "
+       "the vessel."),
+    _q(53, "D", 4, "surface-areas-and-volumes",
+       "A tent is in the shape of a cylinder surmounted by a "
+       "conical top. If the height and diameter of the "
+       "cylindrical part are 2.1 m and 4 m respectively, and "
+       "the slant height of the top is 2.8 m, find the area of "
+       "the canvas used for making the tent. Also, find the "
+       "cost of the canvas of the tent at the rate of ₹500 per "
+       "m². (Note that the base of the tent will not be covered "
+       "with canvas.)"),
+    _q(54, "D", 4, "statistics",
+       "The mode of frequency distribution given below is 34.5 "
+       "and number of observations is 165. Find the missing "
+       "frequencies a and b. Class: 5-14, 14-23, 23-32, 32-41, "
+       "41-50, 50-59 Frequency: 5, 11, a, 53, b, 26"),
+]
+
+_GSEB10_2025_ENTRY = {
+        "id": "gseb-10-2025",
+        "class_num": 10,
+        "board": "GSEB (Gujarat Board)",
+        "year": 2025,
+        "set_label": "12 (E) · S-1910 · February–March 2025",
+        "source_name": "Gujarat Secondary and Higher Secondary "
+                       "Education Board (GSEB) Class 10 "
+                       "Mathematics (Standard) Question Paper, "
+                       "February–March 2025, Code 12 (E) — "
+                       "English medium, as mirrored on AglaSem "
+                       "Docs",
+        "source_url": "https://docs.aglasem.com/view/"
+                      "b93613d8-d746-11f0-a2ff-0a5e36bc6706",
+        "note": "The real GSEB SSC Mathematics (Standard) paper "
+                "of February–March 2025, code 12 (E). Maximum "
+                "Marks 80, Time 3 Hours, 54 questions in four "
+                "sections: A — Q1–24 objective, 1 mark each, all "
+                "compulsory (Q1–6 choose the correct option, "
+                "Q7–12 fill in the blanks, Q13–16 true/false, "
+                "Q17–20 one-sentence answers, Q21–24 match the "
+                "following, stored as separate questions with "
+                "their printed columns); B — Q25–37, 2 marks "
+                "each, answer any 9 of 13; C — Q38–46, 3 marks "
+                "each, answer any 6 of 9; D — Q47–54, 4 marks "
+                "each, answer any 5 of 8 — so the typed texts "
+                "sum to 109 marks while the paper itself is of "
+                "80 marks. The printed '(For Blind Students "
+                "Only)' alternative questions (for Q6, Q9, Q32, "
+                "Q43, Q44, Q49, Q50, Q51) are stored inside "
+                "their parent questions. In Q6 the value of OQ "
+                "is covered by the QR-code stamp in the AglaSem "
+                "scan; it is stored as 9, cross-checked against "
+                "two independent mirrors of the same paper and "
+                "consistent with the printed options (OS = 12). "
+                "Q2's option (B) is printed as the unsimplified "
+                "fraction 3/6 and is stored as printed. The "
+                "paper's header states 12 printed pages; the "
+                "scan's printed page numbers run 1–10 and the "
+                "paper ends with Q54 there — the Q1–54 sequence "
+                "is complete. Transcribed from the page images "
+                "(the PDF has no text layer) in Wave 94.",
+        "max_marks": 80,
+        "section_titles": {
+            "A": "Section A — Objective Questions 1–24 "
+                 "(1 mark each, all compulsory)",
+            "B": "Section B — Questions 25–37 (2 marks each, "
+                 "answer any 9 of 13)",
+            "C": "Section C — Questions 38–46 (3 marks each, "
+                 "answer any 6 of 9)",
+            "D": "Section D — Questions 47–54 (4 marks each, "
+                 "answer any 5 of 8)",
+        },
+        "questions": _GSEB10_2025_EN,
+    }
+
+# ---------------------------------------------------------------------------
+# UBSE Class 10 Mathematics — 2025, Code 231 (HHG), Series 031.
+# One bilingual booklet: every question is printed in Hindi and
+# then in English, so the paper is stored as two entries
+# (English and Hindi), each carrying the full paper. Question 1
+# is a multiple-choice question with eight parts (क)–(ज); the
+# eight parts are stored as eight separate questions, all
+# numbered 1, exactly as Wave 63/66 stored composite
+# sub-questions (Maharashtra Q1 parts, UPMSP section A). Full
+# text: AglaSem Docs (see source_url in the entries below).
+# Wave 94.
+# ---------------------------------------------------------------------------
+_UBSE10_2025_EN = [
+    _q(1, "A", 1, "real-numbers",
+       "(क) If HCF (306, 657) = 9, then LCM (306, 657) will "
+       "be – (i) 22,338 (ii) 22,328 (iii) 22,438 (iv) 22,348"),
+    _q(1, "A", 1, "polynomials",
+       "(ख) Which of the following is not the irrational "
+       "number – (i) 3 + √7 (ii) 3 − √7 (iii) 2/√7 (iv) 6√7"),
+    _q(1, "A", 1, "arithmetic-progressions",
+       "(ग) The sum of first 16 terms of the A.P. 10, 6, 2, "
+       "... is – (i) −320 (ii) 320 (iii) −352 (iv) −198"),
+    _q(1, "A", 1, "introduction-to-trigonometry",
+       "(घ) If tan θ = 5/12, then the value of sin θ will be "
+       "– (i) 5/13 (ii) 13/5 (iii) 5/12 (iv) 12/13"),
+    _q(1, "A", 1, "coordinate-geometry",
+       "(ङ) The distance between the points (−5, 7) and "
+       "(−1, 3) is – (i) 4√2 (ii) 3√2 (iii) 2√2 (iv) √2"),
+    _q(1, "A", 1, "quadratic-equations",
+       "(च) For what value of 'k' will the quadratic equation "
+       "2x² + kx + 3 = 0 have equal roots – (i) ±2√6 "
+       "(ii) ±3√6 (iii) 2√6 (iv) 3√6"),
+    _q(1, "A", 1, "triangles",
+       "(छ) In the following figure, DE ∥ BC, then the value "
+       "of x will be – (i) 3 (ii) 2 (iii) 4 (iv) 1 [Figure]"),
+    _q(1, "A", 1, "probability",
+       "(ज) A bag contains 3 red balls and 5 black balls. A "
+       "ball is drawn at random from the bag. The probability "
+       "that the ball drawn is red will be – (i) 3/8 (ii) 5/8 "
+       "(iii) 3/5 (iv) 5/3"),
+    _q(2, "A", 1, "real-numbers",
+       "Find the HCF of numbers 12, 15 and 21 by prime "
+       "factorisation method."),
+    _q(3, "A", 1, "polynomials",
+       "Find the zeroes of quadratic polynomial x² + 7x + 10."),
+    _q(4, "A", 1, "arithmetic-progressions",
+       "Find the 10th term of A.P. 2, 7, 12, ...."),
+    _q(5, "A", 1, "introduction-to-trigonometry",
+       "If A, B and C are interior angles of a ΔABC, then show "
+       "that sin((B + C)/2) = cos(A/2)."),
+    _q(6, "A", 1, "introduction-to-trigonometry",
+       "Prove that (1 + tan²A)/(1 + cot²A) = tan²A."),
+    _q(7, "A", 1, "coordinate-geometry",
+       "Find the coordinates of the point which divides the "
+       "line segment joining the points (4, −3) and (8, 5) in "
+       "the ratio 3 : 1 internally."),
+    _q(8, "A", 1, "surface-areas-and-volumes",
+       "A solid iron pole consists of a cylinder of height "
+       "220 cm and base diameter 24 cm, which is surmounted by "
+       "another cylinder of height 60 cm and radius 8 cm. Find "
+       "the mass of the pole, given that 1 cm³ of iron has "
+       "approximately 8 g mass. (Use π = 3.14)"),
+    _q(9, "A", 1, "statistics",
+       "Find the mode of the following data: Class Interval: "
+       "0-20, 20-40, 40-60, 60-80, 80-100, 100-120; Frequency: "
+       "12, 15, 22, 18, 10, 8."),
+    _q(10, "B", 2, "real-numbers",
+       "Prove that 3 + 2√5 is an irrational number."),
+    _q(11, "B", 2, "polynomials",
+       "Divide the polynomial p(x) = x³ − 3x² + 5x − 3 by the "
+       "polynomial g(x) = x² − 2. Find the quotient and "
+       "remainder."),
+    _q(12, "B", 2, "quadratic-equations",
+       "Find the roots of quadratic equation 2x² − 7x + 3 = 0 "
+       "by factorisation method."),
+    _q(13, "B", 2, "circles",
+       "Prove that the parallelogram circumscribing a circle "
+       "is a rhombus. OR A circle touches all the four sides "
+       "of a quadrilateral ABCD. Prove that AB + CD = BC + DA. "
+       "[Figure]"),
+    _q(14, "B", 2, "areas-related-to-circles",
+       "A horse is tied to a peg at one corner of a square "
+       "shaped grass field of side 15 m by means of a 5 m long "
+       "rope. Find the area of that part of the field in which "
+       "the horse can graze. (Use π = 3.14)"),
+    _q(15, "B", 2, "statistics",
+       "Find the median of the following data: Marks Obtained: "
+       "0-10, 10-20, 20-30, 30-40, 40-50, 50-60; Number of "
+       "Students: 5, 12, 18, 10, 6, 4."),
+    _q(16, "B", 2, "probability",
+       "A box contains 5 red marbles, 8 white marbles and 4 "
+       "green marbles. One marble is taken out of the box at "
+       "random. What is the probability that the marble taken "
+       "out will be (i) red? (ii) white? (iii) not green? OR "
+       "Five cards — the ten, jack, queen, king and ace of "
+       "diamonds, are well-shuffled and then one card is drawn "
+       "at random. What is the probability that the card drawn "
+       "is (i) a queen? (ii) an ace?"),
+    _q(17, "C", 4, "pair-of-linear-equations",
+       "Solve the following pair of linear equations by the "
+       "substitution method: 3x − y = 3, 9x − 3y = 9 OR Solve "
+       "the following pair of linear equations by the "
+       "elimination method: x + y = 5, 2x − 3y = 4"),
+    _q(18, "C", 4, "quadratic-equations",
+       "The diagonal of a rectangular field is 60 metres more "
+       "than the shorter side. If the longer side is 30 metres "
+       "more than the shorter side, find the sides of the "
+       "field."),
+    _q(19, "C", 4, "triangles",
+       "Prove that if a line is drawn parallel to one side of "
+       "a triangle to intersect the other two sides in "
+       "distinct points, the other two sides are divided in "
+       "the same ratio."),
+    _q(20, "C", 4, "surface-areas-and-volumes",
+       "A gulab jamun contains sugar syrup up to about 30% of "
+       "its volume. Find approximately how much syrup would be "
+       "found in 45 gulab jamuns, each shaped like a cylinder "
+       "with two hemispherical ends with length 5 cm and "
+       "diameter 2.8 cm. (Use π = 22/7) OR A solid is in the "
+       "shape of a cone standing on a hemisphere with both "
+       "their radii being equal to 1 cm and the height of the "
+       "cone is equal to its radius. Find the volume of the "
+       "solid in terms of π."),
+    _q(21, "C", 4, "probability",
+       "A die is thrown once. Find the probability of getting "
+       "(i) a prime number; (ii) a number lying between 2 and "
+       "6; (iii) an odd number."),
+    _q(22, "D", 5, "arithmetic-progressions",
+       "The sum of the third and the seventh terms of an A.P. "
+       "is 6 and their product is 8. Find the sum of first "
+       "sixteen terms of this A.P. OR The sum of first 14 "
+       "terms of an A.P. is 1050 and its first term is 10. "
+       "Find the 20th term of A.P."),
+    _q(23, "D", 5, "coordinate-geometry",
+       "If A(−5, 7), B(−4, −5), C(−1, −6) and D(4, 5) are the "
+       "vertices of a quadrilateral, find the area of the "
+       "quadrilateral ABCD."),
+    _q(24, "D", 5, "some-applications-of-trigonometry",
+       "From a point on the ground, the angles of elevation of "
+       "the bottom and the top of a transmission tower fixed "
+       "at the top of a 20 m high building are 45° and 60° "
+       "respectively. Find the height of the tower. OR The "
+       "angles of elevation of the top of a tower from two "
+       "points at a distance of 4 m and 9 m from the base of "
+       "the tower and in the same straight line with it are "
+       "complementary. Prove that the height of the tower is "
+       "6 m. [Figure]"),
+    _q(25, "D", 5, "some-applications-of-trigonometry",
+       "A statue, 1.6 m tall, stands on the top of a pedestal. "
+       "From a point on the ground, the angle of elevation of "
+       "the top of the statue is 60° and from the same point "
+       "the angle of elevation of the top of the pedestal is "
+       "45°. Find the height of the pedestal."),
+    _q(26, "D", 5, "surface-areas-and-volumes",
+       "A vessel is in the form of an inverted cone. Its "
+       "height is 8 cm and the radius of its top, which is "
+       "open, is 5 cm. It is filled with water up to the brim. "
+       "When lead shots, each of which is a sphere of radius "
+       "0.5 cm are dropped into the vessel, one-fourth of the "
+       "water flows out. Find the number of lead shots dropped "
+       "in the vessel."),
+    _q(27, "D", 5, "statistics",
+       "The following distribution gives the daily income of "
+       "50 workers of a factory: Daily Income (in ₹): 100-120, "
+       "120-140, 140-160, 160-180, 180-200; Number of Workers: "
+       "12, 14, 8, 6, 10. Convert the distribution above to a "
+       "less than type cumulative frequency distribution, and "
+       "draw its ogive."),
+]
+
+_UBSE10_2025_HI = [
+    _q(1, "A", 1, "real-numbers",
+       "(क) यदि HCF (306, 657) = 9 है, तो LCM (306, 657) "
+       "होगा – (i) 22,338 (ii) 22,328 (iii) 22,438 "
+       "(iv) 22,348"),
+    _q(1, "A", 1, "polynomials",
+       "(ख) निम्नलिखित में से कौन-सी अपरिमेय संख्या नहीं है – "
+       "(i) 3 + √7 (ii) 3 − √7 (iii) 2/√7 (iv) 6√7"),
+    _q(1, "A", 1, "arithmetic-progressions",
+       "(ग) समांतर श्रेढ़ी 10, 6, 2, ... के प्रथम 16 पदों का "
+       "योग है – (i) −320 (ii) 320 (iii) −352 (iv) −198"),
+    _q(1, "A", 1, "introduction-to-trigonometry",
+       "(घ) यदि tan θ = 5/12 है, तो sin θ का मान होगा – "
+       "(i) 5/13 (ii) 13/5 (iii) 5/12 (iv) 12/13"),
+    _q(1, "A", 1, "coordinate-geometry",
+       "(ङ) बिन्दुओं (−5, 7) और (−1, 3) के बीच की दूरी है – "
+       "(i) 4√2 (ii) 3√2 (iii) 2√2 (iv) √2"),
+    _q(1, "A", 1, "quadratic-equations",
+       "(च) द्विघात समीकरण 2x² + kx + 3 = 0 के मूल बराबर होने "
+       "के लिए 'k' का मान होगा – (i) ±2√6 (ii) ±3√6 "
+       "(iii) 2√6 (iv) 3√6"),
+    _q(1, "A", 1, "triangles",
+       "(छ) निम्नलिखित आकृति में, DE ∥ BC है, तो x का मान "
+       "होगा – (i) 3 (ii) 2 (iii) 4 (iv) 1 [Figure]"),
+    _q(1, "A", 1, "probability",
+       "(ज) एक थैले में 3 लाल गेंदें तथा 5 काली गेंदें हैं। "
+       "थैले में से एक गेंद यादृच्छया निकाली जाती है। निकाली "
+       "गयी गेंद के लाल होने की प्रायिकता होगी – (i) 3/8 "
+       "(ii) 5/8 (iii) 3/5 (iv) 5/3"),
+    _q(2, "A", 1, "real-numbers",
+       "अभाज्य गुणनखण्ड विधि द्वारा संख्याओं 12, 15 और 21 का "
+       "HCF ज्ञात कीजिए।"),
+    _q(3, "A", 1, "polynomials",
+       "द्विघात बहुपद x² + 7x + 10 के शून्यक ज्ञात कीजिए।"),
+    _q(4, "A", 1, "arithmetic-progressions",
+       "समांतर श्रेढ़ी 2, 7, 12, ... का 10वाँ पद ज्ञात "
+       "कीजिए।"),
+    _q(5, "A", 1, "introduction-to-trigonometry",
+       "यदि A, B और C, ΔABC के आन्तरिक कोण हैं, तो दर्शाइए "
+       "कि sin((B + C)/2) = cos(A/2) है।"),
+    _q(6, "A", 1, "introduction-to-trigonometry",
+       "सिद्ध कीजिए कि (1 + tan²A)/(1 + cot²A) = tan²A है।"),
+    _q(7, "A", 1, "coordinate-geometry",
+       "उस बिन्दु के निर्देशांक ज्ञात कीजिए जो बिन्दुओं "
+       "(4, −3) और (8, 5) को जोड़ने वाले रेखाखण्ड को 3 : 1 "
+       "के अनुपात में अन्तः विभाजित करता है।"),
+    _q(8, "A", 1, "surface-areas-and-volumes",
+       "लोहे का एक ठोस खम्भा 220 cm ऊँचाई और 24 cm आधार "
+       "व्यास वाले बेलन के रूप का है, जिस पर 60 cm ऊँचाई और "
+       "8 cm त्रिज्या वाला एक अन्य बेलन अध्यारोपित है। खम्भे "
+       "का द्रव्यमान ज्ञात कीजिए जबकि दिया है 1 cm³ लोहे का "
+       "द्रव्यमान लगभग 8 g है। (π = 3.14 लीजिए)"),
+    _q(9, "A", 1, "statistics",
+       "निम्न आँकड़ों का बहुलक ज्ञात कीजिए : वर्ग अन्तराल: "
+       "0-20, 20-40, 40-60, 60-80, 80-100, 100-120; बारम्बारता: "
+       "12, 15, 22, 18, 10, 8."),
+    _q(10, "B", 2, "real-numbers",
+       "सिद्ध कीजिए कि 3 + 2√5 एक अपरिमेय संख्या है।"),
+    _q(11, "B", 2, "polynomials",
+       "बहुपद p(x) = x³ − 3x² + 5x − 3 को बहुपद g(x) = x² − 2 "
+       "से भाग दीजिए। भागफल और शेषफल ज्ञात कीजिए।"),
+    _q(12, "B", 2, "quadratic-equations",
+       "गुणनखण्ड विधि द्वारा द्विघात समीकरण 2x² − 7x + 3 = 0 "
+       "के मूल ज्ञात कीजिए।"),
+    _q(13, "B", 2, "circles",
+       "सिद्ध कीजिए कि किसी वृत्त के परिगत समांतर चतुर्भुज "
+       "एक समचतुर्भुज होता है। अथवा एक वृत्त, चतुर्भुज ABCD "
+       "की चारों भुजाओं को स्पर्श करता है। सिद्ध कीजिए कि "
+       "AB + CD = BC + DA है। [Figure]"),
+    _q(14, "B", 2, "areas-related-to-circles",
+       "एक घोड़ा एक वर्गाकार घास के मैदान के एक कोने पर लगे "
+       "खूँटे से 5 m लम्बी रस्सी द्वारा बँधा है। यदि वर्गाकार "
+       "मैदान की भुजा 15 m है, तो मैदान के उस भाग का क्षेत्रफल "
+       "ज्ञात कीजिए जिसमें घोड़ा चर सकता है। (π = 3.14 "
+       "लीजिए)"),
+    _q(15, "B", 2, "statistics",
+       "निम्न आँकड़ों का माध्यक ज्ञात कीजिए : प्राप्तांक: "
+       "0-10, 10-20, 20-30, 30-40, 40-50, 50-60; विद्यार्थियों "
+       "की संख्या: 5, 12, 18, 10, 6, 4."),
+    _q(16, "B", 2, "probability",
+       "एक पेटी में 5 लाल कंचे, 8 सफेद कंचे और 4 हरे कंचे "
+       "हैं। पेटी में से यादृच्छया एक कंचा निकाला जाता है। "
+       "इसकी क्या प्रायिकता है कि निकाला गया कंचा "
+       "(i) लाल है? (ii) सफेद है? (iii) हरा नहीं है? अथवा "
+       "ताश के पाँच पत्तों — ईंट का दहला, गुलाम, बेगम, बादशाह "
+       "और इक्का — को अच्छी प्रकार से फेंटा जाता है। फिर "
+       "इनमें से यादृच्छया एक पत्ता निकाला जाता है। इसकी "
+       "क्या प्रायिकता है कि निकाला गया पत्ता (i) एक बेगम "
+       "होगा? (ii) एक इक्का होगा?"),
+    _q(17, "C", 4, "pair-of-linear-equations",
+       "प्रतिस्थापन विधि द्वारा निम्न रैखिक समीकरण युग्म को "
+       "हल कीजिए : 3x − y = 3, 9x − 3y = 9 अथवा विलोपन विधि "
+       "द्वारा निम्न रैखिक समीकरण युग्म को हल कीजिए : "
+       "x + y = 5, 2x − 3y = 4"),
+    _q(18, "C", 4, "quadratic-equations",
+       "एक आयताकार खेत का विकर्ण उसकी छोटी भुजा से 60 मीटर "
+       "अधिक लम्बा है। यदि बड़ी भुजा छोटी भुजा से 30 मीटर "
+       "अधिक हो, तो खेत की भुजाएँ ज्ञात कीजिए।"),
+    _q(19, "C", 4, "triangles",
+       "सिद्ध कीजिए कि यदि किसी त्रिभुज की एक भुजा के समांतर "
+       "अन्य दो भुजाओं को भिन्न-भिन्न बिन्दुओं पर प्रतिच्छेद "
+       "करने के लिए एक रेखा खींची जाए, तो ये अन्य दो भुजाएँ "
+       "एक ही अनुपात में विभाजित हो जाती हैं।"),
+    _q(20, "C", 4, "surface-areas-and-volumes",
+       "एक गुलाब जामुन में उसके आयतन की लगभग 30% चाशनी "
+       "होती है। ऐसे 45 गुलाब जामुनों में लगभग कितनी चाशनी "
+       "होगी, यदि प्रत्येक गुलाब जामुन एक बेलन के आकार का "
+       "है जिसके दोनों सिरों पर अर्धगोले हैं और जिसकी लम्बाई "
+       "5 cm है तथा व्यास 2.8 cm है? (π = 22/7 लीजिए) अथवा "
+       "एक ठोस एक शंकु के आकार का है जो एक अर्धगोले पर "
+       "अध्यारोपित है। इन दोनों की त्रिज्याएँ 1 cm के बराबर "
+       "हैं तथा शंकु की ऊँचाई उसकी त्रिज्या के बराबर है। इस "
+       "ठोस का आयतन π के पदों में ज्ञात कीजिए।"),
+    _q(21, "C", 4, "probability",
+       "एक पासा एक बार फेंका जाता है। निम्नलिखित को प्राप्त "
+       "करने की प्रायिकता ज्ञात कीजिए : (i) एक अभाज्य संख्या; "
+       "(ii) 2 और 6 के बीच स्थित कोई संख्या; (iii) एक विषम "
+       "संख्या।"),
+    _q(22, "D", 5, "arithmetic-progressions",
+       "एक समांतर श्रेढ़ी के तीसरे और सातवें पदों का योग 6 "
+       "है और इनका गुणनफल 8 है। इस समांतर श्रेढ़ी के प्रथम "
+       "16 पदों का योग ज्ञात कीजिए। अथवा एक समांतर श्रेढ़ी के "
+       "प्रथम 14 पदों का योग 1050 है और इसका प्रथम पद 10 है। "
+       "इस समांतर श्रेढ़ी का 20वाँ पद ज्ञात कीजिए।"),
+    _q(23, "D", 5, "coordinate-geometry",
+       "यदि A(−5, 7), B(−4, −5), C(−1, −6) और D(4, 5) एक "
+       "चतुर्भुज के शीर्ष हैं, तो चतुर्भुज ABCD का "
+       "क्षेत्रफल ज्ञात कीजिए।"),
+    _q(24, "D", 5, "some-applications-of-trigonometry",
+       "भूमि के एक बिन्दु से, जो कि एक 20 m ऊँची इमारत के "
+       "ऊपर खड़े हुए एक संचरण मीनार के शीर्ष और तल के उन्नयन "
+       "कोण क्रमशः 60° और 45° हैं, संचरण मीनार की ऊँचाई "
+       "ज्ञात कीजिए। अथवा एक मीनार के आधार से और एक सरल रेखा "
+       "में 4 m और 9 m की दूरी पर स्थित दो बिन्दुओं से "
+       "मीनार के शिखर के उन्नयन कोण पूरक हैं। सिद्ध कीजिए "
+       "कि मीनार की ऊँचाई 6 m है। [Figure]"),
+    _q(25, "D", 5, "some-applications-of-trigonometry",
+       "एक मूर्ति, जो 1.6 m लम्बी है, एक पेडस्टल के ऊपर खड़ी "
+       "है। भूमि के एक बिन्दु से मूर्ति के शिखर का उन्नयन "
+       "कोण 60° है और उसी बिन्दु से पेडस्टल के शिखर का "
+       "उन्नयन कोण 45° है। पेडस्टल की ऊँचाई ज्ञात कीजिए।"),
+    _q(26, "D", 5, "surface-areas-and-volumes",
+       "एक बर्तन एक उल्टे शंकु के आकार का है। इसकी ऊँचाई "
+       "8 cm है और इसके ऊपरी सिरे (जो खुला हुआ है) की "
+       "त्रिज्या 5 cm है। यह ऊपर तक पानी से भरा हुआ है। जब "
+       "इस बर्तन में सीसे की कुछ गोलियाँ जिनमें से प्रत्येक "
+       "0.5 cm त्रिज्या वाला एक गोला है, डालती है तो पानी का "
+       "एक चौथाई भाग बाहर निकल जाता है। बर्तन में डाली गयी "
+       "गोलियों की संख्या ज्ञात कीजिए।"),
+    _q(27, "D", 5, "statistics",
+       "निम्नलिखित बंटन एक फैक्टरी के 50 श्रमिकों की दैनिक "
+       "आय दर्शाता है : दैनिक आय (₹ में): 100-120, 120-140, "
+       "140-160, 160-180, 180-200; श्रमिकों की संख्या: 12, "
+       "14, 8, 6, 10. उपर्युक्त बंटन को एक 'से कम प्रकार' "
+       "के संचयी बारम्बारता बंटन में बदलिए और उसका तोरण "
+       "खींचिए।"),
+]
+
+_UBSE10_2025_SECTION_TITLES = {
+    "A": "Section A — Question 1 (MCQ parts) and Questions "
+         "2–9 (1 mark each)",
+    "B": "Section B — Questions 10–16 (2 marks each)",
+    "C": "Section C — Questions 17–21 (4 marks each)",
+    "D": "Section D — Questions 22–27 (5 marks each)",
+}
+
+_UBSE10_2025_FULL_COUNT = {"A": 16, "B": 7, "C": 5, "D": 6}
+_UBSE10_2025_FULL_MARKS = {"A": 16, "B": 14, "C": 20, "D": 30}
+
+_UBSE10_2025_ENTRY_EN = {
+        "id": "ubse-10-2025",
+        "class_num": 10,
+        "board": "UBSE (Uttarakhand Board)",
+        "year": 2025,
+        "set_label": "231 (HHG) · Series 031 · 2025",
+        "source_name": "Uttarakhand Board of School Education "
+                       "(UBSE) High School (Class 10) "
+                       "Mathematics Question Paper 2025, Code "
+                       "231 (HHG), Series 031 — as mirrored on "
+                       "AglaSem Docs",
+        "source_url": "https://docs.aglasem.com/view/"
+                      "b265bc54-a21f-11f0-bfd4-0a5e36bc6706",
+        "note": "The real UBSE Class 10 Mathematics paper of "
+                "2025, code 231 (HHG). Maximum Marks 80, Time "
+                "3 Hours, 27 questions. The booklet is "
+                "bilingual: every question is printed in Hindi "
+                "and then in English, so the same paper is also "
+                "stored as a Hindi-medium entry "
+                "(ubse-10-2025-hindi); this entry carries the "
+                "English text. Question 1 is a multiple-choice "
+                "question with eight parts (क), (ख), (ग), (घ), "
+                "(ङ), (च), (छ), (ज); the parts are stored as "
+                "eight separate questions, all numbered 1, each "
+                "with its printed (i)–(iv) options — so 34 "
+                "stored questions carry the paper's 27 printed "
+                "questions and the stored marks sum to exactly "
+                "80. Section A holds the eight Q1 parts and "
+                "Q2–9 (1 mark each), Section B Q10–16 "
+                "(2 marks each), Section C Q17–21 (4 marks "
+                "each) and Section D Q22–27 (5 marks each). "
+                "Internal choices (OR) in Q13, Q16, Q17, Q20, "
+                "Q22, Q24 and Q26 are stored inside their "
+                "questions. The booklet also binds a blank "
+                "graph-paper sheet for rough work, which carries "
+                "no questions. Transcribed from the page images "
+                "(the PDF has no text layer) in Wave 94.",
+        "max_questions": 27,
+        "full_count": _UBSE10_2025_FULL_COUNT,
+        "full_marks": _UBSE10_2025_FULL_MARKS,
+        "section_titles": _UBSE10_2025_SECTION_TITLES,
+        "questions": _UBSE10_2025_EN,
+    }
+
+_UBSE10_2025_ENTRY_HI = {
+        "id": "ubse-10-2025-hindi",
+        "class_num": 10,
+        "board": "UBSE (Uttarakhand Board)",
+        "year": 2025,
+        "set_label": "231 (HHG) · Series 031 · 2025 · "
+                     "हिन्दी माध्यम",
+        "source_name": "Uttarakhand Board of School Education "
+                       "(UBSE) High School (Class 10) "
+                       "Mathematics Question Paper 2025, Code "
+                       "231 (HHG), Series 031 — Hindi text, as "
+                       "mirrored on AglaSem Docs",
+        "source_url": "https://docs.aglasem.com/view/"
+                      "b265bc54-a21f-11f0-bfd4-0a5e36bc6706",
+        "note": "Hindi-medium entry for the same UBSE Class 10 "
+                "Mathematics paper of 2025, code 231 (HHG) "
+                "(see ubse-10-2025). The booklet prints every "
+                "question in Hindi and then in English; this "
+                "entry carries the Hindi text, exactly as "
+                "printed, including the Hindi Q24 in which the "
+                "angle order (60° for the top, 45° for the "
+                "bottom) is printed the other way round from "
+                "the English text. Maximum Marks 80, Time "
+                "3 Hours, 27 printed questions (34 stored, "
+                "because Question 1's eight MCQ parts (क)–(ज) "
+                "are stored separately, all numbered 1, with "
+                "their printed (i)–(iv) options). Transcribed "
+                "from the page images (the PDF has no text "
+                "layer) in Wave 94.",
+        "medium": "hindi",
+        "subject_label": "गणित",
+        "max_questions": 27,
+        "full_count": _UBSE10_2025_FULL_COUNT,
+        "full_marks": _UBSE10_2025_FULL_MARKS,
+        "section_titles": _UBSE10_2025_SECTION_TITLES,
+        "hindi_section_letters": {"A": "अ", "B": "ब",
+                                  "C": "स", "D": "द"},
+        "section_titles_hindi": {
+            "A": "खण्ड अ — प्रश्न 1 (बहुविकल्पीय भाग) और "
+                 "प्रश्न 2–9 (प्रत्येक 1 अंक)",
+            "B": "खण्ड ब — प्रश्न 10–16 (प्रत्येक 2 अंक)",
+            "C": "खण्ड स — प्रश्न 17–21 (प्रत्येक 4 अंक)",
+            "D": "खण्ड द — प्रश्न 22–27 (प्रत्येक 5 अंक)",
+        },
+        "questions": _UBSE10_2025_HI,
+    }
+
 PAPERS = [
     {
         "id": "cbse-12-2024",
@@ -6752,6 +7504,9 @@ PAPERS = [
         },
         "questions": _MH10ALG_2025_EN,
     },
+    _GSEB10_2025_ENTRY,
+    _UBSE10_2025_ENTRY_EN,
+    _UBSE10_2025_ENTRY_HI,
 
 ]
 

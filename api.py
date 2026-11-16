@@ -5,6 +5,7 @@ from i18n import (LANG_NAMES, SPEECH_LANGS, advice_for,
                   explanation_for, get_strings, normalise_lang,
                   result_unsolvable, solve_failed, teach_for)
 from langdetect_local import detect_language_confident
+from doubt import build_doubt_response, parse_followup
 from fallback import with_fallback
 from solver.answer_cache import get_negative, put_negative
 from solver.methods import alternate_methods
@@ -47,13 +48,15 @@ def trimmed_history_entry(question, result):
     }
 
 
-def _solve_friendly(question, lang=None):
+def _solve_friendly(question, lang=None, student_class=None):
     """Wave 5b: solve, and on failure gently re-ask once with a hint
     appended (same behaviour as the classic /solve route), so the
     chat never shows a raw solver failure when a small nudge fixes
     it. Returns the final result dict. (`lang`, Wave 67, is the
     UI/detected language forwarded to the fallback layer so the
-    one-line not-found answer can use it.)
+    one-line not-found answer can use it. `student_class`,
+    Wave 90, is forwarded the same way for the not-found
+    learning log only.)
 
     Wave 18: the result then passes through the no-dead-end
     layer (fallback.with_fallback) — real solver answers come
@@ -68,6 +71,17 @@ def _solve_friendly(question, lang=None):
     instead of re-paying solve x2 + fallback layers every time.
     Real solver answers never enter that store; they keep the
     positive answer-cache behaviour inside solve_question."""
+    # Wave 85: the step checker ("meri galti kahan hai"). A
+    # message carrying the student's own working after a
+    # "my solution:" marker is CHECKED against the solver's
+    # solution instead of being solved as a question. The
+    # gate is strict — marker + reference solve + checkable
+    # working — and stepcheck returns None for everything
+    # else, so the normal flow below is untouched.
+    from stepcheck import step_check_result
+    checked = step_check_result(question, lang=lang)
+    if checked is not None:
+        return checked
     cached = get_negative(question)
     if cached is not None:
         return cached
@@ -76,7 +90,8 @@ def _solve_friendly(question, lang=None):
         retry = solve_question(f"{question} find the value")
         if not solve_failed(question, retry):
             result = retry
-    result = with_fallback(question, result, lang=lang)
+    result = with_fallback(question, result, lang=lang,
+                           student_class=student_class)
     put_negative(question, result)
     return result
 
@@ -238,7 +253,42 @@ def api_solve():
         switched = True
     fields = _lang_fields(lang, strings, switched)
 
-    result = _solve_friendly(question, lang=lang)
+    # Wave 96: doubt follow-up ("ye step samjhao") — answered
+    # from the session's last solution (its steps are also what
+    # the client stores inside the saved chat thread), never by
+    # re-solving. When there is nothing honest to explain (no
+    # previous answer, step number out of range, operation not
+    # in any step), build_doubt_response returns None and the
+    # normal path below answers with the app's honest one-liner
+    # — a step is never invented. The last solution itself is
+    # NOT overwritten, so a chain of follow-ups ("agla step
+    # samjhao") keeps pointing at the same answer.
+    doubt_ref = parse_followup(question)
+    if doubt_ref is not None:
+        prev_result = session.get("last_result")
+        built = build_doubt_response(
+            question, doubt_ref, prev_result, lang=lang,
+            last_step=session.get("doubt_step"))
+        if built is not None:
+            result, step_index = built
+            session["doubt_step"] = step_index
+            history = session.get("history", [])
+            history.insert(0, trimmed_history_entry(question, result))
+            session["history"] = history[:_HISTORY_LIMIT]
+            return jsonify({
+                "ok": True,
+                "result": result,
+                "intro": None,
+                "explanation": explanation_for(result, lang),
+                "advice": advice_for(prev_result, lang),
+                "methods": [],
+                "teach": teach_for(prev_result, lang),
+                **fields,
+            })
+
+    result = _solve_friendly(
+        question, lang=lang,
+        student_class=session.get("saathi_class"))
 
     # Wave 5 (additive): a chat solve on the homepage counts exactly
     # like a classic /solve — it lands in the session history and
@@ -246,6 +296,9 @@ def api_solve():
     # print/PDF page. Existing response fields are unchanged.
     session["last_question"] = question
     session["last_result"] = result
+    # Wave 96: a fresh solve replaces the answer any follow-up
+    # points at, so the explained-step cursor resets with it.
+    session.pop("doubt_step", None)
     history = session.get("history", [])
     # Wave 46 (audit F4): trimmed entry — see trimmed_history_entry.
     history.insert(0, trimmed_history_entry(question, result))

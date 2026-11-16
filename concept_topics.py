@@ -202,6 +202,10 @@ _ROMAN_PHRASES = [
     ("pramey", "theorem"),
     ("sankhya", "number"),
     ("yog", "sum"),
+    # Wave 81: line words (longest first, and after
+    # "sparsh rekha" above so the tangent phrase still wins).
+    ("rekha khand", "line segment"),
+    ("rekha", "line"),
 ]
 
 
@@ -509,6 +513,42 @@ _ALIASES = [
     ("average", "mean-of-data"),
     ("mean", "mean-of-data"),
     ("mode", "mode-of-data"),
+    # Wave 81: routes for the topics added to the library in
+    # the same wave. Definition-shaped phrases only, so
+    # compute asks keep their current routes; two protective
+    # entries keep the older topics reachable ("remainder
+    # theorem" before bare "theorem", "logarithmic
+    # functions" ties "logarithm" on position and wins on
+    # length).
+    ("remainder theorem", "remainder-theorem"),
+    ("theorem", "theorem"),
+    ("derivative kya", "derivative-of-a-function"),
+    ("derivative hota", "derivative-of-a-function"),
+    ("what is a derivative", "derivative-of-a-function"),
+    ("limit kya", "limit-of-a-function"),
+    ("limit hoti", "limit-of-a-function"),
+    ("limit hota", "limit-of-a-function"),
+    ("limit matlab", "limit-of-a-function"),
+    ("what is a limit", "limit-of-a-function"),
+    ("subset", "subsets"),
+    ("volume kya", "volume"),
+    ("volume hota", "volume"),
+    ("what is volume", "volume"),
+    ("logarithmic functions", "derivatives-of-logarithmic-functions"),
+    ("logarithm", "logarithms"),
+    ("ogive", "ogive"),
+    ("frequency kya", "frequency"),
+    ("discount kya", "discount"),
+    ("discount kese", "discount"),
+    ("discount kaise", "discount"),
+    ("discount matlab", "discount"),
+    ("function kya", "function"),
+    ("what is a function", "function"),
+    ("iota", "iota-the-imaginary-unit"),
+    ("ratio kya", "ratio"),
+    ("ratio kise", "ratio"),
+    ("ratio matlab", "ratio"),
+    ("what is a ratio", "ratio"),
 ]
 
 # Whole-token aliases for the abbreviations students type.
@@ -517,6 +557,9 @@ _TOKEN_ALIASES = {
     "lcm": "lcm-of-numbers",
     "ap": "nth-term-of-an-ap",
     "gp": "geometric-progressions",
+    # Wave 81: whole-token only, so "pie chart" can never
+    # graze it the way a substring alias would.
+    "pi": "pi",
 }
 
 # Unordered concept pairs for difference asks: a combined
@@ -533,6 +576,19 @@ _DIFF_PAIRS = [
       "perimeter-of-rectangles-and-squares")),
     ({"ap"}, {"gp"},
      ("nth-term-of-an-ap", "geometric-progressions")),
+    # Wave 81: pairs for the topics added in the same wave.
+    ({"ratio"}, {"proportion"},
+     ("ratio", "proportion")),
+    ({"congruent"}, {"similar"},
+     ("congruent-triangles", "similar-triangles")),
+    ({"surface", "area"}, {"volume"},
+     ("surface-area", "volume")),
+    ({"sequence"}, {"serie"},
+     ("sequence", "series")),
+    ({"line"}, {"line", "segment"},
+     ("line", "line-segment")),
+    ({"square"}, {"rectangle"},
+     ("square", "rectangle")),
 ]
 
 

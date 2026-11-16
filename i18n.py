@@ -179,6 +179,7 @@ _EN = {
                           "clear, straight photo again, or type the "
                           "question.",
     "js_photo_sending": "Question found — sending…",
+    "js_photo_check": "I read this question from your photo — please check it, fix any mistake, then press Solve.",
     # Wave 67: the ONE-line not-found answer (Suraj: gibberish /
     # unsolved input gets just this line, no long guide card).
     "answer_not_found": "Answer not found.",
@@ -324,6 +325,7 @@ _HI = {
     "js_photo_not_found": "फ़ोटो में प्रश्न नहीं मिल पाया — साफ़, सीधी "
                           "फ़ोटो फिर भेजिए, या प्रश्न लिख दीजिए।",
     "js_photo_sending": "प्रश्न मिल गया — भेजा जा रहा है…",
+    "js_photo_check": "मैंने यह प्रश्न आपकी फ़ोटो से पढ़ा है — कृपया जाँच लीजिए, कोई गलती हो तो ठीक करके Solve दबाइए।",
     "answer_not_found": "उत्तर नहीं मिला।",
     "js_file_reading": "File padh raha hoon… ⏳",
     "js_file_unsupported": "Ye file type main abhi nahi padh sakta — photo, PDF, Word (.docx) ya text (.txt) file bhejo.",
@@ -470,6 +472,7 @@ _BN = {
     "js_photo_not_found": "ছবিতে প্রশ্ন পাওয়া যায়নি — পরিষ্কার, সোজা "
                           "ছবি আবার পাঠান, বা প্রশ্নটি লিখে দিন।",
     "js_photo_sending": "প্রশ্ন পাওয়া গেছে — পাঠানো হচ্ছে…",
+    "js_photo_check": "আমি এই প্রশ্নটি আপনার ছবি থেকে পড়েছি — অনুগ্রহ করে যাচাই করুন, ভুল থাকলে ঠিক করে Solve চাপুন।",
     "answer_not_found": "উত্তর পাওয়া যায়নি।",
     "js_file_reading": "ফাইল পড়ছি… ⏳",
     "js_file_unsupported": "এই ধরনের ফাইল আমি এখনো পড়তে পারি না — ছবি, PDF, Word (.docx) বা text (.txt) ফাইল পাঠাও।",
@@ -614,6 +617,7 @@ _MR = {
     "js_photo_not_found": "फोटोमध्ये प्रश्न सापडला नाही — स्पष्ट, सरळ "
                           "फोटो पुन्हा पाठवा, किंवा प्रश्न लिहा.",
     "js_photo_sending": "प्रश्न सापडला — पाठवत आहे…",
+    "js_photo_check": "मी हा प्रश्न तुमच्या फोटोवरून वाचला आहे — कृपया तपासा, चूक असल्यास दुरुस्त करून Solve दाबा.",
     "answer_not_found": "उत्तर सापडले नाही.",
     "js_file_reading": "फाइल वाचत आहे… ⏳",
     "js_file_unsupported": "हा फाइल प्रकार मी अजून वाचू शकत नाही — फोटो, PDF, Word (.docx) किंवा text (.txt) फाइल पाठव.",
@@ -779,6 +783,7 @@ _TA = {
                           "அனுப்பவும், அல்லது கேள்வியைத் தட்டச்சு "
                           "செய்யவும்.",
     "js_photo_sending": "கேள்வி கிடைத்தது — அனுப்புகிறேன்…",
+    "js_photo_check": "இந்தக் கேள்வியை உங்கள் புகைப்படத்திலிருந்து படித்தேன் — சரிபார்த்து, தவறு இருந்தால் திருத்தி, Solve அழுத்தவும்.",
     "answer_not_found": "பதில் கிடைக்கவில்லை.",
     "js_file_reading": "கோப்பைப் படிக்கிறேன்… ⏳",
     "js_file_unsupported": "இந்த வகை கோப்பை என்னால் இன்னும் படிக்க முடியாது — புகைப்படம், PDF, Word (.docx) அல்லது text (.txt) கோப்பை அனுப்பு.",
@@ -933,6 +938,7 @@ _TE = {
                           "ఫోటోను మళ్లీ పంపండి, లేదా ప్రశ్నను టైప్ "
                           "చేయండి.",
     "js_photo_sending": "ప్రశ్న దొరికింది — పంపుతున్నాను…",
+    "js_photo_check": "ఈ ప్రశ్నను మీ ఫోటో నుండి చదివాను — దయచేసి తనిఖీ చేసి, పొరపాటు ఉంటే సరిచేసి, Solve నొక్కండి.",
     "answer_not_found": "సమాధానం దొరకలేదు.",
     "js_file_reading": "ఫైల్ చదువుతున్నాను… ⏳",
     "js_file_unsupported": "ఈ రకం ఫైల్‌ను నేను ఇంకా చదవలేను — ఫోటో, PDF, Word (.docx) లేదా text (.txt) ఫైల్ పంపు.",
@@ -4745,6 +4751,7 @@ _EN_W16 = {
     "papers_class_heading": "Class {n} papers",
     "papers_source_label": "Source",
     "papers_view_btn": "View paper →",
+    "papers_attempt_btn": "Attempt full paper →",
     "papers_questions_word": "questions",
     "papers_marks_word": "marks",
     "papers_section_word": "Section",
@@ -4797,6 +4804,7 @@ _HI_W16 = {
     "papers_class_heading": "कक्षा {n} के पेपर",
     "papers_source_label": "स्रोत",
     "papers_view_btn": "पेपर देखिए →",
+    "papers_attempt_btn": "पूरा पेपर दीजिए →",
     "papers_questions_word": "प्रश्न",
     "papers_marks_word": "अंक",
     "papers_section_word": "खंड",
@@ -4851,6 +4859,7 @@ _BN_W16 = {
     "papers_class_heading": "শ্রেণি {n}-এর পেপার",
     "papers_source_label": "উৎস",
     "papers_view_btn": "পেপার দেখুন →",
+    "papers_attempt_btn": "পুরো পেপার দিন →",
     "papers_questions_word": "প্রশ্ন",
     "papers_marks_word": "নম্বর",
     "papers_section_word": "বিভাগ",
@@ -4903,6 +4912,7 @@ _MR_W16 = {
     "papers_class_heading": "इयत्ता {n} चे पेपर",
     "papers_source_label": "स्रोत",
     "papers_view_btn": "पेपर पहा →",
+    "papers_attempt_btn": "पूर्ण पेपर द्या →",
     "papers_questions_word": "प्रश्न",
     "papers_marks_word": "गुण",
     "papers_section_word": "विभाग",
@@ -4956,6 +4966,7 @@ _TA_W16 = {
     "papers_class_heading": "வகுப்பு {n} தாள்கள்",
     "papers_source_label": "மூலம்",
     "papers_view_btn": "தாளைப் பாருங்கள் →",
+    "papers_attempt_btn": "முழுத் தாளையும் முயற்சிக்கவும் →",
     "papers_questions_word": "கேள்விகள்",
     "papers_marks_word": "மதிப்பெண்கள்",
     "papers_section_word": "பிரிவு",
@@ -5011,6 +5022,7 @@ _TE_W16 = {
     "papers_class_heading": "తరగతి {n} పేపర్లు",
     "papers_source_label": "మూలం",
     "papers_view_btn": "పేపర్ చూడండి →",
+    "papers_attempt_btn": "పూర్తి పేపర్ రాయండి →",
     "papers_questions_word": "ప్రశ్నలు",
     "papers_marks_word": "మార్కులు",
     "papers_section_word": "విభాగం",
@@ -5390,3 +5402,328 @@ STRINGS["ta"].update({
     "mm_label_equivalent_discount": "ஒற்றை சமமான தள்ளுபடி (Equivalent discount)"})
 STRINGS["te"].update({
     "mm_label_equivalent_discount": "ఒకే సమానమైన తగ్గింపు (Equivalent discount)"})
+
+# Wave 87: "My Weak Topics" personal practice strings.
+STRINGS["en"].update({
+    "weak_heading": "My Weak Topics 🎯",
+    "weak_intro": "A fresh practice set built from your own Mistake "
+                  "Notebook — more questions from the topics you get "
+                  "wrong most.",
+    "weak_mistakes_word": "mistakes",
+    "weak_start_btn": "Start my practice",
+    "weak_empty": "No mistakes saved yet — nice work! Whatever you "
+                  "get wrong in a quiz or test lands in your Mistake "
+                  "Notebook, and your personal practice set is built "
+                  "from it. Try a general practice below till then.",
+    "weak_gen_failed": "We could not build a set just now — please "
+                       "try again.",
+    "weak_set_intro": "Your personal set — new questions from your "
+                      "weakest topics. Take your time, there is no "
+                      "timer.",
+    "weak_summary_heading": "Topic by topic",
+    "weak_improved_label": "Improved ✔",
+    "weak_still_label": "Still weak — keep practising",
+    "weak_kinds_label": "Question types:",
+    "weak_again_btn": "Practise again",
+})
+STRINGS["hi"].update({
+    "weak_heading": "मेरे कमज़ोर टॉपिक 🎯",
+    "weak_intro": "आपकी अपनी गलती वाली नोटबुक से बना नया अभ्यास सेट — "
+                  "जिन टॉपिक में सबसे ज़्यादा गलतियाँ होती हैं, उन्हीं "
+                  "के ज़्यादा सवाल।",
+    "weak_mistakes_word": "गलतियाँ",
+    "weak_start_btn": "मेरा अभ्यास शुरू करें",
+    "weak_empty": "अभी कोई गलती सेव नहीं है — बहुत बढ़िया! क्विज़ या "
+                  "टेस्ट में जो सवाल गलत होगा, वह आपकी गलती वाली "
+                  "नोटबुक में आएगा और उसी से आपका अपना अभ्यास सेट "
+                  "बनेगा। तब तक नीचे से सामान्य अभ्यास करें।",
+    "weak_gen_failed": "अभी सेट नहीं बन पाया — कृपया फिर से कोशिश करें।",
+    "weak_set_intro": "आपका अपना सेट — आपके सबसे कमज़ोर टॉपिक के नए "
+                      "सवाल। आराम से करें, कोई टाइमर नहीं है।",
+    "weak_summary_heading": "टॉपिक के हिसाब से",
+    "weak_improved_label": "सुधार हुआ ✔",
+    "weak_still_label": "अभी भी कमज़ोर — अभ्यास जारी रखें",
+    "weak_kinds_label": "सवालों के प्रकार:",
+    "weak_again_btn": "फिर से अभ्यास करें",
+})
+STRINGS["bn"].update({
+    "weak_heading": "আমার দুর্বল টপিক 🎯",
+    "weak_intro": "আপনার নিজের ভুলের খাতা থেকে তৈরি নতুন অনুশীলনী "
+                  "সেট — যে টপিকে সবচেয়ে বেশি ভুল হয়, সেই টপিকেরই "
+                  "বেশি প্রশ্ন।",
+    "weak_mistakes_word": "ভুল",
+    "weak_start_btn": "আমার অনুশীলন শুরু করুন",
+    "weak_empty": "এখনো কোনো ভুল সেভ হয়নি — দারুণ! কুইজ বা টেস্টে "
+                  "যে প্রশ্ন ভুল হবে, তা আপনার ভুলের খাতায় আসবে এবং "
+                  "সেখান থেকেই আপনার নিজের অনুশীলনী সেট তৈরি হবে। "
+                  "ততক্ষণ নিচে থেকে সাধারণ অনুশীলন করুন।",
+    "weak_gen_failed": "এখন সেট তৈরি করা যায়নি — আবার চেষ্টা করুন।",
+    "weak_set_intro": "আপনার নিজের সেট — আপনার সবচেয়ে দুর্বল টপিকের "
+                      "নতুন প্রশ্ন। ধীরে করুন, কোনো টাইমার নেই।",
+    "weak_summary_heading": "টপিক অনুযায়ী",
+    "weak_improved_label": "উন্নতি হয়েছে ✔",
+    "weak_still_label": "এখনো দুর্বল — অনুশীলন চালিয়ে যান",
+    "weak_kinds_label": "প্রশ্নের ধরন:",
+    "weak_again_btn": "আবার অনুশীলন করুন",
+})
+STRINGS["mr"].update({
+    "weak_heading": "माझे कमकुवत टॉपिक 🎯",
+    "weak_intro": "तुमच्या स्वतःच्या चुकांच्या वहीवरून बनवलेला नवा "
+                  "सराव सेट — ज्या टॉपिकमध्ये सर्वात जास्त चुका "
+                  "होतात, त्याच टॉपिकचे जास्त प्रश्न।",
+    "weak_mistakes_word": "चुका",
+    "weak_start_btn": "माझा सराव सुरू करा",
+    "weak_empty": "अजून एकही चूक सेव्ह झालेली नाही — छान! क्विझ किंवा "
+                  "चाचणीत जो प्रश्न चुकल, तो तुमच्या चुकांच्या वहीत "
+                  "येईल आणि त्यावरूनच तुमचा स्वतःचा सराव सेट बनेल. "
+                  "तोपर्यंत खालून सामान्य सराव करा.",
+    "weak_gen_failed": "आत्ता सेट बनवता आला नाही — पुन्हा प्रयत्न करा.",
+    "weak_set_intro": "तुमचा स्वतःचा सेट — तुमच्या सर्वात कमकुवत "
+                      "टॉपिकचे नवे प्रश्न. निवांत करा, टायमर नाही.",
+    "weak_summary_heading": "टॉपिकनुसार",
+    "weak_improved_label": "सुधारणा झाली ✔",
+    "weak_still_label": "अजूनही कमकुवत — सराव सुरू ठेवा",
+    "weak_kinds_label": "प्रश्नांचे प्रकार:",
+    "weak_again_btn": "पुन्हा सराव करा",
+})
+STRINGS["ta"].update({
+    "weak_heading": "என் பலவீனமான தலைப்புகள் 🎯",
+    "weak_intro": "உங்கள் சொந்த தவறு குறிப்பேட்டிலிருந்து "
+                  "உருவாக்கப்பட்ட புதிய பயிற்சித் தொகுப்பு — நீங்கள் "
+                  "அதிகம் தவறு செய்யும் தலைப்புகளிலிருந்து அதிக "
+                  "கேள்விகள்.",
+    "weak_mistakes_word": "தவறுகள்",
+    "weak_start_btn": "என் பயிற்சியைத் தொடங்கு",
+    "weak_empty": "இன்னும் தவறுகள் சேமிக்கப்படவில்லை — அருமை! "
+                  "வினாடி வினா அல்லது தேர்வில் நீங்கள் தவறு செய்யும் "
+                  "கேள்வி உங்கள் தவறு குறிப்பேட்டில் சேரும், அதிலிருந்தே "
+                  "உங்கள் தனிப்பட்ட பயிற்சித் தொகுப்பு உருவாகும். "
+                  "அதுவரை கீழே பொதுப் பயிற்சியை முயற்சி செய்யுங்கள்.",
+    "weak_gen_failed": "இப்போது தொகுப்பை உருவாக்க முடியவில்லை — "
+                       "மீண்டும் முயற்சி செய்யுங்கள்.",
+    "weak_set_intro": "உங்கள் தனிப்பட்ட தொகுப்பு — உங்கள் பலவீனமான "
+                      "தலைப்புகளிலிருந்து புதிய கேள்விகள். நேரம் "
+                      "எடுத்துக் கொள்ளுங்கள், டைமர் இல்லை.",
+    "weak_summary_heading": "தலைப்பு வாரியாக",
+    "weak_improved_label": "முன்னேற்றம் ✔",
+    "weak_still_label": "இன்னும் பலவீனம் — பயிற்சியைத் தொடருங்கள்",
+    "weak_kinds_label": "கேள்வி வகைகள்:",
+    "weak_again_btn": "மீண்டும் பயிற்சி செய்",
+})
+STRINGS["te"].update({
+    "weak_heading": "నా బలహీనమైన టాపిక్‌లు 🎯",
+    "weak_intro": "మీ స్వంత తప్పుల నోట్‌బుక్ నుండి తయారైన కొత్త "
+                  "ప్రాక్టీస్ సెట్ — మీరు ఎక్కువగా తప్పు చేసే "
+                  "టాపిక్‌ల నుండే ఎక్కువ ప్రశ్నలు.",
+    "weak_mistakes_word": "తప్పులు",
+    "weak_start_btn": "నా ప్రాక్టీస్ ప్రారంభించండి",
+    "weak_empty": "ఇంకా తప్పులు సేవ్ కాలేదు — చాలా బాగుంది! క్విజ్ "
+                  "లేదా టెస్ట్‌లో మీరు తప్పు చేసిన ప్రశ్న మీ తప్పుల "
+                  "నోట్‌బుక్‌లో చేరుతుంది, దాని నుండే మీ వ్యక్తిగత "
+                  "ప్రాక్టీస్ సెట్ తయారవుతుంది. అప్పటివరకు కింద "
+                  "సాధారణ ప్రాక్టీస్ చేయండి.",
+    "weak_gen_failed": "ఇప్పుడు సెట్ తయారు చేయలేకపోయాము — మళ్లీ "
+                       "ప్రయత్నించండి.",
+    "weak_set_intro": "మీ వ్యక్తిగత సెట్ — మీ బలహీనమైన టాపిక్‌ల "
+                      "నుండి కొత్త ప్రశ్నలు. నెమ్మదిగా చేయండి, "
+                      "టైమర్ లేదు.",
+    "weak_summary_heading": "టాపిక్ వారీగా",
+    "weak_improved_label": "మెరుగుపడింది ✔",
+    "weak_still_label": "ఇంకా బలహీనం — ప్రాక్టీస్ కొనసాగించండి",
+    "weak_kinds_label": "ప్రశ్న రకాలు:",
+    "weak_again_btn": "మళ్లీ ప్రాక్టీస్ చేయండి",
+})
+
+# --- Wave 98 additions: kam-net (offline) mode ------------------------------
+# The one line the chat shows when the server cannot be reached AND the
+# question is beyond the browser's built-in basic evaluator: honest, asks
+# for a connection check and a retry — never a made-up answer. Basic sums
+# are answered locally by static/offline.js and never see this line.
+STRINGS["en"].update({
+    "chat_offline_note": "Internet is not available right now — "
+                         "please check your connection and try again."})
+STRINGS["hi"].update({
+    "chat_offline_note": "अभी इंटरनेट नहीं है — कृपया अपना कनेक्शन "
+                         "जाँचकर फिर कोशिश कीजिए।"})
+STRINGS["bn"].update({
+    "chat_offline_note": "এখন ইন্টারনেট নেই — অনুগ্রহ করে সংযোগ "
+                         "দেখে আবার চেষ্টা করুন।"})
+STRINGS["mr"].update({
+    "chat_offline_note": "आत्ता इंटरनेट नाही — कृपया कनेक्शन "
+                         "तपासून पुन्हा प्रयत्न करा।"})
+STRINGS["ta"].update({
+    "chat_offline_note": "இப்போது இணையம் இல்லை — இணைப்பைச் "
+                         "சரிபார்த்து மீண்டும் முயற்சிக்கவும்."})
+STRINGS["te"].update({
+    "chat_offline_note": "ప్రస్తుతం ఇంటర్నెట్ లేదు — దయచేసి "
+                         "కనెక్షన్ చూసి మళ్లీ ప్రయత్నించండి."})
+
+# Wave 89: My Progress page strings (en + hi; the other
+# languages fall back to English through get_strings, as
+# with other first-wave entries).
+STRINGS["en"].update({
+    "nav_progress": "My Progress",
+    "progress_heading": "📈 My Progress",
+    "progress_intro": "Your learning record on Ganitra — show "
+                      "this page to your parents or teacher.",
+    "progress_student_line": "Class {n} Student",
+    "progress_since": "Learning with Ganitra since {date}",
+    "progress_asked_label": "Questions asked",
+    "progress_answered_label": "Questions answered",
+    "progress_rate_text": "{pct}% of your questions got an answer",
+    "progress_chats_label": "Chats",
+    "progress_weekly_heading": "Questions per week",
+    "progress_weekly_caption": "Questions you asked in each of "
+                               "the last 8 weeks",
+    "progress_weak_heading": "Topics to practise more",
+    "progress_weak_empty": "No weak topics yet — great going!",
+    "progress_notebook_line": "{n} questions are waiting in your "
+                              "Mistake Notebook",
+    "progress_notebook_btn": "See my Mistake Notebook",
+    "progress_print_btn": "🖨 Print this report",
+    "progress_empty_heading": "Your progress story starts here",
+    "progress_empty": "Ask your first question, practise, take a "
+                      "chapter test — and your record will appear "
+                      "on this page.",
+    "progress_ask_btn": "Ask a question",
+})
+STRINGS["hi"].update({
+    "nav_progress": "मेरी प्रगति",
+    "progress_heading": "📈 मेरी प्रगति",
+    "progress_intro": "Ganitra पर आपकी पढ़ाई का रिकॉर्ड — यह पेज "
+                      "अपने माता-पिता या शिक्षक को दिखाइए।",
+    "progress_student_line": "कक्षा {n} के छात्र",
+    "progress_since": "{date} से Ganitra के साथ पढ़ रहे हैं",
+    "progress_asked_label": "पूछे गए सवाल",
+    "progress_answered_label": "जवाब मिले सवाल",
+    "progress_rate_text": "आपके {pct}% सवालों का जवाब मिला",
+    "progress_chats_label": "चैट",
+    "progress_weekly_heading": "हर हफ़्ते के सवाल",
+    "progress_weekly_caption": "पिछले 8 हफ़्तों में हर हफ़्ते पूछे "
+                               "गए सवाल",
+    "progress_weak_heading": "इन विषयों का अभ्यास और करें",
+    "progress_weak_empty": "अभी कोई कमज़ोर विषय नहीं — बहुत बढ़िया!",
+    "progress_notebook_line": "आपकी गलती वाली कॉपी (Mistake "
+                              "Notebook) में {n} सवाल इंतज़ार कर रहे हैं",
+    "progress_notebook_btn": "मेरी Mistake Notebook देखें",
+    "progress_print_btn": "🖨 यह रिपोर्ट प्रिंट करें",
+    "progress_empty_heading": "आपकी प्रगति की कहानी यहाँ से शुरू होती है",
+    "progress_empty": "अपना पहला सवाल पूछिए, अभ्यास कीजिए, अध्याय "
+                      "परीक्षा दीजिए — और आपका रिकॉर्ड इस पेज पर "
+                      "दिखने लगेगा।",
+    "progress_ask_btn": "सवाल पूछिए",
+})
+STRINGS["bn"].update({
+    "nav_progress": "আমার অগ্রগতি",
+    "progress_heading": "📈 আমার অগ্রগতি",
+    "progress_intro": "Ganitra-তে তোমার পড়াশোনার রেকর্ড — এই "
+                      "পেজটি তোমার বাবা-মা বা শিক্ষককে দেখাও।",
+    "progress_student_line": "ক্লাস {n}-এর শিক্ষার্থী",
+    "progress_since": "{date} থেকে Ganitra-র সঙ্গে পড়াশোনা চলছে",
+    "progress_asked_label": "জিজ্ঞাসা করা প্রশ্ন",
+    "progress_answered_label": "উত্তর পাওয়া প্রশ্ন",
+    "progress_rate_text": "তোমার {pct}% প্রশ্নের উত্তর মিলেছে",
+    "progress_chats_label": "চ্যাট",
+    "progress_weekly_heading": "প্রতি সপ্তাহের প্রশ্ন",
+    "progress_weekly_caption": "গত 8 সপ্তাহের প্রতি সপ্তাহে তোমার "
+                               "জিজ্ঞাসা করা প্রশ্ন",
+    "progress_weak_heading": "এই বিষয়গুলো আরও অনুশীলন করো",
+    "progress_weak_empty": "এখনও কোনো দুর্বল বিষয় নেই — খুব ভালো!",
+    "progress_notebook_line": "তোমার ভুলের খাতায় (Mistake "
+                              "Notebook) {n}টি প্রশ্ন অপেক্ষা করছে",
+    "progress_notebook_btn": "আমার Mistake Notebook দেখো",
+    "progress_print_btn": "🖨 এই রিপোর্ট প্রিন্ট করো",
+    "progress_empty_heading": "তোমার অগ্রগতির গল্প এখান থেকে শুরু",
+    "progress_empty": "তোমার প্রথম প্রশ্ন জিজ্ঞাসা করো, অনুশীলন "
+                      "করো, অধ্যায় পরীক্ষা দাও — আর তোমার রেকর্ড "
+                      "এই পেজে দেখা যাবে।",
+    "progress_ask_btn": "প্রশ্ন জিজ্ঞাসা করো",
+})
+STRINGS["mr"].update({
+    "nav_progress": "माझी प्रगती",
+    "progress_heading": "📈 माझी प्रगती",
+    "progress_intro": "Ganitra वरील तुमच्या अभ्यासाची नोंद — हे "
+                      "पान तुमच्या पालकांना किंवा शिक्षकांना दाखवा.",
+    "progress_student_line": "इयत्ता {n} चा विद्यार्थी",
+    "progress_since": "{date} पासून Ganitra सोबत अभ्यास सुरू आहे",
+    "progress_asked_label": "विचारलेले प्रश्न",
+    "progress_answered_label": "उत्तर मिळालेले प्रश्न",
+    "progress_rate_text": "तुमच्या {pct}% प्रश्नांची उत्तरे मिळाली",
+    "progress_chats_label": "चॅट",
+    "progress_weekly_heading": "प्रत्येक आठवड्याचे प्रश्न",
+    "progress_weekly_caption": "गेल्या 8 आठवड्यांत प्रत्येक आठवड्यात "
+                               "तुम्ही विचारलेले प्रश्न",
+    "progress_weak_heading": "या विषयांचा आणखी सराव करा",
+    "progress_weak_empty": "अजून कोणताही कमकुवत विषय नाही — खूप छान!",
+    "progress_notebook_line": "तुमच्या चुकांच्या वहीत (Mistake "
+                              "Notebook) {n} प्रश्न वाट पाहत आहेत",
+    "progress_notebook_btn": "माझी Mistake Notebook पहा",
+    "progress_print_btn": "🖨 हा अहवाल छापा",
+    "progress_empty_heading": "तुमच्या प्रगतीची गोष्ट इथून सुरू होते",
+    "progress_empty": "तुमचा पहिला प्रश्न विचारा, सराव करा, प्रकरण "
+                      "चाचणी द्या — आणि तुमची नोंद या पानावर दिसेल.",
+    "progress_ask_btn": "प्रश्न विचारा",
+})
+STRINGS["ta"].update({
+    "nav_progress": "என் முன்னேற்றம்",
+    "progress_heading": "📈 என் முன்னேற்றம்",
+    "progress_intro": "Ganitra-இல் உங்கள் கற்றல் பதிவு — இந்தப் "
+                      "பக்கத்தை உங்கள் பெற்றோர் அல்லது "
+                      "ஆசிரியரிடம் காட்டுங்கள்.",
+    "progress_student_line": "வகுப்பு {n} மாணவர்",
+    "progress_since": "{date} முதல் Ganitra உடன் கற்று வருகிறீர்கள்",
+    "progress_asked_label": "கேட்ட கேள்விகள்",
+    "progress_answered_label": "பதில் கிடைத்த கேள்விகள்",
+    "progress_rate_text": "உங்கள் கேள்விகளில் {pct}% "
+                          "கேள்விகளுக்குப் பதில் கிடைத்தது",
+    "progress_chats_label": "அரட்டைகள்",
+    "progress_weekly_heading": "ஒவ்வொரு வாரமும் கேள்விகள்",
+    "progress_weekly_caption": "கடந்த 8 வாரங்களில் ஒவ்வொரு "
+                               "வாரமும் நீங்கள் கேட்ட கேள்விகள்",
+    "progress_weak_heading": "இந்தத் தலைப்புகளை மேலும் பயிற்சி "
+                             "செய்யுங்கள்",
+    "progress_weak_empty": "இன்னும் பலவீனமான தலைப்புகள் இல்லை — "
+                           "மிக நன்று.",
+    "progress_notebook_line": "உங்கள் தவறுகள் நோட்டில் (Mistake "
+                              "Notebook) {n} கேள்விகள் "
+                              "காத்திருக்கின்றன",
+    "progress_notebook_btn": "என் Mistake Notebook ஐப் பாருங்கள்",
+    "progress_print_btn": "🖨 இந்த அறிக்கையை அச்சிடுங்கள்",
+    "progress_empty_heading": "உங்கள் முன்னேற்றக் கதை இங்கிருந்து "
+                              "தொடங்குகிறது",
+    "progress_empty": "உங்கள் முதல் கேள்வியைக் கேளுங்கள், பயிற்சி "
+                      "செய்யுங்கள், அத்தியாயத் தேர்வு எழுதுங்கள் — "
+                      "உங்கள் பதிவு இந்தப் பக்கத்தில் தோன்றும்.",
+    "progress_ask_btn": "கேள்வி கேளுங்கள்",
+})
+STRINGS["te"].update({
+    "nav_progress": "నా పురోగతి",
+    "progress_heading": "📈 నా పురోగతి",
+    "progress_intro": "Ganitra లో మీ అభ్యాస రికార్డు — ఈ పేజీని "
+                      "మీ తల్లిదండ్రులకు లేదా ఉపాధ్యాయుడికి "
+                      "చూపించండి.",
+    "progress_student_line": "{n} తరగతి విద్యార్థి",
+    "progress_since": "{date} నుండి Ganitra తో నేర్చుకుంటున్నారు",
+    "progress_asked_label": "అడిగిన ప్రశ్నలు",
+    "progress_answered_label": "సమాధానం దొరికిన ప్రశ్నలు",
+    "progress_rate_text": "మీ ప్రశ్నల్లో {pct}% ప్రశ్నలకు "
+                          "సమాధానం దొరికింది",
+    "progress_chats_label": "చాట్‌లు",
+    "progress_weekly_heading": "ప్రతి వారం ప్రశ్నలు",
+    "progress_weekly_caption": "గత 8 వారాల్లో ప్రతి వారం మీరు "
+                               "అడిగిన ప్రశ్నలు",
+    "progress_weak_heading": "ఈ అంశాలను మరింత సాధన చేయండి",
+    "progress_weak_empty": "ఇంకా బలహీనమైన అంశాలు లేవు — చాలా "
+                           "బాగుంది.",
+    "progress_notebook_line": "మీ తప్పుల నోట్‌బుక్ (Mistake "
+                              "Notebook) లో {n} ప్రశ్నలు వేచి "
+                              "ఉన్నాయి",
+    "progress_notebook_btn": "నా Mistake Notebook చూడండి",
+    "progress_print_btn": "🖨 ఈ నివేదికను ప్రింట్ చేయండి",
+    "progress_empty_heading": "మీ పురోగతి కథ ఇక్కడి నుండి "
+                              "మొదలవుతుంది",
+    "progress_empty": "మీ మొదటి ప్రశ్న అడగండి, సాధన చేయండి, "
+                      "అధ్యాయ పరీక్ష రాయండి — మీ రికార్డు ఈ "
+                      "పేజీలో కనిపిస్తుంది.",
+    "progress_ask_btn": "ప్రశ్న అడగండి",
+})

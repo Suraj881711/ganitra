@@ -7,6 +7,7 @@ import secrets
 import shutil
 import subprocess
 import tempfile
+import time
 import zipfile
 import xml.etree.ElementTree as ET
 from datetime import timedelta
@@ -39,6 +40,10 @@ from solver.router import solve_question
 from fallback import with_fallback
 from langdetect_local import detect_language_confident
 import accounts
+import ocr
+import weak_practice
+import full_paper
+import progress as progress_mod
 import chats
 
 _HISTORY_LIMIT = 30
@@ -167,6 +172,19 @@ def normalize_ocr_text(text):
     unicode minus/dashes -> -, superscript ²/³ -> ^2/^3, ×/✕ -> *,
     ÷ -> /, an X between two digits -> *, and an isolated variable letter
     immediately followed by digits ("x2", "x 2") -> exponent ("x^2").
+
+    Wave 83 adds the classic OCR digit confusions, each fenced in
+    by digits so ordinary words can never trip it: an O/o with a
+    digit on BOTH sides is a 0 ("1O5" -> "105"), an O right after
+    a digit at a token's end is a 0 ("Rs 5O" -> "Rs 50"), an l/I
+    between digits or right before a digit is a 1 ("1l5" ->
+    "115", "l5" -> "15"), and a leading O before 2+ digits is a
+    0 ("O25" -> "025"; a lone "O5" is left alone — O is also the
+    origin point in coordinate geometry). Vulgar fractions
+    (½ ¼ ¾ …) become a/b, and the remaining superscript digits
+    (⁰¹⁴⁵⁶⁷⁸⁹) become ^n like ²/³ already did. These run BEFORE
+    the exponent rule below, which would otherwise read "l5" as
+    the variable l to the power 5.
     """
     if not text:
         return ""
@@ -175,8 +193,24 @@ def normalize_ocr_text(text):
     t = t.replace("−", "-").replace("–", "-").replace("—", "-")
     # Superscript powers OCR sometimes produces
     t = t.replace("²", "^2").replace("³", "^3")
+    for sup, digit in (("⁰", "0"), ("¹", "1"), ("⁴", "4"),
+                       ("⁵", "5"), ("⁶", "6"), ("⁷", "7"),
+                       ("⁸", "8"), ("⁹", "9")):
+        t = t.replace(sup, "^" + digit)
+    # Vulgar fractions -> a/b (spaced, so "200½" cannot fuse
+    # into "2001/2"; the whitespace collapse below tidies up)
+    for frac, ab in (("½", "1/2"), ("¼", "1/4"), ("¾", "3/4"),
+                     ("⅓", "1/3"), ("⅔", "2/3"), ("⅛", "1/8"),
+                     ("⅜", "3/8"), ("⅝", "5/8"), ("⅞", "7/8")):
+        t = t.replace(frac, " " + ab + " ")
     # Multiplication / division symbols
     t = t.replace("×", "*").replace("✕", "*").replace("÷", "/")
+    # Wave 83: digit confusions, fenced by digits (see docstring)
+    t = re.sub(r"(\d)[Oo](?=\d)", r"\g<1>0", t)
+    t = re.sub(r"(\d)[Oo]\b", r"\g<1>0", t)
+    t = re.sub(r"(\d)[lI](?=\d)", r"\g<1>1", t)
+    t = re.sub(r"(?<![A-Za-z])[lI](?=\d)", "1", t)
+    t = re.sub(r"(?<![A-Za-z0-9])O(?=\d{2,})", "0", t)
     # "3X4" / "3 x 4" style: an X between two digits is multiplication
     t = re.sub(r"(\d)\s*[Xx]\s*(?=\d)", r"\1*", t)
     # "x2" / "x 2": isolated variable letter + digits is an exponent
@@ -1043,8 +1077,9 @@ def create_app():
             # friendly guide), so the error card below is now only
             # a last resort that the fallback itself could not
             # cover.
-            result = with_fallback(question, result,
-                                   lang=_lang())
+            result = with_fallback(
+                question, result, lang=_lang(),
+                student_class=session.get("saathi_class"))
             put_negative(question, result)
         failed = solve_failed(question, result)
         # Wave 67: a one-line response (not-found / maths-only
@@ -1279,6 +1314,58 @@ def create_app():
             return jsonify({"ok": False, "code": "empty"})
         return jsonify({"ok": False, "code": "unsupported"})
 
+    @app.post("/photo-ocr")
+    def photo_ocr():
+        # Wave 83: SERVER-side OCR of a photographed question,
+        # behind the pluggable backend in ocr.py. Same upload
+        # rules as /file-extract (2 MB cap, magic bytes, nothing
+        # stored — the bytes live in memory and the backend's
+        # throwaway temp dir only, and are dropped with the
+        # request). Replies the chat script understands:
+        #   {"kind": "text", "text": ..., "confidence": ...,
+        #    "low_confidence": bool, "backend": ...}
+        #        -> the recognised question, already cleaned by
+        #           normalize_ocr_text; low_confidence asks the
+        #           script to show it for editing BEFORE solving
+        #   {"ok": false, "code": "ocr_unavailable"}
+        #        -> this host has no OCR engine (today's
+        #           PythonAnywhere free tier is one) — the script
+        #           falls back to the browser Tesseract.js flow,
+        #           never a fake read
+        #   {"ok": false, "code": "ocr_failed" | "empty" |
+        #    "too_large" | "unsupported"} -> same fallback.
+        upload = request.files.get("file")
+        if upload is None:
+            return jsonify({"ok": False, "code": "no_file"}), 400
+        data = upload.stream.read(_FILE_MAX_BYTES + 1)
+        if len(data) > _FILE_MAX_BYTES:
+            return jsonify({"ok": False, "code": "too_large"})
+        is_image = _photo_kind(data) or data[:4] == b"GIF8" or \
+            data[:2] == b"BM" or \
+            (data[:4] == b"RIFF" and data[8:12] == b"WEBP") or \
+            (data[4:8] == b"ftyp" and data[8:12] in
+             (b"heic", b"heix", b"mif1", b"msf1"))
+        if not is_image:
+            return jsonify({"ok": False, "code": "unsupported"})
+        try:
+            outcome = ocr.ocr_image(data)
+        except ocr.OcrUnavailable:
+            return jsonify({"ok": False,
+                            "code": "ocr_unavailable"})
+        except ocr.OcrFailed:
+            return jsonify({"ok": False, "code": "ocr_failed"})
+        text = normalize_ocr_text(outcome.text)
+        if not text:
+            return jsonify({"ok": False, "code": "empty"})
+        return jsonify({
+            "kind": "text",
+            "text": text[:_FILE_TEXT_LIMIT],
+            "confidence": (None if outcome.confidence is None
+                           else round(outcome.confidence, 1)),
+            "low_confidence": bool(outcome.low_confidence),
+            "backend": outcome.backend,
+        })
+
     @app.post("/photo-solve")
     def photo_solve():
         # Text recognised from a photo by Tesseract.js in the browser.
@@ -1314,8 +1401,9 @@ def create_app():
                 if not solve_failed(question, retry):
                     result = retry
             # Wave 18: same no-dead-end fallback as /solve.
-            result = with_fallback(question, result,
-                                   lang=_lang())
+            result = with_fallback(
+                question, result, lang=_lang(),
+                student_class=session.get("saathi_class"))
             put_negative(question, result)
         failed = solve_failed(question, result)
         # Wave 67: one-line responses get no extras (as /solve).
@@ -1411,6 +1499,78 @@ def create_app():
             last_score_text=last_score_text,
             test_star_count=test_star_count,
             total_stars=total_stars)
+
+    # ------------------------------------------------- wave 89 progress
+    def _progress_page_data():
+        """Wave 89: the My Progress record for the signed-in
+        student — account data aggregated by progress.py from
+        the chats/users tables (questions asked/answered,
+        chats, weekly activity, learning-since), plus the two
+        session-side pieces that exist nowhere else: the
+        Mistake Notebook (weak-topic counts, labelled exactly
+        like the Wave 6 Parent Report) and the last test
+        report. Only the caller's own rows are ever read."""
+        uid = session.get("user_id")
+        user = accounts.get_user_by_id(uid)
+        strings = _t()
+        mistakes = session.get("mistakes", [])
+        counts, order = {}, []
+        for entry in mistakes:
+            source = (entry.get("source") or "").strip()
+            topic = (entry.get("topic") or "").strip()
+            if source and source != "quiz":
+                label = source
+            elif topic:
+                label = strings.get(f"quiz_topic_{topic}", topic)
+            else:
+                label = ""
+            if not label:
+                continue
+            if label not in counts:
+                counts[label] = 0
+                order.append(label)
+            counts[label] += 1
+        weak = [{"label": label, "count": counts[label]}
+                for label in order]
+        weak.sort(key=lambda w: -w["count"])
+        last_report = session.get("last_test_report") or None
+        last_score_text = None
+        if last_report:
+            last_score_text = (f"{last_report.get('score', 0)} / "
+                               f"{last_report.get('total', 0)}")
+        return {
+            "progress": progress_mod.collect_progress(uid),
+            "account_name": user["name"] if user else "",
+            "class_num": user["class_num"] if user else None,
+            "board_text": user["board_text"] if user else "",
+            "since_text": progress_mod.format_date(
+                user["created_at"]) if user else None,
+            "weak_topics": weak[:5],
+            "mistakes_count": len(mistakes),
+            "last_report": last_report,
+            "last_score_text": last_score_text,
+        }
+
+    @app.get("/progress")
+    def progress_page():
+        """Wave 89: My Progress — the student's own record,
+        to show a parent or teacher. An account page like
+        /chats: anonymous visitors go back to the sign-in
+        gate at /."""
+        if not session.get("user_id"):
+            return redirect(url_for("index"))
+        return render_template("progress.html",
+                               **_progress_page_data())
+
+    @app.get("/progress/print")
+    def progress_print():
+        """Wave 89: the print-friendly My Progress sheet
+        (standalone, like the papers print view) — share it
+        as a printout or a browser-saved PDF."""
+        if not session.get("user_id"):
+            return redirect(url_for("index"))
+        return render_template("progress_print.html",
+                               **_progress_page_data())
 
     @app.get("/practice")
     def practice():
@@ -2090,6 +2250,113 @@ def create_app():
         if not paper:
             return redirect(url_for("papers_generate"))
         return render_template("papers_print.html", paper=paper)
+
+    # ------------------------------------------------- wave 88 full paper
+    # Full Paper Mode (full_paper.py): attempt one whole stored
+    # paper like an exam — every question in paper order, the
+    # paper's full time (its own stored duration when the data
+    # carries one, else the board-standard 3 hours, always
+    # shown on the intro page before the timer starts), the
+    # attempt page auto-submits at zero, and checking follows
+    # full_paper.py's honesty contract: MCQs and short answers
+    # the solver can settle are auto-checked and scored; long /
+    # proof / case-study / assertion-reason questions are
+    # self-check with the model answer shown, never scored and
+    # never sent to the Mistake Notebook. The attempt state in
+    # the session is only {paper_id, started, duration} — the
+    # paper itself is re-read from papers_data by id, and the
+    # typed answers ride in the submit POST, exactly like the
+    # Board chapter test. Answers are NOT autosaved: leaving
+    # mid-attempt loses them, which is why the attempt template
+    # overrides the back bar with the Wave 60 always-confirm
+    # pattern.
+    @app.get("/papers/<paper_id>/attempt")
+    def full_paper_intro(paper_id):
+        if not _papers_signed_in():
+            return redirect(url_for("index"))
+        paper = papers_data.get_paper(paper_id)
+        if paper is None:
+            return redirect(url_for("papers_home"))
+        duration = full_paper.duration_for(paper)
+        attempt = session.get("full_paper_attempt") or {}
+        return render_template(
+            "full_paper_intro.html", paper=paper,
+            question_count=len(paper["questions"]),
+            total_marks=papers_data.paper_total_marks(paper),
+            duration_seconds=duration,
+            duration_label=full_paper.duration_label(duration),
+            in_progress=attempt.get("paper_id") == paper_id)
+
+    @app.post("/papers/<paper_id>/attempt/start")
+    def full_paper_start(paper_id):
+        if not _papers_signed_in():
+            return redirect(url_for("index"))
+        paper = papers_data.get_paper(paper_id)
+        if paper is None:
+            return redirect(url_for("papers_home"))
+        override = None
+        if app.config.get("TESTING"):
+            # Tests inject a tiny duration to exercise the
+            # timer; the real UI never sends this field.
+            override = request.form.get("duration_seconds")
+        duration = full_paper.duration_for(paper, override=override)
+        session["full_paper_attempt"] = {
+            "paper_id": paper_id,
+            "started": int(time.time()),
+            "duration": duration,
+        }
+        return render_template(
+            "full_paper_attempt.html", paper=paper,
+            view=full_paper.attempt_view(
+                paper, _paper_q_lines, _has_figure),
+            total_marks=papers_data.paper_total_marks(paper),
+            duration_seconds=duration,
+            remaining_seconds=duration)
+
+    @app.post("/papers/<paper_id>/attempt/submit")
+    def full_paper_submit(paper_id):
+        if not _papers_signed_in():
+            return redirect(url_for("index"))
+        paper = papers_data.get_paper(paper_id)
+        attempt = session.get("full_paper_attempt") or {}
+        if paper is None or attempt.get("paper_id") != paper_id:
+            return redirect(url_for("papers_home"))
+        answers = [request.form.get(f"answer_{i}", "")
+                   for i in range(len(paper["questions"]))]
+        graded = full_paper.grade_attempt(paper, answers)
+        rows, summary = graded["rows"], graded["summary"]
+        _record_mistakes(
+            [{"question": r["question"], "expected": r["expected"],
+              "given": r["given"], "topic": r["chapter"],
+              "correct": False}
+             for r in rows if r["status"] == "wrong"],
+            f"Class {paper['class_num']} · {paper['board']} "
+            f"{paper['year']} full paper")
+        checked = [r for r in rows if r["settled"]]
+        copycheck = None
+        if checked:
+            labels = {}
+            for q in paper["questions"]:
+                labels[q["chapter"]] = papers_data.chapter_title(
+                    paper["class_num"], q["chapter"])
+            copycheck = _copycheck(
+                [{"question": r["question"],
+                  "expected": r["expected"], "given": r["given"],
+                  "correct": r["status"] == "correct",
+                  "topic": r["chapter"]} for r in checked],
+                sum(1 for r in checked
+                    if r["status"] == "correct"),
+                len(checked), labels)
+        try:
+            time_taken = int(request.form.get("time_taken", ""))
+        except (TypeError, ValueError):
+            time_taken = max(0, int(time.time())
+                             - int(attempt.get("started", 0)))
+        session.pop("full_paper_attempt", None)
+        return render_template(
+            "full_paper_result.html", paper=paper, rows=rows,
+            summary=summary, copycheck=copycheck,
+            time_taken=time_taken)
 
     # ------------------------------------------------- wave 40 practice mode
     # Practice Mode (Wave 40): one fresh generated question at a
@@ -2850,6 +3117,99 @@ def create_app():
     def mistakes_clear():
         session.pop("mistakes", None)
         return redirect(url_for("mistakes"))
+
+    # ------------------------------------------------ weak topics
+    # Wave 87: "My Weak Topics" — a personal practice set built
+    # from this session's own Mistake Notebook: topics ranked by
+    # mistake count, fresh questions generated per topic, and only
+    # questions the solver itself answers correctly are served
+    # (weak_practice.build_weak_set).  Data never leaves the
+    # student's own session.
+    def _weak_topic_label(topic):
+        strings = _t()
+        return (strings.get(f"quiz_topic_{topic}")
+                or TEST_TOPICS.get(topic) or topic)
+
+    def _weak_class_num(mistakes):
+        """Class for generation: the signed-in student's own
+        class, else the class named most often in the notebook's
+        source strings ("Class 9 · ..."), else 8.  Clamped to the
+        practice_gen range 6-10."""
+        cls = session.get("saathi_class")
+        if isinstance(cls, int) and 6 <= cls <= 12:
+            return min(10, cls)
+        seen = {}
+        for entry in mistakes:
+            m = re.search(r"Class\s+(\d+)", entry.get("source") or "")
+            if m:
+                n = int(m.group(1))
+                if n in practice_gen.CLASSES:
+                    seen[n] = seen.get(n, 0) + 1
+        if seen:
+            return max(seen, key=seen.get)
+        return 8
+
+    @app.get("/weak-topics")
+    def weak_topics():
+        mistakes = session.get("mistakes", [])
+        ranked = weak_practice.aggregate_weak_topics(mistakes)
+        rows = [{"topic": r["topic"], "count": r["count"],
+                 "label": _weak_topic_label(r["topic"]),
+                 "has_generator":
+                     weak_practice.topic_backend(r["topic"])
+                     is not None}
+                for r in ranked]
+        return render_template(
+            "weak_topics.html", ranked=rows,
+            total_mistakes=len(mistakes),
+            gen_failed=request.args.get("gen_failed") == "1")
+
+    @app.post("/weak-topics/start")
+    def weak_topics_start():
+        mistakes = session.get("mistakes", [])
+        if not mistakes:
+            return redirect(url_for("weak_topics"))
+        built = weak_practice.build_weak_set(
+            mistakes, _weak_class_num(mistakes))
+        if not built["items"]:
+            return redirect(url_for("weak_topics", gen_failed=1))
+        session["weak_practice"] = {
+            "items": built["items"],
+            "general": built["general"],
+        }
+        questions = [{"question": it["question"],
+                      "topic_label": _weak_topic_label(it["topic"])}
+                     for it in built["items"]]
+        return render_template("weak_practice.html",
+                               questions=questions)
+
+    @app.post("/weak-topics/submit")
+    def weak_topics_submit():
+        saved = session.pop("weak_practice", None)
+        if not saved:
+            return redirect(url_for("weak_topics"))
+        items = saved["items"]
+        rows, flags = [], []
+        for i, item in enumerate(items):
+            given = request.form.get(f"answer_{i}", "")
+            ok = weak_practice.check_weak_answer(item, given)
+            flags.append(ok)
+            rows.append({
+                "question": item["question"],
+                "expected": display_answer(item["answer"]),
+                "given": given,
+                "correct": ok,
+                "topic": item["topic"],
+            })
+        _record_mistakes(rows, "weak practice")
+        summary = weak_practice.summarise_results(items, flags)
+        for row in summary["topics"]:
+            row["label"] = _weak_topic_label(row["topic"])
+        return render_template(
+            "weak_result.html", rows=rows,
+            score=summary["score"], total=summary["total"],
+            topic_rows=summary["topics"],
+            kind_rows=summary["kinds"])
 
     # Wave 14: warm the solver + DB before the first request.
     _warm_up(app)

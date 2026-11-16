@@ -70,6 +70,15 @@ and gain plain=True so the chat shows just that line: the
 science payload keeps its formula-guidance steps for the
 full-solution page, the non-maths line is trimmed to the
 guard sentence itself.
+Wave 90: every outcome that collapses to the one-line
+not-found is recorded in the not-found learning log
+(notfound_log.py) — question text, detected language, the
+student's class when known, and how the chain gave up — so
+future waves target real student failures instead of
+hand-built audits. The log is purely observational: the hook
+below is guarded end to end, a logging failure is a silent
+no-op, and no answer changes in any way (proven byte-for-byte
+in test_wave90, logging on and off).
 """
 import re
 from fractions import Fraction
@@ -222,6 +231,27 @@ def _is_real(question, result):
     if _is_soft(result) or _is_junk(question, result):
         return False
     return bool(_answer_text(result).strip())
+
+
+def _with_figure(question, result):
+    """Wave 86: attach the labelled diagram (figures.py) to a
+    real mensuration solve — only when the shape and its
+    dimensions are unambiguous in the question AND the
+    figure's numbers reproduce the solved answer. Anything
+    else returns the result untouched (byte-identical). The
+    result is copied before the key is added: the router's
+    positive answer cache hands out shared dicts, and they
+    must never gain keys."""
+    try:
+        from figures import figure_for
+        fig = figure_for(question, result)
+    except Exception:
+        fig = None
+    if fig is None:
+        return result
+    out = dict(result)
+    out["figure"] = fig
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -1157,15 +1187,46 @@ def _groq_answer(question, hindi):
 
 # ---------------------------------------------------------------------------
 # The entry point
+# Wave 90: the not-found learning log hook (notfound_log.py)
 # ---------------------------------------------------------------------------
 
-def with_fallback(question, result, lang=None):
+def _log_not_found(question, lang, student_class, terminal_kind):
+    """Record a collapsed not-found outcome. Double-guarded:
+    notfound_log.log_not_found never raises by contract, and
+    this wrapper swallows even an import failure — logging is
+    observational and must never slow, break or alter the
+    answer. The recorded language is the explicit `lang` when
+    the caller supplied one, else the question's own flavour
+    mapped to a language label (dev -> hi, roman -> hinglish,
+    en -> en)."""
+    try:
+        from notfound_log import log_not_found
+        language = lang
+        if not language:
+            language = {"dev": "hi", "roman": "hinglish",
+                        "en": "en"}[_flavour(question)]
+        log_not_found(question, lang=language,
+                      student_class=student_class,
+                      terminal_kind=terminal_kind)
+    except Exception:
+        pass
+
+
+# ---------------------------------------------------------------------------
+# The entry point
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+
+def with_fallback(question, result, lang=None, student_class=None):
     """Return `result` unchanged when it is a real solver
     answer; otherwise return an honest fallback result (never
     None, never an error dict). `lang` is the app's UI /
     detected language (Wave 67: it picks the not-found line
     for the bn/mr/ta/te UIs; the line otherwise follows the
-    question's own script/words)."""
+    question's own script/words). `student_class` (Wave 90)
+    is the signed-in student's class when the caller knows
+    it — used only by the not-found learning log."""
     hindi = _looks_hindi(question)
 
     # Layer 0 / 0b run before the solver result is even looked
@@ -1182,6 +1243,37 @@ def with_fallback(question, result, lang=None):
         return _nonmaths_result(question, hindi)
 
     if _is_real(question, result):
+        # Wave 100: a multi-part bundle (mega-MCQ set, case
+        # study) is not one question — a whole-text "solve" of
+        # it is a fragment carved out of one part (the Wave 93
+        # audit's regression #5 served "x = -2/7" from part
+        # (iv)'s line equation as the answer to a 15-part ICSE
+        # set). The parts are the authority: when the bundle
+        # splits and at least one part verifiably solves, the
+        # multipart answer stands instead of the fragment.
+        try:
+            from multipart import multipart_preferred
+            mp_preferred = multipart_preferred(question, result)
+        except Exception:
+            mp_preferred = None
+        if mp_preferred is not None:
+            return _with_figure(question, mp_preferred)
+        # Wave 95: for a proof ask, a SymPy-verified identity
+        # derivation (proofs.py) upgrades the solver's bare
+        # verdict ("Identity verified ✔" with no working, or a
+        # parse-flawed "Not an identity" for true identities
+        # like (sin A + cos A)^2 = 1 + 2 sin A cos A). The
+        # layer returns None for anything it cannot verify,
+        # so a genuinely false identity keeps the solver's
+        # "Not an identity" and every non-proof real answer
+        # is untouched.
+        try:
+            from proofs import proof_result
+            proof = proof_result(question, hindi)
+        except Exception:
+            proof = None
+        if proof is not None:
+            return proof
         # Wave 76: a question that arrived WITH options gets
         # its answer named by option even when the whole text
         # solved as-is — and for MCQs the STEM solve is the
@@ -1197,8 +1289,25 @@ def with_fallback(question, result, lang=None):
         except Exception:
             wrapped = None
         if wrapped is not None:
-            return wrapped
-        return result
+            return _with_figure(question, wrapped)
+        # Wave 82: the same authority question for OR bundles
+        # and case-study sets — a whole bundle fed to the
+        # solver as one text can come back as a fragment
+        # dressed as an answer (the matrix/system OR bundle
+        # "solves" to 2*x - y + 6, a shred of one equation).
+        # formats_preferred serves the format result only
+        # when a part verifiably solves AND the whole-text
+        # answer matches none of the solved parts' answers;
+        # a genuine whole-text solve of a part is left
+        # untouched.
+        try:
+            from formats import formats_preferred
+            preferred = formats_preferred(question, result)
+        except Exception:
+            preferred = None
+        if preferred is not None:
+            return _with_figure(question, preferred)
+        return _with_figure(question, result)
 
     # Wave 20, Layer 0c: a SCIENCE question the solver could not
     # really answer gets the honest maths-only reply + formula
@@ -1244,6 +1353,65 @@ def with_fallback(question, result, lang=None):
     if mcq is not None:
         return mcq
 
+    # Wave 100: the multi-part layer (multipart.py) — mega-MCQ
+    # bundles, case-study sets and "Hence, …" chains, the
+    # paper formats the Wave 93 audit's regressions #3–#5
+    # exposed as missing from the live chain. It splits the
+    # format, solves the parts through the existing machinery
+    # and serves only what settles exactly; unsolved parts
+    # carry the one-line not-found. It sits here — after the
+    # MCQ layer, before salvage (which would otherwise carve
+    # a fragment out of the bundle) — and returns None on any
+    # doubt, so the layers below run byte-for-byte as before.
+    try:
+        from multipart import multipart_result
+        multi = multipart_result(question)
+    except Exception:
+        multi = None
+    if multi is not None:
+        return multi
+
+    # Wave 95: the proof layer (proofs.py). "Prove that ..."
+    # asks the solver could not answer — algebraic identities
+    # (which ended at the not-found line) and the irrationality
+    # proofs (which the concepts card answered for the WRONG
+    # root: a sqrt(5) ask was served the sqrt(2) card) — are
+    # answered here, but only when honestly possible: a
+    # SymPy-verified identity derivation, or the standard
+    # textbook proof from proofs_data.py. Anything else
+    # returns None and the layers below run as before.
+    try:
+        from proofs import proof_result
+        proof = proof_result(question, hindi)
+    except Exception:
+        proof = None
+    if proof is not None:
+        return proof
+
+    # Wave 82: the paper-format layer (formats.py). Board
+    # papers paste three shapes the solver and the MCQ layer
+    # cannot use: OR bundles ("Solve A OR Solve B" / "…
+    # अथवा …"), Assertion–Reason items, and case-study sets
+    # (a passage plus labelled sub-questions). This layer
+    # splits the format, solves the parts through the existing
+    # machinery, and serves only what it can settle exactly —
+    # an OR alternative that really solves, an Assertion–
+    # Reason combination both of whose statements a decider
+    # in formats.py could decide, a case-study set with at
+    # least one solved part. It sits here — after the science
+    # guard, the bank and the MCQ layer, before salvage
+    # (which would otherwise carve a fragment out of the
+    # bundle) — and returns None on any doubt, so the layers
+    # below run byte-for-byte as before. An A–R option is
+    # never guessed.
+    try:
+        from formats import formats_result
+        formatted = formats_result(question)
+    except Exception:
+        formatted = None
+    if formatted is not None:
+        return formatted
+
     # The solver did not really answer. Work the layers.
     salvaged = _salvage(question, hindi)
     if salvaged is not None:
@@ -1259,13 +1427,32 @@ def with_fallback(question, result, lang=None):
     # real chance to solve; its own gate + vetoes keep it from
     # ever capturing one. On no confident topic match the
     # Wave-18 concepts.py card runs exactly as before.
-    concept = None
+    # Wave 100: the concept layers YIELD to options-bearing
+    # (MCQ-shaped) questions. A question that carries options
+    # is a problem to solve, not a concept to teach — when
+    # every solving layer above has failed it, serving a
+    # concept card for its keywords is a hijack (the Wave 93
+    # audit's regression #1: "x + 1/x = 3 … value of a - b + c
+    # is: (A) 5 (B) 2 (C) 1 (D) -1" was served the Quadratic
+    # Formula card). The topics layer already vetoes option
+    # markers internally; the concepts.py card did not, so
+    # the yield is enforced here for both layers at once.
+    # Genuine concept asks carry no option list, so their
+    # behaviour is untouched.
+    options_bearing = False
     try:
-        concept = topic_concept_result(question)
+        from mcq import extract_mcq
+        options_bearing = extract_mcq(question) is not None
     except Exception:
-        concept = None
-    if concept is None:
-        concept = _concept_result(question, hindi)
+        options_bearing = False
+    concept = None
+    if not options_bearing:
+        try:
+            concept = topic_concept_result(question)
+        except Exception:
+            concept = None
+        if concept is None:
+            concept = _concept_result(question, hindi)
     if concept is not None:
         result_out = concept
     else:
@@ -1311,11 +1498,19 @@ def with_fallback(question, result, lang=None):
     # per-flavour line (kind "vague", plain rendering).
     if result_out.get("fallback_kind") in (
             "similar", "gibberish", "guide"):
+        # Wave 90: this collapse is THE "Answer not found"
+        # outcome — solver, bank, MCQ, salvage, concepts and
+        # the AI chain all missed. Record it in the learning
+        # log (observational only; the answer below is built
+        # exactly as before, whether logging works or not).
+        _log_not_found(question, lang, student_class,
+                       result_out.get("fallback_kind"))
         return _not_found_result(question, hindi, lang)
     return result_out
 
 
-def fallback_answer(question, result=None, lang=None):
+def fallback_answer(question, result=None, lang=None,
+                    student_class=None):
     """Convenience wrapper: solve (if no result was given) and
     guarantee a presentable answer dict."""
     if result is None:
@@ -1325,7 +1520,8 @@ def fallback_answer(question, result=None, lang=None):
             result = {"type": "solver", "op": "error",
                       "answer": f"Could not solve this one: {e}",
                       "steps": []}
-    return with_fallback(question, result, lang=lang)
+    return with_fallback(question, result, lang=lang,
+                         student_class=student_class)
 
 
 __all__ = ["with_fallback", "fallback_answer"]

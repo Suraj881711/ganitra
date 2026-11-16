@@ -11,6 +11,15 @@ solve path (api._solve_friendly) and verified EXACT at build
 time — test/test_wave55_topics.py re-verifies every example
 on each test run, so a topic can never silently go stale.
 
+Wave 81 added 37 definition topics (267 in total) so the
+Wave 75 concept layer can answer the asks it used to fall
+through on: theorem, derivative/limit definitions, ratio,
+proportion, sample space, radius, pi, logarithms, ogive,
+and the difference pairs (ratio/proportion, congruent/
+similar, surface area/volume, sequence/series, line/
+segment, square/rectangle). Every new starter was verified
+through the same solve path.
+
 Each topic links to its parent chapter in board_data.py
 (chapter page + practice + test all live there today).
 Topic names follow the Board Mode pattern: English only,
@@ -326,6 +335,36 @@ TOPICS_BY_CLASS = {
             '64',
             'A power of a power multiplies the exponents: (a^m)^n = a^(m × n).',
             ['Multiply the two exponents', 'Raise the base to that power']),
+        _t(
+            'rational-numbers', 'Rational Numbers', 'rational-numbers',
+            'Write the rational number 3/4 as a decimal',
+            '0.75',
+            'A rational number is a number that can be written as p/q, where p and q are integers and q is not zero. Integers, fractions and terminating or repeating decimals are all rational.',
+            ['Check the number can be written as a fraction of integers', 'The denominator must not be zero', 'If it can, it is a rational number']),
+        _t(
+            'equilateral-triangle', 'Equilateral Triangle', 'the-triangle-and-its-properties',
+            'Find the perimeter of an equilateral triangle with side 6 cm',
+            '18',
+            'An equilateral triangle has all three sides equal and each angle equal to 60 degrees. Its perimeter is 3 times the side.',
+            ['Check that all three sides are equal', 'Each angle is 60 degrees', 'Perimeter = 3 x one side']),
+        _t(
+            'discount', 'Discount', 'comparing-quantities',
+            'A jacket is marked at Rs 800 and is sold at a discount of 10%. Find the selling price',
+            'Rs 720',
+            'Discount is the reduction given on the marked price of an article. Selling price = marked price - discount, so a discount of d% means you pay (100 - d)% of the marked price.',
+            ['Note the marked price', 'Find the discount amount: d% of the marked price', 'Subtract it from the marked price to get the selling price']),
+        _t(
+            'pi', 'Pi (π)', 'perimeter-and-area',
+            'Find the circumference of a circle with radius 7 cm',
+            '14·pi ≈ 43.9823',
+            'Pi (π) is the ratio of a circle\'s circumference to its diameter - the same for every circle. Its value is about 3.14159, and 22/7 is a handy approximation.',
+            ['Take the circumference and the diameter of any circle', 'Divide the circumference by the diameter', 'The answer is always π ≈ 3.14159 (about 22/7)']),
+        _t(
+            'ratio', 'Ratio', 'comparing-quantities',
+            'Find the ratio of 20 to 30 in its simplest form',
+            '2 : 3',
+            'A ratio compares two quantities of the same kind, written a : b. It has no unit and is usually written in the simplest form.',
+            ['Write the two quantities in the same unit', 'Write them as the fraction a/b', 'Divide both by their HCF to get the simplest form']),
     ],
     8: [
         _t(
@@ -496,6 +535,36 @@ TOPICS_BY_CLASS = {
             'y = 2x - 1',
             "A line's equation is y = mx + c, where m is the slope and c the y-intercept.",
             ['Find the slope m = (y2 − y1)/(x2 − x1)', 'Put one point in y = mx + c to find c', 'Write the equation']),
+        _t(
+            'proportion', 'Proportion', 'direct-and-inverse-proportions',
+            'If 5 books cost Rs 125, find the cost of 8 books',
+            'Rs 200',
+            'A proportion is a statement that two ratios are equal, a : b = c : d. In a proportion, product of extremes = product of means.',
+            ['Write the two equal ratios', 'Cross-multiply: extremes x means', 'Solve for the unknown term']),
+        _t(
+            'surface-area', 'Surface Area', 'mensuration',
+            'Find the total surface area of a cube with side 4 cm',
+            '96',
+            'Surface area is the total area of all the faces of a solid - the amount of material needed to cover it. It is measured in square units.',
+            ['List all the faces of the solid', 'Find the area of each face', 'Add them up to get the total surface area']),
+        _t(
+            'volume', 'Volume', 'mensuration',
+            'Find the volume of a cube with side 5 cm',
+            '125',
+            'Volume is the space occupied by a solid - how much it holds. It is measured in cubic units: for a cube it is side x side x side.',
+            ['Identify the solid', 'Use its volume formula (for a cube, side cubed)', 'The answer comes in cubic units']),
+        _t(
+            'square', 'Square', 'understanding-quadrilaterals',
+            'Find the area of a square with side 9 cm',
+            '81',
+            'A square is a quadrilateral with all four sides equal and all four angles 90 degrees. Its diagonals are equal and bisect each other at 90 degrees.',
+            ['Check: four equal sides', 'Check: four right angles', 'Area = side x side, perimeter = 4 x side']),
+        _t(
+            'rectangle', 'Rectangle', 'understanding-quadrilaterals',
+            'Find the area of a rectangle with length 12 cm and breadth 7 cm',
+            '84',
+            'A rectangle is a quadrilateral with opposite sides equal and all four angles 90 degrees. Unlike a square, its adjacent sides are generally different.',
+            ['Check: opposite sides equal', 'Check: four right angles', 'Area = length x breadth']),
     ],
     9: [
         _t(
@@ -630,6 +699,60 @@ TOPICS_BY_CLASS = {
             '16.5',
             'For grouped data: mean = Σ(f × x) / Σf, where x is the class mark (midpoint) of each class.',
             ['Find the midpoint x of each class', 'Multiply each midpoint by its frequency', 'Add all fx and divide by total frequency']),
+        _t(
+            'theorem', 'Theorem', 'introduction-to-euclids-geometry',
+            'Two angles of a triangle are 55 degrees and 65 degrees. Find the third angle.',
+            '60°',
+            'A theorem is a statement that is proved to be true using definitions, axioms and statements already proved. Unlike an axiom, a theorem is never just assumed.',
+            ['Start from definitions and axioms (accepted truths)', 'Use logical reasoning step by step', 'When the statement is proved, it becomes a theorem']),
+        _t(
+            'line', 'Line', 'introduction-to-euclids-geometry',
+            'Find the slope of the line joining (1, 2) and (3, 6)',
+            '2',
+            'A line is a straight path that extends endlessly in both directions. It has no endpoints and is fixed by any two points on it.',
+            ['Mark any two points on it', 'The line through them continues forever both ways', 'It is named by its two points, like line AB']),
+        _t(
+            'line-segment', 'Line Segment', 'introduction-to-euclids-geometry',
+            'Find the midpoint of the line segment joining (2, 4) and (6, 8)',
+            '(4, 6)',
+            'A line segment is the part of a line between two points, endpoints included. Unlike a line, it has a fixed, measurable length.',
+            ['Mark the two endpoints A and B', 'The segment AB is the straight path between them', 'Its length is the distance between A and B']),
+        _t(
+            'radius-of-a-circle', 'Radius of a Circle', 'circles',
+            'The diameter of a circle is 20 cm. Find its radius',
+            '10',
+            'The radius is the distance from the centre of a circle to any point on the circle. The diameter is twice the radius: d = 2r.',
+            ['Find the centre of the circle', 'Join it to any point on the circle - that length is the radius', 'Diameter = 2 x radius']),
+        _t(
+            'coordinate-geometry', 'Coordinate Geometry', 'coordinate-geometry',
+            'Find the distance between (1, 2) and (4, 6)',
+            '5',
+            'Coordinate geometry locates points on a plane with a pair of numbers (x, y), their distances from the two axes, and studies shapes using algebra.',
+            ['Give every point an (x, y) address from the origin', 'Use formulas for distance and midpoint between points', 'Read the geometry from the numbers']),
+        _t(
+            'data-in-statistics', 'Data in Statistics', 'statistics',
+            'Find the mean of the data 5, 10, 15',
+            '10',
+            'Data is a collection of facts or numbers gathered for a purpose - marks, heights, runs scored. Statistics is the study of collecting, organising and making sense of data.',
+            ['Collect the observations (the data)', 'Organise them in tables and graphs', 'Summarise with mean, median and mode']),
+        _t(
+            'class-intervals', 'Class Intervals', 'statistics',
+            'Find the mean of the data with class intervals 0-10, 10-20, 20-30 and frequencies 4, 6, 10',
+            '18',
+            'A class interval is a range of values, like 10-20, into which data is grouped. The class size is the difference of its limits, and the midpoint of the class is its class mark.',
+            ['Group the data into equal ranges (classes)', 'Class size = upper limit - lower limit', 'Class mark = (lower limit + upper limit) / 2']),
+        _t(
+            'frequency', 'Frequency', 'statistics',
+            'Find the mode of the data 3, 5, 3, 7, 3',
+            '3',
+            'The frequency of a value is the number of times it occurs in the data. Listing every value with its frequency gives a frequency table; the value with the highest frequency is the mode.',
+            ['Read the data value by value', 'Count how many times each value repeats (tally marks help)', 'That count is the frequency of the value']),
+        _t(
+            'quadrants-in-the-coordinate-plane', 'Quadrants in the Coordinate Plane', 'coordinate-geometry',
+            'Find the distance of the point (5, 12) from the origin',
+            '13',
+            'The two axes divide the coordinate plane into four parts called quadrants. They are numbered I to IV anti-clockwise, and the signs of (x, y) fix the quadrant: (+, +), (-, +), (-, -), (+, -).',
+            ['Draw the x-axis and y-axis crossing at the origin', 'The four parts formed are the quadrants', 'Read the signs of x and y to name the quadrant of a point']),
     ],
     10: [
         _t(
@@ -920,6 +1043,42 @@ TOPICS_BY_CLASS = {
             '1/6 ≈ 0.1667',
             'Two dice give 36 outcomes. A sum of 7 has the most pairs: (1,6), (2,5), (3,4), (4,3), (5,2), (6,1).',
             ['Count the pairs giving the sum', 'Divide by 36', 'Simplify']),
+        _t(
+            'degree-of-a-polynomial', 'Degree of a Polynomial', 'polynomials',
+            'Find the degree of 9x^5',
+            '5',
+            'The degree of a polynomial is the highest power of the variable in it. A degree 1 polynomial is linear, degree 2 is quadratic and degree 3 is cubic.',
+            ['Write the polynomial in standard form', 'Find the power of the variable in each term', 'The highest power is the degree']),
+        _t(
+            'congruent-triangles', 'Congruent Triangles', 'triangles',
+            'Two triangles are congruent. The sides of one triangle are 5 cm, 6 cm and 7 cm. Find the perimeter of the other triangle',
+            '18',
+            'Two triangles are congruent when one fits exactly over the other - same size and same shape, so all sides and angles match. Congruence is proved by SSS, SAS, ASA or RHS.',
+            ['Match the vertices in order', 'Check a congruence rule (SSS, SAS, ASA, RHS)', 'Corresponding parts of congruent triangles are equal (CPCT)']),
+        _t(
+            'similar-triangles', 'Similar Triangles', 'triangles',
+            'In similar triangles ABC and DEF, angle A is 55 degrees and angle B is 65 degrees. Find angle C',
+            '60°',
+            'Two triangles are similar when their shapes match - corresponding angles equal and corresponding sides in the same ratio. The size may differ; similarity is proved by AA, SSS or SAS.',
+            ['Match corresponding angles - they must be equal', 'Check corresponding sides are in one fixed ratio', 'Use that ratio to find unknown sides']),
+        _t(
+            'sample-space', 'Sample Space', 'probability',
+            'A coin is tossed once. What is the probability of getting a head?',
+            '1/2 ≈ 0.5000',
+            'The sample space is the set of all possible outcomes of an experiment - for a coin {H, T}, for a die {1, 2, 3, 4, 5, 6}. Probability counts the favourable outcomes inside it.',
+            ['List every outcome that can happen', 'That full list is the sample space', 'Probability = favourable outcomes / total outcomes']),
+        _t(
+            'impossible-and-certain-events', 'Impossible and Certain Events', 'probability',
+            'What is the probability of getting a number greater than 6 on a die?',
+            '0 ≈ 0.0000',
+            'An impossible event can never happen, so its probability is 0. A certain event is sure to happen, so its probability is 1. Every probability lies between 0 and 1.',
+            ['Ask: can this event happen at all?', 'Never happens: probability 0, an impossible event', 'Always happens: probability 1, a certain event']),
+        _t(
+            'ogive', 'Ogive', 'statistics',
+            'Find the median of the data 12, 15, 18, 20, 25',
+            '18',
+            'An ogive is a curve drawn from cumulative frequencies. The less-than ogive and the more-than ogive cross exactly above the median of the data.',
+            ['Change the frequencies into cumulative frequencies', 'Plot them against the class limits and join with a smooth curve', 'Where the two ogives meet, drop down to the axis to read the median']),
     ],
     11: [
         _t(
@@ -1186,6 +1345,72 @@ TOPICS_BY_CLASS = {
             '7/10 ≈ 0.7000',
             'For any two events, P(A or B) = P(A) + P(B) − P(A and B) — the overlap is counted twice in the sum, so it is subtracted once.',
             ['Write down P(A), P(B) and P(A and B)', 'Add P(A) and P(B)', 'Subtract the overlap P(A and B) once']),
+        _t(
+            'subsets', 'Subsets', 'sets',
+            'Find the number of subsets of a set having 4 elements',
+            '16',
+            'B is a subset of A, written B subset A, when every element of B is also in A. A set with n elements has 2^n subsets in all, including the empty set and the set itself.',
+            ['Take any set B formed from elements of A', 'If every element of B lies in A, then B is a subset of A', 'Count all the subsets with 2^n']),
+        _t(
+            'cardinal-number-of-a-set', 'Cardinal Number of a Set', 'sets',
+            'A set has 5 elements. How many subsets does it have?',
+            '32',
+            'The cardinal number of a finite set A, written n(A), is the number of elements in it. It is found by simply counting the distinct elements.',
+            ['List the elements of the set', 'Count them, each only once', 'That count is n(A), the cardinal number']),
+        _t(
+            'empty-set-and-universal-set', 'Empty Set and Universal Set', 'sets',
+            'A set has 0 elements. How many subsets does it have?',
+            '1',
+            'The empty set, written as {} or the null set, has no elements at all. The universal set U contains every element under discussion, so every other set is a subset of it.',
+            ['A set with no elements is the empty set', 'The universal set U is the big set chosen for the problem', 'Every set in the problem is a subset of U']),
+        _t(
+            'limit-of-a-function', 'Limit of a Function', 'limits-and-derivatives',
+            'Find the limit of (x^2 - 9)/(x - 3) as x tends to 3',
+            '6',
+            'The limit of a function f(x) as x approaches a is the value that f(x) gets closer and closer to - even if f(x) never actually reaches it, or is not defined there.',
+            ['See what f(x) approaches as x nears a from both sides', 'If both sides meet at one value, that value is the limit', 'Try direct substitution first; factorise if it gives 0/0']),
+        _t(
+            'derivative-of-a-function', 'Derivative of a Function', 'limits-and-derivatives',
+            'Find the derivative of x^3',
+            '3·x^2',
+            'The derivative of a function is its rate of change at a point - the slope of the tangent to its graph there. It is defined as a limit of the average rate of change.',
+            ['Take the change in the function for a small change h in x', 'Divide by h to get the average rate of change', 'Let h shrink to 0 - that limit is the derivative']),
+        _t(
+            'function', 'Function', 'relations-and-functions',
+            'If f(x) = 3x + 1, find f(2)',
+            'f(2) = 7',
+            'A function is a rule that gives exactly one output for every input. Writing y = f(x) means the output y is decided by the input x.',
+            ['Give the rule an input x', 'Apply the rule to get one output f(x)', 'No input may give two different outputs']),
+        _t(
+            'domain-and-range-of-a-function', 'Domain and Range of a Function', 'relations-and-functions',
+            'Given f(x) = x^2, find f(5)',
+            'f(5) = 25',
+            'The domain of a function is the set of all inputs it accepts; the range is the set of all outputs it actually gives.',
+            ['Domain: collect every allowed input value', 'Apply the function to each input', 'Range: collect the outputs you get']),
+        _t(
+            'sequence', 'Sequence', 'sequences-and-series',
+            'Find the next term of the sequence 5, 10, 15, 20',
+            '25',
+            'A sequence is an ordered list of numbers following a rule. Each number is a term, and the rule lets you find any term you want.',
+            ['Look at how each term follows the previous one', 'Write the rule for the nth term', 'Use the rule to find any term']),
+        _t(
+            'series', 'Series', 'sequences-and-series',
+            'Find the sum of the series 2 + 4 + 6 + 8',
+            '20',
+            'A series is what you get by adding the terms of a sequence. The sum of the first n terms of a series is written S_n.',
+            ['Write out the terms of the sequence', 'Add them in order', 'The total is the sum of the series']),
+        _t(
+            'degrees-and-radians', 'Degrees and Radians', 'trigonometric-functions',
+            'Find the length of an arc of a circle with radius 7 cm which subtends an angle of 60 degrees at the centre',
+            '7.33038',
+            'Angles are measured in degrees, where a full turn is 360 degrees, or in radians, where a full turn is 2π. Since π radians = 180 degrees, one degree is π/180 radian.',
+            ['To change degrees into radians, multiply by π/180', 'To change radians into degrees, multiply by 180/π', 'Remember: π radians = 180 degrees']),
+        _t(
+            'iota-the-imaginary-unit', 'Iota, the Imaginary Unit', 'complex-numbers-and-quadratic-equations',
+            'What is the value of i^2?',
+            '-1',
+            'Iota, written i, is the imaginary unit, created so that negative numbers also have square roots: i is the square root of -1, so i squared is -1.',
+            ['Remember: i squared = -1', 'Powers of i repeat every 4: i, -1, -i, 1', 'Use i to write square roots of negative numbers']),
     ],
     12: [
         _t(
@@ -1422,6 +1647,12 @@ TOPICS_BY_CLASS = {
             'Mean = 20, variance = 16',
             'For a binomial distribution: mean = np and variance = npq, where q = 1 − p.',
             ['Find q = 1 − p', 'Mean = n × p', 'Variance = n × p × q']),
+        _t(
+            'logarithms', 'Logarithms', 'continuity-and-differentiability',
+            'What is the value of log base 2 of 32?',
+            '5',
+            'The logarithm of a number is the power to which the base must be raised to get that number: log base 2 of 8 is 3 because 2 cubed is 8. It is the inverse of the exponential.',
+            ['Ask: the base raised to what power gives the number?', 'That power is the logarithm', 'Check by raising the base to your answer']),
     ],
 }
 
