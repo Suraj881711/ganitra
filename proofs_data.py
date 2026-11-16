@@ -11,6 +11,19 @@ an honest limit in the wave notes.
 Keys are the radicands as strings ("2", "3", "5"). Matching is
 done by proofs.py, never by keyword soup: the question must be
 a proof ask AND name exactly one of these roots as irrational.
+
+Wave 101 adds PYTHAGOREAN_PROOFS below: the three Pythagorean
+identities, proved genuinely — sin²+cos² from a right-angled
+triangle (Pythagoras' theorem, then divide by the hypotenuse
+squared), the other two FROM sin²+cos² = 1 by dividing every
+term by cos² / sin². Wave 95's SymPy transform path proved
+sin²+cos² = 1 with a single step labelled "using sin²x + cos²x
+= 1" — the identity citing itself — so these three are served
+as textbook content instead. The "{v}" token is the student's
+own variable (A, θ, x, ...), substituted by proofs.py; the
+matching there is structural (the parsed statement must be
+exactly one of these identities, in any arrangement), never
+keyword soup either.
 """
 
 PROOFS = {
@@ -126,4 +139,94 @@ PROOFS = {
     },
 }
 
-__all__ = ["PROOFS"]
+PYTHAGOREAN_PROOFS = {
+    "sin_cos": {
+        "statement": {
+            "en": "sin²{v} + cos²{v} = 1",
+            "hi": "sin²{v} + cos²{v} = 1",
+        },
+        "steps": {
+            "en": [
+                "Take a right-angled triangle whose one acute "
+                "angle is {v}. Call the side opposite {v} (the "
+                "perpendicular) p, the side next to {v} (the "
+                "base) b, and the hypotenuse h.",
+                "Then sin {v} = p/h and cos {v} = b/h, so "
+                "sin²{v} + cos²{v} = p²/h² + b²/h² = (p² + b²)/h².",
+                "By Pythagoras' theorem for this triangle, "
+                "p² + b² = h².",
+                "So sin²{v} + cos²{v} = h²/h² = 1.",
+            ],
+            "hi": [
+                "एक समकोण त्रिभुज लीजिए जिसका एक न्यून कोण {v} "
+                "है। {v} के सामने वाली भुजा (लंब) को p, {v} से "
+                "सटी भुजा (आधार) को b और कर्ण को h मानिए।",
+                "तब sin {v} = p/h और cos {v} = b/h, अतः "
+                "sin²{v} + cos²{v} = p²/h² + b²/h² = (p² + b²)/h²।",
+                "इस त्रिभुज के लिए पाइथागोरस प्रमेय से, "
+                "p² + b² = h²।",
+                "अतः sin²{v} + cos²{v} = h²/h² = 1।",
+            ],
+        },
+    },
+    "sec_tan": {
+        "statement": {
+            "en": "sec²{v} − tan²{v} = 1",
+            "hi": "sec²{v} − tan²{v} = 1",
+        },
+        "steps": {
+            "en": [
+                "Start from sin²{v} + cos²{v} = 1 — the "
+                "right-triangle identity (perpendicular² + "
+                "base² = hypotenuse², divided by hypotenuse²).",
+                "Divide every term by cos²{v}: "
+                "sin²{v}/cos²{v} + cos²{v}/cos²{v} = 1/cos²{v}.",
+                "Now sin {v}/cos {v} = tan {v} and "
+                "1/cos {v} = sec {v}, so this says "
+                "tan²{v} + 1 = sec²{v}.",
+                "Rearranging, sec²{v} − tan²{v} = 1.",
+            ],
+            "hi": [
+                "sin²{v} + cos²{v} = 1 से शुरू करते हैं — यह "
+                "समकोण त्रिभुज वाली सर्वसमिका है (लंब² + आधार² "
+                "= कर्ण², कर्ण² से भाग देने पर)।",
+                "प्रत्येक पद को cos²{v} से भाग देने पर: "
+                "sin²{v}/cos²{v} + cos²{v}/cos²{v} = 1/cos²{v}।",
+                "अब sin {v}/cos {v} = tan {v} और "
+                "1/cos {v} = sec {v}, अतः tan²{v} + 1 = sec²{v}।",
+                "पक्ष बदलने पर, sec²{v} − tan²{v} = 1।",
+            ],
+        },
+    },
+    "cosec_cot": {
+        "statement": {
+            "en": "cosec²{v} − cot²{v} = 1",
+            "hi": "cosec²{v} − cot²{v} = 1",
+        },
+        "steps": {
+            "en": [
+                "Start from sin²{v} + cos²{v} = 1 — the "
+                "right-triangle identity (perpendicular² + "
+                "base² = hypotenuse², divided by hypotenuse²).",
+                "Divide every term by sin²{v}: "
+                "sin²{v}/sin²{v} + cos²{v}/sin²{v} = 1/sin²{v}.",
+                "Now cos {v}/sin {v} = cot {v} and "
+                "1/sin {v} = cosec {v}, so this says "
+                "1 + cot²{v} = cosec²{v}.",
+                "Rearranging, cosec²{v} − cot²{v} = 1.",
+            ],
+            "hi": [
+                "sin²{v} + cos²{v} = 1 से शुरू करते हैं — यह "
+                "समकोण त्रिभुज वाली सर्वसमिका है (लंब² + आधार² "
+                "= कर्ण², कर्ण² से भाग देने पर)।",
+                "प्रत्येक पद को sin²{v} से भाग देने पर: "
+                "sin²{v}/sin²{v} + cos²{v}/sin²{v} = 1/sin²{v}।",
+                "अब cos {v}/sin {v} = cot {v} और "
+                "1/sin {v} = cosec {v}, अतः 1 + cot²{v} = cosec²{v}।",
+                "पक्ष बदलने पर, cosec²{v} − cot²{v} = 1।",
+            ],
+        },
+    },
+}
+
+__all__ = ["PROOFS", "PYTHAGOREAN_PROOFS"]

@@ -18,6 +18,16 @@ Three tiers, in order:
    the standard contradiction proof, served verbatim from
    proofs_data.py in the question's language (English / Hindi;
    Hinglish asks get the English text — see wave notes).
+   Wave 101 adds the three Pythagorean identities to this
+   tier: tier 1 "proved" sin²x + cos²x = 1 with one step
+   labelled "using sin²x + cos²x = 1" — the identity citing
+   itself — so sin²+cos² (right triangle), sec²−tan² and
+   cosec²−cot² (dividing sin²+cos² = 1 by cos² / sin²) are
+   served as genuine textbook derivations from proofs_data.py
+   instead. Tier 1 also refuses, from Wave 101, to present a
+   path whose "pythag" step would cite the very statement
+   being proved; such a statement falls back to the honest
+   LHS − RHS verification display.
 
 3. Everything else returns None: geometry proofs, general
    theorems and anything unparseable fall through to the
@@ -38,7 +48,7 @@ import re
 import sympy as sp
 
 from solver.expression_parser import parse_expression
-from proofs_data import PROOFS
+from proofs_data import PROOFS, PYTHAGOREAN_PROOFS
 
 # ---------------------------------------------------------------------------
 # Detection
@@ -375,7 +385,11 @@ def _transform_path(lhs, rhs, has_trig, has_log):
     return None
 
 
-def _identity_result(question, hindi):
+def _parse_identity(question):
+    """Shared front half of the identity tiers: the proof
+    statement, cleaned and parsed. Returns (left_text,
+    right_text, lhs, rhs, subs) or None when the statement is
+    not a single parseable equation."""
     stmt = _statement(question)
     if stmt.count("=") != 1 or len(stmt) > 140:
         return None
@@ -395,6 +409,135 @@ def _identity_result(question, hindi):
         return None
     if not isinstance(lhs, sp.Expr) or not isinstance(rhs, sp.Expr):
         return None
+    return left_text, right_text, lhs, rhs, subs
+
+
+# ---------------------------------------------------------------------------
+# Tier 2b (Wave 101): the Pythagorean identities, as textbook
+# derivations — the tier-1 transform path proves sin²+cos² = 1
+# by citing it, so these three are recognised structurally and
+# served from proofs_data.py.
+# ---------------------------------------------------------------------------
+
+def _term_slot(term, slot_bases):
+    """Which slot is `term` a nonzero constant multiple of?
+    slot_bases is a list of slots, each a list of equivalent
+    base forms (sec²g and cos(g)^-2 are the same slot). Returns
+    the slot index, "const" for a bare nonzero constant, or
+    None."""
+    if not term.free_symbols:
+        return "const" if term != 0 else None
+    for i, bases in enumerate(slot_bases):
+        for base in bases:
+            try:
+                q = sp.cancel(term / base)
+            except Exception:
+                continue
+            if q != 0 and not q.free_symbols:
+                return i
+    return None
+
+
+def _pythag_family(lhs, rhs):
+    """Classify a parsed identity as one of the three
+    Pythagorean identities — in ANY arrangement (sides
+    swapped, terms moved across, both sides scaled) — or None.
+
+    The statement, exactly as written, must consist only of
+    constant multiples of the family's two squared functions
+    of ONE common argument g, plus a constant term:
+    sin²g + cos²g = 1, sec²g − tan²g = 1, cosec²g − cot²g = 1.
+    Anything richer — (sin A + cos A)² = 1 + 2 sin A cos A —
+    is a consequence OF the identity, not the identity
+    itself, and returns None. Returns (key, g)."""
+    expr = lhs - rhs
+    terms = (sp.Add.make_args(expr) if isinstance(expr, sp.Add)
+             else (expr,))
+
+    def _args(fn):
+        return {a.args[0] for a in expr.atoms(fn) if a.args}
+
+    families = []
+    sin_args, cos_args = _args(sp.sin), _args(sp.cos)
+    if len(sin_args) == 1 and sin_args == cos_args:
+        g = next(iter(sin_args))
+        families.append(("sin_cos", g,
+                         [[sp.sin(g) ** 2], [sp.cos(g) ** 2]]))
+    sec_args, tan_args = _args(sp.sec), _args(sp.tan)
+    if len(tan_args) == 1 and (sec_args == tan_args
+                               or (not sec_args
+                                   and cos_args == tan_args)):
+        g = next(iter(tan_args))
+        families.append(("sec_tan", g,
+                         [[sp.sec(g) ** 2, sp.cos(g) ** -2],
+                          [sp.tan(g) ** 2]]))
+    csc_args, cot_args = _args(sp.csc), _args(sp.cot)
+    if len(cot_args) == 1 and (csc_args == cot_args
+                               or (not csc_args
+                                   and sin_args == cot_args)):
+        g = next(iter(cot_args))
+        families.append(("cosec_cot", g,
+                         [[sp.csc(g) ** 2, sp.sin(g) ** -2],
+                          [sp.cot(g) ** 2]]))
+    for key, g, slot_bases in families:
+        slots = set()
+        for term in terms:
+            slot = _term_slot(term, slot_bases)
+            if slot is None:
+                break
+            slots.add(slot)
+        else:
+            if slots == {0, 1, "const"}:
+                return key, g
+    return None
+
+
+def _pythagorean_result(question, hindi):
+    """The textbook proof for a Pythagorean identity, or
+    None. Fires only when the parsed statement IS one of the
+    three identities (any arrangement), the argument is a
+    single symbol (so the proof can name the student's own
+    variable), and SymPy verifies the identity."""
+    parsed = _parse_identity(question)
+    if parsed is None:
+        return None
+    left_text, right_text, lhs, rhs, subs = parsed
+    fam = _pythag_family(lhs, rhs)
+    if fam is None:
+        return None
+    key, g = fam
+    if not isinstance(g, sp.Symbol):
+        return None
+    if not _verified(lhs, rhs):
+        return None
+    entry = PYTHAGOREAN_PROOFS.get(key)
+    if entry is None:
+        return None
+    var = subs.get(g.name, g.name)
+    lang = "hi" if hindi else "en"
+    body = [line.format(v=var) for line in entry["steps"][lang]]
+    steps = [f"LHS = {left_text}"] + body + ["= RHS"]
+    statement_disp = f"{left_text} = {right_text}"
+    return {
+        "type": "Proof",
+        "op": "proof_identity",
+        "answer": statement_disp + (" — सिद्ध हुआ ✔ (identity proved)"
+                                    if hindi else
+                                    " — identity proved ✔"),
+        "steps": steps,
+        "fallback": True,
+        "fallback_kind": "proof",
+        "source": "proofs",
+        "verified": True,
+    }
+
+
+def _identity_result(question, hindi):
+    parsed = _parse_identity(question)
+    if parsed is None:
+        return None
+    left_text, right_text, lhs, rhs, subs = parsed
+    stmt = _statement(question)
     if len(lhs.free_symbols | rhs.free_symbols) > 4:
         return None
     if not _verified(lhs, rhs):
@@ -408,6 +551,21 @@ def _identity_result(question, hindi):
     # only the intermediate forms come from SymPy.
     steps = [f"LHS = {left_text}"]
     path = _transform_path(lhs, rhs, has_trig, has_log)
+    if path:
+        # Wave 101 audit: the "pythag" step is labelled with
+        # the identity sin²x + cos²x = 1 itself. When the
+        # statement being proved IS that identity (any
+        # arrangement), that step cites the conclusion —
+        # circular. Such statements are normally served by
+        # the textbook layer before this one; any that still
+        # reach here (e.g. a compound argument the textbook
+        # matcher declines) must not be dressed as a
+        # derivation: discard the path so the honest
+        # LHS − RHS verification display below is used.
+        fam = _pythag_family(lhs, rhs)
+        if fam is not None and fam[0] == "sin_cos" and any(
+                k.replace("_rhs", "") == "pythag" for k, _ in path):
+            path = None
     if path is not None and not path:
         # Already equal at parse time (a numeric identity like
         # sin^2 30 + cos^2 30, whose values the parser knows).
@@ -469,6 +627,9 @@ def proof_result(question, hindi=False):
     hindi = any("ऀ" <= ch <= "ॿ" for ch in str(question))
     try:
         result = _irrationality_result(question, hindi)
+        if result is not None:
+            return result
+        result = _pythagorean_result(question, hindi)
         if result is not None:
             return result
         return _identity_result(question, hindi)
