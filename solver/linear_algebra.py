@@ -6,7 +6,175 @@ import re
 import sympy as sp
 from sympy import Matrix
 
-from .expression_parser import fmt
+from .expression_parser import fmt, parse_expression
+
+
+# ---------------------------------------------------------------------------
+# Wave 80: board-text matrix forms — bar determinants
+# |a b c; d e f; g h i|, an unnamed scalar times a matrix in
+# space form (6[-2 1; 3 5]), symbolic-cell determinants and
+# A'A = I verification, and the two counting facts (possible
+# orders / possible matrices). Each schema is self-contained
+# and exception-guarded: on any doubt it falls through to the
+# classic [[...]] handling below, unchanged.
+# ---------------------------------------------------------------------------
+
+def _w80_cell(text):
+    """Parse one matrix cell (may be symbolic: 'x + 1', 'cos θ')."""
+    t = str(text).strip()
+    t = t.replace("−", "-").replace("²", "^2").replace("³", "^3")
+    if not t:
+        raise ValueError("empty cell")
+    return parse_expression(t)
+
+
+def _w80_grid(content):
+    """'a b; c d' / 'a, b; c, d' content -> list of rows of
+    sympy cells. Commas separate cells when present (symbolic
+    cells contain spaces); otherwise whitespace does."""
+    rows = []
+    for row_text in content.split(";"):
+        row_text = row_text.strip()
+        if not row_text:
+            continue
+        if "," in row_text:
+            cells = [c for c in row_text.split(",")]
+        else:
+            cells = row_text.split()
+        rows.append([_w80_cell(c) for c in cells])
+    if not rows or any(len(r) != len(rows[0]) for r in rows):
+        raise ValueError("ragged grid")
+    return rows
+
+
+def _w80_bar_determinant(q):
+    m = re.search(r"\|([^|]+)\|", q)
+    if not m or ";" not in m.group(1):
+        return None
+    rows = _w80_grid(m.group(1))
+    if len(rows) not in (2, 3) or len(rows[0]) != len(rows):
+        return None
+    M = Matrix(rows)
+    det = sp.simplify(M.det())
+    steps = [f"The determinant of {_mstr(M)}"]
+    if det == 0:
+        # A proportional row/column is the textbook reason.
+        n = len(rows)
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    ri, rj = rows[i], rows[j]
+                    if ri[0] != 0 and rj[0] != 0:
+                        ratio = sp.simplify(rj[0] / ri[0])
+                        if ratio != 0 and all(
+                                sp.simplify(rj[k] - ratio * ri[k]) == 0
+                                for k in range(n)):
+                            steps.append(
+                                f"Row {j + 1} = {fmt(ratio)} x "
+                                f"Row {i + 1}, so the determinant "
+                                f"is 0.")
+                            break
+            else:
+                continue
+            break
+    steps.append(f"det = {fmt(det)}")
+    return {"type": "linear_algebra", "op": "bar_determinant",
+            "answer": fmt(det), "steps": steps}
+
+
+def _w80_scalar_matrix(q):
+    m = re.search(r"(?<![\d.])(\d+(?:\.\d+)?)\s*\[([^\[\]]+)\]", q)
+    if not m or ";" not in m.group(2):
+        return None
+    rows = _w80_grid(m.group(2))
+    if any(cell.free_symbols for row in rows for cell in row):
+        return None
+    k = sp.Rational(m.group(1))
+    M = Matrix(rows)
+    R = k * M
+    steps = [f"Multiply every entry of {_mstr(M)} by {fmt(k)}.",
+             f"= {_mstr(R)}"]
+    return {"type": "linear_algebra", "op": "scalar_matrix_unnamed",
+            "answer": _mstr(R), "steps": steps}
+
+
+def _w80_counting(q, ql):
+    # Number of possible matrices of order m x n, each entry
+    # chosen from a listed set: (choices)^(m*n).
+    m = re.search(r"matrices\s+of\s+order\s+(\d+)\s*[x×]\s*(\d+)",
+                  ql)
+    if m and "each entry" in ql:
+        em = re.search(r"each\s+entry\s+(.+?)(?:\s+is\b|\?|$)", q)
+        choices = None
+        if em:
+            opts = re.split(r"\s+or\s+|\s*,\s*", em.group(1).strip())
+            opts = [o for o in opts if o]
+            if 2 <= len(opts) <= 6:
+                choices = len(opts)
+        if choices:
+            total = int(m.group(1)) * int(m.group(2))
+            ans = choices ** total
+            steps = [
+                f"The matrix has {m.group(1)} x {m.group(2)} = "
+                f"{total} entries.",
+                f"Each entry has {choices} choices, so the "
+                f"number of matrices = {choices}^{total} = {ans}.",
+            ]
+            return {"type": "linear_algebra",
+                    "op": "matrix_count_entries",
+                    "answer": str(ans), "steps": steps}
+    # A matrix with N elements: possible orders = ordered
+    # factor pairs of N = number of divisors of N.
+    m = re.search(r"has\s+(\d+)\s+elements", ql)
+    if m and "order" in ql:
+        n = int(m.group(1))
+        divs = [d for d in range(1, n + 1) if n % d == 0]
+        steps = [
+            f"An order r x c needs r x c = {n}; each divisor "
+            f"of {n} gives one possible order.",
+            f"Divisors of {n}: {', '.join(map(str, divs))} "
+            f"— {len(divs)} in all.",
+        ]
+        return {"type": "linear_algebra", "op": "matrix_orders_count",
+                "answer": str(len(divs)), "steps": steps}
+    return None
+
+
+def _w80_verify_orthogonal(q):
+    if "verify" not in q.lower():
+        return None
+    qf = q.replace("′", "'").replace("’", "'")
+    mA = re.search(r"A\s*=\s*(\[\[.+?\]\])", qf, re.S)
+    if not mA:
+        return None
+    block = mA.group(1)
+    try:
+        rows = []
+        for row_text in re.split(r"\]\s*,\s*\[", block[2:-2]):
+            rows.append([_w80_cell(c) for c in row_text.split(",")])
+        A = Matrix(rows)
+    except Exception:
+        return None
+    if not A.free_symbols:
+        return None
+    want_transpose_first = "A'A" in qf.replace(" ", "")
+    want_first = "AA'" in qf.replace(" ", "")
+    if not (want_transpose_first or want_first):
+        return None
+    P = (A.T * A) if want_transpose_first else (A * A.T)
+    P = P.applyfunc(lambda e: sp.trigsimp(sp.simplify(e)))
+    I = sp.eye(A.rows)
+    if P != I:
+        return None
+    label = "A'A" if want_transpose_first else "AA'"
+    steps = [
+        f"A = {_mstr(A)}",
+        f"{label} = {_mstr(P)} = I "
+        f"(using sin^2 θ + cos^2 θ = 1).",
+        f"Hence {label} = I is verified.",
+    ]
+    return {"type": "linear_algebra", "op": "verify_orthogonal",
+            "answer": f"{label} = I", "steps": steps}
 
 
 def _parse_matrix_block(block: str) -> Matrix:
@@ -32,6 +200,23 @@ def _mstr(M: Matrix) -> str:
 def solve_linear_algebra(question: str):
     q = question
     ql = q.lower()
+
+    # Wave 80 board-text schemas first (each guarded; a miss
+    # falls through to the classic handling below).
+    for _w80_try in (_w80_bar_determinant, _w80_scalar_matrix,
+                     _w80_verify_orthogonal):
+        try:
+            _r = _w80_try(q)
+        except Exception:
+            _r = None
+        if _r is not None:
+            return _r
+    try:
+        _r = _w80_counting(q, ql)
+    except Exception:
+        _r = None
+    if _r is not None:
+        return _r
 
     # A = [[...]], b = [[...]]  -> solve A x = b
     mA = re.search(r"A\s*=\s*(\[\[.+?\]\])", q, re.S)

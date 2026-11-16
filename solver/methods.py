@@ -51,6 +51,7 @@ from .algebra import _poly_coeffs, _strip_solve_prefix
 from .arithmetic import reduction_steps
 from .expression_parser import (extract_points, find_param, fmt,
                                 fmt_num, parse_expression)
+from .pi_policy import pi_choice
 
 
 def _root_text(value):
@@ -1994,16 +1995,34 @@ def _circle_diameter_area_method(working, primary):
     if r is None:
         return None
     approx = _answer_approx(primary)
-    import math as _math
-    if approx is None or abs(_math.pi * r * r - approx) > 0.01:
+    if approx is None:
+        # Wave 99: a 22/7 primary answer is exact — it carries
+        # no "≈" — so verify against its plain value instead.
+        approx = _answer_first_num(primary)
+    # Wave 99: verify against the policy pi for this radius
+    # (22/7 for 7-friendly radii), like the primary does.
+    _pi, _u227, _reason = pi_choice(radius=r)
+    if approx is None or abs(_pi * r * r - approx) > 0.01:
         return None
     d = 2 * r
+    if _u227:
+        steps = [
+            f"Use the diameter instead: d = 2 × r = 2 × "
+            f"{fmt_num(r)} = {fmt_num(d)}.",
+            f"Area = pi × d^2 / 4 = (22/7) × "
+            f"{fmt_num(d)}^2 / 4 = (22/7) × "
+            f"{fmt_num(r * r)} = {fmt_num(_pi * r * r)}",
+            _final_line(primary.get("answer", "")),
+        ]
+        return {"id": "diameter", "label": "Using the diameter",
+                "steps": steps,
+                "answer": primary.get("answer", "")}
     steps = [
         f"Use the diameter instead: d = 2 × r = 2 × "
         f"{fmt_num(r)} = {fmt_num(d)}.",
         f"Area = pi × d^2 / 4 = pi × {fmt_num(d)}^2 / 4 = "
         f"pi × {fmt_num(d * d)} / 4 = {fmt_num(r * r)}·pi "
-        f"≈ {_math.pi * r * r:.4f}",
+        f"≈ {_pi * r * r:.4f}",
         _final_line(primary.get("answer", "")),
     ]
     return {"id": "diameter", "label": "Using the diameter",
@@ -2019,17 +2038,31 @@ def _circle_diameter_circ_method(working, primary):
     r = find_param(ql, ["radius"])
     if r is None:
         return None
-    import math as _math
     approx = _answer_approx(primary)
-    if approx is None or abs(2 * _math.pi * r - approx) > 0.01:
+    if approx is None:
+        approx = _answer_first_num(primary)
+    _pi, _u227, _reason = pi_choice(radius=r)
+    if approx is None or abs(2 * _pi * r - approx) > 0.01:
         return None
     d = 2 * r
+    if _u227:
+        steps = [
+            f"The circumference is pi times the diameter: "
+            f"C = pi × d.",
+            f"d = 2 × r = 2 × {fmt_num(r)} = {fmt_num(d)}, so "
+            f"C = pi × {fmt_num(d)} = (22/7) × "
+            f"{fmt_num(d)} = {fmt_num(2 * _pi * r)}",
+            _final_line(primary.get("answer", "")),
+        ]
+        return {"id": "diameter", "label": "Using the diameter",
+                "steps": steps,
+                "answer": primary.get("answer", "")}
     steps = [
         f"The circumference is pi times the diameter: "
         f"C = pi × d.",
         f"d = 2 × r = 2 × {fmt_num(r)} = {fmt_num(d)}, so "
         f"C = pi × {fmt_num(d)} = {fmt_num(d)}·pi ≈ "
-        f"{2 * _math.pi * r:.4f}",
+        f"{2 * _pi * r:.4f}",
         _final_line(primary.get("answer", "")),
     ]
     return {"id": "diameter", "label": "Using the diameter",
@@ -2182,12 +2215,29 @@ def _cylinder_base_area_method(working, primary):
     h = find_param(ql, ["height"])
     if r is None or h is None:
         return None
-    import math as _math
     approx = _answer_approx(primary)
-    base = _math.pi * r * r
+    if approx is None:
+        approx = _answer_first_num(primary)
+    _pi, _u227, _reason = pi_choice(radius=r)
+    base = _pi * r * r
     vol = base * h
     if approx is None or abs(vol - approx) > 0.01:
         return None
+    if _u227:
+        steps = [
+            "Think of the cylinder as a stack of identical "
+            "thin circles, one on top of another.",
+            f"Area of one circular base = pi × r^2 = "
+            f"(22/7) × {fmt_num(r)}^2 = {fmt_num(base)}.",
+            f"The stack is {fmt_num(h)} high, so the volume "
+            f"= {fmt_num(base)} × {fmt_num(h)} "
+            f"= {fmt_num(vol)}.",
+            _final_line(primary.get("answer", "")),
+        ]
+        return {"id": "base_area",
+                "label": "Base area × height method",
+                "steps": steps,
+                "answer": primary.get("answer", "")}
     steps = [
         "Think of the cylinder as a stack of identical "
         "thin circles, one on top of another.",
@@ -2211,12 +2261,29 @@ def _cone_third_method(working, primary):
     h = find_param(ql, ["height"])
     if r is None or h is None:
         return None
-    import math as _math
     approx = _answer_approx(primary)
-    cyl = _math.pi * r * r * h
+    if approx is None:
+        approx = _answer_first_num(primary)
+    _pi, _u227, _reason = pi_choice(radius=r)
+    cyl = _pi * r * r * h
     vol = cyl / 3.0
     if approx is None or abs(vol - approx) > 0.01:
         return None
+    if _u227:
+        steps = [
+            "A cone holds exactly one-third of a cylinder "
+            "with the same base and height.",
+            f"Cylinder volume = pi × r^2 × h = (22/7) × "
+            f"{fmt_num(r)}^2 × {fmt_num(h)} "
+            f"= {fmt_num(cyl)}.",
+            f"Cone volume = {fmt_num(cyl)} / 3 "
+            f"= {fmt_num(vol)}.",
+            _final_line(primary.get("answer", "")),
+        ]
+        return {"id": "cone_third",
+                "label": "One-third of the cylinder",
+                "steps": steps,
+                "answer": primary.get("answer", "")}
     steps = [
         "A cone holds exactly one-third of a cylinder with "
         "the same base and height.",

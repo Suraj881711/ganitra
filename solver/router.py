@@ -7,9 +7,11 @@ import logging
 import math
 import re
 import threading
+from functools import lru_cache
 
 from .algebra import solve_algebra
-from .answer_cache import get_cached, put_cached
+from .answer_cache import get_cached, get_failure, put_cached, \
+    put_failure
 from .applied import solve_applied
 from .arithmetic import solve_arithmetic
 from .calculus import solve_calculus
@@ -20,6 +22,7 @@ from .expression_parser import wants_circumference
 from .geometry import solve_geometry
 from .junior import solve_junior
 from .linear_algebra import solve_linear_algebra
+from .vectors import solve_vectors
 from .number_theory import solve_number_theory
 from .plotting import solve_plot
 from .sequences import solve_sequences
@@ -29,6 +32,7 @@ from .transforms import solve_transforms
 from .trigonometry import solve_trigonometry
 from .units import solve_units
 from .word_problems import solve_word_problem
+from .papers10 import solve_papers10
 
 # --------------------------------------------------------------------------
 # Hinglish normalisation:  "5 aur 3 ko jodo" -> "5 + 3",
@@ -88,7 +92,10 @@ _HINGLISH_CANON = frozenset(_HINGLISH_VARIANTS.values()) | frozenset(
     "trijya byaj dar saal rupaye paas sankhya ausat "
     "madhyika sambhavna "
     "sikka sikke pasa chit puchh samikaran mool yog pad padon "
-    "pehle ghante ghanta doori train speed chaal gati samay karo "
+    "pehle ghante ghanta doori train speed chaal gati samay karo der "
+    # Wave 92: "der" (देर, duration) is canon so the skeleton
+    # fold ("dr" -> doori) can never rewrite "kitni der
+    # lagegi" into a distance ask.
     "wala wali milega mile mila milta anupat banto number gaya jati tay uchale "
     "feko sama visham sadharan "
     # Wave 59: Class 11-12 Hinglish maths vocabulary.
@@ -407,6 +414,13 @@ def normalize_spelling(question: str) -> str:
         return question
 
 
+# Wave 97 (speed): both normalisers are pure functions of the
+# question string, and every solver walk re-runs them — the
+# fallback / MCQ / salvage layers solve many near-identical
+# candidate strings per chat question, so the same normalisation
+# was paid again and again. Memoised: identical input, identical
+# output, no semantics change.
+@lru_cache(maxsize=2048)
 def _normalize_spelling(question: str) -> str:
     text = _superscripts_to_caret(str(question))
     text = text.translate(_DEV_DIGIT_TABLE)
@@ -539,6 +553,7 @@ _DEV_VARIANTS = {
 }
 
 
+@lru_cache(maxsize=2048)
 def normalize_hinglish(question: str) -> str:
     q = " " + question.strip() + " "
     ql = q.lower()
@@ -568,6 +583,26 @@ def normalize_hinglish(question: str) -> str:
             ql = " " + ql.rsplit("chhodo", 1)[0].strip(" ,:—") \
                 + " " + _tail + " "
         q = ql
+
+    # Wave 92: speed-unit normalisation. Students write the
+    # speed unit as "40 km per hour", "40 km/hour", "40 kmph"
+    # or "40 (kilo)metre/km prati ghanta", but every train
+    # rewrite below keys on the canonical "km/h" — so the
+    # whole distance-first family ("360 km jati hai 40 km
+    # per hour ki speed se, kitne ghante lagenge") fell
+    # through, and the bare unit number was even misread as
+    # a distance by the speed rule ("60 km per hour ... 3
+    # ghante, kitni doori" answered speed 60/3 = 20).
+    # Canonicalise the unit here, before any rewrite runs.
+    ql = re.sub(r"(\d+(?:\.\d+)?)\s*(?:km|kilometres?|"
+                r"kilometers?)\s+prati\s+ghanta\b",
+                r"\1 km/h", ql)
+    ql = re.sub(r"(\d+(?:\.\d+)?)\s*km\s*/\s*hour\b",
+                r"\1 km/h", ql)
+    ql = re.sub(r"(\d+(?:\.\d+)?)\s*(?:km|kilometres?|"
+                r"kilometers?)\s+per\s+hour\b",
+                r"\1 km/h", ql)
+    ql = re.sub(r"(\d+(?:\.\d+)?)\s*kmph\b", r"\1 km/h", ql)
 
     # Wave 65 (top priority): three shapes an early generic
     # rule below answers WRONGLY — the "ko bhaag dene par
@@ -764,6 +799,37 @@ def normalize_hinglish(question: str) -> str:
         if m:
             return (f"how long does a train take to travel "
                     f"{m.group(1)} km at {m.group(2)} km/h")
+    # Wave 92: distance-first time ask — "ek tren 360 km
+    # jati hai 40 km/h ki speed se, kitne ghante lagenge"
+    # (the rules above only cover speed-first order and the
+    # exact "km jana hai" frame). Unit variants reach here
+    # already canonicalised to km/h at the top. Guarded
+    # like the Wave 30 distance rule: conditionals (agar /
+    # hoti to / zyada / kam lagta) belong to the quadratic
+    # schema further down and must never be claimed here.
+    if (("lag" in ql and ("ghante" in ql or "time" in ql
+                          or "samay" in ql or "der" in ql))
+            or "how long" in ql) \
+            and "agar" not in ql and "hoti" not in ql \
+            and "zyada" not in ql and "kam lag" not in ql:
+        m = re.search(r"(\d+(?:\.\d+)?)\s*km\b[^0-9]{0,40}?"
+                      r"(\d+(?:\.\d+)?)\s*km/h", ql)
+        if m:
+            return (f"how long does a train take to travel "
+                    f"{m.group(1)} km at {m.group(2)} km/h")
+    # Wave 92: time-first distance ask — "ek car 2 ghante
+    # me 80 km/h ki speed se kitni doori jayegi" (the
+    # Wave 30 distance rule above needs speed before the
+    # hours). Same conditional guards.
+    if ("doori" in ql or "distance" in ql) \
+            and "agar" not in ql and "hoti" not in ql \
+            and "zyada" not in ql and "kam lag" not in ql:
+        m = re.search(r"(\d+(?:\.\d+)?)\s*(?:ghante|hours)"
+                      r"[^0-9]{0,40}?(\d+(?:\.\d+)?)"
+                      r"\s*km/h", ql)
+        if m:
+            return (f"{m.group(2)} km/h for {m.group(1)} "
+                    f"hours")
     # Rectangle area: lambai/chaudai or length/breadth forms.
     m = re.search(r"aayat[^0-9]{0,40}?lambai\s+(?:hai\s+)?"
                   r"(\d+(?:\.\d+)?)[^0-9]{0,20}?chaudai\s+"
@@ -2782,9 +2848,11 @@ def route_intent(question: str) -> str:
     if re.search(
             r"(dy/dx|d2y|y\'|differential|dsolve|derivative|"
             r"differentiate|integration|integral|integrate|"
-            r"avakalan|samakalan|"
+            r"avakalan|samakalan|∫|समाकलन|अवकलज|"
             r"\blimit\b|\blim\b|d/d|partial"
-            r"|continu\w*|differentiab\w*)", q) or re.search(
+            r"|continu\w*|differentiab\w*"
+            r"|increasing\s+at\s+the\s+rate"
+            r"|decreasing\s+at\s+the\s+rate)", q) or re.search(
             r"\bintegrat\w*\b.+\b(graph|shade|plot)\b", q) or \
             re.search(r"rate\s+of\s+change", q) or re.search(
             r"slope\s+of\s+(the\s+)?(tangent|normal)\b", q) or \
@@ -3163,6 +3231,15 @@ def solve_question(question: str):
     cached = get_cached(question)
     if cached is not None:
         return cached
+    # Wave 97 (speed): an identical string that failed a moment
+    # ago fails identically now (the solver is deterministic) —
+    # serve the memoised error instead of re-walking the whole
+    # pipeline for it. One chat question re-solves its failing
+    # cores through several layers; see answer_cache's failure
+    # memo for the TTL/graph/deep-copy rules.
+    failed = get_failure(question)
+    if failed is not None:
+        return failed
     reason = _dangerous_shape(question)
     if reason is not None:
         log.warning("solve pre-guard refused %r (%s)",
@@ -3170,6 +3247,7 @@ def solve_question(question: str):
         return _too_big_result()
     result = _solve_with_budget(question)
     put_cached(question, result)
+    put_failure(question, result)
     return result
 
 
@@ -3209,6 +3287,7 @@ def solve_question(question: str):
 # ---------------------------------------------------------------------------
 
 _W77_LOCAL = threading.local()
+_W94_LOCAL = threading.local()
 
 _W77_FILLER_WORDS = {
     "please", "plz", "batao", "bata", "samjhao", "samjha", "do",
@@ -3710,6 +3789,8 @@ def _solve_question_uncached(question: str):
     # through to normal routing whenever it cannot solve them.
     if re.search(
             r"length of (?:the )?tangent"
+            r"|centre of the circle"
+            r"|center of the circle"
             r"|angle between (?:the )?(?:two )?tangents"
             r"|\bchord\b"
             r"|\bcentroid\b"
@@ -3945,6 +4026,59 @@ def _solve_question_uncached(question: str):
             if was_translated:
                 out["interpreted_as"] = translated
             return out
+
+    # Wave 80 gates (Class 12 pack). Three board-text families
+    # no intent pattern reads: (1) vector glyphs — î/ĵ/k̂ and
+    # a⃗ combining marks — plus the vector asks; the vectors
+    # module claims them in milliseconds, which also kills
+    # the audit's >20 s timeout family (an unsolvable stem
+    # used to be retried through ~11 full-pipeline MCQ
+    # candidates). (2) Bar determinants |a b; c d|, an unnamed
+    # scalar x matrix, and the matrix counting facts — the
+    # linear_algebra intent needs '[[', which these lack.
+    # (3) Hindi brace-form continuity (संतत), whose stems the
+    # 'continu...' guard never sees. Every gate accepts ONLY
+    # its own ops and falls through unchanged otherwise.
+    if re.search("[îĵ]|[ijk]\u0302|[A-Za-z]\u20d7|"
+                 r"unit\s+vector|इकाई\s+सदिश|मात्रक\s+सदिश|"
+                 r"parallelogram|direction\s+cosines|"
+                 r"equation\s+of\s+(the\s+)?(xy|yz|zx)[-\s]?plane",
+                 original, re.I):
+        try:
+            _v80 = solve_vectors(original)
+        except Exception:
+            _v80 = None
+        if _v80 is not None:
+            if was_translated:
+                _v80["interpreted_as"] = translated
+            return _v80
+    _wl80 = working.lower()
+    if re.search(r"\|[^|]*;[^|]*\|", working) or \
+            re.search(r"\d\s*\[[^\[\]]*;[^\[\]]*\]", working) or \
+            re.search(r"number\s+of\s+(all\s+)?(possible\s+)?"
+                      r"matrices", _wl80) or \
+            (re.search(r"has\s+\d+\s+elements", _wl80)
+             and "order" in _wl80):
+        try:
+            _la80 = solve_linear_algebra(working)
+        except Exception:
+            _la80 = None
+        if _la80 is not None and str(_la80.get("op", "")) in (
+                "bar_determinant", "scalar_matrix_unnamed",
+                "matrix_count_entries", "matrix_orders_count"):
+            if was_translated:
+                _la80["interpreted_as"] = translated
+            return _la80
+    if "{" in working and ";" in working and "संतत" in working:
+        try:
+            _bc80 = solve_calculus(working)
+        except Exception:
+            _bc80 = None
+        if _bc80 is not None and str(_bc80.get("op", "")) in (
+                "continuity_find_k", "continuity_check"):
+            if was_translated:
+                _bc80["interpreted_as"] = translated
+            return _bc80
 
     intent = route_intent(working)
 
@@ -4239,6 +4373,31 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     core.setdefault("interpreted_as", translated)
                 return core
+        # Wave 94: Class 10 board-paper method schemas
+        # (solver/papers10.py) — the same failure-only gate as
+        # the Wave 77 pass: the primary result is a failure or
+        # letter-soup, so before it falls through, try the
+        # paper-method families (coordinate geometry, AP
+        # term facts, zeros relations, fact-MCQ verifiers,
+        # tangent/shadow/heights geometry, mensuration and
+        # statistics forms). A real primary answer is never
+        # displaced, and papers10 returns None unless one of
+        # its strict schemas matches completely.
+        if getattr(_W94_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W94_LOCAL.depth = 1
+            try:
+                w94 = solve_papers10(original)
+                if w94 is None and working != original:
+                    w94 = solve_papers10(working)
+            except Exception:
+                w94 = None
+            finally:
+                _W94_LOCAL.depth = 0
+            if w94 is not None:
+                if was_translated:
+                    w94.setdefault("interpreted_as", translated)
+                return w94
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])

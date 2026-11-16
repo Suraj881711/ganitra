@@ -11,6 +11,171 @@ from .expression_parser import fmt, fmt_num, parse_expression
 
 _x = symbols("x")
 
+# ---------------------------------------------------------------------------
+# Wave 100: order & degree of a differential equation, by inspection.
+#
+# The Wave 93 audit's regression #2 was a Hindi MCQ that asks only
+# for the DEGREE (घात) of an ODE — "अवकल समीकरण x·(d²y/dx²) +
+# xy(dy/dx)² − xy(dy/dx) = 0 का घात है (a) 1 (b) 2 …". The question
+# never needed the equation SOLVED, but solve_calculus routed it
+# into _ode -> dsolve, whose classify_ode factorisation explodes
+# combinatorially on the y·(y')² shape (sympy polys dmp_inflate
+# recursion) and burned the whole 10 s solve budget twice over
+# (original + the app layer's retry) before the MCQ layer could
+# even look at it: an audit ERROR_TIMEOUT. Order and degree are
+# facts OF the equation's text — the highest derivative present
+# and the power it is raised to — so they are read off with a
+# pure text scan (no SymPy work at all) and answered directly.
+# ---------------------------------------------------------------------------
+
+_SUPERSCRIPT_DIGITS = {
+    "⁰": "^0", "¹": "^1", "²": "^2", "³": "^3", "⁴": "^4",
+    "⁵": "^5", "⁶": "^6", "⁷": "^7", "⁸": "^8", "⁹": "^9",
+}
+
+
+def _ode_scan_text(text):
+    """Normalise the derivative spellings of an ODE text for the
+    order/degree scan: Unicode superscripts become ^n, and the
+    compact ASCII forms (d2y/dx2) gain their carets."""
+    t = str(text or "")
+    for sup, caret in _SUPERSCRIPT_DIGITS.items():
+        t = t.replace(sup, caret)
+    t = re.sub(r"d(\d+)y/dx(\d+)", r"d^\1y/dx^\2", t)
+    t = re.sub(r"dy/dx", "dy/dx", t)
+    return t
+
+
+def ode_order_degree(text):
+    """(order, degree) of the differential equation in `text`,
+    read off its derivative tokens, or None when the text holds
+    no derivative at all. degree is None when the highest
+    derivative is not raised to a plain positive-integer power
+    in a polynomial way (inside sin/log/exp/sqrt, or under a
+    fractional power) — the degree is then NOT DEFINED and the
+    caller must not invent one.
+
+    Derivative tokens recognised: d^ny/dx^n (any spelling),
+    dy/dx, and the prime forms y', y'', y'''. The power of a
+    token is the ^n attached to the token itself or to its
+    closing parenthesis — "(dy/dx)^2" — never a power applied
+    to a larger bracket around it ("[1 + (dy/dx)^2]^3" leaves
+    the dy/dx power at 2)."""
+    t = _ode_scan_text(text)
+    found = []  # (order, power, start, end)
+
+    def _power_after(end):
+        rest = t[end:end + 8]
+        m = re.match(r"\s*\)\s*\^\s*(\d+)", rest)
+        if m:
+            return int(m.group(1))
+        m = re.match(r"\s*\^\s*(\d+)", rest)
+        if m:
+            return int(m.group(1))
+        return 1
+
+    for m in re.finditer(r"d\^(\d+)y/dx\^(\d+)", t):
+        found.append((int(m.group(1)), _power_after(m.end()),
+                      m.start(), m.end()))
+    for m in re.finditer(r"(?<![a-z])dy/dx", t):
+        found.append((1, _power_after(m.end()), m.start(),
+                      m.end()))
+    for m in re.finditer(r"y('{2,})", t):
+        found.append((len(m.group(1)), _power_after(m.end()),
+                      m.start(), m.end()))
+    for m in re.finditer(r"(?<![a-z'])y'(?![a-z'])", t):
+        found.append((1, _power_after(m.end()), m.start(),
+                      m.end()))
+    if not found:
+        return None
+    order = max(o for o, _p, _s, _e in found)
+    # Degree is undefined when the highest-order derivative sits
+    # inside a transcendental call — sin(dy/dx), log(d2y/dx2)…
+    for o, _p, s, _e in found:
+        if o != order:
+            continue
+        head = t[max(0, s - 12):s]
+        if re.search(r"(sin|cos|tan|sec|csc|cot|log|ln|exp|"
+                     r"sqrt)\s*\($", head):
+            return (order, None)
+    powers = [p for o, p, _s, _e in found if o == order]
+    degree = powers[0] if len(set(powers)) == 1 else max(powers)
+    return (order, degree)
+
+
+_ODE_FACT_ASK = re.compile(
+    r"अवकल|differential\s+equation", re.I)
+_ODE_DEGREE_ASK = re.compile(r"घात|\bdegree\b", re.I)
+_ODE_ORDER_ASK = re.compile(r"कोटि|\border\b", re.I)
+_ODE_SOLVE_ASK = re.compile(
+    r"\bsolve\b|हल\s+कर|dsolve", re.I)
+
+
+def _ode_order_degree_result(q):
+    """The direct answer for a question that asks ONLY for the
+    order and/or degree of a differential equation (Wave 100).
+    Fires solely when the text names a differential equation
+    (अवकल / "differential equation"), asks for घात/degree and/or
+    कोटि/order, and does not ask for the equation to be solved;
+    anything else returns None and the dsolve path runs exactly
+    as before. A both-fact ask on an options-bearing text is
+    left to the MCQ layer (a single computed value is what its
+    matcher can name); a plain both-fact ask is answered in
+    words."""
+    if "=" not in q:
+        return None
+    if not _ODE_FACT_ASK.search(q):
+        return None
+    want_degree = bool(_ODE_DEGREE_ASK.search(q))
+    want_order = bool(_ODE_ORDER_ASK.search(q))
+    if not (want_degree or want_order):
+        return None
+    if _ODE_SOLVE_ASK.search(q):
+        return None
+    got = ode_order_degree(q)
+    if got is None:
+        return None
+    order, degree = got
+    options_bearing = len(re.findall(r"\(\s*[a-dA-D]\s*\)", q)) >= 2
+    if want_degree and want_order:
+        if options_bearing:
+            return None
+        if degree is None:
+            return None
+        return {
+            "type": "calculus", "op": "ode_order_degree",
+            "answer": f"Order = {order}, Degree = {degree}",
+            "steps": [
+                "The order is the highest derivative present "
+                f"in the equation: order = {order}.",
+                "The degree is the power of that highest "
+                f"derivative: degree = {degree}.",
+            ],
+        }
+    if want_degree:
+        if degree is None:
+            return None
+        return {
+            "type": "calculus", "op": "ode_degree",
+            "answer": str(degree),
+            "steps": [
+                "The degree of a differential equation is the "
+                "power of its highest-order derivative.",
+                f"Here the highest derivative appears with "
+                f"power {degree}, so the degree is {degree}.",
+            ],
+        }
+    return {
+        "type": "calculus", "op": "ode_order",
+        "answer": str(order),
+        "steps": [
+            "The order of a differential equation is the "
+            "highest derivative present in it.",
+            f"Here that is a derivative of order {order}, "
+            f"so the order is {order}.",
+        ],
+    }
+
 
 def _guess_symbol(expr):
     return next(iter(expr.free_symbols), _x)
@@ -124,6 +289,28 @@ def _ode(q: str):
     text = re.sub(r"\band\s*$", "", text).strip(" ,;")
     text = re.sub(r"\bwith\b.*$", "", text, flags=re.I).strip(" ,;")
 
+    # Wave 80: prose guard. The implicit-form branch below
+    # letter-splits every multi-letter word it cannot name
+    # (xy -> x*y), so a FACT question about an equation —
+    # "Integrating factor of the differential Equation
+    # dy/dx + y logx = cosx is" — tokenised into dozens of
+    # one-letter symbols and dsolve churned on the soup for
+    # ~39 s (Wave 71 audit timeout family). A real ODE's text
+    # contains no alphabetic word of 3+ letters except
+    # function names (or glued forms like cosx/logx, which
+    # START with a function name). Anything else is prose:
+    # refuse fast and let the fact schemas answer.
+    _FUNC_WORDS = ("sin", "cos", "tan", "exp", "log", "sqrt",
+                   "cot", "sec", "csc", "asin", "acos", "atan",
+                   "sinh", "cosh", "tanh", "abs")
+    for _w in re.findall(r"[A-Za-z]{3,}", text):
+        _wl = _w.lower()
+        if _wl in _FUNC_WORDS:
+            continue
+        if any(_wl.startswith(_f) for _f in _FUNC_WORDS):
+            continue
+        return None
+
     if "=" not in text:
         return None
     left, right = text.split("=", 1)
@@ -178,6 +365,13 @@ def _ode(q: str):
         sol_eq = sp.Eq(lexpr.subs(subs_map), rexpr.subs(subs_map))
         ode_text = text.replace("d2y/dx2", "y''")
     else:
+        return None
+
+    # Wave 80: symbol guard — an equation carrying more than
+    # a couple of stray symbols is letter-soup, not an ODE;
+    # never hand it to dsolve.
+    _extra = sol_eq.free_symbols - {_x, yx}
+    if len(_extra) > 3:
         return None
 
     try:
@@ -352,8 +546,357 @@ def _conic_tangent_normal(q, qlow):
         return None
 
 
+# ---------------------------------------------------------------------------
+# Wave 80: Class 12 calculus pack — the ∫ glyph (with Unicode
+# sub/superscript limits), glued function forms (sinx, logx,
+# cosec x, tan⁻¹x), brace-form continuity (incl. Hindi संतत
+# stems), implicit dy/dx, integrating factor, order & degree,
+# Hindi अवकलज derivatives, (d/dx)(...) form, and chain-rate
+# area schemas. Every general-path integral is verified by
+# differentiating the antiderivative back before it is shown.
+# ---------------------------------------------------------------------------
+
+_SUP_MAP = {"⁰": "0", "¹": "1", "²": "2", "³": "3", "⁴": "4",
+            "⁵": "5", "⁶": "6", "⁷": "7", "⁸": "8", "⁹": "9"}
+_SUB_MAP = {"₀": "0", "₁": "1", "₂": "2", "₃": "3", "₄": "4",
+            "₅": "5", "₆": "6", "₇": "7", "₈": "8", "₉": "9"}
+
+
+def _w80_glue(text):
+    """Normalise board/student function spellings into forms
+    parse_expression reads: sinx -> sin(x), logx -> log(x),
+    cosec -> csc, sin⁻¹(x) -> asin(x), x² -> x^2, √ -> sqrt,
+    π -> pi."""
+    t = str(text).replace("−", "-").replace("π", "pi")
+    # parse_expression reads a bare 'e' as a free symbol, not
+    # Euler's number — e^x must become exp(x) or nothing
+    # downstream (division, verification) can cancel it.
+    t = re.sub(r"\be\s*\^\s*\(\s*([^()]*)\s*\)", r"exp(\1)", t)
+    t = re.sub(r"\be\s*\^\s*([A-Za-z0-9]+)", r"exp(\1)", t)
+    t = t.replace("⁻¹", "^-1").replace("⁻", "-")
+    for ch, d in _SUP_MAP.items():
+        t = t.replace(ch, "^" + d)
+    t = re.sub(r"(sin|cos|tan|sec|csc|cot)\s*\^\s*-\s*1\s*"
+               r"(?:\(([^()]*)\)|([A-Za-z0-9]+))",
+               lambda m: f"a{m.group(1)}({m.group(2) or m.group(3)})",
+               t)
+    t = re.sub(r"\bcosec\b", "csc", t)
+    t = re.sub(r"√\s*\(([^()]*)\)", r"sqrt(\1)", t)
+    t = re.sub(r"√\s*([A-Za-z0-9]+)", r"sqrt(\1)", t)
+    t = re.sub(r"\b(sin|cos|tan|sec|csc|cot|log|exp|sqrt)\s*"
+               r"([A-Za-z])(?![A-Za-z(])", r"\1(\2)", t)
+    return t
+
+
+def _w80_cut_options(text):
+    m = re.search(r"\(\s*[aA]\s*\)\s", text)
+    return text[:m.start()].strip() if m else text
+
+
+def _w80_integral(q):
+    """Solve a question carrying the ∫ glyph. Returns a result
+    dict or None (fall through unchanged)."""
+    s = q[q.index("∫"):]
+    lo = hi = None
+    rest = s[1:]
+    # Limit spellings: "(0 to 1)", "_{0}^{1}", "_0^1", and the
+    # Unicode runs ∫₂⁸ — including the router-folded mixed
+    # form ∫₂^8, since the router's superscript cleaning has
+    # already rewritten superscript digits to ^N by the time
+    # the question reaches this solver.
+    mp = re.match(r"\s*\(\s*(.+?)\s+to\s+(.+?)\s*\)", rest)
+    if mp:
+        lo, hi, rest = mp.group(1), mp.group(2), rest[mp.end():]
+    else:
+        ms = re.match(r"\s*(?:_\{([^}]*)\}|_(\d+)|"
+                      r"([₀₁₂₃₄₅₆₇₈₉]+))", rest)
+        if ms:
+            lo = ms.group(1) or ms.group(2) or "".join(
+                _SUB_MAP.get(c, c) for c in ms.group(3))
+            rest = rest[ms.end():]
+            mu = re.match(r"\s*(?:\^\{([^}]*)\}|\^(\d+)|"
+                          r"([⁰¹²³⁴⁵⁶⁷⁸⁹]+))", rest)
+            if mu:
+                hi = mu.group(1) or mu.group(2) or "".join(
+                    _SUP_MAP.get(c, c) for c in mu.group(3))
+                rest = rest[mu.end():]
+    rest = rest.strip()
+    # Integrand and differential variable.
+    var = "x"
+    integrand = None
+    md = re.match(r"d([a-z])\s*/\s*(.+)$", rest)
+    if md:  # ∫ dx/(1 + x^2): the differential leads.
+        var = md.group(1)
+        integrand = "1/" + md.group(2).strip()
+    else:
+        md = re.search(r"(.+?)\s*d([a-z])\b", rest)
+        if md:
+            integrand, var = md.group(1).strip(), md.group(2)
+        elif rest:
+            integrand = rest
+    if not integrand:
+        return None
+    integrand = integrand.strip().rstrip(".").rstrip("=").strip()
+    integrand = re.sub(r"\|([^|]+)\|", r"Abs(\1)", integrand)
+    integrand = _w80_glue(integrand)
+    vsym = symbols(var)
+
+    def _num(text):
+        return parse_expression(_w80_glue(str(text).strip()))
+
+    lo_v = _num(lo) if lo is not None else None
+    hi_v = _num(hi) if hi is not None else None
+    definite = lo_v is not None and hi_v is not None
+
+    # Schema: ∫(0 to 1) x(1 - x)^n dx = 1/((n + 1)(n + 2))
+    # (Beta function B(2, n + 1)); SymPy returns a Piecewise
+    # for the symbolic n, so the closed form is given directly.
+    if definite and lo_v == 0 and hi_v == 1 and re.fullmatch(
+            r"x\s*\(\s*1\s*-\s*x\s*\)\s*\^\s*\(?\s*n\s*\)?",
+            integrand):
+        n = symbols("n")
+        val = 1 / ((n + 1) * (n + 2))
+        steps = [
+            "Put u = 1 - x, so the integral becomes "
+            "∫(0 to 1) (1 - u) u^n du.",
+            "= [u^(n+1)/(n+1) - u^(n+2)/(n+2)] from 0 to 1",
+            f"= 1/((n + 1)(n + 2))",
+        ]
+        return {"type": "calculus", "op": "definite_integral",
+                "answer": fmt(val), "steps": steps}
+
+    try:
+        expr = parse_expression(integrand)
+    except Exception:
+        return None
+    if expr.has(sp.Integral):
+        return None
+
+    # Schema: ∫ csc x dx and friends have textbook log forms
+    # that SymPy's -log(csc x + cot x) style answers obscure.
+    if not definite:
+        _std = {sp.csc(vsym): "log|tan(x/2)| + C",
+                sp.sec(vsym): "log|sec x + tan x| + C",
+                sp.tan(vsym): "log|sec x| + C",
+                sp.cot(vsym): "log|sin x| + C"}
+        if expr in _std and var == "x":
+            return {"type": "calculus", "op": "integral",
+                    "answer": _std[expr],
+                    "steps": [f"∫ {integrand} dx is a standard "
+                              f"form: {_std[expr]}"]}
+
+    # Schema: ∫ sec^2(linear) / csc^2(linear) — the general
+    # integrator leaves these unevaluated.
+    _sec2 = None
+    if isinstance(expr, sp.Pow) and expr.exp == 2 and \
+            isinstance(expr.base, (sp.sec, sp.csc)):
+        _u = expr.base.args[0]
+        _du = sp.diff(_u, vsym)
+        if _du != 0 and sp.simplify(sp.diff(_u, vsym, 2)) == 0:
+            _anti_fn = sp.tan if isinstance(expr.base, sp.sec) \
+                else lambda z: -sp.cot(z)
+            _sec2 = _anti_fn(_u) / _du
+
+    if definite:
+        val = None
+        if _sec2 is not None:
+            val = sp.simplify(_sec2.subs(vsym, hi_v)
+                              - _sec2.subs(vsym, lo_v))
+        else:
+            try:
+                got = sp.integrate(expr, (vsym, lo_v, hi_v))
+            except Exception:
+                got = None
+            if got is not None and not got.has(
+                    sp.Integral, sp.zoo, sp.nan, sp.Piecewise):
+                val = sp.simplify(got)
+            if val is None:
+                val = _w80_abs_linear_definite(
+                    expr, vsym, lo_v, hi_v)
+        if val is None or not val.is_number:
+            return None
+        steps = [f"Integrate {integrand} with respect to {var}.",
+                 f"Substitute the limits {fmt(lo_v)} to "
+                 f"{fmt(hi_v)}.",
+                 f"Value = {fmt(val)}"]
+        return {"type": "calculus", "op": "definite_integral",
+                "answer": fmt(val), "steps": steps}
+
+    # Indefinite. First two textbook schemas whose answers the
+    # general integrator either misses or presents in an
+    # expanded form the MCQ options do not use:
+    # (a) ∫ e^x (f + f') dx = e^x f — try each subexpression
+    #     of the bracket as f and check f + f' exactly.
+    # (b) ∫ h(u)·u' dx by substitution — try each inner
+    #     subexpression u (power base, function argument);
+    #     the quotient expr/u' must be a function of u alone.
+    # Both are exact checks, and the result is still verified
+    # by differentiation below.
+    F = _sec2
+    if F is None and expr.has(sp.exp):
+        try:
+            _bracket = expr / sp.exp(vsym)
+            if not _bracket.has(sp.exp):
+                # f must be one of the bracket's sum terms
+                # (asin x in 1/sqrt(1 - x^2) + asin x); the
+                # check is a syntactic expand — fast, exact.
+                _cands = list(_bracket.args) if isinstance(
+                    _bracket, sp.Add) else [_bracket]
+                for _g in _cands:
+                    if not _g.has(vsym):
+                        continue
+                    if sp.expand(_bracket - _g - sp.diff(
+                            _g, vsym)) == 0:
+                        F = sp.exp(vsym) * _g
+                        break
+        except Exception:
+            F = None
+    if F is None:
+        try:
+            _cands = set()
+            for _node in sp.preorder_traversal(expr):
+                if isinstance(_node, sp.Pow) and \
+                        _node.base.has(vsym):
+                    _cands.add(_node.base)
+                if getattr(_node, "is_Function", False) and \
+                        _node.args and _node.args[0].has(vsym):
+                    _cands.add(_node.args[0])
+            _U = symbols("U")
+            # Deepest inner expression first; u = x itself is
+            # the trivial non-substitution and is excluded.
+            for _u in sorted(_cands, key=lambda z: -len(str(z))):
+                if _u == vsym:
+                    continue
+                _du = sp.diff(_u, vsym)
+                if _du == 0:
+                    continue
+                # Plain division: Mul canonicalisation
+                # already cancels u' (cancel() would EXPAND
+                # the quotient and destroy the inner u).
+                _quot = expr / _du
+                _h = _quot.subs(_u, _U)
+                if _h.has(vsym) or _h.has(sp.Integral):
+                    continue
+                _H = sp.integrate(_h, _U)
+                if _H.has(sp.Integral, sp.zoo, sp.nan):
+                    continue
+                F = _H.subs(_U, _u)
+                break
+        except Exception:
+            F = None
+    if F is None:
+        try:
+            F = sp.integrate(expr, vsym)
+        except Exception:
+            return None
+    if F is None or F.has(sp.Integral, sp.zoo, sp.nan):
+        return None
+    try:
+        if sp.simplify(sp.diff(F, vsym) - expr) != 0:
+            return None
+    except Exception:
+        return None
+    steps = [f"Integrate {integrand} with respect to {var} "
+             f"(standard forms / substitution).",
+             f"∫ {integrand} d{var} = {fmt(F)} + C"]
+    return {"type": "calculus", "op": "integral",
+            "answer": f"{fmt(F)} + C", "steps": steps}
+
+
+def _w80_abs_linear_definite(expr, vsym, lo_v, hi_v):
+    """∫|linear| over [lo, hi]: split at the root."""
+    abs_args = [a.args[0] for a in expr.atoms(sp.Abs)]
+    if len(abs_args) != 1:
+        return None
+    arg = abs_args[0]
+    if sp.diff(arg, vsym, 2) != 0:
+        return None
+    root = sp.solve(sp.Eq(arg, 0), vsym)
+    if not root:
+        return None
+    r = root[0]
+    if not (bool(lo_v < r) and bool(r < hi_v)):
+        signed = expr.subs(sp.Abs(arg),
+                           arg if sp.sign(arg.subs(
+                               vsym, (lo_v + hi_v) / 2)) > 0 else -arg)
+        try:
+            return sp.simplify(sp.integrate(signed,
+                                            (vsym, lo_v, hi_v)))
+        except Exception:
+            return None
+    neg = expr.subs(sp.Abs(arg), -arg)
+    pos = expr.subs(sp.Abs(arg), arg)
+    try:
+        return sp.simplify(
+            sp.integrate(neg, (vsym, lo_v, r))
+            + sp.integrate(pos, (vsym, r, hi_v)))
+    except Exception:
+        return None
+
+
+def _w80_brace_continuity(q):
+    """f(x) = {3x + 5, x ≥ 2; kx^2, x < 2} is continuous:
+    equate the two branches at the joining point and solve
+    for the parameter."""
+    mb = re.search(r"\{([^}]*)\}", q)
+    if not mb:
+        return None
+    parts = mb.group(1).split(";")
+    if len(parts) != 2:
+        return None
+    branches = []
+    for part in parts:
+        mp = re.match(r"\s*(.+?)\s*,\s*x\s*(>=|<=|≥|≤|>|<)\s*"
+                      r"(-?\d+(?:\.\d+)?)\s*$", part)
+        if not mp:
+            return None
+        branches.append((mp.group(1), mp.group(2),
+                         sp.Rational(mp.group(3))))
+    (e1, c1, a1), (e2, c2, a2) = branches
+    if a1 != a2:
+        return None
+    a = a1
+    x = symbols("x")
+    try:
+        b1 = parse_expression(_w80_glue(e1))
+        b2 = parse_expression(_w80_glue(e2))
+    except Exception:
+        return None
+    params = (b1.free_symbols | b2.free_symbols) - {x}
+    if len(params) != 1:
+        return None
+    param = next(iter(params))
+    v_at = b1 if c1 in (">=", "<=", "≥", "≤") else b2
+    v_other = b2 if v_at is b1 else b1
+    sol = sp.solve(sp.Eq(v_at.subs(x, a), v_other.subs(x, a)),
+                   param)
+    if not sol:
+        return None
+    steps = [
+        f"For continuity at x = {fmt(a)}, the two pieces must "
+        f"meet: value from one side = limit from the other.",
+        f"{e1.strip()} at x = {fmt(a)} gives "
+        f"{fmt(v_at.subs(x, a))}; {e2.strip()} at x = {fmt(a)} "
+        f"gives {fmt(v_other.subs(x, a))}.",
+        f"Equating them: {param} = {fmt(sol[0])}",
+    ]
+    return {"type": "calculus", "op": "continuity_find_k",
+            "answer": f"{param} = {fmt(sol[0])}", "steps": steps}
+
+
 def solve_calculus(question: str):
     q = question.strip()
+
+    # --- Wave 80: the ∫ glyph (board papers write integrals
+    # with ∫ and Unicode limits; no earlier pattern reads the
+    # glyph, so these fell through every block) ----
+    if "∫" in q:
+        try:
+            _ri = _w80_integral(_w80_cut_options(q))
+        except Exception:
+            _ri = None
+        if _ri is not None:
+            return _ri
 
     # --- Wave 32: continuity / differentiability at a point ----
     _qlow = q.lower()
@@ -562,6 +1105,236 @@ def solve_calculus(question: str):
                           f"where needed).",
                           f"dy/dx = {fmt(_dd)}"],
                 "latex": sp.latex(_dd)}
+        except Exception:
+            pass
+
+    # Wave 100: an ask for the ORDER / DEGREE of a differential
+    # equation is a fact about the equation's text, not a request
+    # to solve it — answer it by inspection and never let it
+    # reach dsolve (whose classifier factorisation explodes on
+    # shapes like y·(y')² and burned the whole solve budget on
+    # the Wave 93 audit's Hindi degree MCQ).
+    _od = _ode_order_degree_result(q)
+    if _od is not None:
+        return _od
+
+    # --- Wave 80: brace-form continuity (Hindi संतत stems
+    # never reach the Wave 32 block, whose guard needs the
+    # English word 'continu...') ----
+    if "{" in q and ";" in q and ("संतत" in q or "continu" in _qlow):
+        try:
+            _bc = _w80_brace_continuity(q)
+        except Exception:
+            _bc = None
+        if _bc is not None:
+            return _bc
+
+    # --- Wave 80: (d/dx)(...) derivative form ----
+    _mddx = re.search(r"\(\s*d\s*/\s*d([a-z])\s*\)\s*\(", q)
+    if _mddx:
+        try:
+            _start = _mddx.end() - 1
+            _depth, _end = 0, None
+            for _i in range(_start, len(q)):
+                if q[_i] == "(":
+                    _depth += 1
+                elif q[_i] == ")":
+                    _depth -= 1
+                    if _depth == 0:
+                        _end = _i
+                        break
+            if _end is not None:
+                _dexpr = parse_expression(
+                    _w80_glue(q[_start + 1:_end]))
+                _dvar = symbols(_mddx.group(1))
+                _dd = _textbook_trig(diff(_dexpr, _dvar))
+                return {
+                    "type": "calculus", "op": "derivative",
+                    "answer": fmt(_dd), "value": fmt(_dd),
+                    "steps": [f"y = {fmt(_dexpr)}",
+                              f"Differentiate with respect to "
+                              f"{_dvar}.",
+                              f"(d/dx)({fmt(_dexpr)}) = "
+                              f"{fmt(_dd)}"],
+                    "latex": sp.latex(_dd)}
+        except Exception:
+            pass
+
+    # --- Wave 80: Hindi derivative — 'x के सापेक्ष <expr> का
+    # अवकलज' ----
+    if "अवकलज" in q and "समीकरण" not in q:
+        _mh = re.search(r"(.+?)\s*का\s+अवकलज", q)
+        if _mh:
+            try:
+                _hexpr = re.sub(r"^\s*[a-zA-Z]\s*के\s+सापेक्ष\s*",
+                                "", _mh.group(1)).strip()
+                _dexpr = parse_expression(_w80_glue(_hexpr))
+                _dvar = _guess_symbol(_dexpr) or symbols("x")
+                _dd = _textbook_trig(diff(_dexpr, _dvar))
+                return {
+                    "type": "calculus", "op": "derivative",
+                    "answer": fmt(_dd), "value": fmt(_dd),
+                    "steps": [f"y = {fmt(_dexpr)}",
+                              f"Differentiate with respect to "
+                              f"{_dvar} (chain rule).",
+                              f"dy/dx = {fmt(_dd)}"],
+                    "latex": sp.latex(_dd)}
+            except Exception:
+                pass
+
+    # --- Wave 80: integrating factor of dy/dx + P(x)·y = Q(x)
+    # (a FACT question — it must never reach dsolve, which
+    # used to churn on the prose for ~39 s) ----
+    if "integrating factor" in _qlow or "समाकलन गुणक" in q:
+        try:
+            _stem = _w80_cut_options(q)
+            _mif = re.search(r"dy/dx\s*\+\s*y\s*(.+?)\s*=", _stem)
+            if _mif:
+                _P = parse_expression(_w80_glue(
+                    _mif.group(1).strip()))
+                _xv = _guess_symbol(_P) or symbols("x")
+                _intP = sp.integrate(_P, _xv)
+                if not _intP.has(sp.Integral, sp.zoo, sp.nan):
+                    _IF = sp.exp(_intP)
+                    return {
+                        "type": "calculus",
+                        "op": "integrating_factor",
+                        "answer": fmt(_IF),
+                        "steps": [
+                            "Write the equation as dy/dx + "
+                            "P(x)·y = Q(x).",
+                            f"Here P(x) = {fmt(_P)}.",
+                            "Integrating factor = "
+                            "e^(∫P(x) dx).",
+                            f"∫ {fmt(_P)} dx = {fmt(_intP)}, so "
+                            f"IF = {fmt(_IF)}"]}
+        except Exception:
+            pass
+
+    # --- Wave 80: order and degree of a differential
+    # equation. Degree = the power of the HIGHEST-order
+    # derivative only; powers of lower derivatives (and
+    # brackets around them) are distractors. ----
+    if ("order" in _qlow and "degree" in _qlow) or \
+            ("कोटि" in q and "घात" in q):
+        try:
+            _stem = _w80_cut_options(q)
+            # Normalise every derivative spelling first: the
+            # router's superscript cleaning rewrites d²y/dx²
+            # as d^2y/dx^2 before the question reaches this
+            # solver, and the raw Unicode form arrives on
+            # direct calls — both must read identically.
+            _norm = _stem.replace("d²y/dx²", "d2y/dx2") \
+                .replace("d^2y/dx^2", "d2y/dx2") \
+                .replace("²", "^2").replace("³", "^3")
+            _flat2 = _norm.replace(" ", "")
+            _orders = []
+            if "d2y/dx2" in _flat2 or "y''" in _norm:
+                _orders.append(2)
+            if "dy/dx" in _flat2 or "y'" in _norm:
+                _orders.append(1)
+            if _orders:
+                _ord = max(_orders)
+                _deg = 1
+                _tok = "d2y/dx2" if _ord == 2 else "dy/dx"
+                for _mm in re.finditer(re.escape(_tok), _flat2):
+                    _tail = _flat2[_mm.end():_mm.end() + 5]
+                    _mp = re.match(r"(?:\))?\^(\d)", _tail)
+                    if _mp:
+                        _deg = int(_mp.group(1))
+                        break
+                return {
+                    "type": "calculus", "op": "order_degree",
+                    "answer": f"{_ord}, {_deg}",
+                    "steps": [
+                        f"The highest derivative present is of "
+                        f"order {_ord}, so the order is {_ord}.",
+                        f"The degree is the power of that "
+                        f"highest-order derivative: {_deg}."]}
+        except Exception:
+            pass
+
+    # --- Wave 80: implicit dy/dx — 'If <equation> then find
+    # dy/dx' (the block below only reads the 'for ...' form)
+    # ----
+    if "dy/dx" in q.replace(" ", "") and "=" in q and not _mdy:
+        _meq = re.search(r"(?i)^\s*if\s+", q)
+        if _meq:
+            try:
+                _eq = q[_meq.end():]
+                _eq = re.sub(r"(?i),?\s*(then\s+)?find\s+dy/dx"
+                             r".*$", "", _eq).strip().rstrip(",")
+                if "=" in _eq:
+                    _l, _r = _eq.split("=", 1)
+                    if _l.strip().lower() not in ("y", "f(x)"):
+                        _xs, _ys = symbols("x y")
+                        _expr = parse_expression(
+                            _w80_glue(_l)) - parse_expression(
+                            _w80_glue(_r))
+                        if _ys in _expr.free_symbols:
+                            _dydx = idiff(_expr, _ys, _xs)
+                            return {
+                                "type": "calculus",
+                                "op": "implicit_derivative",
+                                "answer": fmt(_dydx),
+                                "steps": [
+                                    f"Differentiate both sides "
+                                    f"of {_l.strip()} = "
+                                    f"{_r.strip()} with "
+                                    f"respect to x, treating "
+                                    f"y as a function of x.",
+                                    "Collect the dy/dx terms "
+                                    "and divide.",
+                                    f"dy/dx = {fmt(_dydx)}"]}
+            except Exception:
+                pass
+
+    # --- Wave 80: chain-rate area schemas — equilateral
+    # triangle / square / circle with a numeric rate and a
+    # numeric current size ----
+    if "rate" in _qlow and ("increasing" in _qlow
+                            or "decreasing" in _qlow):
+        try:
+            _mrate = re.search(r"rate\s+of\s+(\d+(?:\.\d+)?)",
+                               _qlow)
+            _mwhen = re.search(
+                r"(?:side|radius)(?:\s+of\s+the\s+\w+)?\s+is\s+"
+                r"(\d+(?:\.\d+)?)", _qlow)
+            if _mrate and _mwhen:
+                _rate = sp.Rational(_mrate.group(1))
+                _now = sp.Rational(_mwhen.group(1))
+                _sgn = -1 if "decreasing" in _qlow else 1
+                if "equilateral triangle" in _qlow:
+                    _val = sp.sqrt(3) / 2 * _now * _rate * _sgn
+                    _steps = [
+                        "For an equilateral triangle, "
+                        "A = (sqrt(3)/4)·s^2, so dA/dt = "
+                        "(sqrt(3)/2)·s·(ds/dt).",
+                        f"dA/dt = (sqrt(3)/2) x {_now} x "
+                        f"{_rate} = {fmt(_val)} cm^2/s"]
+                    return {"type": "calculus",
+                            "op": "rate_of_change",
+                            "answer": fmt(_val), "steps": _steps}
+                if "square" in _qlow:
+                    _val = 2 * _now * _rate * _sgn
+                    _steps = [
+                        "For a square, A = s^2, so dA/dt = "
+                        "2s·(ds/dt).",
+                        f"dA/dt = 2 x {_now} x {_rate} = "
+                        f"{fmt(_val)} cm^2/s"]
+                    return {"type": "calculus",
+                            "op": "rate_of_change",
+                            "answer": fmt(_val), "steps": _steps}
+                if "circle" in _qlow and "area" in _qlow:
+                    _val = 2 * sp.pi * _now * _rate * _sgn
+                    _steps = [
+                        "For a circle, A = pi·r^2, so dA/dt = "
+                        "2·pi·r·(dr/dt).",
+                        f"dA/dt = 2 x pi x {_now} x {_rate} = "
+                        f"{fmt(_val)} cm^2/s"]
+                    return {"type": "calculus",
+                            "op": "rate_of_change",
+                            "answer": fmt(_val), "steps": _steps}
         except Exception:
             pass
 

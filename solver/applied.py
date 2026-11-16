@@ -21,6 +21,7 @@ import sympy as sp
 
 from .algebra import _poly_coeffs
 from .expression_parser import fmt, fmt_num, parse_expression
+from .pi_policy import pi_choice, pi_note, pi_note_hi
 
 _NUM = r"\d+(?:\.\d+)?"
 _RS = r"(?:rs\.?|₹|rupees)"
@@ -3039,12 +3040,27 @@ def _hindi_word_problems(q):
         return {"type": "applied", "op": op, "answer": answer,
                 "value": value, "steps": steps}
 
+    def hpi(coef, r):
+        """_hpi + the Wave 99 pi policy for radius r: when the
+        radius is 7-friendly the coefficient is multiplied by
+        22/7 exactly (Rational), giving the clean textbook
+        value; returns (answer, value, used_227)."""
+        _pi, _u227, _reason = pi_choice(radius=r)
+        if _u227:
+            v = sp.Rational(coef) * sp.Rational(22, 7)
+            # Display like the float paths: integers clean,
+            # anything else a decimal (1437.33, not 4312/3).
+            return fmt_num(float(v)), float(v), True
+        ans, val = _hpi(coef)
+        return ans, val, False
+
     # Hemisphere volume — BEFORE the sphere (अर्धगोले contains गोले).
     if "अर्धगोल" in q and "आयतन" in q:
         r = _hnear(q, "त्रिज्या")
         if r:
-            ans, val = _hpi(sp.Rational(2, 3) * sp.Rational(str(r)) ** 3)
-            return res("hindi_hemisphere_volume", ans, val, [
+            ans, val, _u = hpi(sp.Rational(2, 3) * sp.Rational(str(r)) ** 3, r)
+            return res("hindi_hemisphere_volume", ans, val,
+                       ([pi_note_hi()] if _u else []) + [
                 "अर्धगोले का आयतन = (2/3) × π × त्रिज्या³",
                 f"= (2/3) × π × {fmt_num(r)}³ = {ans}",
             ])
@@ -3052,8 +3068,9 @@ def _hindi_word_problems(q):
     if "बेलन" in q and "वक्र पृष्ठ" in q:
         r, h = _hnear(q, "त्रिज्या"), _hnear(q, "ऊंचाई")
         if r and h:
-            ans, val = _hpi(2 * sp.Rational(str(r)) * sp.Rational(str(h)))
-            return res("hindi_cylinder_csa", ans, val, [
+            ans, val, _u = hpi(2 * sp.Rational(str(r)) * sp.Rational(str(h)), r)
+            return res("hindi_cylinder_csa", ans, val,
+                       ([pi_note_hi()] if _u else []) + [
                 "बेलन का वक्र पृष्ठ क्षेत्रफल = 2 × π × त्रिज्या "
                 "× ऊंचाई",
                 f"= 2 × π × {fmt_num(r)} × {fmt_num(h)} = {ans}",
@@ -3062,8 +3079,9 @@ def _hindi_word_problems(q):
     if "बेलन" in q and "आयतन" in q:
         r, h = _hnear(q, "त्रिज्या"), _hnear(q, "ऊंचाई")
         if r and h:
-            ans, val = _hpi(sp.Rational(str(r)) ** 2 * sp.Rational(str(h)))
-            return res("hindi_cylinder_volume", ans, val, [
+            ans, val, _u = hpi(sp.Rational(str(r)) ** 2 * sp.Rational(str(h)), r)
+            return res("hindi_cylinder_volume", ans, val,
+                       ([pi_note_hi()] if _u else []) + [
                 "बेलन का आयतन = π × त्रिज्या² × ऊंचाई",
                 f"= π × {fmt_num(r)}² × {fmt_num(h)} = {ans}",
             ])
@@ -3071,9 +3089,10 @@ def _hindi_word_problems(q):
     if "शंकु" in q and "आयतन" in q:
         r, h = _hnear(q, "त्रिज्या"), _hnear(q, "ऊंचाई")
         if r and h:
-            ans, val = _hpi(sp.Rational(1, 3)
-                            * sp.Rational(str(r)) ** 2 * sp.Rational(str(h)))
-            return res("hindi_cone_volume", ans, val, [
+            ans, val, _u = hpi(sp.Rational(1, 3)
+                            * sp.Rational(str(r)) ** 2 * sp.Rational(str(h)), r)
+            return res("hindi_cone_volume", ans, val,
+                       ([pi_note_hi()] if _u else []) + [
                 "शंकु का आयतन = (1/3) × π × त्रिज्या² × ऊंचाई",
                 f"= (1/3) × π × {fmt_num(r)}² × {fmt_num(h)} "
                 f"= {ans}",
@@ -3082,8 +3101,9 @@ def _hindi_word_problems(q):
     if "गोल" in q and "आयतन" in q:
         r = _hnear(q, "त्रिज्या")
         if r:
-            ans, val = _hpi(sp.Rational(4, 3) * sp.Rational(str(r)) ** 3)
-            return res("hindi_sphere_volume", ans, val, [
+            ans, val, _u = hpi(sp.Rational(4, 3) * sp.Rational(str(r)) ** 3, r)
+            return res("hindi_sphere_volume", ans, val,
+                       ([pi_note_hi()] if _u else []) + [
                 "गोले का आयतन = (4/3) × π × त्रिज्या³",
                 f"= (4/3) × π × {fmt_num(r)}³ = {ans}",
             ])
@@ -3100,14 +3120,16 @@ def _hindi_word_problems(q):
     if "वृत्त" in q:
         r = _hnear(q, "त्रिज्या")
         if r and "क्षेत्रफल" in q:
-            ans, val = _hpi(sp.Rational(str(r)) ** 2)
-            return res("hindi_circle_area", ans, val, [
+            ans, val, _u = hpi(sp.Rational(str(r)) ** 2, r)
+            return res("hindi_circle_area", ans, val,
+                       ([pi_note_hi()] if _u else []) + [
                 "वृत्त का क्षेत्रफल = π × त्रिज्या²",
                 f"= π × {fmt_num(r)}² = {ans}",
             ])
         if r and ("परिमाप" in q or "परिधि" in q):
-            ans, val = _hpi(2 * sp.Rational(str(r)))
-            return res("hindi_circle_circumference", ans, val, [
+            ans, val, _u = hpi(2 * sp.Rational(str(r)), r)
+            return res("hindi_circle_circumference", ans, val,
+                       ([pi_note_hi()] if _u else []) + [
                 "वृत्त का परिमाप (परिधि) = 2 × π × त्रिज्या",
                 f"= 2 × π × {fmt_num(r)} = {ans}",
             ])
@@ -3938,10 +3960,12 @@ def _hindi_schemas(q):
     if "अर्धगोल" in qt:
         r = _rad()
         if r and "आयतन" in qt:
-            v = 2.0 / 3.0 * pi * r ** 3
+            _pi, _u227, _reason = pi_choice(radius=r)
+            v = 2.0 / 3.0 * _pi * r ** 3
             return {"type": "applied", "op": "hindi_mensuration",
                     "answer": fmt_num(round(v, 2)),
-                    "steps": ["Volume of a hemisphere = "
+                    "steps": ([pi_note(_reason)] if _u227 else []) + [
+                              "Volume of a hemisphere = "
                               "(2/3)πr³",
                               f"= (2/3) × π × {fmt_num(r)}³ = "
                               f"{fmt_num(round(v, 2))}"],
@@ -3949,18 +3973,22 @@ def _hindi_schemas(q):
     if "गोल" in qt and "गोलाकार" not in qt:
         r = _rad()
         if r and "आयतन" in qt:
-            v = 4.0 / 3.0 * pi * r ** 3
+            _pi, _u227, _reason = pi_choice(radius=r)
+            v = 4.0 / 3.0 * _pi * r ** 3
             return {"type": "applied", "op": "hindi_mensuration",
                     "answer": fmt_num(round(v, 2)),
-                    "steps": ["Volume of a sphere = (4/3)πr³",
+                    "steps": ([pi_note(_reason)] if _u227 else []) + [
+                              "Volume of a sphere = (4/3)πr³",
                               f"= (4/3) × π × {fmt_num(r)}³ = "
                               f"{fmt_num(round(v, 2))}"],
                     "value": v}
         if r and "पृष्ठ" in qt:
-            v = 4 * pi * r ** 2
+            _pi, _u227, _reason = pi_choice(radius=r)
+            v = 4 * _pi * r ** 2
             return {"type": "applied", "op": "hindi_mensuration",
                     "answer": fmt_num(round(v, 2)),
-                    "steps": ["Surface area of a sphere = 4πr²",
+                    "steps": ([pi_note(_reason)] if _u227 else []) + [
+                              "Surface area of a sphere = 4πr²",
                               f"= 4 × π × {fmt_num(r)}² = "
                               f"{fmt_num(round(v, 2))}"],
                     "value": v}
@@ -4000,36 +4028,41 @@ def _hindi_schemas(q):
     if "बेलन" in qt:
         r, h = _rad(), _hgt()
         if r and h:
+            _pi, _u227, _reason = pi_choice(radius=r)
             if "आयतन" in qt:
-                v = pi * r * r * h
+                v = _pi * r * r * h
                 return {"type": "applied",
                         "op": "hindi_mensuration",
                         "answer": fmt_num(round(v, 2)),
-                        "steps": ["Volume of a cylinder = πr²h",
+                        "steps": ([pi_note(_reason)] if _u227 else []) + [
+                                  "Volume of a cylinder = πr²h",
                                   f"= π × {fmt_num(r)}² × "
                                   f"{fmt_num(h)} = "
                                   f"{fmt_num(round(v, 2))}"],
                         "value": v}
             if "पृष्ठ" in qt:
                 if "कुल" in qt or "संपूर्ण" in qt:
-                    v = 2 * pi * r * (r + h)
+                    v = 2 * _pi * r * (r + h)
                     lab = "Total surface area = 2πr(r + h)"
                 else:
-                    v = 2 * pi * r * h
+                    v = 2 * _pi * r * h
                     lab = "Curved surface area = 2πrh"
                 return {"type": "applied",
                         "op": "hindi_mensuration",
                         "answer": fmt_num(round(v, 2)),
-                        "steps": [lab,
+                        "steps": ([pi_note(_reason)] if _u227 else []) + [
+                                  lab,
                                   f"= {fmt_num(round(v, 2))}"],
                         "value": v}
     if "शंकु" in qt:
         r, h = _rad(), _hgt()
         if r and h and "आयतन" in qt:
-            v = pi * r * r * h / 3.0
+            _pi, _u227, _reason = pi_choice(radius=r)
+            v = _pi * r * r * h / 3.0
             return {"type": "applied", "op": "hindi_mensuration",
                     "answer": fmt_num(round(v, 2)),
-                    "steps": ["Volume of a cone = (1/3)πr²h",
+                    "steps": ([pi_note(_reason)] if _u227 else []) + [
+                              "Volume of a cone = (1/3)πr²h",
                               f"= (1/3) × π × {fmt_num(r)}² × "
                               f"{fmt_num(h)} = "
                               f"{fmt_num(round(v, 2))}"],
@@ -4040,20 +4073,24 @@ def _hindi_schemas(q):
         d = _slot(r"व्यास\s*(?:है\s*)?(" + _NUM + r")")
         if "परिधि" in qt or "परिमाप" in qt:
             if r:
-                v = 2 * pi * r
+                _pi, _u227, _reason = pi_choice(radius=r)
+                v = 2 * _pi * r
                 return {"type": "applied",
                         "op": "hindi_mensuration",
                         "answer": fmt_num(round(v, 2)),
-                        "steps": ["Circumference = 2πr",
+                        "steps": ([pi_note(_reason)] if _u227 else []) + [
+                                  "Circumference = 2πr",
                                   f"= 2 × π × {fmt_num(r)} = "
                                   f"{fmt_num(round(v, 2))}"],
                         "value": v}
             if d:
-                v = pi * d
+                _pi, _u227, _reason = pi_choice(diameter=d)
+                v = _pi * d
                 return {"type": "applied",
                         "op": "hindi_mensuration",
                         "answer": fmt_num(round(v, 2)),
-                        "steps": ["Circumference = π × "
+                        "steps": ([pi_note(_reason)] if _u227 else []) + [
+                                  "Circumference = π × "
                                   "diameter",
                                   f"= π × {fmt_num(d)} = "
                                   f"{fmt_num(round(v, 2))}"],
@@ -4062,11 +4099,13 @@ def _hindi_schemas(q):
             if r is None and d:
                 r = d / 2
             if r:
-                v = pi * r * r
+                _pi, _u227, _reason = pi_choice(radius=r)
+                v = _pi * r * r
                 return {"type": "applied",
                         "op": "hindi_mensuration",
                         "answer": fmt_num(round(v, 2)),
-                        "steps": ["Area of a circle = πr²",
+                        "steps": ([pi_note(_reason)] if _u227 else []) + [
+                                  "Area of a circle = πr²",
                                   f"= π × {fmt_num(r)}² = "
                                   f"{fmt_num(round(v, 2))}"],
                         "value": v}
@@ -4537,28 +4576,38 @@ def _hinglish_schemas(q):
         mD = re.search(r"vyas\D{0,14}?(" + _NUM + r")", q)
         mR = re.search(r"trijya\D{0,14}?(" + _NUM + r")", q)
         if _circ56 and mD:
-            v = math.pi * _num(mD.group(1))
+            # Wave 99: pi policy (diameter rule).
+            _pi, _u227, _reason = pi_choice(
+                diameter=_num(mD.group(1)))
+            _pit = "(22/7)" if _u227 else "π"
+            v = _pi * _num(mD.group(1))
             return {"type": "applied", "op": "hinglish_circle",
                     "answer": fmt_num(round(v, 2)),
                     "steps": ["Paridhi = π × vyas",
-                              f"= π × {fmt_num(_num(mD.group(1)))}"
+                              f"= {_pit} × {fmt_num(_num(mD.group(1)))}"
                               f" = {fmt_num(round(v, 2))}"],
                     "value": v}
         if _circ56 and mR:
-            v = 2 * math.pi * _num(mR.group(1))
+            _pi, _u227, _reason = pi_choice(
+                radius=_num(mR.group(1)))
+            _pit = "(22/7)" if _u227 else "π"
+            v = 2 * _pi * _num(mR.group(1))
             return {"type": "applied", "op": "hinglish_circle",
                     "answer": fmt_num(round(v, 2)),
                     "steps": ["Paridhi = 2πr",
-                              f"= 2 × π × "
+                              f"= 2 × {_pit} × "
                               f"{fmt_num(_num(mR.group(1)))} = "
                               f"{fmt_num(round(v, 2))}"],
                     "value": v}
         if "kshetrafal" in q and mR:
-            v = math.pi * _num(mR.group(1)) ** 2
+            _pi, _u227, _reason = pi_choice(
+                radius=_num(mR.group(1)))
+            _pit = "(22/7)" if _u227 else "π"
+            v = _pi * _num(mR.group(1)) ** 2
             return {"type": "applied", "op": "hinglish_circle",
                     "answer": fmt_num(round(v, 2)),
                     "steps": ["Kshetrafal = πr²",
-                              f"= π × "
+                              f"= {_pit} × "
                               f"{fmt_num(_num(mR.group(1)))}² = "
                               f"{fmt_num(round(v, 2))}"],
                     "value": v}

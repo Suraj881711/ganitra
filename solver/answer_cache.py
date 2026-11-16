@@ -127,6 +127,7 @@ def clear_cache():
     _stats["hits"] = 0
     _stats["misses"] = 0
     clear_negative_cache()
+    clear_failure_cache()
 
 
 def cache_stats():
@@ -136,7 +137,12 @@ def cache_stats():
             "negative_hits": _neg_stats["hits"],
             "negative_misses": _neg_stats["misses"],
             "negative_max_entries": _NEG_MAX_ENTRIES,
-            "negative_ttl_seconds": _NEG_TTL_SECONDS}
+            "negative_ttl_seconds": _NEG_TTL_SECONDS,
+            "failure_entries": len(_fail_cache),
+            "failure_hits": _fail_stats["hits"],
+            "failure_misses": _fail_stats["misses"],
+            "failure_max_entries": _FAIL_MAX_ENTRIES,
+            "failure_ttl_seconds": _FAIL_TTL_SECONDS}
 
 
 # --- Negative cache: fallback outcomes, short TTL ----------------
@@ -211,3 +217,83 @@ def clear_negative_cache():
     _neg_cache.clear()
     _neg_stats["hits"] = 0
     _neg_stats["misses"] = 0
+
+
+# --- Failure memo: solver error outcomes, very short TTL -------
+#
+# Wave 97 (speed): the positive cache above stores successes and
+# the negative cache stores finished FALLBACK outcomes, but a raw
+# solver failure (op == "error") was stored NOWHERE — and one
+# chat question re-solves the same failing string many times
+# through its layers (the router's wrapper-core candidates, the
+# MCQ stem forms, the salvage candidates and the friendly retry
+# all converge on the same normalised cores). Measured on one
+# unsolvable MCQ: the same stem string was solved 8 times in a
+# single request, each time paying the full pipeline walk for
+# the identical error dict.
+#
+# solve_question() is deterministic for the same raw question
+# (the positive cache's own design premise), so a stored error
+# dict re-served within the TTL is byte-identical to re-solving.
+# The TTL is deliberately much shorter than the negative
+# cache's: an error can also mean "the solve budget ran out
+# under load", and that must clear quickly — 60 seconds bounds
+# the stickiness while covering every within-request repeat
+# (a whole chat answer is built in seconds). Same graph-safety
+# and deep-copy rules as the other stores; bounded LRU.
+
+_FAIL_MAX_ENTRIES = 500
+_FAIL_TTL_SECONDS = 60
+
+_fail_cache = OrderedDict()
+_fail_stats = {"hits": 0, "misses": 0}
+
+
+def _is_failure_worthy(result):
+    """Only raw solver failures: dicts with op == "error".
+    Successes keep the positive cache; fallback outcomes keep
+    the negative cache; this store is solely for the gap
+    between them."""
+    if not isinstance(result, dict):
+        return False
+    if result.get("op") != "error":
+        return False
+    return _graphs_exist(result)
+
+
+def get_failure(question):
+    """Return a deep copy of the memoised solver failure for
+    question, or None on a miss / expired entry."""
+    key = _cache_key(question)
+    entry = _fail_cache.get(key)
+    if entry is None:
+        _fail_stats["misses"] += 1
+        return None
+    stored_at, result = entry
+    if time.monotonic() - stored_at > _FAIL_TTL_SECONDS \
+            or not _graphs_exist(result):
+        del _fail_cache[key]
+        _fail_stats["misses"] += 1
+        return None
+    _fail_stats["hits"] += 1
+    _fail_cache.move_to_end(key)
+    return copy.deepcopy(result)
+
+
+def put_failure(question, result):
+    """Memoise a solver failure for the TTL; silently skip
+    anything that is not one."""
+    if not _is_failure_worthy(result):
+        return False
+    key = _cache_key(question)
+    _fail_cache[key] = (time.monotonic(), copy.deepcopy(result))
+    _fail_cache.move_to_end(key)
+    while len(_fail_cache) > _FAIL_MAX_ENTRIES:
+        _fail_cache.popitem(last=False)
+    return True
+
+
+def clear_failure_cache():
+    _fail_cache.clear()
+    _fail_stats["hits"] = 0
+    _fail_stats["misses"] = 0

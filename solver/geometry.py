@@ -2,13 +2,30 @@
 geometry (distance, midpoint, slope, line & circle equations)."""
 import math
 import re
+from fractions import Fraction
 
 import sympy as sp
 
 from .expression_parser import (extract_points, find_param, fmt,
                                 fmt_num, wants_circumference)
+from .pi_policy import PI_227, pi_choice, pi_note, pi_note_hi
 
 PI = math.pi
+
+
+def _fmt_frac(fr):
+    """Wave 99: display an exact Fraction from the 22/7 paths —
+    integers clean ("154"), terminating fractions as decimals
+    ("38.5", not "77/2"); anything else falls back to fmt_num."""
+    if fr.denominator == 1:
+        return str(fr.numerator)
+    q = fr.denominator
+    for _p in (2, 5):
+        while q % _p == 0:
+            q //= _p
+    if q == 1:
+        return fmt_num(float(fr))
+    return fmt_num(fr)
 
 
 def _param_flex(q, names):
@@ -125,9 +142,13 @@ def _mensuration_extra(q):
         slant = _param_flex(q, ["slant height", "slant"])
         if slant is None:
             slant = math.sqrt(h * h + (R - r) ** 2)
+        # Wave 99: pi policy — 22/7 only when BOTH radii are
+        # multiples of 7 (see solver/pi_policy.py).
+        _pi, _u227, _reason = pi_choice(radii=[R, r])
+        _note = [pi_note(_reason)] if _u227 else []
         if "curved surface" in q or " csa" in q:
-            val = PI * (R + r) * slant
-            steps = [
+            val = _pi * (R + r) * slant
+            steps = _note + [
                 f"For a frustum: R = {fmt_num(R)}, "
                 f"r = {fmt_num(r)}, slant height l = "
                 f"{slant:.4f}",
@@ -137,8 +158,8 @@ def _mensuration_extra(q):
             ]
             return "frustum csa", fmt_num(val), steps
         if "total surface" in q or " tsa" in q:
-            val = PI * (R + r) * slant + PI * (R * R + r * r)
-            steps = [
+            val = _pi * (R + r) * slant + _pi * (R * R + r * r)
+            steps = _note + [
                 f"For a frustum: R = {fmt_num(R)}, "
                 f"r = {fmt_num(r)}, slant height l = "
                 f"{slant:.4f}",
@@ -146,8 +167,8 @@ def _mensuration_extra(q):
                 f"{fmt_num(val)}",
             ]
             return "frustum tsa", fmt_num(val), steps
-        val = PI * h / 3 * (R * R + R * r + r * r)
-        steps = [
+        val = _pi * h / 3 * (R * R + R * r + r * r)
+        steps = _note + [
             f"For a frustum: R = {fmt_num(R)}, "
             f"r = {fmt_num(r)}, h = {fmt_num(h)}",
             f"Volume = (1/3)·pi·h·(R^2 + Rr + r^2) = "
@@ -180,9 +201,11 @@ def _mensuration_extra(q):
             _solid_height(q, "cone")
         if r is None or h1 is None or h2 is None:
             return None
-        v1 = PI * r * r * h1
-        v2 = PI * r * r * h2 / 3
-        steps = [
+        _pi, _u227, _reason = pi_choice(radius=r)
+        _note = [pi_note(_reason)] if _u227 else []
+        v1 = _pi * r * r * h1
+        v2 = _pi * r * r * h2 / 3
+        steps = _note + [
             f"Volume of the cylinder part = pi·r^2·h = pi × "
             f"{fmt_num(r)}^2 × {fmt_num(h1)} = {fmt_num(v1)}",
             f"Volume of the cone part = (1/3)·pi·r^2·h = "
@@ -208,12 +231,14 @@ def _mensuration_extra(q):
             _diam = _param_flex(q, ["diameter"])
             if _diam is not None:
                 r = _diam / 2
+        _pi, _u227, _reason = pi_choice(radius=r)
+        _note = [pi_note(_reason)] if _u227 else []
         if r is not None and "cylinder" in q:
             h = _solid_height(q, "cylinder")
             if h is not None:
-                v1 = PI * r * r * h
-                v2 = 2 * PI * r ** 3 / 3
-                steps = [
+                v1 = _pi * r * r * h
+                v2 = 2 * _pi * r ** 3 / 3
+                steps = _note + [
                     f"Volume of the cylinder part = pi·r^2·h "
                     f"= pi × {fmt_num(r)}^2 × {fmt_num(h)} "
                     f"= {fmt_num(v1)}",
@@ -228,9 +253,9 @@ def _mensuration_extra(q):
         if r is not None and "cone" in q:
             h = _solid_height(q, "cone")
             if h is not None:
-                v1 = PI * r * r * h / 3
-                v2 = 2 * PI * r ** 3 / 3
-                steps = [
+                v1 = _pi * r * r * h / 3
+                v2 = 2 * _pi * r ** 3 / 3
+                steps = _note + [
                     f"Volume of the cone part = "
                     f"(1/3)·pi·r^2·h = (1/3) × pi × "
                     f"{fmt_num(r)}^2 × {fmt_num(h)} "
@@ -249,24 +274,26 @@ def _mensuration_extra(q):
         r = _param_flex(q, ["radius", "r"])
         if r is None:
             return None
+        _pi, _u227, _reason = pi_choice(radius=r)
+        _note = [pi_note(_reason)] if _u227 else []
         if "curved surface" in q or " csa" in q:
-            val = 2 * PI * r * r
-            steps = [f"Curved surface area of a hemisphere = "
+            val = 2 * _pi * r * r
+            steps = _note + [f"Curved surface area of a hemisphere = "
                      f"2·pi·r^2 = 2 × pi × {fmt_num(r)}^2 "
                      f"= {fmt_num(val)}"]
             return "hemisphere csa", fmt_num(val), steps
         if "total surface" in q or " tsa" in q or \
                 "surface" in q:
-            val = 3 * PI * r * r
-            steps = [
+            val = 3 * _pi * r * r
+            steps = _note + [
                 f"Total surface area of a hemisphere = curved "
                 f"surface + base = 2·pi·r^2 + pi·r^2 "
                 f"= 3·pi·r^2",
                 f"= 3 × pi × {fmt_num(r)}^2 = {fmt_num(val)}",
             ]
             return "hemisphere tsa", fmt_num(val), steps
-        val = 2 * PI * r ** 3 / 3
-        steps = [f"Volume of a hemisphere = (2/3)·pi·r^3 = "
+        val = 2 * _pi * r ** 3 / 3
+        steps = _note + [f"Volume of a hemisphere = (2/3)·pi·r^3 = "
                  f"(2/3) × pi × {fmt_num(r)}^3 "
                  f"= {fmt_num(val)}"]
         return "hemisphere volume", fmt_num(val), steps
@@ -283,17 +310,19 @@ def _mensuration_extra(q):
             slant = math.sqrt(r * r + h * h)
         if slant is None:
             return None
+        _pi, _u227, _reason = pi_choice(radius=r)
+        _note = [pi_note(_reason)] if _u227 else []
         if "curved surface" in q or " csa" in q:
-            val = PI * r * slant
-            steps = [
+            val = _pi * r * slant
+            steps = _note + [
                 f"Slant height l = {fmt_num(slant)}",
                 f"Curved surface area of a cone = pi·r·l = "
                 f"pi × {fmt_num(r)} × {fmt_num(slant)} "
                 f"= {fmt_num(val)}",
             ]
             return "cone csa", fmt_num(val), steps
-        val = PI * r * (slant + r)
-        steps = [
+        val = _pi * r * (slant + r)
+        steps = _note + [
             f"Slant height l = {fmt_num(slant)}",
             f"Total surface area of a cone = pi·r(l + r) = "
             f"pi × {fmt_num(r)} × ({fmt_num(slant)} + "
@@ -308,8 +337,10 @@ def _mensuration_extra(q):
         h = _param_flex(q, ["height", "h"])
         if r is None or h is None:
             return None
-        val = 2 * PI * r * h
-        steps = [f"Curved surface area of a cylinder = "
+        _pi, _u227, _reason = pi_choice(radius=r)
+        _note = [pi_note(_reason)] if _u227 else []
+        val = 2 * _pi * r * h
+        steps = _note + [f"Curved surface area of a cylinder = "
                  f"2·pi·r·h = 2 × pi × {fmt_num(r)} × "
                  f"{fmt_num(h)} = {fmt_num(val)}"]
         return "cylinder csa", fmt_num(val), steps
@@ -320,10 +351,14 @@ def _mensuration_extra(q):
         th = _angle_deg(q)
         if r is None or th is None:
             return None
-        sector = th / 360 * PI * r * r
+        # Wave 99: the policy pi applies to the sector part;
+        # the triangle part (a sine) never involves pi.
+        _pi, _u227, _reason = pi_choice(radius=r)
+        _note = [pi_note(_reason)] if _u227 else []
+        sector = th / 360 * _pi * r * r
         tri = 0.5 * r * r * math.sin(math.radians(th))
         val = sector - tri
-        steps = [
+        steps = _note + [
             f"Area of the sector = (theta/360)·pi·r^2 = "
             f"({fmt_num(th)}/360) × pi × {fmt_num(r)}^2 "
             f"= {fmt_num(sector)}",
@@ -338,8 +373,10 @@ def _mensuration_extra(q):
         th = _angle_deg(q)
         if r is None or th is None:
             return None
-        val = th / 360 * PI * r * r
-        steps = [f"Area of a sector = (theta/360)·pi·r^2 = "
+        _pi, _u227, _reason = pi_choice(radius=r)
+        _note = [pi_note(_reason)] if _u227 else []
+        val = th / 360 * _pi * r * r
+        steps = _note + [f"Area of a sector = (theta/360)·pi·r^2 = "
                  f"({fmt_num(th)}/360) × pi × {fmt_num(r)}^2 "
                  f"= {fmt_num(val)}"]
         return "sector area", fmt_num(val), steps
@@ -348,8 +385,10 @@ def _mensuration_extra(q):
         th = _angle_deg(q)
         if r is None or th is None:
             return None
-        val = th / 360 * 2 * PI * r
-        steps = [f"Length of an arc = (theta/360)·2·pi·r = "
+        _pi, _u227, _reason = pi_choice(radius=r)
+        _note = [pi_note(_reason)] if _u227 else []
+        val = th / 360 * 2 * _pi * r
+        steps = _note + [f"Length of an arc = (theta/360)·2·pi·r = "
                  f"({fmt_num(th)}/360) × 2 × pi × "
                  f"{fmt_num(r)} = {fmt_num(val)}"]
         return "arc length", fmt_num(val), steps
@@ -418,6 +457,23 @@ def _area_perimeter_volume(q: str):
                     _cs = _mc.group(1)
                     C = float(_cs) if "." in _cs else int(_cs)
             if C is not None and "area" in q:
+                # Wave 99: C a multiple of 22 -> r = 7C/44 is
+                # exact with pi = 22/7 (Fraction arithmetic, so
+                # the textbook value comes out clean).
+                _pi, _u227, _reason = pi_choice(circumference=C)
+                if _u227:
+                    rr = (Fraction(C).limit_denominator(10 ** 6)
+                          / (2 * PI_227))
+                    val = PI_227 * rr * rr
+                    steps = [
+                        pi_note(_reason),
+                        f"Radius from the circumference: r = C / "
+                        f"(2·pi) = {fmt_num(C)} / (2 × 22/7) "
+                        f"= {_fmt_frac(rr)}",
+                        f"Area = pi·r^2 = (22/7) × "
+                        f"{_fmt_frac(rr)}^2 = {_fmt_frac(val)}",
+                    ]
+                    return "area", _fmt_frac(val), steps
                 rr = C / (2 * PI)
                 val = PI * rr * rr
                 steps = [
@@ -429,13 +485,34 @@ def _area_perimeter_volume(q: str):
                 ]
                 return "area", f"≈ {val:.4f}", steps
             return None
+        # Wave 99: pi policy for the direct radius/diameter
+        # forms (22/7 answer is the clean value, no "·pi ≈").
+        _pi, _u227, _reason = (pi_choice(diameter=d)
+                               if d is not None
+                               else pi_choice(radius=r))
         if wants_circumference(q) or "perimeter" in q:
-            val = 2 * PI * r
+            val = 2 * _pi * r
+            if _u227:
+                steps = [
+                    pi_note(_reason),
+                    f"Circumference = 2·pi·r = 2 × (22/7) × "
+                    f"{fmt_num(r)}",
+                    f"= {fmt_num(val)}",
+                ]
+                return "circumference", fmt_num(val), steps
             steps = [f"Circumference = 2·pi·r = 2 × pi × {fmt_num(r)}",
                      f"= {fmt_num(val)} (approx) = {fmt_num(2 * r)}·pi "
                      f"exactly"]
             return "circumference", f"{fmt_num(2 * r)}·pi ≈ {val:.4f}", steps
-        val = PI * r * r
+        val = _pi * r * r
+        if _u227:
+            steps = [
+                pi_note(_reason),
+                f"Area = pi·r^2 = (22/7) × {fmt_num(r)}^2 "
+                f"= (22/7) × {fmt_num(r * r)}",
+                f"= {fmt_num(val)}",
+            ]
+            return "area", fmt_num(val), steps
         steps = [f"Area = pi·r^2 = pi × {fmt_num(r)}^2 = pi × "
                  f"{fmt_num(r * r)}",
                  f"= {fmt_num(r * r)}·pi ≈ {val:.4f}"]
@@ -632,12 +709,27 @@ def _area_perimeter_volume(q: str):
                 r = _d56 / 2
         if r is None:
             return None
+        _pi, _u227, _reason = pi_choice(radius=r)
+        _note = [pi_note(_reason)] if _u227 else []
         if "surface" in q:
-            val = 4 * PI * r * r
+            val = 4 * _pi * r * r
+            if _u227:
+                steps = _note + [
+                    f"Surface area = 4·pi·r^2 = 4 × (22/7) × "
+                    f"{fmt_num(r)}^2",
+                    f"= {fmt_num(val)}"]
+                return "surface area", fmt_num(val), steps
             steps = [f"Surface area = 4·pi·r^2 = 4 × pi × {fmt_num(r)}^2",
                      f"≈ {val:.4f}"]
             return "surface area", f"≈ {val:.4f}", steps
-        val = (4 / 3) * PI * r ** 3
+        val = (4 / 3) * _pi * r ** 3
+        if _u227:
+            steps = _note + [
+                f"Volume = (4/3)·pi·r^3 = (4/3) × (22/7) × "
+                f"{fmt_num(r)}^3",
+                f"= {fmt_num(4 * r ** 3)} × (22/7) / 3 "
+                f"= {fmt_num(val)}"]
+            return "volume", fmt_num(val), steps
         steps = [f"Volume = (4/3)·pi·r^3 = (4/3) × pi × {fmt_num(r)}^3",
                  f"= {fmt_num(4 * r ** 3)}·pi/3 ≈ {val:.4f}"]
         return "volume", f"≈ {val:.4f}", steps
@@ -660,13 +752,28 @@ def _area_perimeter_volume(q: str):
         h = _param_flex(q, ["height", "h"])
         if r is None or h is None:
             return None
+        _pi, _u227, _reason = pi_choice(radius=r)
+        _note = [pi_note(_reason)] if _u227 else []
         if "surface" in q:
-            val = 2 * PI * r * (r + h)
+            val = 2 * _pi * r * (r + h)
+            if _u227:
+                steps = _note + [
+                    f"Total surface area = 2·pi·r(r + h) = "
+                    f"2 × (22/7) × {fmt_num(r)} × "
+                    f"({fmt_num(r)} + {fmt_num(h)})",
+                    f"= {fmt_num(val)}"]
+                return "surface area", fmt_num(val), steps
             steps = [f"Total surface area = 2·pi·r(r + h) = 2 × pi × "
                      f"{fmt_num(r)} × ({fmt_num(r)} + {fmt_num(h)})",
                      f"≈ {val:.4f}"]
             return "surface area", f"≈ {val:.4f}", steps
-        val = PI * r * r * h
+        val = _pi * r * r * h
+        if _u227:
+            steps = _note + [
+                f"Volume = pi·r^2·h = (22/7) × {fmt_num(r)}^2 "
+                f"× {fmt_num(h)}",
+                f"= {fmt_num(val)}"]
+            return "volume", fmt_num(val), steps
         steps = [f"Volume = pi·r^2·h = pi × {fmt_num(r)}^2 × "
                  f"{fmt_num(h)}", f"≈ {val:.4f}"]
         return "volume", f"≈ {val:.4f}", steps
@@ -677,7 +784,15 @@ def _area_perimeter_volume(q: str):
         h = _param_flex(q, ["height", "h"])
         if r is None or h is None:
             return None
-        val = (1 / 3) * PI * r * r * h
+        _pi, _u227, _reason = pi_choice(radius=r)
+        _note = [pi_note(_reason)] if _u227 else []
+        val = (1 / 3) * _pi * r * r * h
+        if _u227:
+            steps = _note + [
+                f"Volume = (1/3)·pi·r^2·h = (1/3) × (22/7) × "
+                f"{fmt_num(r)}^2 × {fmt_num(h)}",
+                f"= {fmt_num(val)}"]
+            return "volume", fmt_num(val), steps
         steps = [f"Volume = (1/3)·pi·r^2·h = (1/3) × pi × "
                  f"{fmt_num(r)}^2 × {fmt_num(h)}", f"≈ {val:.4f}"]
         return "volume", f"≈ {val:.4f}", steps
@@ -1019,15 +1134,20 @@ def _circles_extra(q):
                 ]
                 return "concentric chord", fmt_num(_val), steps
             if "area" in q or "ring" in q or "annulus" in q:
-                _val = PI * (_R * _R - _r * _r)
+                # Wave 99: 22/7 only when BOTH radii qualify.
+                _pi, _u227, _reason = pi_choice(radii=[_R, _r])
+                _val = _pi * (_R * _R - _r * _r)
+                _pit = "(22/7)" if _u227 else "π"
                 steps = [
                     "Area between two concentric circles "
                     "= π(R^2 - r^2), with R the larger radius "
                     "and r the smaller.",
-                    f"= π({fmt_num(_R)}^2 - {fmt_num(_r)}^2) "
-                    f"= π × {fmt_num(_R * _R - _r * _r)} "
+                    f"= {_pit}({fmt_num(_R)}^2 - {fmt_num(_r)}^2) "
+                    f"= {_pit} × {fmt_num(_R * _R - _r * _r)} "
                     f"= {fmt_num(_val)}",
                 ]
+                if _u227:
+                    steps = [pi_note(_reason)] + steps
                 return ("ring area",
                         f"{fmt_num(_val)} square units", steps)
     if "tangent" in q and "length" in q:
@@ -1410,6 +1530,221 @@ def _pythagoras(q):
     return None
 
 
+def _centre_letter(q):
+    """The letter naming the circle's centre: stated ("point o
+    is the centre") or the conventional o."""
+    m = re.search(r"point\s+([a-z])\s+is\s+the\s+cent", q)
+    if m:
+        return m.group(1)
+    return "o"
+
+
+def _one_angle(q):
+    """The single "∠xyz = θ" fact in the text, as
+    (arm1, vertex, arm2, degrees), or None when there is not
+    exactly one."""
+    hits = [(m.group(1), m.group(2), m.group(3),
+             float(m.group(4))) for m in re.finditer(
+        r"∠\s*([a-z])\s*([a-z])\s*([a-z])\s*=\s*"
+        r"(\d+(?:\.\d+)?)\s*°?", q)]
+    return hits[0] if len(hits) == 1 else None
+
+
+def _radii_base_angle(q):
+    """Wave 100: the isosceles triangle two radii make with a
+    chord — "point O is the centre of the circle and ∠AOB =
+    30°, find ∠OBA". OA and OB are radii, so the base angles
+    are equal and the angle sum does the rest. The Wave 93
+    audit's regression #7: this papers MCQ fell to NOT_FOUND
+    because no schema read the figure's facts out of the text
+    (the facts ARE all in the text — centre, one angle, the
+    asked angle). Both directions: vertex angle given -> base
+    angle (180 - θ)/2; base angle given -> vertex 180 - 2β."""
+    if "centre of the circle" not in q and \
+            "center of the circle" not in q:
+        return None
+    centre = _centre_letter(q)
+    got = _one_angle(q)
+    if got is None:
+        return None
+    g1, gv, g2, given = got
+    letters = {g1, gv, g2}
+    if len(letters) != 3 or centre not in letters:
+        return None
+    endpoints = letters - {centre}
+    m = re.search(
+        r"(?:find|value\s+of|calculate)\s+(?:the\s+)?"
+        r"(?:value\s+of\s+)?∠\s*([a-z])\s*([a-z])\s*([a-z])",
+        q)
+    if not m:
+        return None
+    a1, av, a2 = m.group(1), m.group(2), m.group(3)
+    if {a1, av, a2} != letters:
+        return None
+    e1, e2 = sorted(endpoints)
+    radii_step = (
+        f"{centre.upper()}{e1.upper()} and "
+        f"{centre.upper()}{e2.upper()} are radii of the same "
+        "circle, so they are equal and the triangle is "
+        "isosceles — its base angles are equal.")
+    if gv == centre and av in endpoints:
+        val = (180.0 - given) / 2.0
+        steps = [
+            radii_step,
+            f"∠{a1.upper()}{av.upper()}{a2.upper()} = "
+            f"(180° - ∠{g1.upper()}{gv.upper()}{g2.upper()})/2",
+            f"= (180° - {fmt_num(given)}°)/2 = "
+            f"{fmt_num(val)}°",
+        ]
+        return "radii base angle", f"{fmt_num(val)}°", steps
+    if av == centre and gv in endpoints:
+        val = 180.0 - 2.0 * given
+        steps = [
+            radii_step,
+            f"∠{a1.upper()}{av.upper()}{a2.upper()} = 180° - "
+            f"2 × ∠{g1.upper()}{gv.upper()}{g2.upper()}",
+            f"= 180° - 2 × {fmt_num(given)}° = "
+            f"{fmt_num(val)}°",
+        ]
+        return "radii vertex angle", f"{fmt_num(val)}°", steps
+    return None
+
+
+def _tangent_from_angle(q):
+    """Wave 100: a tangent's length from the radius and ONE
+    angle of the right triangle (centre, touch point,
+    external point) — the Class 10 circles staple behind the
+    Wave 93 audit's discus-throw case study (regression #3):
+    "AB is a tangent to a circle of radius 75 cm, O is the
+    centre and ∠ABO = 30°. Find the length of AB / OB." The
+    radius to the touch point is perpendicular to the tangent,
+    so tan/sin/cos of the given angle settle every side. The
+    asked segment is the LAST "length of XY" in the text (a
+    case-study passage carries the facts; the sub-question
+    carries the ask). Only this triangle's own segments are
+    served — a segment naming any other point (AP, PQ in the
+    case study) returns None, honestly unsolved."""
+    if "tangent" not in q:
+        return None
+    mr = re.search(r"radius\s+(?:of\s+)?(?:the\s+|a\s+)?"
+                   r"(?:circle\s+)?(?:is\s+)?"
+                   r"(\d+(?:\.\d+)?)\s*(cm|mm|m|km)?", q)
+    if not mr:
+        return None
+    radius = float(mr.group(1))
+    unit = (" " + mr.group(2)) if mr.group(2) else ""
+    centre = _centre_letter(q)
+    got = _one_angle(q)
+    if got is None:
+        return None
+    g1, gv, g2, theta = got
+    letters = {g1, gv, g2}
+    if len(letters) != 3 or centre not in letters:
+        return None
+    # The tangent segment: named in the text ("AB is one such
+    # tangent") or read off the angle's non-centre letters.
+    mt = re.search(r"([a-z])([a-z])\s+is\s+(?:one\s+such\s+)?"
+                   r"(?:a\s+)?tangent", q)
+    if mt:
+        tangent_pair = {mt.group(1), mt.group(2)}
+    else:
+        tangent_pair = letters - {centre}
+    if len(tangent_pair) != 2 or centre in tangent_pair:
+        return None
+    if gv == centre:
+        at_centre = True
+        external = None  # either tangent letter; set below
+        touch = None
+    elif centre in (g1, g2):
+        at_centre = False
+        external = gv
+        touch = g2 if g1 == centre else g1
+        if {touch, external} != tangent_pair:
+            return None
+    else:
+        return None
+    asks = list(re.finditer(
+        r"length\s+of\s+([a-z])\s*([a-z])\b", q))
+    if not asks:
+        return None
+    segment = {asks[-1].group(1), asks[-1].group(2)}
+    if segment == tangent_pair:
+        kind = "tangent"
+    elif len(segment) == 2 and centre in segment and \
+            (segment - {centre}) <= tangent_pair:
+        kind = "centre-line"
+        external = (segment - {centre}).pop()
+        touch = (tangent_pair - {external}).pop()
+    elif external is not None and segment == {centre, touch}:
+        kind = "radius"
+    else:
+        return None
+    if kind == "radius":
+        steps = [
+            "That segment is a radius of the circle, so its "
+            f"length is {fmt_num(radius)}{unit}.",
+        ]
+        return ("tangent radius segment",
+                f"{fmt_num(radius)}{unit}", steps)
+    tri = (f"{centre.upper()}{touch.upper()}"
+           f"{external.upper()}")
+    ang = f"∠{g1.upper()}{gv.upper()}{g2.upper()}"
+    head = [
+        f"{centre.upper()}{touch.upper()} ⊥ "
+        f"{touch.upper()}{external.upper()} — the radius to "
+        "the point of contact is perpendicular to the tangent, "
+        f"so △{tri} is right-angled at {touch.upper()}.",
+    ]
+    rad = math.radians(theta)
+    seg_name = f"{touch.upper()}{external.upper()}"
+    if kind == "tangent":
+        if at_centre:
+            val = radius * math.tan(rad)
+            steps = head + [
+                f"tan({ang}) = {seg_name}/"
+                f"{centre.upper()}{touch.upper()}, so "
+                f"{seg_name} = {fmt_num(radius)} × "
+                f"tan({fmt_num(theta)}°) = {fmt_num(val)}",
+            ]
+        else:
+            val = radius / math.tan(rad)
+            steps = head + [
+                f"tan({ang}) = {centre.upper()}{touch.upper()}"
+                f"/{seg_name}, so {seg_name} = "
+                f"{fmt_num(radius)}/tan({fmt_num(theta)}°)",
+            ]
+            if theta == 30.0:
+                steps.append(
+                    f"= {fmt_num(radius)}√3 ≈ {val:.4f}")
+                return ("tangent length from angle",
+                        f"{fmt_num(radius)}√3{unit} ≈ "
+                        f"{val:.4f}{unit}", steps)
+            steps.append(f"= {fmt_num(val)}")
+        return ("tangent length from angle",
+                f"{fmt_num(val)}{unit}", steps)
+    # centre-line (the hypotenuse)
+    if at_centre:
+        val = radius / math.cos(rad)
+        steps = head + [
+            f"cos({ang}) = {centre.upper()}{touch.upper()}/"
+            f"{centre.upper()}{external.upper()}, so "
+            f"{centre.upper()}{external.upper()} = "
+            f"{fmt_num(radius)}/cos({fmt_num(theta)}°) = "
+            f"{fmt_num(val)}",
+        ]
+    else:
+        val = radius / math.sin(rad)
+        steps = head + [
+            f"sin({ang}) = {centre.upper()}{touch.upper()}/"
+            f"{centre.upper()}{external.upper()}, so "
+            f"{centre.upper()}{external.upper()} = "
+            f"{fmt_num(radius)}/sin({fmt_num(theta)}°) = "
+            f"{fmt_num(val)}",
+        ]
+    return ("tangent centre distance from angle",
+            f"{fmt_num(val)}{unit}", steps)
+
+
 def _vec56_parse(q):
     """One vector from '2i + 3j + 6k' or '(1, 2, 3)' form."""
     m = re.search(_PT3, q)
@@ -1521,8 +1856,17 @@ def _mensuration_hindi(q: str):
         m = re.search(r"त्रिज्या\s*" + _NUM_HI, q)
         if m:
             r = _val(m)
+            _pi, _u227, _reason = pi_choice(radius=r)
+            _note = [pi_note_hi()] if _u227 else []
             if "परिधि" in q:
-                val = 2 * PI * r
+                val = 2 * _pi * r
+                if _u227:
+                    steps = _note + [
+                        f"परिधि = 2·pi·r = 2 × (22/7) × "
+                        f"{fmt_num(r)}",
+                        f"= {fmt_num(val)}",
+                    ]
+                    return "circumference", fmt_num(val), steps
                 steps = [
                     f"परिधि = 2·pi·r = 2 × pi × {fmt_num(r)}",
                     f"= {fmt_num(2 * r)}·pi ≈ {val:.4f}",
@@ -1530,7 +1874,15 @@ def _mensuration_hindi(q: str):
                 return "circumference", \
                     f"{fmt_num(2 * r)}·pi ≈ {val:.4f}", steps
             if "क्षेत्रफल" in q:
-                val = PI * r * r
+                val = _pi * r * r
+                if _u227:
+                    steps = _note + [
+                        f"क्षेत्रफल = pi·r^2 = (22/7) × "
+                        f"{fmt_num(r)}^2 = (22/7) × "
+                        f"{fmt_num(r * r)}",
+                        f"= {fmt_num(val)}",
+                    ]
+                    return "area", fmt_num(val), steps
                 steps = [
                     f"क्षेत्रफल = pi·r^2 = pi × {fmt_num(r)}^2 "
                     f"= pi × {fmt_num(r * r)}",
@@ -1697,6 +2049,18 @@ def _wave65_geometry(q):
                   + N, q)
     if m and "radius" in q:
         c = float(m.group(1))
+        # Wave 99: C a multiple of 22 -> r = 7C/44 exactly
+        # with pi = 22/7 (Fraction arithmetic).
+        _pi, _u227, _reason = pi_choice(circumference=c)
+        if _u227:
+            rf = (Fraction(c).limit_denominator(10 ** 6)
+                  / (2 * PI_227))
+            return _res("radius_from_circumference",
+                        _fmt_frac(rf), float(rf),
+                        [pi_note(_reason),
+                         f"C = 2πr, so r = C / (2π) = "
+                         f"{fmt_num(c)} / (2 × 22/7) = "
+                         f"{_fmt_frac(rf)}"])
         r = c / (2 * PI)
         return _res("radius_from_circumference", fmt_num(r), r,
                     [f"C = 2πr, so r = C / (2π) = "
@@ -1741,16 +2105,24 @@ def _wave65_geometry(q):
         r"wheel[^.]{0,30}?diameter\s+(?:is\s+)?" + N, q)
     if m and "revolution" in q:
         d = float(m.group(1))
-        dist = PI * d
+        _pi, _u227, _reason = pi_choice(diameter=d)
+        dist = _pi * d
+        _pit = "(22/7)" if _u227 else "π"
         return _res("wheel_revolution", fmt_num(dist), dist,
                     [f"In one revolution the wheel covers "
-                     f"its circumference = π × d = π × "
+                     f"its circumference = π × d = {_pit} × "
                      f"{fmt_num(d)} = {fmt_num(dist)}"])
     m = re.search(r"radius\s+of\s+(?:a|the)\s+wheel\s+is\s+"
                   + N, q)
     if m and "revolution" in q:
         r = float(m.group(1))
-        dist = 2 * PI * r
+        _pi, _u227, _reason = pi_choice(radius=r)
+        dist = 2 * _pi * r
+        if _u227:
+            return _res("wheel_revolution", fmt_num(dist), dist,
+                        [f"In one revolution the wheel covers "
+                         f"2πr = 2 × (22/7) × {fmt_num(r)} = "
+                         f"{fmt_num(dist)}"])
         return _res("wheel_revolution", fmt_num(dist), dist,
                     [f"In one revolution the wheel covers "
                      f"2πr = 2π × {fmt_num(r)} = "
@@ -1828,10 +2200,12 @@ def _wave65_geometry(q):
             re.search(N + r"\s*(?:m\s+)?in\s+radius", q)
         if md and mr:
             dep, r = float(md.group(1)), float(mr.group(1))
-            v = PI * r * r * dep
+            _pi, _u227, _reason = pi_choice(radius=r)
+            v = _pi * r * r * dep
+            _pit = "(22/7)" if _u227 else "π"
             return _res("well_volume", fmt_num(v), v,
                         [f"The well is a cylinder: V = πr²h "
-                         f"= π × {fmt_num(r)}² × "
+                         f"= {_pit} × {fmt_num(r)}² × "
                          f"{fmt_num(dep)} = {fmt_num(v)}"])
     # Right triangle from its legs -> area.
     m = re.search(r"legs?\s+(?:of\s+)?" + N + r"\s*(?:cm|m)?"
@@ -1931,6 +2305,10 @@ def solve_geometry(question: str):
         out = _vectors56(q)
     if out is None:
         out = _pythagoras(q)
+    if out is None:
+        out = _radii_base_angle(q)
+    if out is None:
+        out = _tangent_from_angle(q)
     if out is None:
         out = _third_angle(q)
     if out is None:
