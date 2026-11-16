@@ -38,6 +38,18 @@ Detection is deliberately tight: an explicit proof phrase
 "siddh karo", "prove karo") is required. Ordinary questions
 that merely contain the word "that" never reach this layer.
 
+Wave 102: the phrase may also TRAIL the statement — the
+standard NCERT exercise order ("sec²θ − tan²θ = 1 सिद्ध
+करो", "sin²A + cos²A = 1 siddh karo"). Detection already
+fired on those (the phrase regex searches the whole text),
+but _statement only stripped the filler verbs ("karo",
+करो, "it" of "prove it") at the START of the text, so a
+trailing filler survived into the statement and poisoned
+the parse — the ask fell through to a concept card or the
+not-found line. _statement now strips the same filler at
+the end too. The gate is unchanged: no proof phrase
+anywhere, no proof.
+
 Result dicts follow the house shape (type / op / answer /
 steps) with fallback_kind == "proof" and source == "proofs",
 so no renderer changes are needed and the AI-upgrade layer
@@ -59,17 +71,31 @@ _PROOF_PHRASE = re.compile(
     r"|\bshow\s+that\b"
     r"|\bverify\s+that\b"
     r"|सिद्ध"
-    r"|साबित\s*कर"
+    r"|साबित\s*करो?"
     r"|\bsiddh\b"
-    r"|\bsa{1,2}bit\s+kar\b",
+    r"|\bsa{1,2}bito?\s+karo?\b",
     re.IGNORECASE,
 )
 
 # Connectors / filler verbs that may sit between the phrase
 # and the statement ("prove karo ki X", "सिद्ध करो कि X").
 _CONNECTOR = re.compile(
-    r"^\s*(?:that|karo|ki|कि|kro|kar|करो|कीजिए|करें|ke)"
+    r"^\s*(?:that|karo|kijiye|ki|कि|kro|kar|करो|कीजिए|करें|ke)"
     r"(?=\s|$)\s*",
+    re.IGNORECASE)
+
+# Wave 102: the same filler, trailing the statement ("X = 1
+# siddh karo", "X = 1 सिद्ध करो", "X = 1 prove it"). After
+# the proof phrase itself is removed, one of these verbs is
+# often left dangling at the end; left in place it is prose
+# inside the statement and the shape guard in
+# _clean_for_parse rightly rejects the side. None of these
+# tokens can end a real maths statement (the guard rejects
+# them all anyway), so stripping them here can only rescue
+# statements that never parsed before.
+_TRAILING_FILLER = re.compile(
+    r"(?:\s+|^)(?:that|karo|kijiye|ki|कि|kro|kar|करो|कीजिए"
+    r"|करें|ke|it)\s*\.?\s*$",
     re.IGNORECASE)
 
 _FUNCS = ("sin", "cos", "tan", "cot", "sec", "csc", "log")
@@ -83,12 +109,23 @@ def _has_proof_intent(question):
 
 
 def _statement(question):
-    """The question with every proof phrase (and a leading
-    connector) removed — the bare statement to prove."""
+    """The question with every proof phrase (and the filler
+    connectors around it) removed — the bare statement to
+    prove."""
     text = _PROOF_PHRASE.sub(" ", str(question or ""))
     text = text.strip()
     while True:
         stripped = _CONNECTOR.sub("", text)
+        if stripped == text:
+            break
+        text = stripped
+    # Wave 102: the filler can also survive at the END, when
+    # the phrase trailed the statement ("X = 1 siddh karo"
+    # leaves "X = 1 karo" once "siddh" is removed). Strip it
+    # the same way, repeatedly ("prove karo" can leave one
+    # filler behind another).
+    while True:
+        stripped = _TRAILING_FILLER.sub("", text)
         if stripped == text:
             break
         text = stripped
@@ -119,8 +156,11 @@ def _irrationality_result(question, hindi):
     if entry is None:
         return None
     low = qn.lower()
+    # "aprimey" is the common Roman misspelling of aparimey
+    # (Wave 102: "√2 aprimey hai siddh karo" was served a
+    # concept card because only the book spelling matched).
     if not ("irrational" in low or "अपरिमेय" in q
-            or "aparimey" in low):
+            or "aparimey" in low or "aprimey" in low):
         return None
     lang = "hi" if hindi else "en"
     statement = entry["statement"][lang]
@@ -165,6 +205,19 @@ def _clean_for_parse(text):
             t = re.sub(rf"\b{name}\b", letter, t, flags=re.I)
             subs[letter] = name
     t = re.sub(r"\bcosec\b", "csc", t, flags=re.I)
+    # Wave 102: unicode superscripts ("sec²θ") — ² is a
+    # Unicode word character, so it glues onto the function
+    # name, defeats every \b-bounded pass below and leaves
+    # "sec" standing in the residual, where the shape guard
+    # reads it as prose. Normalise to ^n first, inserting the
+    # space the ^n passes expect when the argument is typed
+    # attached ("sin²A" -> "sin^2 A", exactly the ASCII form,
+    # so downstream behaviour is inherited unchanged). Sides
+    # written this way never parsed before, so nothing
+    # working moves.
+    t = re.sub(r"²(?=[A-Za-z0-9])", "^2 ", t)
+    t = re.sub(r"³(?=[A-Za-z0-9])", "^3 ", t)
+    t = t.replace("²", "^2").replace("³", "^3")
     t = t.replace("√", "sqrt").replace("−", "-").replace("×", "*")
 
     degrees = False
