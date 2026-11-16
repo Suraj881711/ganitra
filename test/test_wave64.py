@@ -12,7 +12,7 @@ paper's medium; a Hindi sheet renders in the paper's own
 language (गणित subject line, सामान्य निर्देश, खण्ड headings,
 अधिकतम अंक, अथवा dividers, lowercase (a)–(d) options split
 onto their own lines). [Figure] census for the Hindi texts:
-2 + 3 + 4 + 3 = 12. Pins ?v=39 / cache ganitra-static-v16.
+2 + 3 + 4 + 3 = 12. Pins ?v=40 / cache ganitra-static-v17.
 """
 import html as _html
 import re
@@ -72,7 +72,7 @@ def test_hindi_papers_complete_and_real():
             assert " OR " not in q["text"]
     assert total == 128
     # Wave 66: library grew from 17 to 39 papers (all boards).
-    assert len(papers_data.PAPERS) == 39
+    assert len(papers_data.PAPERS) == 42
 
 
 def test_hindi_papers_restore_questions_the_english_entries_omit():
@@ -93,11 +93,12 @@ def test_hindi_papers_restore_questions_the_english_entries_omit():
 def test_list_labels_every_medium(client):
     body = client.get("/papers").get_data(as_text=True)
     # Wave 66: the library grew to 39 papers (15 Hindi-medium,
-    # 24 English-medium) across 9 boards. Counted via the chip
-    # markup: two Wave-66 entry notes also contain the words
-    # "English Medium" as plain text.
-    assert body.count("हिंदी माध्यम · Hindi Medium</span>") == 15
-    assert body.count("English Medium</span>") == 24
+    # 24 English-medium) across 9 boards. Wave 94: 42 papers
+    # (16 Hindi-medium, 26 English-medium). Counted via the
+    # chip markup: two Wave-66 entry notes also contain the
+    # words "English Medium" as plain text.
+    assert body.count("हिंदी माध्यम · Hindi Medium</span>") == 16
+    assert body.count("English Medium</span>") == 26
     for p in papers_data.PAPERS:
         assert p["source_url"] not in body
 
@@ -176,7 +177,7 @@ def test_pins_bumped_for_wave64():
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()
     css = (ROOT / "static" / "style.css").read_text()
-    assert "v='39'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v16"' in sw
+    assert "v='40'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v17"' in sw
     assert ".paper-medium" in css
     assert "Noto Serif Devanagari" in css

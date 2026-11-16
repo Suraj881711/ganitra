@@ -59,7 +59,8 @@ def test_story_dressing_not_refused():
     assert _ans("ek class me 30 ladke cricket khelte hain, "
                 "25 football khelte hain aur 10 dono khelte "
                 "hain, kitne ladke khelte hain?") == "45"
-    assert "1436" in _ans(
+    # Wave 99: trijya 7 -> pi = 22/7 -> 1437.33 (was 1436.76).
+    assert "1437.33" in _ans(
         "football gol (sphere) aakar ki hoti hai, ek gend "
         "ki trijya 7 cm hai to uska volume kitna hoga?")
     assert "25" in _ans(
@@ -103,6 +104,9 @@ def test_non_hijack_controls():
         "king or a queen?")
     assert _ans("500 gram ka daam 40 rupaye hai, 2 kilo "
                 "ka daam batao") == "Rs 160"
-    assert _ans("Prove that sin^2 theta + cos^2 theta = 1"
-                ) == "Identity verified ✔"
+    # Wave 95: the identity ask now gets a full proof
+    # (statement + "identity proved"), not the bare verdict.
+    _proof = _ans("Prove that sin^2 theta + cos^2 theta = 1")
+    assert _proof.startswith("sin^2 theta + cos^2 theta = 1")
+    assert "identity proved" in _proof
     assert _ans("limit x->0 of sin(x)/x") == "1"

@@ -13,7 +13,7 @@ marks, OR dividers for internal choices, [Figure] markers
 where the printed paper's figure is not in the data; the
 stored-paper print view (?paper=<id>) renders the same sheet;
 the generated-paper flow is untouched; delivery pins
-?v=35 / cache ganitra-static-v16.
+?v=35 / cache ganitra-static-v17.
 """
 import re
 from pathlib import Path
@@ -56,6 +56,12 @@ FIGURE_COUNTS = {
     "mpbse-12-2025": 0, "mpbse-12-2025-hindi": 0,
     "bseb-12-2025": 0, "bseb-12-2025-hindi": 0,
     "msbshse-10-2025-algebra": 0,
+    # Wave 94: GSEB Class 10 2025 (Q44's circumscribed-
+    # triangle figure) and UBSE Class 10 2025 in both mediums
+    # (Q1(छ)'s DE ∥ BC figure, Q13's circumscribed
+    # quadrilateral and Q24's OR figure).
+    "gseb-10-2025": 1,
+    "ubse-10-2025": 3, "ubse-10-2025-hindi": 3,
 }
 
 
@@ -200,7 +206,7 @@ def test_figure_markers_match_census(client):
         n = body.count("[Figure]")
         assert n == FIGURE_COUNTS[p["id"]], p["id"]
         total += n
-    assert total == 64
+    assert total == 71
 
 
 def test_section_order_and_subjects(client):
@@ -240,8 +246,8 @@ def test_generated_print_flow_unchanged(client):
 def test_pins_bumped():
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()
-    assert "v='39'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v16"' in sw
+    assert "v='40'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v17"' in sw
 
 
 def test_sheet_css_present():

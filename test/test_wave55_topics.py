@@ -5,11 +5,15 @@ jyada topic or add karo" (target raised to 200+), then "Topic
 solve karne kaa tarika daalo" (every topic must carry HOW TO
 SOLVE it). This suite is the quality gate:
 
-- the honest count: 230 class topics (per-class counts locked;
+- the honest count: 267 class topics (per-class counts locked;
   226 from Wave 55 + 4 restored at merge-3 — the topics Wave 55
   dropped because their starters did not solve then: mutually
   exclusive events, union of events, geometric mean, function
-  composition — all four solve EXACTLY after Waves 56/58),
+  composition — all four solve EXACTLY after Waves 56/58 —
+  + 37 added by Wave 81: the definition topics the Wave 75
+  concept layer needed — theorem, derivative/limit
+  definitions, ratio/proportion, sample space, ogive, pi,
+  logarithms, ...),
   on top of the 17 legacy subject cards;
 - every topic has a method section (idea + >=2 plain steps) and
   a worked example with a stored verified answer;
@@ -32,7 +36,7 @@ import board_data
 import topics_data
 from api import _solve_friendly
 
-EXPECTED_PER_CLASS = {6: 22, 7: 27, 8: 28, 9: 22, 10: 48, 11: 44, 12: 39}
+EXPECTED_PER_CLASS = {6: 22, 7: 32, 8: 33, 9: 31, 10: 54, 11: 55, 12: 40}
 
 
 @pytest.fixture()

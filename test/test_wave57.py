@@ -84,8 +84,9 @@ def test_hinglish_spelling_variants_solve(question, want):
     ("ek train 360 km ki duree 4 ghnte me tay karti hai, "
      "speed kitnaaa hoga btao", "90"),
     ("in snkhya ka osat btao: 3, 6, 9, 12", "7.5"),
+    # Wave 99: trijyaa 7 -> pi = 22/7 -> 154 (was 153.938).
     ("ek britt ka kshetrafal btao jiska trijyaa 7 cm hai",
-     "153.938"),
+     "154"),
     ("15 aur 27 ka joddd ktna hoga?", "42"),
     ("do sikke uchale jaye to kam se kam ek chitt aane ki "
      "praayikta kya hai?", "0.75"),
@@ -105,10 +106,14 @@ def test_fold_is_identity_on_clean_questions():
 def test_money_words_never_fold_to_a_die():
     # "paas" (has) and "paise" (money) share the pasa (die)
     # skeleton; they must survive folding untouched.
+    # (Wave 57 pinned fallback_kind "similar" here; since
+    # Wave 67 the unsolved outcome is the not-found line —
+    # what matters here is that it stays an honest non-answer,
+    # never a die-roll solve.)
     res = _solve_friendly(
         "ek ladke ke paas 50 rupaye hai usne 3 chocolate 10 "
         "rupaye ki kharidi kitne bache")
-    assert res.get("fallback_kind") == "similar"
+    assert res.get("fallback_kind") == "not_found"
 
 
 # --- 2. Devanagari: junk guard + real patterns -----------------
@@ -117,9 +122,11 @@ def test_money_words_never_fold_to_a_die():
     ("12 और 18 का महत्तम समापवर्तक बताओ", "6"),
     ("12 और 15 का लघुत्तम समापवर्त्य निकालो", "60"),
     ("१२ और १८ का महत्तम समापवर्तक क्या होगा?", "6"),
+    # Wave 99: त्रिज्या 7 -> pi = 22/7 -> 154 / 44
+    # (was 153.938 / 43.98 with true pi).
     ("एक वृत्त की त्रिज्या 7 सेमी है, उसका क्षेत्रफल निकालो",
-     "153.938"),
-    ("एक वृत्त की त्रिज्या 7 सेमी है, उसकी परिधि बताओ", "43.98"),
+     "154"),
+    ("एक वृत्त की त्रिज्या 7 सेमी है, उसकी परिधि बताओ", "44"),
     ("एक आयत की लंबाई 12 सेमी और चौड़ाई 5 सेमी है, उसका "
      "क्षेत्रफल बताओ", "60"),
     ("एक वर्ग की भुजा 9 सेमी है, उसका परिमाप बताओ", "36"),
@@ -188,13 +195,15 @@ def test_hinglish_word_problems_solve(question, want):
 @pytest.mark.parametrize("question,want", [
     ("find the area of a rectangel with lenght 12 and "
      "breath 5", "60"),
-    ("circumfrence of a circle with radius 7", "43.98"),
+    # Wave 99: radius 7 -> pi = 22/7 -> 44 (was 43.98).
+    ("circumfrence of a circle with radius 7", "44"),
     ("find the mena of 3, 6, 9, 12", "7.5"),
     ("what is 15% of 24O", "36"),
     ("area of a square with side 1O cm", "100"),
     ("25% of 8OO", "200"),
     ("6O km/h for 3 hours", "180"),
-    ("find the area of a circle with rad1us 7 cm", "153.938"),
+    # Wave 99: rad1us 7 -> pi = 22/7 -> 154 (was 153.938).
+    ("find the area of a circle with rad1us 7 cm", "154"),
     ("findtheareaofasquarewithside9cm", "81"),
     ("area of a rect angle with length 12 and breadth 5", "60"),
     ("sim ple interest on 1000 at 5% for 2 years", "100"),
@@ -261,5 +270,8 @@ def test_concept_asks_get_concept_answers(question):
 ])
 def test_vague_asks_stay_honest(question):
     res = _solve_friendly(question)
+    # Wave 67: "not_found" (the one-line answer) joins the
+    # honest outcomes for a vague ask.
     assert res.get("fallback_kind") in ("similar", "guide",
-                                        "vague", "concept")
+                                        "vague", "concept",
+                                        "not_found")

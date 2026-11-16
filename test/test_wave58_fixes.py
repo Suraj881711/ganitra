@@ -60,7 +60,9 @@ def test_hindi_fresh_cone():
     # pattern answers in the app's established format
     # "98·pi ≈ 307.876" — the same value; assert containment,
     # as Wave 52's own Hindi tests do.
-    assert "307.876" in _ans(
+    # Wave 99 (pi policy): radius 7 -> pi = 22/7 -> the cone
+    # volume is exactly 308 (was 98·pi ≈ 307.876).
+    assert "308" in _ans(
         "एक शंकु की त्रिज्या 7 cm और ऊंचाई 6 cm है। "
         "शंकु का आयतन ज्ञात कीजिए।")
 
@@ -291,8 +293,10 @@ def test_ring_area_control():
 
 # --- trig ----------------------------------------------------------
 def test_theta_identity_true():
-    assert _ans("Prove that sin^2 theta + cos^2 theta "
-                "= 1.") == "Identity verified ✔"
+    # Wave 95: upgraded from the bare verdict to a proof.
+    ans = _ans("Prove that sin^2 theta + cos^2 theta = 1.")
+    assert ans.startswith("sin^2 theta + cos^2 theta = 1")
+    assert "identity proved" in ans
 
 
 def test_theta_identity_false():

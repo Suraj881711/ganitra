@@ -126,22 +126,28 @@ def test_hindi_mensuration():
     assert "314.159" in _ans(
         "एक वृत्त की त्रिज्या 10 cm है। इसका क्षेत्रफल ज्ञात "
         "कीजिए।")
-    assert "615.752" in _ans(
+    # Wave 99 (pi policy): radii 14 / 21 / 7 are multiples of
+    # 7, so these Hindi answers now use pi = 22/7 — clean
+    # textbook values (616, 132, 220, 1540, 1437.33, 718.667)
+    # instead of the true-pi decimals asserted before. The
+    # radius-10 circle (314.159) and radius-3 cone (37.6991)
+    # below/above stay on true pi, unchanged.
+    assert "616" in _ans(
         "14 cm त्रिज्या वाले वृत्त का क्षेत्रफल ज्ञात कीजिए।")
-    assert "131.947" in _ans(
+    assert "132" in _ans(
         "वृत्त की त्रिज्या 21 cm है। इसका परिमाप ज्ञात कीजिए।")
-    assert "219.911" in _ans(
+    assert "220" in _ans(
         "एक बेलन का वक्र पृष्ठ क्षेत्रफल ज्ञात कीजिए जिसकी "
         "त्रिज्या 7 cm और ऊंचाई 5 cm है")
-    assert "1539.38" in _ans(
+    assert "1540" in _ans(
         "एक बेलन की त्रिज्या 7 cm और ऊंचाई 10 cm है। बेलन का "
         "आयतन ज्ञात कीजिए।")
     assert "37.6991" in _ans(
         "एक शंकु की त्रिज्या 3 cm और ऊंचाई 4 cm है। शंकु का "
         "आयतन ज्ञात कीजिए।")
-    assert "1436.76" in _ans(
+    assert "1437.33" in _ans(
         "7 cm त्रिज्या वाले गोले का आयतन ज्ञात कीजिए।")
-    assert "718.378" in _ans(
+    assert "718.667" in _ans(
         "एक अर्धगोले की त्रिज्या 7 cm है। इसका आयतन ज्ञात "
         "कीजिए।")
     assert _ans("9 cm भुजा वाले घन का आयतन ज्ञात कीजिए।") \

@@ -66,11 +66,14 @@ def client(tmp_path, monkeypatch):
 
 
 def test_library_totals():
-    assert len(papers_data.PAPERS) == 39
+    # Wave 94: + GSEB Class 10 2025 (54 questions) and the
+    # UBSE Class 10 2025 paper in English and Hindi (34 stored
+    # questions each; the Hindi entry is the 16th Hindi paper).
+    assert len(papers_data.PAPERS) == 42
     assert sum(len(p["questions"])
-               for p in papers_data.PAPERS) == 1486
+               for p in papers_data.PAPERS) == 1608
     assert sum(1 for p in papers_data.PAPERS
-               if p.get("medium") == "hindi") == 15
+               if p.get("medium") == "hindi") == 16
 
 
 @pytest.mark.parametrize("pid", sorted(EXPECTED))
@@ -110,8 +113,9 @@ def test_hbse12_english_corrections():
 
 def test_list_labels_boards_and_mediums(client):
     body = client.get("/papers").get_data(as_text=True)
-    assert body.count("हिंदी माध्यम · Hindi Medium</span>") == 15
-    assert body.count("English Medium</span>") == 24
+    # Wave 94: 42 papers — 16 Hindi-medium, 26 English-medium.
+    assert body.count("हिंदी माध्यम · Hindi Medium</span>") == 16
+    assert body.count("English Medium</span>") == 26
     for p in papers_data.PAPERS:
         assert p["board"] in body
         assert p["source_url"] not in body
