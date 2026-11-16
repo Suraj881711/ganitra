@@ -1182,6 +1182,22 @@ def with_fallback(question, result, lang=None):
         return _nonmaths_result(question, hindi)
 
     if _is_real(question, result):
+        # Wave 76: a question that arrived WITH options gets
+        # its answer named by option even when the whole text
+        # solved as-is — and for MCQs the STEM solve is the
+        # authority, because the option numbers pollute the
+        # full-text solve (the HCF of "12 and 18 (A) 3 (B) 6
+        # (C) 9 (D) 36" comes out as the HCF of all six numbers
+        # — the wrong option). mcq_preferred only fires on an
+        # exact one-option match and returns None otherwise,
+        # leaving the real result untouched.
+        try:
+            from mcq import mcq_preferred
+            wrapped = mcq_preferred(question, result)
+        except Exception:
+            wrapped = None
+        if wrapped is not None:
+            return wrapped
         return result
 
     # Wave 20, Layer 0c: a SCIENCE question the solver could not
@@ -1205,6 +1221,28 @@ def with_fallback(question, result, lang=None):
     banked = _bank_answer(question)
     if banked is not None:
         return banked
+
+    # Wave 76: the MCQ layer (mcq.py). A question that arrives
+    # WITH its options ("(a) 12 (b) 18 (c) 24 (d) 36") usually
+    # defeats the solver as a whole — the Wave 71 audit counted
+    # 75 such failures in a 150-question papers sample — but
+    # the STEM alone often solves through the ordinary
+    # machinery. This layer extracts stem + options, solves the
+    # stem, and serves the stem's own steps with a final answer
+    # naming the one option the computed value matches. It
+    # sits here — after the science guard and the bank, before
+    # salvage (which would otherwise carve a fragment out of
+    # the option text) — and returns None unless the stem
+    # really solved AND exactly one option matched, so on any
+    # doubt the layers below run byte-for-byte as before. An
+    # option is never guessed.
+    try:
+        from mcq import mcq_result
+        mcq = mcq_result(question)
+    except Exception:
+        mcq = None
+    if mcq is not None:
+        return mcq
 
     # The solver did not really answer. Work the layers.
     salvaged = _salvage(question, hindi)
