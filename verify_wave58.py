@@ -158,7 +158,8 @@ check("hindi SI #389", _ans(
 # Merge-3: Wave 52's hindi pattern answers in the app's
 # established "…·pi ≈ value" format — same value; assert
 # containment, as Wave 52's own Hindi tests do.
-check("hindi sphere volume", "1436.76" in _ans(
+# Wave 99 (pi policy): radius 7 -> pi = 22/7 -> 1437.33.
+check("hindi sphere volume", "1437.33" in _ans(
     "7 cm त्रिज्या वाले गोले का आयतन ज्ञात कीजिए।"))
 check("hindi times-linear #429", _ans(
     "एक संख्या के तीन गुने में 7 जोड़ने पर 40 प्राप्त "
@@ -168,7 +169,8 @@ check("hindi train time #479", _ans(
     "समय में तय करेगी?") == "5")
 # Merge-3: same value in Wave 52's "98·pi ≈ 307.876"
 # format; containment as in Wave 52's tests.
-check("hindi fresh cone", "307.876" in _ans(
+# Wave 99 (pi policy): radius 7 -> pi = 22/7 -> exactly 308.
+check("hindi fresh cone", "308" in _ans(
     "एक शंकु की त्रिज्या 7 cm और ऊंचाई 6 cm है। शंकु का "
     "आयतन ज्ञात कीजिए।"))
 check("hindi soup is not an answer", not _exact(

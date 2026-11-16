@@ -149,12 +149,13 @@ check("circle area #427", "314.159" in _ans(
 check("linear equation #429", _ans(
     "एक संख्या के तीन गुने में 7 जोड़ने पर 40 प्राप्त होता "
     "है। संख्या ज्ञात कीजिए।") == "11")
-check("cylinder CSA #432", "219.911" in _ans(
+# Wave 99 (pi policy): radii 7/14/21 -> pi = 22/7 below.
+check("cylinder CSA #432", "220" in _ans(
     "एक बेलन का वक्र पृष्ठ क्षेत्रफल ज्ञात कीजिए जिसकी "
     "त्रिज्या 7 cm और ऊंचाई 5 cm है"))
-check("sphere volume #460", "1436.76" in _ans(
+check("sphere volume #460", "1437.33" in _ans(
     "7 cm त्रिज्या वाले गोले का आयतन ज्ञात कीजिए।"))
-check("cylinder volume #461", "1539.38" in _ans(
+check("cylinder volume #461", "1540" in _ans(
     "एक बेलन की त्रिज्या 7 cm और ऊंचाई 10 cm है। बेलन का "
     "आयतन ज्ञात कीजिए।"))
 check("cone volume #462", "37.6991" in _ans(
@@ -162,9 +163,9 @@ check("cone volume #462", "37.6991" in _ans(
     "आयतन ज्ञात कीजिए।"))
 check("cube volume #463",
       _ans("9 cm भुजा वाले घन का आयतन ज्ञात कीजिए।") == "729")
-check("circle area #464", "615.752" in _ans(
+check("circle area #464", "616" in _ans(
     "14 cm त्रिज्या वाले वृत्त का क्षेत्रफल ज्ञात कीजिए।"))
-check("hemisphere volume #465", "718.378" in _ans(
+check("hemisphere volume #465", "718.667" in _ans(
     "एक अर्धगोले की त्रिज्या 7 cm है। इसका आयतन ज्ञात "
     "कीजिए।"))
 check("percentage #478",
@@ -176,7 +177,7 @@ check("tower height #480", _ans(
 check("triangle area #481", _ans(
     "त्रिभुज का क्षेत्रफल ज्ञात कीजिए जिसका आधार 10 cm और "
     "ऊंचाई 12 cm है।") == "60")
-check("circle perimeter #483", "131.947" in _ans(
+check("circle perimeter #483", "132" in _ans(
     "वृत्त की त्रिज्या 21 cm है। इसका परिमाप ज्ञात कीजिए।"))
 check("train time #479", _ans(
     "एक रेलगाड़ी 60 km/h की चाल से 300 km की दूरी कितने "

@@ -154,21 +154,24 @@ MENS = [
     ("frustum csa", "Find the curved surface area of a "
      "frustum of a cone with radii 8 cm and 4 cm and "
      "height 6 cm.", "271.85"),
+    # Wave 99 (pi policy): radii 7/14 below are multiples of
+    # 7 -> pi = 22/7 -> clean values (718.667, 462, 220, 374,
+    # 440, 154, 56); frustum radii 10 & 6 / 8 & 4 unchanged.
     ("hemisphere volume (was: sphere)",
      "Find the volume of a hemisphere of radius 7 cm.",
-     "718.378"),
+     "718.667"),
     ("hemisphere tsa (was: sphere)",
      "Find the total surface area of a hemisphere of "
-     "radius 7 cm.", "461.814"),
+     "radius 7 cm.", "462"),
     ("cone csa (was: cone volume)",
      "Find the curved surface area of a cone with "
-     "radius 7 cm and slant height 10 cm.", "219.911"),
+     "radius 7 cm and slant height 10 cm.", "220"),
     ("cone tsa (was: cone volume)",
      "Find the total surface area of a cone with "
-     "radius 7 cm and slant height 10 cm.", "373.85"),
+     "radius 7 cm and slant height 10 cm.", "374"),
     ("cylinder csa (was: cylinder tsa)",
      "Find the curved surface area of a cylinder with "
-     "radius 7 cm and height 10 cm.", "439.823"),
+     "radius 7 cm and height 10 cm.", "440"),
     ("cuboid volume", "Find the volume of a cuboid with "
      "length 10 cm, breadth 8 cm and height 6 cm.", "480"),
     ("cuboid tsa", "Find the total surface area of a "
@@ -180,10 +183,10 @@ MENS = [
      "it, both of radius 3 cm.", "179.071"),
     ("sector area (was: full circle)",
      "Find the area of a sector of a circle with "
-     "radius 14 cm and angle 90 degrees.", "153.938"),
+     "radius 14 cm and angle 90 degrees.", "154"),
     ("segment area", "Find the area of a segment of a "
      "circle with radius 14 cm and angle 90 degrees.",
-     "55.938"),
+     "56"),
     ("arc length", "Find the length of an arc of a "
      "circle with radius 10 cm and angle 60 degrees.",
      "10.472"),
@@ -191,10 +194,10 @@ MENS = [
 for _name, _q, _want in MENS:
     check(f"mensuration: {_name}", _want in _ans(_q),
           _ans(_q))
-check("cylinder TSA still the generic branch's 747.6991",
-      "747.6991" in _ans("Find the total surface area of a "
-                         "cylinder with radius 7 cm and "
-                         "height 10 cm."))
+check("cylinder TSA still the generic branch's 748",
+      "748" in _ans("Find the total surface area of a "
+                    "cylinder with radius 7 cm and "
+                    "height 10 cm."))
 
 # --- 4. Circles + coordinate + 3D -----------------------------------
 GEO = [

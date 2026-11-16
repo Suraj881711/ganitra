@@ -23,7 +23,7 @@ Checks:
     present only for word problems, answer never duplicated.
  4. Template/CSS pins — plain + intro hooks, no explanation
     paragraph, no notebook panel in the chat flow, NO example
-    chips (Wave-69 removal on Suraj's order), pins ?v=39 / v16.
+    chips (Wave-69 removal on Suraj's order), pins ?v=40 / v17.
  5. Mini-battery — 24 known-value questions across topics
     and languages stay EXACT (the full 515 + 984 batteries
     were diffed per-item during the wave: 0 verdict flips,
@@ -122,7 +122,9 @@ check("percentage value", r["answer"] == "36", r["answer"])
 check("percentage no intro",
       _intro_for(r, "What is 15% of 240?") is None)
 r = _solve_friendly("Find the area of a circle with radius 7 cm.")
-check("geometry value", "49" in r["answer"], r["answer"])
+# Wave 99 (pi policy): radius 7 -> pi = 22/7 -> area exactly 154
+# (was 49·pi ≈ 153.94).
+check("geometry value", "154" in r["answer"], r["answer"])
 r = _solve_friendly("ek train 360 km jati hai 4 ghante me, "
                     "speed kitni hai?")
 check("hinglish train value", "90 km/h" in r["answer"], r["answer"])
@@ -166,8 +168,8 @@ check("no notebook panel in chat",
       '"steps notebook"' not in INDEX and "makeHwToggle" not in INDEX)
 check("no example chips (Wave 69)", INDEX.count('class="example-chip"') == 0
       and 'id="example-chips"' not in INDEX)
-check("pins ?v=39 / v16", "v='39'" in BASE
-      and 'GANITRA_CACHE = "ganitra-static-v16"' in SW)
+check("pins ?v=40 / v17", "v='40'" in BASE
+      and 'GANITRA_CACHE = "ganitra-static-v17"' in SW)
 check("wave68 CSS present", ".example-chip" not in CSS
       and ".plain-reply" in CSS and ".answer-intro" in CSS)
 

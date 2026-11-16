@@ -176,10 +176,12 @@ COVERAGE = [
     ("distance between (2,3) and (5,7)", "5", "9-10"),
     ("midpoint of (2,3) and (6,9)", "(4, 6)", "9-10"),
     ("slope of line joining (1,2) and (4,8)", "2", "9-10"),
-    ("volume of a cylinder radius 7 height 10", "1539", "9-10"),
+    # Wave 99 (pi policy): radius 7 -> pi = 22/7 -> 1540 /
+    # 154 / 44 (were 1539.38 / 153.938 / 43.98 with true pi).
+    ("volume of a cylinder radius 7 height 10", "1540", "9-10"),
     ("surface area of sphere radius 5", "314", "9-10"),
-    ("area of a circle radius 7", "153.9", "9-10"),
-    ("circumference of circle radius 7", "43.98", "9-10"),
+    ("area of a circle radius 7", "154", "9-10"),
+    ("circumference of circle radius 7", "44", "9-10"),
     ("volume of cube side 4", "64", "9-10"),
     ("area of triangle base 6 height 4", "12", "9-10"),
     ("mean of 4, 8, 15, 16, 23", "13.2", "9-10"),

@@ -243,9 +243,10 @@ check("nth term from S_n", "n + 2" in _fans(
 check("collinear find k", _fans(
     "Find the value of k for which the points (2, 3), "
     "(4, k) and (6, -3) are collinear.") == "k = 0")
+# Wave 99: radii 7 & 14 -> pi = 22/7 -> 462 (was 461.81).
 check("ring area", _fans(
     "Find the area between two concentric circles of radii "
-    "7 cm and 14 cm.").startswith("461.81"))
+    "7 cm and 14 cm.").startswith("462"))
 _rd = _fans("The diagonal of a rectangle is 60 m more than "
             "the shorter side and the longer side is 30 m "
             "more than the shorter side. Find the sides of "

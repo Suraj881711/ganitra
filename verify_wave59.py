@@ -121,10 +121,11 @@ check("ages story (cricket dressing)",
              "cricket khelta hai, dono ki umar ka yog 40 saal "
              "hai aur antar 10 saal hai, bade bhai ram ki umar "
              "kitni hai?", "25"))
+# Wave 99: trijya 7 -> pi = 22/7 -> 1437.33 (was 1436.76).
 check("sphere story (football dressing)",
       _exact("football gol (sphere) aakar ki hoti hai, ek "
              "gend ki trijya 7 cm hai to uska volume kitna "
-             "hoga?", "1436"))
+             "hoga?", "1437.33"))
 check("percent merged ka15", _exact("240 ka15 persent kitna hogaa?", "36"))
 check("sum of naturals (prakrit)",
       _exact("pehli 10 prakrit sankhyao (natural numbers) ka "

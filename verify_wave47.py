@@ -135,7 +135,8 @@ check("cone+hemisphere", "94.2478" in _ans(
     "A solid consists of a cone of radius 3 cm and "
     "height 4 cm with a hemisphere of the same radius "
     "on top. Find the total volume."))
-check("plain hemisphere unchanged", "718.378" in _ans(
+# Wave 99: radius 7 -> pi = 22/7 -> 718.667 (was 718.378).
+check("plain hemisphere unchanged", "718.667" in _ans(
     "Find the volume of a hemisphere of radius 7 cm."))
 
 print("== 3. train / work ==")

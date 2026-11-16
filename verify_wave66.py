@@ -4,7 +4,7 @@ WHAT THIS WAVE CHANGED (Suraj's instruction: "All paper
 sabhi board ke chahiye, hindi or english dono ke"):
 
 The Wave 63/64 typed-paper library grows from 17 papers
-(567 questions, CBSE + HBSE) to 39 papers (1,486 questions)
+(567 questions, CBSE + HBSE) to 42 papers (1,608 questions)
 across 9 boards — every paper a REAL printed board paper
 transcribed question-by-question from its full text (board
 booklets mirrored by AglaSem, cross-checked against a
@@ -89,13 +89,13 @@ DEV = re.compile(r"[ऀ-ॿ]")
 
 # --- 1. Data -------------------------------------------------
 print("== 1. Library data ==")
-check("library holds 39 papers", len(papers_data.PAPERS) == 39,
+check("library holds 42 papers", len(papers_data.PAPERS) == 42,
       f"total={len(papers_data.PAPERS)}")
-check("library holds 1,486 questions",
-      sum(len(p["questions"]) for p in papers_data.PAPERS) == 1486)
-check("15 Hindi-medium papers",
+check("library holds 1,608 questions",
+      sum(len(p["questions"]) for p in papers_data.PAPERS) == 1608)
+check("16 Hindi-medium papers",
       sum(1 for p in papers_data.PAPERS
-          if p.get("medium") == "hindi") == 15)
+          if p.get("medium") == "hindi") == 16)
 for pid, (nq, stored, header) in EXPECTED.items():
     p = papers_data.get_paper(pid)
     ok = (p is not None and len(p["questions"]) == nq
@@ -157,8 +157,8 @@ check("signup", r.status_code in (200, 302), f"status={r.status_code}")
 
 body = client.get("/papers").get_data(as_text=True)
 check("/papers labels every medium",
-      body.count("हिंदी माध्यम · Hindi Medium</span>") == 15
-      and body.count("English Medium</span>") == 24)
+      body.count("हिंदी माध्यम · Hindi Medium</span>") == 16
+      and body.count("English Medium</span>") == 26)
 check("/papers shows every board name",
       all(p["board"] in body for p in papers_data.PAPERS))
 check("/papers has no external paper links",
