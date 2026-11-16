@@ -83,10 +83,46 @@
    the menu panel rules were already correct live, but a
    pre-Wave-72 cached shell could still replay the old
    unstyled menu. No CSS content change rides along. */
-var GANITRA_CACHE = "ganitra-static-v16";
+/* Wave 98: kam-net mode — cache v17, stylesheet ?v=40.
+   Two changes: (1) the install handler now PRECACHES the
+   chat shell (below) — until now the worker cached only
+   what a visit happened to fetch, so a first load that was
+   interrupted, or a cache the OS evicted under storage
+   pressure, left nothing for an offline open; (2) the new
+   /static/offline.js (the browser-side basic evaluator the
+   chat uses when /api/solve is unreachable) joins the
+   shell so it is guaranteed present offline. The fetch
+   rules themselves are unchanged: code network-first with
+   revalidation, media stale-while-revalidate, navigations
+   network-first with the cached shell as the fallback. */
+var GANITRA_CACHE = "ganitra-static-v17";
+
+/* Wave 98: the chat shell, precached on install. Each URL
+   is added on its own so one failure (e.g. a sprite the
+   server hiccups on) can never veto the rest — the shell
+   that matters is the page, its stylesheet and the
+   offline evaluator. The stylesheet URL carries the same
+   ?v= pin as base.html so the code handler's cache lookup
+   (which keys on the full URL) hits it offline. */
+var GANITRA_SHELL = [
+  "/",
+  "/static/style.css?v=40",
+  "/static/offline.js",
+  "/static/logo-mark-t.png",
+  "/static/logo-full-t.png",
+  "/static/scene-boy.webp?v=29",
+  "/static/favicon.png",
+  "/manifest.webmanifest"
+];
 
 self.addEventListener("install", function (event) {
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(GANITRA_CACHE).then(function (cache) {
+      return Promise.all(GANITRA_SHELL.map(function (url) {
+        return cache.add(url).catch(function () { return null; });
+      }));
+    }).then(function () { return self.skipWaiting(); })
+  );
 });
 
 self.addEventListener("activate", function (event) {

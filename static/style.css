@@ -43,6 +43,10 @@ nav a { color: var(--accent); margin-right: 14px; font-size: 15px; font-weight: 
 .answer-big { font-size: 23px; font-weight: 700; }
 .steps li { margin: 7px 0; line-height: 1.6; }
 img.graph { max-width: 100%; background: #fff; border-radius: 10px; margin-top: 10px; }
+/* Wave 86: the labelled mensuration diagram inside an answer card. */
+.answer-figure { margin: 12px 0 4px; text-align: center; }
+.answer-figure svg { max-width: 100%; height: auto; }
+.answer-figure figcaption { color: var(--muted); font-size: 13.5px; margin-top: 4px; }
 details { margin-top: 14px; }
 details summary { cursor: pointer; color: var(--accent); }
 .practice-q { border-top: 1px solid var(--line); padding: 14px 0; }
