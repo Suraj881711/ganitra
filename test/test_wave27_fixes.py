@@ -80,9 +80,13 @@ def test_scene_css_has_no_card_styling():
 # --- 3+4. Scene on every load, fast -------------------------------
 
 def test_sprites_preloaded(page):
-    assert page.count('rel="preload"') >= 3
-    for name in ("eagle", "tiger", "boy"):
-        assert f"scene-{name}.webp" in page
+    # Wave 70 (Suraj, 16 Nov 2026): the scene is PARKED, so no
+    # sprite preloads are served. (The boy's writer sprite is
+    # still named by the answer-flow JS — that is not a
+    # preload and not part of the empty-state scene.)
+    assert 'rel="preload"' not in page
+    assert "scene-eagle.webp" not in page
+    assert "scene-tiger.webp" not in page
 
 
 def test_css_durations_match_trimmed_scenes():

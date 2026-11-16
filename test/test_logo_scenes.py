@@ -68,15 +68,17 @@ def test_stage_markup_served_on_empty_chat(client):
     r = client.get("/")
     assert r.status_code == 200
     body = r.get_data(as_text=True)
-    assert 'id="scene-stage"' in body
     assert 'id="scene-logo"' in body
     # The logo still renders above the greeting (Wave-8 order).
     assert body.index("logo-full-t.png") < body.index("empty-greeting")
+    # Wave 70 (Suraj, 16 Nov 2026): the scene is PARKED — the
+    # stage id, the actors and the stick are NOT served; the
+    # empty state is the still logo + greeting only. (The
+    # scene markup returns if SCENE_ENABLED is flipped on.)
+    assert 'id="scene-stage"' not in body
     for actor in ("eagle", "tiger", "boy"):
-        assert f'id="scene-{actor}"' in body
-        assert f"scene-{actor}.webp" in body
-    # Scene C's stick prop rides in the stage too.
-    assert 'id="scene-stick"' in body
+        assert f'id="scene-{actor}"' not in body
+    assert 'id="scene-stick"' not in body
 
 
 def test_scene_sprites_exist_and_are_served(client):

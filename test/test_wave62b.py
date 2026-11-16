@@ -125,7 +125,9 @@ def test_boy_writer_is_the_2d_sprite_again():
 
 def test_served_page_wave62b(client):
     page = client.get("/").get_data(as_text=True)
-    assert 'id="scene-3d"' in page and 'id="scene-stage"' in page
+    # Wave 70 (Suraj, 16 Nov 2026): the scene is PARKED — the
+    # stage and 3D layer are NOT served at all.
+    assert 'id="scene-3d"' not in page and 'id="scene-stage"' not in page
     # Merge-4: pins reconciled to ?v=38 / ganitra-static-v15.
     assert "style.css?v=38" in page
     r = client.get("/static/logo-g-t.png")

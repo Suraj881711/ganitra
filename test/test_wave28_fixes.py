@@ -90,11 +90,13 @@ def test_tesseract_no_longer_blocks_the_parser():
 
 def test_sprite_urls_versioned_everywhere(client):
     page = client.get("/").get_data(as_text=True)
-    # Preload + stage <img> for each sprite; the boy also has
-    # two JS-built writer sprites in the inline scripts.
-    assert page.count("scene-eagle.webp?v=29") == 2
-    assert page.count("scene-tiger.webp?v=29") == 2
-    assert page.count("scene-boy.webp?v=29") == 4
+    # Wave 70 (Suraj, 16 Nov 2026): the scene is PARKED — the
+    # preload + stage <img> mentions are gone (eagle/tiger 0);
+    # the boy keeps only his two JS-built writer sprites in
+    # the inline scripts (the answer flow, not the scene).
+    assert page.count("scene-eagle.webp?v=29") == 0
+    assert page.count("scene-tiger.webp?v=29") == 0
+    assert page.count("scene-boy.webp?v=29") == 2
     # No unversioned sprite URL survives anywhere in the page:
     # every mention of a sprite file carries the version query.
     for name in ("eagle", "tiger", "boy"):

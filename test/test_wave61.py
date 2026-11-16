@@ -177,8 +177,11 @@ def test_vendored_three_present():
 
 def test_served_chat_page_carries_3d_layer(client):
     page = client.get("/").get_data(as_text=True)
-    assert 'id="scene-3d"' in page
-    assert 'id="scene-stage"' in page
+    # Wave 70 (Suraj, 16 Nov 2026): the scene is PARKED — the
+    # 3D layer and stage id are NOT served. The inert import
+    # map stays in the head (nothing is fetched from it).
+    assert 'id="scene-3d"' not in page
+    assert 'id="scene-stage"' not in page
     assert "vendor/three.module.js" in page
     assert "style.css?v=38" in page
 

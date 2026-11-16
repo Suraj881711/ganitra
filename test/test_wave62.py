@@ -164,10 +164,13 @@ def test_scene3d_wires_locomotion():
 def test_served_page_wave62(client):
     page = client.get("/").get_data(as_text=True)
     assert 'SCENE_ORDER = ["eagle", "tiger", "chase", "lion"]' in page
-    assert 'id="scene-3d"' in page and 'id="scene-stage"' in page
+    # Wave 70 (Suraj, 16 Nov 2026): the scene is PARKED — the
+    # stage, 3D layer and 2D actors are NOT served (the
+    # director script above stays in the page, inert without
+    # its stage element).
+    assert 'id="scene-3d"' not in page and 'id="scene-stage"' not in page
     assert "__ganitraBoyWriter3D" in page
     # Merge-4: pins reconciled to ?v=38 / ganitra-static-v15.
     assert "style.css?v=38" in page
-    # the 2D fallback actors are still served in the stage
     for n in ("eagle", "tiger", "boy"):
-        assert f'id="scene-{n}"' in page
+        assert f'id="scene-{n}"' not in page

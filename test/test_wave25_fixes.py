@@ -121,10 +121,11 @@ def test_answer_line_and_dedupe_wiring():
 def test_sprite_attribute_sizes(client):
     _signup(client)
     page = client.get("/").get_data(as_text=True)
-    for actor, size in (("scene-eagle", "92"), ("scene-tiger", "104"),
-                        ("scene-boy", "96")):
-        assert re.search(
-            rf'id="{actor}"\s+width="{size}"\s+height="{size}"', page)
+    # Wave 70 (Suraj, 16 Nov 2026): the scene is PARKED — the
+    # sprite <img> pins are not served at all (they return
+    # with the scene if SCENE_ENABLED is flipped back on).
+    for actor in ("scene-eagle", "scene-tiger", "scene-boy"):
+        assert f'id="{actor}"' not in page
     assert "boyWriter.width = 82" in INDEX
     assert "boy.width = 54" in INDEX
 
