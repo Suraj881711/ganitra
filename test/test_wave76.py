@@ -109,14 +109,20 @@ def test_mcq_solves(question, want):
 # --- The honesty guards ----------------------------------------
 
 def test_unsolvable_stem_falls_through_without_guessing():
-    # The stem asks for a formula in n; the solver cannot
-    # produce it, so NO option may be named — the existing
-    # layers answer (or honestly decline) as before.
+    # The stem asks for a formula; the solver cannot produce
+    # it, so NO option may be named — the existing layers
+    # answer (or honestly decline) as before. (Wave 94 note:
+    # the original example here — the sum of the first n odd
+    # naturals — is now genuinely SOLVED by the papers10
+    # AP-sum identity schema, with derivation, so this test
+    # uses a segment-area formula stem, which no schema
+    # derives.)
     result = _solve_friendly(
-        "The sum of first n odd natural numbers is "
-        "(A) n² − 1 (B) n + 1 (C) 2n − 1 (D) n²")
+        "The area of a segment of a circle of radius r with "
+        "angle θ is (A) (θ/360)πr² (B) (θ/360)πr² − "
+        "(1/2)r²sinθ (C) πr² (D) 2πr")
     assert result.get("source") != "mcq"
-    assert not str(result.get("answer", "")).startswith("(D)")
+    assert not str(result.get("answer", "")).startswith("(B)")
 
 
 def test_stem_letters_do_not_break_extraction():
@@ -142,11 +148,16 @@ def test_vector_unicode_junk_is_not_matched():
 
 
 def test_knowledge_mcq_is_not_guessed():
-    # A pure-recall item (ordinate of a point on the x-axis):
-    # nothing to compute, so the layer must stay silent.
+    # A pure-recall item (the longest chord of a circle has a
+    # NAME, not a value): nothing to compute, so the layer
+    # must stay silent. (Wave 94 note: the original example
+    # here — the ordinate of a point on the x-axis — is a
+    # BSEB 2025 audit question that the papers10 axis-fact
+    # schema now answers as a stated coordinate fact, so
+    # this test uses a naming-recall item instead.)
     assert mcq_result(
-        "x-अक्ष पर स्थित सभी बिन्दुओं की कोटि होती है– "
-        "(a) 0 (b) 1 (c) 2 (d) −1") is None
+        "किसी वृत्त की सबसे बड़ी जीवा कहलाती है– "
+        "(a) त्रिज्या (b) व्यास (c) चाप (d) स्पर्श रेखा") is None
 
 
 def test_duplicate_options_are_not_guessed():

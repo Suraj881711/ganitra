@@ -23,7 +23,7 @@ What these tests pin:
 3. THE CHAT TEMPLATE: no explanation paragraph, no
    notebook/copy-style panel in the answer flow, NO example
    chips on the empty state (Wave-68 chips removed in Wave
-   69 on Suraj's order), pins ?v=39 / ganitra-static-v16.
+   69 on Suraj's order), pins ?v=40 / ganitra-static-v17.
 """
 from pathlib import Path
 
@@ -157,7 +157,9 @@ def test_solved_values_spot_set():
     assert _solve_friendly("Solve x^2 - 5x + 6 = 0")["answer"] \
         == "x = 2, x = 3"
     assert _solve_friendly("What is 15% of 240?")["answer"] == "36"
-    assert "49" in _solve_friendly(
+    # Wave 99 (pi policy): radius 7 -> pi = 22/7 -> "154"
+    # (was "49·pi ≈ 153.9380", hence the old "49" check).
+    assert "154" in _solve_friendly(
         "Find the area of a circle with radius 7 cm.")["answer"]
     assert "90 km/h" in _solve_friendly(
         "ek train 360 km jati hai 4 ghante me, "
@@ -276,13 +278,14 @@ def test_sample_questions_all_solve():
     assert "90 km/h" in _solve_friendly(
         "एक ट्रेन 360 km की दूरी 4 घंटे में तय करती है। "
         "उसकी चाल ज्ञात कीजिए।")["answer"]
-    assert "49" in _solve_friendly(
+    # Wave 99: radius 7 -> pi = 22/7 -> "154" (was 49·pi).
+    assert "154" in _solve_friendly(
         "Find the area of a circle with radius 7 cm.")["answer"]
 
 
 def test_wave68_pins_and_css():
-    assert "v='39'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v16"' in SW
+    assert "v='40'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v17"' in SW
     assert ".example-chip" not in CSS
     assert ".plain-reply" in CSS
     assert ".answer-intro" in CSS

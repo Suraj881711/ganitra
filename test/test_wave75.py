@@ -202,17 +202,16 @@ def test_ap_gp_difference_answer():
 # the not-found line) — the layer must return None for them.
 
 FALL_THROUGH = [
-    "what is a theorem",                    # no generic topic
-    "derivative kya hota hai yr?",          # no definition topic
-    "polynomial ki degree kya hoti hai?",   # no degree topic
-    "ratio aur proportion me kya fark hai?",
-    "congruent aur similar triangles me kya fark hai?",
-    "surface area aur volume me kya antar hai?",
-    "sequence aur series me kya antar hai?",
-    "rekha aur rekha khand me kya antar hai?",
-    "discount kese kaam karta hai dukaan par?",
-    "iota (i) kya hai aur kyun banaya gaya?",
-    "what is the difference between a square and a rectangle?",
+    # Wave 81 added topics for every other ask that used to
+    # be listed here (theorem, derivative/limit definitions,
+    # degree, ratio vs proportion, congruent vs similar,
+    # surface area vs volume, sequence vs series, line vs
+    # segment, discount, iota, square vs rectangle — see
+    # test_wave81.py). This one stays: it asks for a FACT
+    # (the angle sum of a quadrilateral) and the topics
+    # library has no topic whose worked example the solver
+    # can verify for it, so it keeps the concepts.py card.
+    "chaturbhuj ke chaaro kono ka yog kitna hota hai?",
 ]
 
 
@@ -264,8 +263,10 @@ def test_layer_never_captures_concrete_problems(question):
 NUMERIC_SOLVES = {
     "what is the HCF of 12 and 18": "6",
     "Find the mean of 3, 6, 9, 12.": "7.5",
+    # Wave 99 (pi policy): radius 7 -> pi = 22/7 -> the
+    # clean answer "154" (was "49·pi ≈ 153.9380").
     "Find the area of a circle with radius 7 cm.":
-        "49·pi ≈ 153.9380",
+        "154",
     "Solve x^2 - 5x + 6 = 0": "x = 2, x = 3",
     "find the difference between 45 and 17": "28",
     "what is the difference between 250 and 175?": "75",

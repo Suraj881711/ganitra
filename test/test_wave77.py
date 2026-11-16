@@ -157,11 +157,12 @@ def test_wrapped_decimal_items_match_numerically(question,
 
 
 def test_wrapped_sphere_surface_area():
+    # Wave 99: radius 7 -> pi = 22/7 -> 616 (was 615.75).
     answer = _solver_answer(
         "Sphere ka radius 7 cm hai to uska surface area find "
         "karo?")
     assert answer is not None
-    assert "615.75" in answer
+    assert "616" in answer
 
 
 # --- The Wave 74 trap: evaluate-at ----------------------------

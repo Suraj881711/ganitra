@@ -40,26 +40,33 @@ def _num(ans):
 
 # --- Case 1: circumference vs area ---------------------------------
 
+# Wave 99 (pi policy): radius 17.5 implies diameter 35 — a
+# multiple of 7 — and diameter 28 / circumference 44 are
+# 7-/22-friendly too, so all of these now use pi = 22/7:
+# circumference 110 (was 109.9557), circumference 88 (was
+# 87.9646), area 962.5 (was 962.1128), area-from-C 154
+# (was 154.062). The Wave 74 routing intent is unchanged.
+
 def test_circumferance_misspelt_is_circumference():
     a = _ans("the circumferance of a circle with radius "
              "17.5 cm is?")
-    assert abs(_num(a) - 109.9557) < 0.01, a
+    assert abs(_num(a) - 110) < 0.01, a
 
 
 def test_circumference_correct_spelling_still_works():
     a = _ans("the circumference of a circle with radius "
              "17.5 cm is?")
-    assert abs(_num(a) - 109.9557) < 0.01, a
+    assert abs(_num(a) - 110) < 0.01, a
 
 
 def test_circumfrence_with_diameter():
     a = _ans("circumfrence of a circle with diameter 28 cm")
-    assert abs(_num(a) - 87.9646) < 0.01, a
+    assert abs(_num(a) - 88) < 0.01, a
 
 
 def test_area_ask_still_area():
     a = _ans("area of a circle with radius 17.5 cm")
-    assert abs(_num(a) - 962.1128) < 0.01, a
+    assert abs(_num(a) - 962.5) < 0.01, a
 
 
 def test_area_from_circumference_both_spellings():
@@ -68,7 +75,7 @@ def test_area_from_circumference_both_spellings():
               "area of a circle whose circumferance is "
               "44 cm"):
         a = _ans(q)
-        assert abs(_num(a) - 154.062) < 0.01, (q, a)
+        assert abs(_num(a) - 154) < 0.01, (q, a)
 
 
 # --- Case 2: capacity question vs its conversion hint ---------------
