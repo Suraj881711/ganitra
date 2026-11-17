@@ -36,7 +36,7 @@ Presentation/interaction only: no answer content, format,
 font size, colour, logo, menu or feature changed. The
 reading rhythm was measured against the Wave-105 spec and
 was on-spec, so it is untouched. Pins move to ?v=43 /
-ganitra-static-v20 with this wave's CSS (Wave 116 may pick
+ganitra-static-v21 with this wave's CSS (Wave 116 may pick
 the same numbers in its tree — the parent renumbers one at
 merge).
 """
@@ -150,14 +150,14 @@ def test_composer_halo_reaches_44px():
 # --- Pins -------------------------------------------------------------
 
 def test_pins_bumped_to_v42_v19():
-    assert "v='43'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v20"' in SW
-    assert '"/static/style.css?v=43"' in SW
+    assert "v='46'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v23"' in SW
+    assert '"/static/style.css?v=46"' in SW
 
 
 # --- The served page carries the wave -------------------------------
 
 def test_served_page_has_aligner_and_new_pins(page):
     assert "alignLiveAnswer" in page
-    assert "style.css?v=43" in page
+    assert "style.css?v=46" in page
     assert "interactive-widget=resizes-content" in page

@@ -16,7 +16,7 @@ auth inputs and chats search already referenced them
 app-wide and silently fell back); topic cards warmed to the
 app palette; the all-chats "+" in the app teal; one Fraunces
 heading voice on .card pages; 40px answer-panel chips; the
-pins at ?v=43 / ganitra-static-v20.
+pins at ?v=43 / ganitra-static-v21.
 """
 from pathlib import Path
 
@@ -93,9 +93,9 @@ def test_finish_details():
 
 
 def test_pins_v42_v19():
-    assert "filename='style.css', v='43'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v20"' in SW
-    assert '"/static/style.css?v=43"' in SW
+    assert "filename='style.css', v='46'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v23"' in SW
+    assert '"/static/style.css?v=46"' in SW
     # Deploy-25 merge: the final pins are ?v=43 / v20 (this
     # wave's ?v=42 / v19 superseded in the combined tree);
     # every earlier pin must be gone.

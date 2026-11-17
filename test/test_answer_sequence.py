@@ -58,6 +58,17 @@ item inside the ••• panel, and the ••• sign + panel ride
 on EVERY answer card (a plain answer's row is now
 copy / listen / methods, and its wrap order gains the
 panel at the end).
+WAVE 122 (Suraj, 17 Nov 2026): the four Wave-118 decision
+items are approved, each CONDITIONAL — (1) fresh-turn
+streaming reveal, (2) the final-answer BOX on SOLVED
+answers only (the "no highlight box" rule above is
+superseded by his approval under that one condition;
+non-solved cards keep the plain line), (3) follow-up chips
+under a solved live answer only, (4) "Step N" labels via a
+data attribute + CSS ::before when a card shows 2+ solving
+lines (the step TEXT stays byte-identical, so the
+stepTexts pins below still hold verbatim). The conditions
+themselves are pinned in test_wave122.py.
 """
 import json
 import os
@@ -606,13 +617,19 @@ def test_jsdom_answer_sequence(client, tmp_path):
     # Wave 25: the trailing "Solution: ..." restatement is
     # dropped from the shown steps; the answer line holds it.
     assert s1["stepTexts"] == PAYLOADS["s1"]["result"]["steps"][:-1]
-    # The answer is a PLAIN line holding ONLY the answer.
+    # The answer line holds ONLY the answer.
     assert s1["answerText"] == "Answer: x = 2, x = 3"
     assert s1["answerHasStepText"] is False
     assert s1["answerHasAdvice"] is False
     assert s1["boxInBubble"] is False
-    assert s1["answerStyle"]["bg"] == "rgba(0, 0, 0, 0)"
-    assert s1["answerStyle"]["border"] == "none"
+    # Wave 122 (Suraj, 17 Nov 2026 — deliberate flip): the
+    # plain-line rule above was superseded BY HIS APPROVAL
+    # for SOLVED answers only: this fixture IS a solved
+    # answer, so its line now wears the warm box (cream bg +
+    # solid gold border). Non-solved cards keep the plain
+    # line — test_wave122.py pins both sides.
+    assert s1["answerStyle"]["bg"] == "rgb(253, 246, 224)"
+    assert s1["answerStyle"]["border"] == "solid"
     # Four signs in order (Wave 120: the play/teach sign
     # is gone — speaker only); methods panel hidden; the
     # advice card hidden by default and toggled by the

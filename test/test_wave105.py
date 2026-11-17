@@ -32,7 +32,7 @@ the bulb, the 5 glyphs below the card), no chips, the
 logo, the menu, the scene (OFF), the composer element
 order, the plain send sign, every font size, and the
 header (Wave 104 owns the header buttons). Pins move to
-?v=43 / ganitra-static-v20 with this wave's CSS.
+?v=43 / ganitra-static-v21 with this wave's CSS.
 """
 from pathlib import Path
 
@@ -126,7 +126,12 @@ def test_no_font_size_moves_except_the_greeting_clamp():
     # them (the greeting clamp is a display size, not text).
     assert "body.chat-page .bubble { font-size: 13px;" in CSS
     assert "font-size: 13.5px; line-height: 1.55;" in CSS
-    assert W105.count("font-size") == 1  # only the greeting clamp
+    # Wave 122 (deliberate flip): the slice now runs to EOF,
+    # so it also contains Wave 122's appended block, whose
+    # two NEW elements carry their own sizes — the step label
+    # (11px) and the follow-up chip (13px). Neither touches
+    # the frozen text sizes above.
+    assert W105.count("font-size") == 3  # clamp + W122 label/chip
 
 
 def test_header_and_menu_are_not_this_waves_business():
@@ -136,7 +141,15 @@ def test_header_and_menu_are_not_this_waves_business():
 
 
 def test_no_chips_creep_back_in():
-    assert ".chip" not in W105
+    # Wave 122 (Suraj, 17 Nov 2026): the blanket ".chip" ban
+    # guarded Wave-69's EXAMPLE-question chips. The follow-up
+    # chips Suraj approved in Wave 122 are a different feature
+    # (post-answer only, solved + latest answer only) and
+    # their styles legitimately end in this slice — so the ban
+    # now targets the example chips it was always about. The
+    # Wave-69 removal itself stands (test_wave68_chat pins the
+    # template side).
+    assert ".example-chip" not in W105
     assert "example" not in W105.lower()
 
 
@@ -149,9 +162,9 @@ def test_answer_card_internals_untouched():
 # --- Pins -------------------------------------------------------------
 
 def test_pins_moved_with_the_css():
-    assert "v='43'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v20"' in SW
-    assert '"/static/style.css?v=43"' in SW
+    assert "v='46'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v23"' in SW
+    assert '"/static/style.css?v=46"' in SW
 
 
 # --- The page still serves ---------------------------------------------
@@ -168,5 +181,5 @@ def test_chat_page_serves_with_the_new_sheet(tmp_path, monkeypatch):
         "goal": "Doctor", "hobby": "Cricket", "favourite": "Pizza",
         "password": "w105-test-pass"})
     page = client.get("/").get_data(as_text=True)
-    assert "style.css?v=43" in page
+    assert "style.css?v=46" in page
     assert 'id="q"' in page

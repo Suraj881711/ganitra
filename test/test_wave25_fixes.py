@@ -84,7 +84,7 @@ def test_real_payload_shape():
 # --- Bug 3's root: the service worker ------------------------
 
 def test_service_worker_never_freezes_code_again():
-    assert 'GANITRA_CACHE = "ganitra-static-v20"' in SW
+    assert 'GANITRA_CACHE = "ganitra-static-v23"' in SW
     assert '"ganitra-static-v4"' not in SW
     assert '"ganitra-static-v3"' not in SW
     assert '"ganitra-static-v2"' not in SW
@@ -301,10 +301,16 @@ def test_jsdom_wave25_fixes(client, tmp_path):
     assert out["eagle"]["opacity"] == "0"
     assert out["eagle"]["visibility"] == "hidden"
     assert out["eagle"]["attrW"] == "92"
-    # Bug 2: labelled plain answer line, last in the card.
+    # Bug 2: labelled answer line, last in the card.
     assert out["answerText"] == "Answer: x = 2"
     assert out["answerIsLast"] is True
-    assert out["answerBg"] == "rgba(0, 0, 0, 0)"
+    # Wave 122 (Suraj, 17 Nov 2026 — deliberate flip): a
+    # SOLVED answer's line now wears the warm highlighted
+    # box (his approval superseded the plain-line rule for
+    # solved answers only), so the bg is the cream tint,
+    # not transparent. Non-solved cards stay plain —
+    # test_wave122.py pins both sides.
+    assert out["answerBg"] == "rgb(253, 246, 224)"
     # Steps: deduped, plain, unnumbered on the <ol> AND each <li>.
     assert out["stepTexts"] == payload["result"]["steps"][:-1]
     assert out["liListAllNone"] is True

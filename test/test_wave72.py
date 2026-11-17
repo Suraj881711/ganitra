@@ -27,7 +27,7 @@ def _critical_block():
 def test_critical_block_exists_and_precedes_stylesheet():
     assert '<style id="wave72-critical">' in BASE
     assert BASE.index('<style id="wave72-critical">') \
-        < BASE.index("style.css', v='43'")
+        < BASE.index("style.css', v='46'")
 
 
 def test_critical_block_carries_the_menu_panel_rule():
@@ -57,4 +57,4 @@ def test_critical_rules_match_style_css_verbatim():
 
 
 def test_stylesheet_link_unchanged():
-    assert "filename='style.css', v='43'" in BASE
+    assert "filename='style.css', v='46'" in BASE
