@@ -85,9 +85,12 @@ def test_hinglish_families():
 
 
 def test_non_hijack_controls():
+    # Wave 140 pin flip: the segment-area answer now carries
+    # the question's unit ("28.5398 cm²", was "28.5398") —
+    # Suraj's live-check defect 4; numerics unchanged.
     assert _ans("Find the area of a segment of a circle "
                 "with radius 10 cm and angle 90 degrees."
-                ) == "28.5398"
+                ) == "28.5398 cm²"
     assert _ans("Find the mean of the data with class "
                 "intervals 0-10, 10-20, 20-30, 30-40, "
                 "40-50 and frequencies 6, 10, 14, 8, 2."

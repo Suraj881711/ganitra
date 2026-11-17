@@ -260,8 +260,10 @@ def test_openrouter_not_maths_and_empty_return_none(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Through the real user path: third in the chain, only after
-# BOTH Gemini and Groq returned None
+# Through the real user path: third in the chain after both
+# Gemini and Groq returned None — and, since Wave 133, as a
+# consensus second/third opinion when an earlier leg's answer
+# carries an unverifiable-by-arithmetic value
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
@@ -320,20 +322,35 @@ def test_openrouter_used_only_after_gemini_and_groq_none(three_spies):
     assert order == ["gemini", "groq", "openrouter"]
 
 
-def test_openrouter_not_called_when_groq_answers(three_spies):
+def test_openrouter_consulted_for_consensus_when_groq_answers(
+        three_spies):
+    # Wave 133 DELIBERATE FLIP of the Wave 108 pin "OpenRouter
+    # is never called when Groq answered": Groq's answer here
+    # carries a final value no deterministic check can judge,
+    # so the verification gate asks OpenRouter for a second
+    # opinion before serving. Its text states the SAME final
+    # ages, so Groq's answer is served, consensus-verified.
     order, state = three_spies
     state["groq"] = "ok"
     result = _solve_friendly(AGES_Q)
     assert result.get("fallback_kind") == "groq", result
-    assert order == ["gemini", "groq"]
+    assert result.get("ai_verification") == "consensus"
+    assert order == ["gemini", "groq", "openrouter"]
 
 
-def test_openrouter_not_called_when_gemini_answers(three_spies):
+def test_openrouter_consulted_for_consensus_when_gemini_answers(
+        three_spies):
+    # Wave 133 DELIBERATE FLIP, same reasoning: Gemini's
+    # unverifiable-by-arithmetic answer is cross-checked —
+    # Groq times out (no vote), OpenRouter agrees with
+    # Gemini's stated ages, so Gemini's answer is served,
+    # consensus-verified.
     order, state = three_spies
     state["gemini"] = "ok"
     result = _solve_friendly(AGES_Q)
     assert result.get("fallback_kind") == "gemini", result
-    assert order == ["gemini"]
+    assert result.get("ai_verification") == "consensus"
+    assert order == ["gemini", "groq", "openrouter"]
 
 
 def test_openrouter_timeout_chain_still_settles_cleanly(three_spies):

@@ -53,7 +53,14 @@ def _clean_caches():
     cache.clear_cache()
 
 
-PROBE_Q = "Find the area between the curves y = x^2 and y = x"
+# Deploy-27 merge: the original EN probe ("Find the area
+# between the curves y = x^2 and y = x") is now solved
+# DETERMINISTICALLY by Wave 125's area-between-curves solver,
+# so it never reaches the AI leg this probe exercises. The
+# Hinglish phrasing of the same question still routes to the
+# leg (verified in the merge tree) and the stub replies below
+# are unchanged — same working, same 1/6 answer.
+PROBE_Q = "Area between curve y = x^2 and line y = x nikalo"
 
 # The reply the real API returned under the old 1024 cap
 # (recorded live 17 Nov 2026): finishReason MAX_TOKENS,

@@ -12,7 +12,7 @@ paper's medium; a Hindi sheet renders in the paper's own
 language (गणित subject line, सामान्य निर्देश, खण्ड headings,
 अधिकतम अंक, अथवा dividers, lowercase (a)–(d) options split
 onto their own lines). [Figure] census for the Hindi texts:
-2 + 3 + 4 + 3 = 12. Pins ?v=43 / cache ganitra-static-v23.
+2 + 3 + 4 + 3 = 12. Pins ?v=43 / cache ganitra-static-v24.
 """
 import html as _html
 import re
@@ -182,7 +182,7 @@ def test_pins_bumped_for_wave64():
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()
     css = (ROOT / "static" / "style.css").read_text()
-    assert "v='46'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v23"' in sw
+    assert "v='47'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v24"' in sw
     assert ".paper-medium" in css
     assert "Noto Serif Devanagari" in css

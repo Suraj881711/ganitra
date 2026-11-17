@@ -171,7 +171,9 @@ def test_gemini_non_model_failure_does_not_chain(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Groq through the real user path: only after Gemini None
+# Groq through the real user path: after Gemini None — and,
+# since Wave 133, as the consensus second opinion when
+# Gemini's answer carries an unverifiable-by-arithmetic value
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
@@ -215,12 +217,22 @@ def test_groq_used_only_after_gemini_none(both_spies):
     assert order == ["gemini", "groq"]  # Gemini first, Groq second
 
 
-def test_groq_not_called_when_gemini_answers(both_spies):
+def test_groq_consulted_for_consensus_when_gemini_answers(
+        both_spies):
+    # Wave 133 DELIBERATE FLIP of the Wave 41 pin "Groq is
+    # never consulted when Gemini answered": an AI answer
+    # whose final value no deterministic check can judge is
+    # now cross-checked with a second leg before serving
+    # (Suraj's "jawab ki jaanch" order). Here Groq's text
+    # states the SAME final ages as Gemini's, so Gemini's
+    # answer is served — marked consensus-verified — and the
+    # consultation order is exactly one extra call.
     order, state = both_spies
     state["gemini"] = "ok"
     result = _solve_friendly(AGES_Q)
     assert result.get("fallback_kind") == "gemini", result
-    assert order == ["gemini"]
+    assert result.get("ai_verification") == "consensus"
+    assert order == ["gemini", "groq"]
 
 
 def test_groq_payload_and_shaping(monkeypatch):

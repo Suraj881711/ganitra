@@ -96,8 +96,11 @@ def test_square_and_cube_of():
     # neighbours NOT hijacked: 'square root of' has 'root'
     # between, 'square of side' has 'side' between.
     assert _op("Find the square root of 16.") != "square_of"
+    # Wave 140 pin flip: the area answer now carries the
+    # question's unit ("225 cm²", was "225") — Suraj's
+    # live-check defect 4; numerics unchanged.
     assert _ans("What is the area of a square of side 15 "
-                "cm?") == "225"
+                "cm?") == "225 cm²"
 
 
 def test_junk_detector_letter_chains():

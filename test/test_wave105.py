@@ -162,9 +162,9 @@ def test_answer_card_internals_untouched():
 # --- Pins -------------------------------------------------------------
 
 def test_pins_moved_with_the_css():
-    assert "v='46'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v23"' in SW
-    assert '"/static/style.css?v=46"' in SW
+    assert "v='47'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v24"' in SW
+    assert '"/static/style.css?v=47"' in SW
 
 
 # --- The page still serves ---------------------------------------------
@@ -181,5 +181,5 @@ def test_chat_page_serves_with_the_new_sheet(tmp_path, monkeypatch):
         "goal": "Doctor", "hobby": "Cricket", "favourite": "Pizza",
         "password": "w105-test-pass"})
     page = client.get("/").get_data(as_text=True)
-    assert "style.css?v=46" in page
+    assert "style.css?v=47" in page
     assert 'id="q"' in page

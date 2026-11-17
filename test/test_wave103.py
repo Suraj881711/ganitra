@@ -84,12 +84,19 @@ def test_fourth_angle_hinglish():
 
 
 def test_ratio_angles_not_hijacked():
-    # Ratio angles need the parts method, which this wave
-    # does not claim — the ask must stay honestly unanswered
-    # rather than be caught by the fourth-angle schema.
-    assert _kind("The angles of a quadrilateral are in the "
-                 "ratio 1:2:3:4. Find the largest "
-                 "angle") == "not_found"
+    # Wave 103: ratio angles need the parts method, which
+    # that wave did not claim — the ask had to stay honestly
+    # unanswered rather than be caught by the fourth-angle
+    # schema.
+    # Deploy-27 merge flip: Wave 125 (whose brief explicitly
+    # included the Wave 103 leftovers) added the real parts
+    # method (solver/depth125._ratio_angles) — the ask is now
+    # SOLVED correctly, still never by the fourth-angle
+    # schema: parts 1+2+3+4 = 10, 360/10 = 36, largest
+    # 4 x 36 = 144 degrees.
+    assert _ans("The angles of a quadrilateral are in the "
+                "ratio 1:2:3:4. Find the largest "
+                "angle") == "144°"
 
 
 # --- Gap 2: occurrence counting --------------------------

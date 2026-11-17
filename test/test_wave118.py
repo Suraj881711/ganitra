@@ -150,14 +150,14 @@ def test_composer_halo_reaches_44px():
 # --- Pins -------------------------------------------------------------
 
 def test_pins_bumped_to_v42_v19():
-    assert "v='46'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v23"' in SW
-    assert '"/static/style.css?v=46"' in SW
+    assert "v='47'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v24"' in SW
+    assert '"/static/style.css?v=47"' in SW
 
 
 # --- The served page carries the wave -------------------------------
 
 def test_served_page_has_aligner_and_new_pins(page):
     assert "alignLiveAnswer" in page
-    assert "style.css?v=46" in page
+    assert "style.css?v=47" in page
     assert "interactive-widget=resizes-content" in page

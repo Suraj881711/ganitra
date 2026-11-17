@@ -29,6 +29,27 @@ from api import _solve_friendly
 from topics_bandc import TOPICS_BANDC
 from topics_data import TOPICS_BY_CLASS
 
+
+@pytest.fixture(autouse=True)
+def _w125_isolated_livebank(tmp_path, monkeypatch):
+    """Wave 125 (test-only): this battery used to run against
+    the tree's real ganitra_users.db, so a Wave 117 live-bank
+    row recorded by an earlier test in the same suite run
+    could be re-served here and flip an item — half of the
+    second-derivative routing flake (the other half, the
+    solver's nondeterministic prose parse, is fixed at the
+    root in solver/calculus.py). Point the live bank at a
+    throwaway DB and clear the answer caches — the same
+    seam test_wave117 uses — so the battery measures
+    routing, not suite history."""
+    monkeypatch.setenv("GANITRA_DB_PATH",
+                       str(tmp_path / "bandc.db"))
+    from solver.answer_cache import (clear_cache,
+                                     clear_negative_cache)
+    clear_cache()
+    clear_negative_cache()
+    yield
+
 BANDC_COUNT = 259
 BASE_COUNT = 267
 

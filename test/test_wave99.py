@@ -119,12 +119,17 @@ def test_227_answers_are_clean(question, want):
 # --- chat path: true-pi cases are byte-identical ---------------
 
 @pytest.mark.parametrize("question,want", [
+    # Wave 140 pin flips (2 area rows): the answer now
+    # carries the question's unit ("... cm²") — Suraj's
+    # live-check defect 4. The pi behaviour this test guards
+    # (true pi, no 22/7) is byte-identical; the
+    # circumference row is a length and stays untouched.
     ("find the area of a circle with radius 10 cm",
-     "100·pi ≈ 314.1593"),
+     "100·pi ≈ 314.1593 cm²"),
     ("find the circumference of a circle with radius 5 cm",
      "10·pi ≈ 31.4159"),
     ("find the area of a circle with radius 7.5 cm",
-     "56.25·pi ≈ 176.7146"),
+     "56.25·pi ≈ 176.7146 cm²"),
 ])
 def test_true_pi_answers_unchanged(question, want):
     ans, steps = _ans(question)
