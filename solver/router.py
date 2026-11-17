@@ -33,6 +33,7 @@ from .trigonometry import solve_trigonometry
 from .units import solve_units
 from .word_problems import solve_word_problem
 from .papers10 import solve_papers10
+from .gaps103 import solve_gaps103
 
 # --------------------------------------------------------------------------
 # Hinglish normalisation:  "5 aur 3 ko jodo" -> "5 + 3",
@@ -3288,6 +3289,7 @@ def solve_question(question: str):
 
 _W77_LOCAL = threading.local()
 _W94_LOCAL = threading.local()
+_W103_LOCAL = threading.local()
 
 _W77_FILLER_WORDS = {
     "please", "plz", "batao", "bata", "samjhao", "samjha", "do",
@@ -4398,6 +4400,31 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     w94.setdefault("interpreted_as", translated)
                 return w94
+        # Wave 103: audit-gap method schemas
+        # (solver/gaps103.py) — the same failure-only gate as
+        # Waves 77/94: polygon angle sums and the fourth
+        # angle, occurrence counting, set cardinality,
+        # degree <-> radian conversion, quadrant
+        # identification, sample-space basics and the f(n)
+        # phrasings the primary paths miss. A real primary
+        # answer is never displaced, and gaps103 returns
+        # None unless one of its strict schemas matches
+        # completely.
+        if getattr(_W103_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W103_LOCAL.depth = 1
+            try:
+                w103 = solve_gaps103(original)
+                if w103 is None and working != original:
+                    w103 = solve_gaps103(working)
+            except Exception:
+                w103 = None
+            finally:
+                _W103_LOCAL.depth = 0
+            if w103 is not None:
+                if was_translated:
+                    w103.setdefault("interpreted_as", translated)
+                return w103
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])
