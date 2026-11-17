@@ -318,6 +318,7 @@
                     {{ t.error_tip3 | tojson }}],
         errorRetry: {{ t.error_retry_btn | tojson }},
         offlineNote: {{ t.chat_offline_note | tojson }},
+        serverSlow: {{ t.chat_server_slow | tojson }},
         moreMethods: {{ t.mm_more | tojson }},
         otherHeading: {{ t.mm_other_heading | tojson }},
         methodLabel: {{ t.mm_method_label | tojson }},
@@ -1071,6 +1072,15 @@
           return node;
         }
         var fb = addBubble("bot typing", CHAT.solving);
+        // Wave 145: the fallback bubble carries the same
+        // three-dot loading animation as the template path —
+        // the indicator must exist whichever way it is built.
+        var dots = document.createElement("span");
+        dots.className = "dots";
+        dots.setAttribute("aria-hidden", "true");
+        dots.innerHTML = "<i></i><i></i><i></i>";
+        var fp = fb.querySelector("p") || fb;
+        fp.appendChild(dots);
         addTypingBoy(fb);
         return fb;
       }
@@ -2471,6 +2481,7 @@
         if (ui.print_copy_link) CHAT.printCopy = ui.print_copy_link;
         if (ui.error_heading) CHAT.errorHeading = ui.error_heading;
         if (ui.chat_offline_note) CHAT.offlineNote = ui.chat_offline_note;
+        if (ui.chat_server_slow) CHAT.serverSlow = ui.chat_server_slow;
         if (ui.error_intro) CHAT.errorIntro = ui.error_intro;
         if (ui.error_tip1) {
           CHAT.errorTips = [ui.error_tip1, ui.error_tip2,
@@ -2631,7 +2642,16 @@
         }
         function solveClassic() {
           fetch("/api/solve", fetchOpts).then(function (resp) {
-            return resp.json();
+            /* Wave 145: a response whose body is not JSON (the
+               host's 502/503 error page, a proxy error page) is a
+               SERVER failure, not a student-connection failure —
+               tag it so the catch below picks the honest line and
+               never the offline note for it. */
+            return resp.json().catch(function () {
+              var bad = new Error("non-JSON response");
+              bad.ganitraServerError = true;
+              throw bad;
+            });
           }).then(handleSolveData).catch(function () {
           // Network/API trouble (or the Wave-98 timeout):
           // the server could not answer, so the browser's
@@ -2660,9 +2680,26 @@
             addAnswerBubble(question, odata);
             recordTurn({ role: "bot", data: odata });
           } else if (window.GanitraOffline) {
-            addBubble("bot", CHAT.offlineNote
-              || "Internet is not available right now — "
-                 + "please check your connection and try again.");
+            /* Wave 145 (Suraj): the offline line is ONLY for a
+               genuine connectivity loss — the browser itself
+               reporting offline. A slow answer, the 45 s timeout
+               above, a 502 error page, or any other failed
+               request while the browser is ONLINE is the
+               server's trouble, never the student's internet:
+               those get the honest server-slow line instead.
+               (His words: his internet was working fine when
+               the old code blamed it.) */
+            var browserOffline = (typeof navigator !== "undefined"
+              && navigator.onLine === false);
+            if (browserOffline) {
+              addBubble("bot", CHAT.offlineNote
+                || "Internet is not available right now — "
+                   + "please check your connection and try again.");
+            } else {
+              addBubble("bot", CHAT.serverSlow
+                || "Server is slow right now — "
+                   + "please try again in a moment.");
+            }
           } else {
             box.value = question;
             form.submit();
@@ -3371,7 +3408,12 @@
               }
               sendQuestionText(d.text, "photo");
             } else if (d && d.code === "too_large") {
-              say(L.js_file_too_large);
+              /* Wave 144: a phone camera photo is routinely
+                 over the server's 2 MB cap — that cap must not
+                 dead-end the photo (it did: the flow stopped
+                 here). The browser flow reads the LOCAL file
+                 whatever its size, after its canvas downscale. */
+              ocrBlob(blob);
             } else {
               ocrBlob(blob);
             }
@@ -3416,11 +3458,16 @@
             .catch(function () { ocrBlobEngOnly(blob, source); });
         });
       }
-      function extractFileOnServer(file) {
+      function extractFileOnServer(file, opts) {
         if (!window.fetch || !window.FormData) {
           say(L.js_photo_error);
           return;
         }
+        /* Wave 144: opts.pdfLine — when a PDF reaches this
+           server path only because the in-browser PDF reader
+           could not load, the generic failure lines are
+           replaced by the one honest PDF line (the specific
+           too_large / unsupported lines still win). */
         say(L.js_file_reading);
         var fd = new FormData();
         fd.append("file", file);
@@ -3444,11 +3491,240 @@
               say(L.js_file_unsupported);
             } else if (d && d.code === "too_large") {
               say(L.js_file_too_large);
+            } else if (opts && opts.pdfLine) {
+              say(L.js_pdf_unavailable);
             } else {
               say(L.js_photo_not_found);
             }
           })
-          .catch(function () { say(L.js_photo_error); });
+          .catch(function () {
+            say(opts && opts.pdfLine ? L.js_pdf_unavailable
+                                     : L.js_photo_error);
+          });
+      }
+      /* ---------- Wave 144: vision-first photo read, real
+         PDF/txt files ----------
+         Why: on a phone the old photo flow dead-ended before
+         OCR even started (the diagnosis is in
+         ganitra-wave144-notes.md — in short: the untouched
+         multi-MB camera photo was POSTed to /photo-ocr first,
+         its 2 MB cap answered "too_large", and the script
+         stopped; even a small photo then waited on the
+         Tesseract.js CDN engine + eng/hin traineddata and a
+         heavy WASM read on the phone CPU).
+         (1) PHOTOS now go FIRST to /photo-vision: the photo
+             is shrunk on a canvas (~1600 px long edge, JPEG —
+             a few hundred KB instead of several MB) and
+             Gemini vision TRANSCRIBES the question (its own
+             model bucket, never the answer quota). The text
+             ALWAYS lands in the editable composer — with the
+             Wave 137 reconstruction + one confirmation line
+             when the server sent them — and is NEVER solved
+             unseen: the student checks it and presses Solve.
+             Any vision failure (no key, quota, network) falls
+             back SILENTLY to the old chain (ocrImageSmart:
+             server OCR -> browser Tesseract), unchanged.
+         (2) PDFs are read IN THE BROWSER by pdf.js (CDN,
+             lazy-loaded only when a PDF is picked): the first
+             pages' text lands in the composer the same way —
+             a document is never auto-solved whole. A PDF with
+             no text layer (a scan) falls back to the server
+             path (first page -> OCR); if pdf.js itself cannot
+             load, the server path runs with the one honest
+             PDF line as its failure message.
+         (3) .txt files are read as text straight into the
+             composer. Everything else keeps the Wave 27
+             server path, byte-identical. */
+      function visionShowText(d) {
+        var text = (d && (d.prefill || d.text) || "").trim();
+        if (!text) return false;
+        if (!ocrFillComposer(text)) return false;
+        say(d.confirm ? (L.js_photo_check + " " + d.confirm)
+                      : L.js_photo_check);
+        return true;
+      }
+      /* Shrink a camera photo for the vision upload: canvas,
+         EXIF-aware like ocrPreprocess, ~1600 px long edge,
+         JPEG q0.85. Resolves with the ORIGINAL blob on any
+         failure — the server's 2 MB cap still guards, and the
+         fallback chain reads the local file regardless. */
+      function visionDownscale(blob) {
+        return new Promise(function (resolve) {
+          var settled = false;
+          function done(b) {
+            if (!settled) { settled = true; resolve(b || blob); }
+          }
+          function paint(src, sw, sh) {
+            try {
+              var longEdge = Math.max(sw, sh), scale = 1;
+              if (longEdge > 1600) scale = 1600 / longEdge;
+              var w = Math.max(1, Math.round(sw * scale));
+              var h = Math.max(1, Math.round(sh * scale));
+              var canvas = document.createElement("canvas");
+              canvas.width = w;
+              canvas.height = h;
+              var ctx = canvas.getContext("2d");
+              ctx.fillStyle = "#ffffff";
+              ctx.fillRect(0, 0, w, h);
+              ctx.drawImage(src, 0, 0, w, h);
+              if (canvas.toBlob) {
+                canvas.toBlob(function (b) { done(b); },
+                              "image/jpeg", 0.85);
+              } else { done(blob); }
+            } catch (e) { done(blob); }
+          }
+          function fromImg() {
+            var url = URL.createObjectURL(blob);
+            var img = new Image();
+            img.onload = function () {
+              paint(img, img.naturalWidth, img.naturalHeight);
+              URL.revokeObjectURL(url);
+            };
+            img.onerror = function () {
+              URL.revokeObjectURL(url);
+              done(blob);
+            };
+            img.src = url;
+          }
+          if (window.createImageBitmap) {
+            var attempt = null;
+            try {
+              attempt = window.createImageBitmap(
+                blob, { imageOrientation: "from-image" });
+            } catch (e) { attempt = null; }
+            if (attempt && attempt.then) {
+              attempt.then(function (bmp) {
+                paint(bmp, bmp.width, bmp.height);
+              }).catch(function () {
+                window.createImageBitmap(blob)
+                  .then(function (bmp) {
+                    paint(bmp, bmp.width, bmp.height);
+                  })
+                  .catch(fromImg);
+              });
+              return;
+            }
+          }
+          fromImg();
+        });
+      }
+      function visionImageSmart(file) {
+        if (!window.fetch || !window.FormData) {
+          ocrImageSmart(file);
+          return;
+        }
+        say(L.js_photo_reading);
+        visionDownscale(file).then(function (small) {
+          var fd = new FormData();
+          fd.append("file", small, small.name || "photo.jpg");
+          return window.fetch("/photo-vision",
+                              { method: "POST", body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+              if (d && d.kind === "text" && visionShowText(d)) {
+                return;
+              }
+              if (d && d.code === "no_question") {
+                /* The photo WAS read — there is just no
+                   readable maths question in it. A second,
+                   weaker read would only garble; say the one
+                   honest line instead. */
+                say(L.js_photo_not_found);
+                return;
+              }
+              if (d && d.code === "too_large") {
+                say(L.js_file_too_large);
+                return;
+              }
+              /* vision_unavailable / vision_quota /
+                 vision_failed / anything unexpected: the old
+                 chain takes over, silently. */
+              ocrImageSmart(file);
+            });
+        }).catch(function () { ocrImageSmart(file); });
+      }
+      /* File text (PDF / .txt) lands in the composer for the
+         student's check, exactly like a checked photo read —
+         never auto-solved. Without a composer on the page it
+         rides the old photo-form, as file text always did. */
+      function fileShowText(text) {
+        text = (text || "").trim().slice(0, 6000);
+        if (!text) { say(L.js_photo_not_found); return; }
+        if (!ocrFillComposer(text)) {
+          sendQuestionText(text, "file");
+          return;
+        }
+        say(L.js_file_check);
+      }
+      var PDFJS_URL = "https://cdn.jsdelivr.net/npm/" +
+        "pdfjs-dist@4.2.67/build/pdf.min.mjs";
+      var PDFJS_WORKER_URL = "https://cdn.jsdelivr.net/npm/" +
+        "pdfjs-dist@4.2.67/build/pdf.worker.min.mjs";
+      function extractPdfClient(file) {
+        say(L.js_pdf_reading);
+        import(PDFJS_URL).then(function (pdfjs) {
+          pdfjs.GlobalWorkerOptions.workerSrc =
+            PDFJS_WORKER_URL;
+          file.arrayBuffer()
+            .then(function (buf) {
+              return pdfjs.getDocument({ data: buf }).promise;
+            })
+            .then(function (pdf) {
+              var pages = Math.min(5, pdf.numPages), jobs = [];
+              for (var i = 1; i <= pages; i++) {
+                jobs.push(pdf.getPage(i));
+              }
+              return Promise.all(jobs);
+            })
+            .then(function (pageObjs) {
+              return Promise.all(pageObjs.map(function (p) {
+                return p.getTextContent();
+              }));
+            })
+            .then(function (contents) {
+              var parts = [];
+              contents.forEach(function (c) {
+                var line = (c.items || []).map(function (it) {
+                  return it.str || "";
+                }).join(" ");
+                if (line.trim()) parts.push(line);
+              });
+              return parts.join("\n");
+            })
+            .then(function (text) {
+              if (text && text.trim()) {
+                fileShowText(text);
+              } else {
+                /* No text layer — a scanned PDF: the server
+                   renders page 1 and it is OCR'd like a photo,
+                   exactly as before this wave. */
+                extractFileOnServer(file);
+              }
+            })
+            .catch(function () {
+              extractFileOnServer(file, { pdfLine: true });
+            });
+        }, function () {
+          /* pdf.js itself could not load (CDN blocked): the
+             server path is the last resort, with the one
+             honest PDF line if it also cannot read the file. */
+          extractFileOnServer(file, { pdfLine: true });
+        });
+      }
+      function readTxtClient(file) {
+        if (file.size > 2 * 1024 * 1024) {
+          say(L.js_file_too_large);
+          return;
+        }
+        say(L.js_file_reading);
+        var reader = new FileReader();
+        reader.onload = function () {
+          fileShowText(String(reader.result || ""));
+        };
+        reader.onerror = function () {
+          extractFileOnServer(file);
+        };
+        reader.readAsText(file);
       }
       photoInput.addEventListener("change", function () {
         var file = photoInput.files && photoInput.files[0];
@@ -3457,7 +3733,13 @@
         var isImage = (file.type &&
                        file.type.indexOf("image/") === 0) ||
           /\.(png|jpe?g|gif|webp|bmp|heic)$/.test(name);
-        if (isImage) ocrImageSmart(file);
+        var isPdf = file.type === "application/pdf" ||
+          /\.pdf$/i.test(name);
+        var isTxt = file.type === "text/plain" ||
+          /\.txt$/i.test(name);
+        if (isImage) visionImageSmart(file);
+        else if (isPdf) extractPdfClient(file);
+        else if (isTxt) readTxtClient(file);
         else extractFileOnServer(file);
         photoInput.value = "";
       });
