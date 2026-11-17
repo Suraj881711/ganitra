@@ -706,17 +706,9 @@ body.chat-page .tool-note {
   .chat-empty { padding-top: 4vh; }
 }
 
-/* Wave 9: the one-line "language changed" notice bubble in the chat. */
-.bubble.lang-note {
-  align-self: center;
-  background: transparent;
-  border: 1px dashed var(--accent);
-  border-radius: 999px;
-  box-shadow: none;
-  color: var(--ink-soft, #555);
-  font-size: 0.85rem;
-  padding: 0.35rem 0.8rem;
-}
+/* Wave 9's one-line "language changed" notice bubble style was
+   removed in Wave 139 (Suraj's order): the language switch is
+   silent — no banner, toast or pill is ever rendered. */
 
 /* Wave 10: the first-page sign-in. ONE page, the site's one warm
    background (--bg), the frozen logo on top in the same cream-card
@@ -2585,4 +2577,27 @@ body.chat-page .answer-wrap .followup-chip:active {
     background: none; border: none; padding: 0;
   }
   .followup-chips { display: none; }
+}
+
+/* Wave 131: the live AI-stream bubble — the provider's
+   pieces land in a plain bot bubble while the streamed
+   solve runs; line breaks in the raw reply stay visible
+   (the finished answer replaces this bubble wholesale). */
+.bubble.stream-live .stream-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Wave 138: typeset maths (MathJax output) inside answer
+   cards and step lists — a formula wider than a narrow phone
+   screen scrolls inside its own line instead of stretching
+   the card; a hair of vertical padding keeps stacked
+   fractions from touching the line above. Presentation
+   only: the answer text itself is unchanged. */
+.bubble mjx-container, ol.steps mjx-container,
+.final-answer mjx-container {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
 }
