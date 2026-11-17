@@ -22,7 +22,7 @@ What these tests pin:
 4. The rendering: the chat template and the classic answer
    page both place the figure inside the card after the
    steps; the CSS keeps it within the card on mobile widths;
-   pins ?v=40 / ganitra-static-v17.
+   pins ?v=41 / ganitra-static-v18.
 """
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -223,5 +223,5 @@ def test_figure_css_and_pins():
     assert ".answer-figure" in CSS
     assert ".answer-figure svg" in CSS
     assert "max-width: 100%" in CSS
-    assert "v='40'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v17"' in SW
+    assert "v='41'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v18"' in SW

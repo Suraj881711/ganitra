@@ -113,7 +113,7 @@ def test_scrolllog_glides_short_hops_jumps_far_ones():
 
 
 def test_grown_composer_and_resize_repins():
-    assert 'box.style.height = Math.min(box.scrollHeight, 160)' \
+    assert 'box.style.height = Math.min(box.scrollHeight, 128)' \
         in INDEX
     inp = INDEX[INDEX.index('box.addEventListener("input"'):]
     assert "scrollLog();" in inp[:inp.index("});")]
@@ -153,8 +153,8 @@ def test_height_fallback_and_safe_area_sides():
 # --- 7. Delivery pins ---------------------------------------------
 
 def test_delivery_versions_wave49():
-    assert "v='40'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v17"' in SW
+    assert "v='41'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v18"' in SW
     # Sprites did not change, so their pins do not move.
     assert "filename='scene-eagle.webp', v='29'" in INDEX
     assert '"/static/scene-boy.webp?v=29"' in INDEX

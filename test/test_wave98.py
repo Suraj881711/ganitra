@@ -182,18 +182,18 @@ def test_offline_note_string_in_all_languages():
 # ------------------------------------------------------------------
 
 def test_sw_cache_name_bumped():
-    assert 'GANITRA_CACHE = "ganitra-static-v17"' in SW
+    assert 'GANITRA_CACHE = "ganitra-static-v18"' in SW
 
 
 def test_stylesheet_pin_bumped():
-    assert "v='40'" in BASE
+    assert "v='41'" in BASE
     assert "v='39'" not in BASE
 
 
 def test_sw_precaches_the_chat_shell():
     assert "GANITRA_SHELL" in SW
     for url in ("/",
-                "/static/style.css?v=40",
+                "/static/style.css?v=41",
                 "/static/offline.js",
                 "/static/logo-mark-t.png",
                 "/static/logo-full-t.png",

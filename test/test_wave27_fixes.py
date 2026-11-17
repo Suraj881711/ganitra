@@ -177,7 +177,7 @@ def test_composer_comfort_properties():
     assert ".chat-bar .composer-btn::after" in CSS
     assert "inset: -2px;" in CSS
     # Textarea auto-grow handler (JS) with a sane cap.
-    assert "Math.min(box.scrollHeight, 160)" in INDEX
+    assert "Math.min(box.scrollHeight, 128)" in INDEX
 
 
 # --- 8. Font scale ---------------------------------------------------
@@ -194,5 +194,5 @@ def test_chat_font_scale_wave27():
 # --- Delivery hygiene --------------------------------------------------
 
 def test_delivery_versions_bumped():
-    assert "v='40'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v17"' in SW
+    assert "v='41'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v18"' in SW
