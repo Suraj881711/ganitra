@@ -803,6 +803,17 @@ def _area_perimeter_volume(q: str):
 def _coordinate(q: str):
     pts = extract_points(q)
 
+    # Wave 146: no branch in this function computes an
+    # eccentricity — when the FINAL ask is a conic's
+    # eccentricity, any branch answer (the foci distance, a
+    # semi-axis) is a hijack of a stem phrase (the CISCE
+    # ellipse case answered every part with the foci
+    # distance 4). Decline; a distance ask in the same final
+    # segment is untouched.
+    _seg = re.split(r"[.?]\s+", q)[-1]
+    if "eccentricity" in _seg and "distance" not in _seg:
+        return None
+
     # Wave 30: section formula — the point dividing the join of
     # two points in a given ratio. This question used to leak to
     # the applied ratio simplifier, which answered "1 : 2" (the
@@ -898,6 +909,77 @@ def _coordinate(q: str):
         return "slope", fmt_num(m), steps
 
     if "line" in q and ("equation" in q):
+        # Wave 146: a line through the CENTROID of a triangle
+        # ("Find the centroid P of ∆ABC ... Hence, find the
+        # equation of a line passing through P and parallel to
+        # AB") — the two-point branch below anchored the line
+        # at vertex A and answered a line through A. When the
+        # ask names the centroid and three vertices are
+        # present, the anchor is the centroid and the
+        # direction comes from the named side (default: the
+        # first two vertices).
+        if "centroid" in q and len(pts) >= 3:
+            (ax, ay), (bx, by), (cx, cy) = pts[0], pts[1], pts[2]
+            gx = sp.Rational(ax + bx + cx, 3) \
+                if all(float(v).is_integer()
+                       for v in (ax, bx, cx)) \
+                else (ax + bx + cx) / 3
+            gy = sp.Rational(ay + by + cy, 3) \
+                if all(float(v).is_integer()
+                       for v in (ay, by, cy)) \
+                else (ay + by + cy) / 3
+            labels = re.findall(r"\b([A-Z])\s*\(", q)
+            pair = (pts[0], pts[1])
+            mp = re.search(
+                r"(?:parallel|perpendicular)\s+to\s+([A-Z])([A-Z])",
+                q)
+            if mp and len(labels) >= 3:
+                try:
+                    pair = (pts[labels.index(mp.group(1))],
+                            pts[labels.index(mp.group(2))])
+                except (ValueError, IndexError):
+                    pair = (pts[0], pts[1])
+            (px, py), (qx_, qy_) = pair
+            if qx_ == px and "perpendicular" not in q:
+                return "line equation", f"x = {fmt_num(gx)}", [
+                    f"Centroid = (({fmt_num(ax)} + {fmt_num(bx)} "
+                    f"+ {fmt_num(cx)})/3, ({fmt_num(ay)} + "
+                    f"{fmt_num(by)} + {fmt_num(cy)})/3) = "
+                    f"({fmt_num(gx)}, {fmt_num(gy)})",
+                    "The side is vertical, so the parallel line "
+                    "through the centroid is vertical."]
+            m_side = sp.Rational(qy_ - py, qx_ - px) \
+                if float(qy_ - py).is_integer() \
+                and float(qx_ - px).is_integer() \
+                else (qy_ - py) / (qx_ - px)
+            if "perpendicular" in q:
+                if m_side == 0:
+                    return "line equation", f"x = {fmt_num(gx)}", [
+                        f"Centroid = ({fmt_num(gx)}, "
+                        f"{fmt_num(gy)})",
+                        "The side is horizontal, so the "
+                        "perpendicular through the centroid is "
+                        "vertical."]
+                m = -1 / m_side
+            else:
+                m = m_side
+            c = gy - m * gx
+            steps = [
+                f"Centroid = (({fmt_num(ax)} + {fmt_num(bx)} + "
+                f"{fmt_num(cx)})/3, ({fmt_num(ay)} + "
+                f"{fmt_num(by)} + {fmt_num(cy)})/3) = "
+                f"({fmt_num(gx)}, {fmt_num(gy)})",
+                f"Slope of the side = ({fmt_num(qy_)} - "
+                f"{fmt_num(py)}) / ({fmt_num(qx_)} - "
+                f"{fmt_num(px)}) = {fmt_num(m_side)}",
+                f"Use y - y1 = m(x - x1) through the centroid "
+                f"({fmt_num(gx)}, {fmt_num(gy)}).",
+                f"y = {fmt_num(m)}·x + {fmt_num(c)}",
+            ]
+            ans = f"y = {fmt_num(m)}x" + (
+                f" + {fmt_num(c)}" if c > 0 else
+                f" - {fmt_num(abs(c))}" if c < 0 else "")
+            return "line equation", ans, steps
         if len(pts) >= 2:
             (x1, y1), (x2, y2) = pts[0], pts[1]
             if x2 == x1:

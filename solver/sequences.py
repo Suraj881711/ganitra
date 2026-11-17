@@ -915,6 +915,22 @@ def solve_sequences(question: str):
                             "common ratio again and again never "
                             f"reaches {fmt_num(V)}.",
                         ]}
+        # Wave 146: a question about the sums of SEVERAL
+        # different GPs ("S1, S2, S3, ..., Sn are the sums of
+        # n infinite geometric progressions...") is not a
+        # single-GP ask — the parser's scavenged a = 1, r = 1
+        # produced a confident "sum to infinity does not
+        # exist" verdict for a series whose terms do converge.
+        # Decline the whole single-GP path for that shape.
+        if re.search(
+                r"sums?\s+of\s+(?:\w+\s+){0,3}?geometric\s+"
+                r"progressions", q) or re.search(
+                r"\bS\s?1\s*,\s*S\s?2\b", q):
+            return {"type": "sequences", "op": "unknown",
+                    "answer": "Tell me which term or sum you "
+                              "want, e.g. '10th term of AP "
+                              "2, 5, 8'.",
+                    "steps": []}
         # Wave 38: sum to infinity (only exists for |r| < 1).
         if "infinit" in q:
             if abs(r) < 1:

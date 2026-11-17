@@ -1887,6 +1887,17 @@ def _compound_interest_freq(q):
 def _gst(q):
     if "gst" not in q:
         return None
+    # Wave 146: a MULTI-ITEM bill (several marked prices, or
+    # several GST rates) cannot be answered from the first
+    # price and first rate alone — the CISCE audit's 3-item
+    # bill (12% / 5% / 12%) was answered with item 1's GST
+    # only, dressed as the bill total. Decline; the honest
+    # not-found beats a partial bill.
+    _rates = len(re.findall(r"\d+(?:\.\d+)?\s*%\s*gst", q)) \
+        + len(re.findall(
+            r"gst\s*(?:rate\s*)?(?:of\s*)?\d+(?:\.\d+)?\s*%", q))
+    if len(re.findall(r"marked\s+price", q)) >= 2 or _rates >= 2:
+        return None
     # Reverse: total price INCLUDING gst -> price before gst.
     # Form A: "including 28% GST is Rs 6400" (rate, then total).
     # Form B: "Rs 6400 including 28% GST" (total, then rate).

@@ -3333,6 +3333,7 @@ _W77_LOCAL = threading.local()
 _W94_LOCAL = threading.local()
 _W103_LOCAL = threading.local()
 _W115_LOCAL = threading.local()
+_W142_LOCAL = threading.local()
 _W125_LOCAL = threading.local()
 
 _W77_FILLER_WORDS = {
@@ -4544,6 +4545,46 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     w125.setdefault("interpreted_as", translated)
                 return w125
+        # Wave 142: Class 12 book-gap method families
+        # (solver/c12gaps142.py) — the same failure-only
+        # gate as Waves 77/94/103/115: inverse-trig
+        # principal values, vector families, continuity and
+        # differentiation (implicit / logarithmic /
+        # parametric / second order), Application of
+        # Derivatives rates, intervals and word maxima,
+        # conics facts and the minimal area family — the
+        # families the Wave 135 NCERT audit found weakest
+        # (Inverse Trig 0.0%, Vectors 10.0%, Continuity &
+        # Differentiability 15.9%). A real primary answer
+        # is never displaced, and c12gaps142 returns None
+        # unless one of its strict schemas settles the
+        # question completely (every value SymPy-verified
+        # at solve time). The hijack shapes whose primary
+        # results ARE "real" (a partially parsed inverse-
+        # trig sum, a scalar triple product served as a
+        # variable value) are repaired by c12gaps142_upgrade
+        # in fallback.py instead. Deploy-28 merge: this gate
+        # sits AFTER the Wave 125 gate so Wave 125's richer
+        # area-between-curves family keeps precedence; the
+        # Wave 142 area branches 125 lacks (ellipse / circle
+        # / quarter / multi-part ordinates) still run when
+        # 125 declines.
+        if getattr(_W142_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W142_LOCAL.depth = 1
+            try:
+                from .c12gaps142 import solve_c12gaps
+                w142 = solve_c12gaps(original)
+                if w142 is None and working != original:
+                    w142 = solve_c12gaps(working)
+            except Exception:
+                w142 = None
+            finally:
+                _W142_LOCAL.depth = 0
+            if w142 is not None:
+                if was_translated:
+                    w142.setdefault("interpreted_as", translated)
+                return w142
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])

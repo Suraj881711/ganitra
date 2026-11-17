@@ -733,6 +733,15 @@ def _probability(q: str):
     # coins ... at most one head" (correct 3/4) silently fell
     # through to the shortcut and returned 1/2, and "no tail" /
     # "at most ... tail" / "exactly ... tails" were missing too.
+    # Wave 146: "exactly four ROUNDS of tossing" is a
+    # geometric (repeat-until-success) ask, not a single-round
+    # enumeration — the block below (and the bare 1/2 shortcut
+    # after it) answered it 1/2. Decline the whole probability
+    # path for the exact-rounds shape.
+    if re.search(r"\bexactly\s+(?:\d+|one|two|three|four|"
+                 r"five|six|seven|eight|nine|ten)\s+rounds?\b",
+                 ql):
+        return None
     if "coin" in ql and ("toss" in ql or "throw" in ql
                          or "flip" in ql or "both" in ql):
         _words = {"one": 1, "two": 2, "three": 3, "four": 4,
@@ -747,8 +756,19 @@ def _probability(q: str):
         # coin tossed repeatedly ("in 3 tosses", "tossed twice");
         # otherwise a single coin.
         _mc = re.search(r"\b" + _num + r"\s+coins?\b", ql)
+        # Wave 146: "Three friends ... each one of them will
+        # toss a coin" — the coin count is the number of
+        # TOSSERS (the odd-one-out pizza game). Without it the
+        # count stayed 1 and every part of the case was
+        # answered 1/2 (CISCE audit idx 150-152).
+        _mtoss = re.search(
+            r"\b" + _num + r"\s+(?:friends|persons|people|"
+            r"players|students|children)\b[\s\S]{0,160}?\beach\b"
+            r"[\s\S]{0,40}?\btoss", ql)
         if _mc:
             _n = _cnt(_mc.group(1))
+        elif _mtoss:
+            _n = _cnt(_mtoss.group(1))
         elif re.search(r"\bboth\s+coins?\b", ql):
             # Wave 57: "both coins show heads" states the count
             # without a number word.
@@ -829,6 +849,21 @@ def _probability(q: str):
                         _ev = ((lambda fn, k: lambda h: fn(h, k))
                                (_fn, _k), _m.group(0))
                         break
+            if _ev is None:
+                # Wave 146: the odd-one-out game events — "all
+                # get the SAME result" (all heads or all tails)
+                # vs "a DIFFERENT result" (not all the same).
+                # The stem states both phrases, so the event is
+                # whichever phrase the ASK (the later text)
+                # repeats: compare last occurrences.
+                _ps = ql.rfind("same result")
+                _pd = ql.rfind("different result")
+                if _ps >= 0 and _ps > _pd:
+                    _ev = (lambda h, n=_n: h == 0 or h == n,
+                           "all the same result")
+                elif _pd >= 0 and _pd > _ps:
+                    _ev = (lambda h, n=_n: 0 < h < n,
+                           "a different result")
             if _ev is None:
                 if re.search(r"\bboth\s+coins?\b[^.]{0,24}?"
                              r"\bheads?\b", ql):
@@ -1343,12 +1378,31 @@ def _counting(q: str):
         r"(\d+)\s*P\s*(\d+)", q)
     if m or "permutation" in ql:
         if not m:
-            nums = [int(v) for v in re.findall(r"\d+", q)]
-            if len(nums) < 2:
-                return None
-            n, r = nums[0], nums[1]
+            # Wave 146: a bare "permutation" mention is NOT a
+            # licence to feed the first two numbers in the text
+            # to P(n, r) — the CISCE audit's DEVASTATION ask
+            # ("4-letter combinations and 4-letter
+            # permutations") was answered P(4, 4) = 24 from the
+            # two 4s. Only a structured "n things taken r at a
+            # time" parse may proceed; anything else declines.
+            mm = re.search(
+                r"(\d+)\s+(?:different\s+)?(?:things|objects|"
+                r"items|letters|digits|persons|people|students|"
+                r"books|colours|colors)\s+(?:taken|arranged)\s+"
+                r"(\d+)\s+at\s+a\s+time", ql)
+            if mm:
+                n, r = int(mm.group(1)), int(mm.group(2))
+            else:
+                mm = re.search(
+                    r"taken\s+(\d+)\s+at\s+a\s+time\s*(?:from|"
+                    r"of)\s+(\d+)", ql)
+                if not mm:
+                    return None
+                r, n = int(mm.group(1)), int(mm.group(2))
         else:
             n, r = int(m.group(1)), int(m.group(2))
+        if r > n or r < 0:
+            return None
         val = sp.perm(n, r) if hasattr(sp, "perm") else None
         from math import factorial as _f
         val = _f(n) // _f(n - r)
@@ -1360,22 +1414,50 @@ def _counting(q: str):
                 "answer": fmt_num(val), "value": int(val), "steps": steps}
     m = re.search(r"\bC\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)", q) or re.search(
         r"(\d+)\s*C\s*(\d+)", q)
-    if m or "combination" in ql or "choose" in ql:
+    if m or "combination" in ql or "choose" in ql \
+            or "chosen" in ql or "selected" in ql \
+            or "committee" in ql:
         if not m:
-            mm = re.search(r"choose\s+(\d+)\s+from\s+(\d+)", ql) or \
-                re.search(r"(\d+)\s+(?:taken|from)\s+(\d+)", ql)
+            # Wave 146: the old fallback took the FIRST TWO
+            # numbers in the whole text as (n, r) whenever the
+            # words "combination"/"choose" appeared anywhere —
+            # and every board-paper Section A carries the
+            # instruction "Choose the correct answers...", so
+            # an RD question was answered C(400, 18) (a 31-digit
+            # number), a shares question C(50, 40), a
+            # correlation question C(53, 28). Only a structured
+            # choose/select/taken parse may proceed now; a bare
+            # keyword declines.
+            mm = re.search(
+                r"(?:choose|select|chosen|selected)\s+(\d+)\s+"
+                r"(?:\w+\s+)?(?:from|of|out\s+of)\s+"
+                r"(?:a\s+total\s+of\s+)?(\d+)", ql)
             if mm:
-                if "choose" in ql and mm.re.pattern.startswith("choose"):
+                r, n = int(mm.group(1)), int(mm.group(2))
+            else:
+                mm = re.search(
+                    r"(\d+)\s+(?:students|persons|people|"
+                    r"members|items|objects|books|things)\s+"
+                    r"(?:can\s+be\s+|to\s+be\s+|are\s+|be\s+)?"
+                    r"(?:chosen|selected)\s+from\s+(\d+)", ql)
+            if mm:
+                r, n = int(mm.group(1)), int(mm.group(2))
+            else:
+                mm = re.search(
+                    r"(?:committee|team|group)\s+of\s+(\d+)\b[^.]{0,40}?"
+                    r"\bfrom\s+(?:a\s+total\s+of\s+)?(\d+)", ql)
+                if mm:
                     r, n = int(mm.group(1)), int(mm.group(2))
                 else:
+                    mm = re.search(
+                        r"(\d+)\s+(?:taken|from)\s+(\d+)", ql)
+                    if not mm:
+                        return None
                     n, r = int(mm.group(1)), int(mm.group(2))
-            else:
-                nums = [int(v) for v in re.findall(r"\d+", q)]
-                if len(nums) < 2:
-                    return None
-                n, r = nums[0], nums[1]
         else:
             n, r = int(m.group(1)), int(m.group(2))
+        if r > n or r < 0:
+            return None
         from math import comb
         val = comb(n, r)
         steps = [
@@ -2118,6 +2200,66 @@ def solve_statistics(question: str):
         op = "range"
     elif "mean" in ql or "average" in ql:
         op = "mean"
+    if op:
+        # Wave 146 (CISCE audit): the bare-keyword op choice
+        # above plus the whole-text number sweep below is a
+        # hijack magnet when the "data" is not a raw list at
+        # all. Four narrow declines:
+        if op == "mode":
+            # "Mode A / Mode B / Mode C" are LABELS (attendance
+            # modes in a Bayes case study), not the statistic —
+            # the case parts were answered with the swept
+            # percentage list, because the bare substring
+            # "mode" fired on the labels. The statistic is
+            # only meant when the question carries a mode-OF /
+            # find-the-mode frame; label uses carry none.
+            # (The router's stopword-normalised copy drops
+            # label letters and prepositions, so a label-strip
+            # cannot be made reliable — the frame whitelist
+            # can.)
+            if not re.search(
+                    r"\bmode\s+of\b|\bmode\s+is\b|\bmode\s*[:=]|"
+                    r"\bfind\s+(?:the\s+)?mode\b|"
+                    r"\bcalculate\s+(?:the\s+)?mode\b|"
+                    r"\bdetermine\s+(?:the\s+)?mode\b|"
+                    r"\bka\s+mode\b|\bmode\s+(?:kya|batao)\b",
+                    ql) and "बहुलक" not in ql:
+                op = None
+        if op == "median" and re.search(
+                r"medians?\s+of\s+(?:the\s+)?"
+                r"(?:triangle|∆|Δ)", ql):
+            # The medians of a TRIANGLE (geometry — their
+            # intersection point G) are not a data median; a
+            # vectors question was answered "Median = 1" from
+            # the scavenged coordinates (0, 1, 2).
+            op = None
+        if op in ("mean", "median", "mode", "std", "variance",
+                  "range") and "[" not in q and len(re.findall(
+                      r"\d+(?:\.\d+)?\s*[-–—]\s*\d+(?:\.\d+)?",
+                      q)) >= 3:
+            # Three or more class-interval ranges = GROUPED
+            # data. The grouped handlers above own it; a raw
+            # sweep would mix class bounds with frequencies
+            # (the audit's grouped question was answered with
+            # the std of a bounds+frequency mixture).
+            op = None
+        if op == "mean" and "[" not in q:
+            if re.search(r"\{\s*\d", q) and (
+                    "probab" in ql or "distribution" in ql
+                    or "random variable" in ql):
+                # The mean of a random variable's SUPPORT SET
+                # ({0,1,2,3} -> 1.5) is not E(X) — every part
+                # of the audit's distribution case was answered
+                # 1.5 while the true mean was 2.4.
+                op = None
+            elif "shown in" in ql and (
+                    "diagram" in ql or "figure" in ql) and \
+                    "are:" not in ql and "is:" not in ql:
+                # The data lives in a FIGURE ("mean of two
+                # heights shown in the diagram"); the prose
+                # numbers (a diameter, pi = 22/7) are not the
+                # data — they were averaged into a fake mean.
+                op = None
     if op:
         nums = _extract_list(q)
         # Wave 47: a colon-introduced list IS the data — the
