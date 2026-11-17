@@ -137,6 +137,9 @@ def _place_value(q):
 def _table(q):
     m = re.search(r"table\s+of\s+(\d{1,3})\b", q) or \
         re.search(r"(\d{1,3})\s+ka\s+table\b", q) or \
+        re.search(r"(\d{1,3})\s+ki\s+table\b", q) or \
+        re.search(r"(\d{1,3})\s+(?:ka|ki)\s+pahada\b", q) or \
+        re.search(r"(\d{1,3})\s+का\s+पहाड़ा", q) or \
         re.search(r"multiplication\s+table\s+of\s+(\d{1,3})\b", q)
     if not m:
         return None

@@ -3044,7 +3044,9 @@ def route_intent(question: str) -> str:
     if re.search(
             r"(\bin\s+words\b|\bnumber\s+name\b|\bplace\s+value\b|"
             r"\bexpanded\s+form\b|\btable\s+of\s+\d|"
-            r"\d\s+ka\s+table\b|\bhalf\s+of\s+\d|"
+            r"\d\s+ka\s+table\b|\d\s+ki\s+table\b|"
+            r"\d\s+(?:ka|ki)\s+pahada\b|\d\s+का\s+पहाड़ा|"
+            r"\bhalf\s+of\s+\d|"
             r"\bquarter\s+of\s+\d|\d\s*/\s*\d\s+of\s+\d|"
             r"\bas\s+(a\s+)?decimal\b|\bin\s+decimal\b|"
             r"\bas\s+(a\s+)?fraction\b|"

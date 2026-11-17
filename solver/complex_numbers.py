@@ -60,17 +60,38 @@ def solve_complex(question: str):
                         r"product\s+of\s+(.+?)\s+and\s+(.+?)"
                         r"\s*\.?\s*$", q, re.I)
     if _mm:
-        _prod = sp.expand(_to_sympy(_mm.group(1))
-                          * _to_sympy(_mm.group(2)))
-        steps = [
-            f"Multiply out, using i^2 = -1: "
-            f"({_mm.group(1).strip()}) × "
-            f"({_mm.group(2).strip()})",
-            f"= {fmt(_prod)}",
-        ]
-        return {"type": "complex", "op": "multiply",
-                "answer": fmt(_prod), "steps": steps}
+        _f1 = _to_sympy(_mm.group(1))
+        _f2 = _to_sympy(_mm.group(2))
+        # Wave 148: word-harvested factors (free symbols —
+        # see the guard below) are not complex numbers; fall
+        # through to the guarded parse, which declines.
+        if not _f1.free_symbols and not _f2.free_symbols:
+            _prod = sp.expand(_f1 * _f2)
+            steps = [
+                f"Multiply out, using i^2 = -1: "
+                f"({_mm.group(1).strip()}) × "
+                f"({_mm.group(2).strip()})",
+                f"= {fmt(_prod)}",
+            ]
+            return {"type": "complex", "op": "multiply",
+                    "answer": fmt(_prod), "steps": steps}
     expr = _to_sympy(_extract_expr(q))
+    # Wave 148: a complex-number expression has NO free
+    # symbols — its only "variable" is i itself, which the
+    # parse holds as SymPy's I constant. Any symbol in the
+    # parse was harvested from the question's WORDS by the
+    # implicit-multiplication parser ("(i)" -> I, "of" ->
+    # o*f), and serving its expansion serves letter-soup as
+    # an answer: the live benchmark's "Find: (i) 15% of 200
+    # (ii) 3/5 of 45" came back "5400·f^2·i^2·o·(Mod(15·I,
+    # o))" — three harvested letters, under the fallback
+    # layer's letter-soup thresholds. Decline with the
+    # soft-unknown (the calculus solver's prose guard uses
+    # the same shape) and let the honest layers — multipart,
+    # fallback, the one-line not-found — answer instead.
+    if getattr(expr, "free_symbols", None):
+        return {"type": "complex", "op": "unknown",
+                "answer": "", "steps": []}
 
     if "conjugate" in ql:
         res = sp.conjugate(expr)

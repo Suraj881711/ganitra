@@ -60,9 +60,16 @@ def _linear_steps(a, b, var):
     """Steps for a*var + b = 0 (a != 0)."""
     steps = [f"Bring all terms to one side: {fmt(a)}·{var} + {fmt(b)} = 0"]
     if b != 0:
+        # Wave 148: the preposition pairs with the verb —
+        # "Subtract X FROM both sides" but "Add X TO both
+        # sides". The template used to hardcode "from", so
+        # every b < 0 equation narrated the impossible move
+        # "Add 15 from both sides" (live benchmark, 3x + 7
+        # = 22 -> standard form 3x - 15 = 0).
         verb = "Subtract" if b > 0 else "Add"
+        prep = "from" if b > 0 else "to"
         steps.append(
-            f"{verb} {fmt(abs(b))} from both sides: "
+            f"{verb} {fmt(abs(b))} {prep} both sides: "
             f"{fmt(a)}·{var} = {fmt(-b)}"
         )
     if a != 1:
