@@ -127,8 +127,9 @@ _dd = body[body.index('class="nav-dropdown menu-panel"'):]
 _dd = _dd[:_dd.index("</nav>")]
 check("menu has NO history link (wave 12)",
       'href="/history"' not in _dd)
-check("compact dhyaan pill in bar", 'id="dhyaan-pill"' in body
-      and 'id="dhyaan-text"' in body)
+check("dhyaan pill GONE from bar (wave 106)",
+      'id="dhyaan-pill"' not in body
+      and 'id="dhyaan-text"' not in body)
 check("NO language switch in bar (wave 20)", 'id="lang-select"' not in body)
 
 # --- 4. Composer fixed at the bottom -------------------------------------------
@@ -272,10 +273,11 @@ err = data.get("error") or {}
 # answer milna chahiye"): the unsolvable error contract is
 # replaced by the fallback contract — every question returns
 # an answer; gibberish returns a flagged friendly fallback.
-check("api error contract (Wave 18 fallback contract)",
+check("api error contract (Wave 18 fallback contract; "
+      "Wave 67: not_found)",
       data.get("ok") is True
       and (data.get("result") or {}).get("fallback_kind")
-      == "gibberish"
+      == "not_found"
       and "error" not in data and "unsolvable" not in data)
 r = c.post("/api/solve", json={"question": ""})
 data = r.get_json() or {}

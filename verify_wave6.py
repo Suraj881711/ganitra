@@ -164,24 +164,26 @@ body = r.get_data(as_text=True)
 # here. The Saathi encouragement strings themselves are
 # asserted intact in i18n (the error card remains the answer
 # template's last resort).
-check("named session gibberish -> friendly fallback",
-      esc("didn't look like a maths question") in body
+# Wave 67: the friendly fallback for gibberish is the
+# one-line not-found answer.
+check("named session gibberish -> one-line not-found",
+      "Answer not found." in body
       and "error-card" not in body)
 check("encouragement strings intact in i18n",
       "Aarav" in EN["error_encourage_name"].format(name="Aarav")
       and bool(EN["error_encourage"]))
 r = c.post("/api/solve", json={"question": "asdf qwer zxq"})
 data = r.get_json() or {}
-check("api gibberish -> fallback reply (Wave 18)",
+check("api gibberish -> fallback reply (Wave 18; "
+      "Wave 67: not_found)",
       data.get("ok") is True
       and (data.get("result") or {}).get("fallback_kind")
-      == "gibberish")
+      == "not_found")
 
 c = app.test_client()
 r = c.post("/solve", data={"question": "asdf qwer zxq"})
-check("anonymous gibberish -> friendly fallback",
-      esc("didn't look like a maths question")
-      in r.get_data(as_text=True))
+check("anonymous gibberish -> one-line not-found (Wave 67)",
+      "Answer not found." in r.get_data(as_text=True))
 
 # Wrong timed-quiz answers -> the never-scolding line (named + anon).
 def run_wrong_quiz(client):
@@ -210,7 +212,6 @@ body = r.get_data(as_text=True)
 check("parent report 200 + sections", r.status_code == 200
       and esc(EN["parent_heading"]) in body
       and esc(EN["parent_solved_label"]) in body
-      and esc(EN["parent_today_heading"]) in body
       and esc(EN["parent_mistakes_heading"]) in body
       and esc(EN["parent_last_test_heading"]) in body
       and esc(EN["parent_stars_heading"]) in body)
@@ -225,9 +226,10 @@ check("parent report star rule stated",
 check("WhatsApp share hook", 'id="parent-whatsapp"' in body
       and "https://wa.me/?text=" in body
       and "encodeURIComponent" in body)
-check("parent report Dhyaan JS hooks", "ganitra-dhyaan" in body
-      and 'id="parent-minutes"' in body
-      and 'id="parent-today-count"' in body)
+check("parent report Dhyaan GONE (wave 106)",
+      "ganitra-dhyaan" not in body
+      and 'id="parent-minutes"' not in body
+      and 'id="parent-today-count"' not in body)
 check("parents link in nav + footer", body.count("/parent-report") >= 1
       and esc(EN["nav_parents"]) in body)
 

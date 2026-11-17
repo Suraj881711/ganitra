@@ -21,8 +21,8 @@ the LAST test report exists, in the session — the /progress
 route adds it from there, like the Wave 6 Parent Report),
 per-question timestamps (stored messages carry none, so
 the weekly series groups a chat's questions by the week of
-that chat's last activity), and study minutes (the Dhyaan
-record is browser-localStorage, per day and per browser).
+that chat's last activity), and study minutes (no stored
+data source exists for them).
 
 Every query is scoped by user_id: a student only ever sees
 their own record. A missing chats table (an account that

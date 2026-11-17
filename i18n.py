@@ -2628,11 +2628,11 @@ STRINGS["te"].update(_TE_W5D)
 
 
 # ---------------------------------------------------------------------------
-# Wave 5e: board-style copy check + Dhyaan meter + Badhai celebration.
+# Wave 5e: board-style copy check + Badhai celebration.
+# (Wave 106 removed the Dhyaan meter on Suraj's order.)
 # Copy check = the teacher-checked answer copy after a quiz/test:
 # marks, a remark by score band, where marks were lost (topics) — it
 # checks FINAL ANSWERS only, honestly; no handwriting/step claims.
-# Dhyaan = today's study record (localStorage, per calendar day).
 # Badhai = the gentle congratulations shown on >= 80% results and on
 # finishing a mistakes-retry round. All 6 languages, zero missing.
 # ---------------------------------------------------------------------------
@@ -2658,8 +2658,6 @@ _EN_W5E = {
                      "rhythm going!",
     "mistakes_done_msg": "🎉 Badhai ho! You finished the mistakes "
                          "practice round.",
-    "dhyaan_label": "🧘 Dhyaan",
-    "dhyaan_today": "Today: {minutes} min · {count} questions",
 }
 
 _HI_W5E = {
@@ -2680,8 +2678,6 @@ _HI_W5E = {
     "celebrate_msg": "🎉 बधाई हो! शानदार काम — यही लय बनाए रखें!",
     "mistakes_done_msg": "🎉 बधाई हो! आपने ग़लतियों के अभ्यास का दौर "
                          "पूरा किया।",
-    "dhyaan_label": "🧘 ध्यान",
-    "dhyaan_today": "आज: {minutes} मिनट · {count} प्रश्न",
 }
 
 _BN_W5E = {
@@ -2703,8 +2699,6 @@ _BN_W5E = {
                      "রাখুন!",
     "mistakes_done_msg": "🎉 অভিনন্দন! আপনি ভুলের অনুশীলন পর্ব শেষ "
                          "করেছেন।",
-    "dhyaan_label": "🧘 মনোযোগ",
-    "dhyaan_today": "আজ: {minutes} মিনিট · {count}টি প্রশ্ন",
 }
 
 _MR_W5E = {
@@ -2726,8 +2720,6 @@ _MR_W5E = {
     "celebrate_msg": "🎉 अभिनंदन! अप्रतिम काम — हीच लय कायम ठेवा!",
     "mistakes_done_msg": "🎉 अभिनंदन! तुम्ही चुकांच्या सरावाची फेरी "
                          "पूर्ण केली.",
-    "dhyaan_label": "🧘 लक्ष",
-    "dhyaan_today": "आज: {minutes} मि. · {count} प्रश्न",
 }
 
 _TA_W5E = {
@@ -2753,8 +2745,6 @@ _TA_W5E = {
                      "தொடரவும்!",
     "mistakes_done_msg": "🎉 வாழ்த்துகள்! தவறுகள் பயிற்சிச் சுற்றை "
                          "முடித்தீர்கள்.",
-    "dhyaan_label": "🧘 கவனம்",
-    "dhyaan_today": "இன்று: {minutes} நிமி · {count} கேள்விகள்",
 }
 
 _TE_W5E = {
@@ -2778,8 +2768,6 @@ _TE_W5E = {
                      "కొనసాగించండి!",
     "mistakes_done_msg": "🎉 అభినందనలు! మీరు తప్పుల సాధన రౌండ్‌ను "
                          "పూర్తి చేశారు.",
-    "dhyaan_label": "🧘 ధ్యానం",
-    "dhyaan_today": "ఈరోజు: {minutes} నిమి · {count} ప్రశ్నలు",
 }
 
 STRINGS["en"].update(_EN_W5E)

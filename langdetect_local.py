@@ -46,7 +46,8 @@ caller keeps the current language.
 """
 import re
 
-__all__ = ["detect_language", "detect_language_confident"]
+__all__ = ["detect_language", "detect_language_confident",
+           "detect_language_request"]
 
 # ---------------------------------------------------------------- scripts
 # (language key or "deva", first codepoint, last codepoint)
@@ -274,3 +275,198 @@ def detect_language_confident(text):
 def detect_language(text):
     """Best-guess language code for ``text`` (no confidence flag)."""
     return detect_language_confident(text)[0]
+
+
+# ---------------------------------------------------------------------------
+# Wave 107: explicit language requests inside a message.
+#
+# Suraj's order (17 Nov 2026): the standing rule above (answer in
+# the language the student types in) is EXTENDED — an explicit
+# request inside the message overrides the question's language.
+# "What is the sum of angles of a triangle? Answer in Hindi"
+# must be answered in Hindi even though the question is English,
+# and symmetrically for English / Hinglish requests.
+#
+# ``detect_language_request(text)`` returns ``(target, cleaned)``
+# or None. ``target`` is "hi" (Hindi), "en" (English) or
+# "hinglish" (Roman Hindi). ``cleaned`` is the message with the
+# request phrase removed, so the phrase never reaches the
+# solver / bank / fallback layers as if it were question
+# content. When no request-shaped phrase is present the
+# function returns None and every caller behaves exactly as
+# before this wave.
+#
+# False-positive design (the reason this is not a bare keyword
+# search): a language name alone is CONTENT in plenty of real
+# maths questions ("A Hindi textbook costs Rs 200 and an English
+# textbook costs Rs 150. What is the total cost?"). A match
+# therefore needs a request SHAPE around the language name:
+#   A. "in <language>" ("answer in Hindi", "in english please")
+#      — the English preposition directly before the name.
+#   B. "<language> me/mein/mai/में" (the Hindi postposition
+#      directly after the name, or attached: "hindime",
+#      "हिंदीमें") PLUS a request word within 3 tokens on
+#      either side, or the phrase trailing at the very end of
+#      the message. The postposition alone is content-shaped
+#      ("20 छात्र हिंदी में पढ़ते हैं" — students studying IN
+#      Hindi in a sets problem), so it never fires by itself
+#      mid-message.
+#   C. A request word (answer / jawab / samjhao / batao /
+#      chahiye / explain / reply ...) within 3 tokens of the
+#      language name, either side ("Hindi answer do", "mujhe
+#      english jawab chahiye"). The window is kept tight on
+#      purpose: ordinary asks put their verb much further from
+#      a content language name ("English book ki price batao"
+#      has "batao" 4 tokens away and must NOT fire).
+# Maths-ask verbs that appear in every question ("find",
+# "solve", "what", "kitna") are deliberately NOT request words.
+# When several requests fire, the LAST one wins (a student
+# correcting themselves: "hindi me nahi, english me do").
+
+_REQ_LANG_NAMES = {
+    "hindi": "hi", "हिंदी": "hi", "हिन्दी": "hi",
+    "hinglish": "hinglish", "हिंग्लिश": "hinglish",
+    "english": "en", "angrezi": "en", "angreji": "en",
+    "अंग्रेज़ी": "en", "अंग्रेजी": "en", "इंग्लिश": "en",
+}
+_REQ_POSTPOSITIONS = {"me", "mein", "mai", "में", "मे"}
+_REQ_WORDS = {
+    "answer", "ans", "jawab", "reply", "respond", "explain",
+    "samjhao", "samjha", "batao", "bata", "bolo", "likho",
+    "do", "dein", "dena", "chahiye",
+    "जवाब", "समझाओ", "समझा", "बताओ", "बताइए", "बता",
+    "चाहिए", "उत्तर", "दीजिए", "दो", "देना",
+}
+_REQ_FILLERS = {"please", "plz", "kripya", "कृपया",
+                "language", "bhasha", "भाषा"}
+# Tokens a request phrase can be built from — used to find the
+# full span to strip out of the message before solving.
+_REQ_RUN_VOCAB = (set(_REQ_LANG_NAMES) | _REQ_POSTPOSITIONS
+                  | _REQ_WORDS | _REQ_FILLERS | {"in"})
+_REQ_EDGE_PUNCT = ".,?!;:।\"'()[]–—-"
+
+
+def _req_token_key(raw):
+    return raw.strip(_REQ_EDGE_PUNCT).lower()
+
+
+def _req_token_lang(key):
+    """(target, attached_postposition) when ``key`` is a
+    language name — including the attached-postposition forms
+    students actually type ("hindime", "हिंदीमें") — else
+    (None, False)."""
+    if key in _REQ_LANG_NAMES:
+        return _REQ_LANG_NAMES[key], False
+    for suffix in ("में", "मे"):
+        if key.endswith(suffix) and key[:-len(suffix)] \
+                in _REQ_LANG_NAMES:
+            return _REQ_LANG_NAMES[key[:-len(suffix)]], True
+    if key.endswith("me") and key[:-2] in _REQ_LANG_NAMES \
+            and key[:-2].isascii():
+        return _REQ_LANG_NAMES[key[:-2]], True
+    return None, False
+
+
+def _req_tokens(text):
+    """Whitespace tokens of ``text`` with match keys and char
+    spans: (key, start, end, lang_target, attached_post)."""
+    out = []
+    for m in re.finditer(r"\S+", text):
+        key = _req_token_key(m.group(0))
+        target, attached = _req_token_lang(key)
+        out.append((key, m.start(), m.end(), target, attached))
+    return out
+
+
+def _req_fires(tokens, i):
+    """True when the language-name token at index ``i`` sits in
+    a request-shaped phrase (see the design note above)."""
+    n = len(tokens)
+    # Shape A: "in <language>".
+    if i > 0 and tokens[i - 1][0] == "in":
+        return True
+    # The postposition slot: the token after the name, or the
+    # name token itself when the postposition is attached.
+    post_idx = None
+    if tokens[i][4]:
+        post_idx = i
+    elif i + 1 < n and tokens[i + 1][0] in _REQ_POSTPOSITIONS:
+        post_idx = i + 1
+    if post_idx is not None:
+        # Shape B: postposition + a request word within 3
+        # tokens on either side of the phrase...
+        for j in range(max(0, i - 3), i):
+            if tokens[j][0] in _REQ_WORDS:
+                return True
+        for j in range(post_idx + 1, min(n, post_idx + 4)):
+            if tokens[j][0] in _REQ_WORDS:
+                return True
+        # ...or the phrase trailing at the message end (only
+        # filler words after the postposition).
+        if all(tokens[j][0] in _REQ_FILLERS
+               for j in range(post_idx + 1, n)):
+            return True
+    # Shape C: a request word within 3 tokens either side.
+    for j in range(max(0, i - 3), min(n, i + 4)):
+        if j != i and tokens[j][0] in _REQ_WORDS:
+            return True
+    return False
+
+
+def _req_run_span(tokens, i):
+    """Char span of the whole request phrase around token
+    ``i``: extend over consecutive request-vocabulary tokens
+    (language names, postpositions, request words, fillers,
+    "in") so "please answer in hindi" is stripped as one
+    phrase, never half of it."""
+    lo = i
+    while lo > 0 and tokens[lo - 1][0] in _REQ_RUN_VOCAB:
+        lo -= 1
+    hi = i
+    while hi + 1 < len(tokens) \
+            and tokens[hi + 1][0] in _REQ_RUN_VOCAB:
+        hi += 1
+    return tokens[lo][1], tokens[hi][2]
+
+
+def _req_tidy(text):
+    """Normalise a message after phrase removal: collapse
+    whitespace, drop punctuation orphaned at the cut edges and
+    a dangling connector ("aur" / "and") at either end."""
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"\s+([.,?!;:।])", r"\1", text)
+    text = text.strip(" .,?!;:।-—")
+    for connector in ("aur", "and"):
+        if text.lower().startswith(connector + " "):
+            text = text[len(connector) + 1:].lstrip(" .,")
+        if text.lower().endswith(" " + connector):
+            text = text[:-(len(connector) + 1)].rstrip(" .,")
+    return text.strip(" .,?!;:।-—")
+
+
+def detect_language_request(text):
+    """Wave 107: ``(target, cleaned)`` when the message carries
+    an explicit answer-language request, else None.
+
+    ``target`` is "hi" / "en" / "hinglish"; ``cleaned`` is the
+    message with every firing request phrase stripped (it can
+    be "" when the message was ONLY a request — callers then
+    keep the original text for the solve pipeline and apply
+    just the language). The LAST firing request wins."""
+    text = str(text or "")
+    if not text.strip():
+        return None
+    tokens = _req_tokens(text)
+    hits = []
+    for i, tok in enumerate(tokens):
+        if tok[3] is not None and _req_fires(tokens, i):
+            hits.append(i)
+    if not hits:
+        return None
+    target = tokens[hits[-1]][3]
+    spans = sorted((_req_run_span(tokens, i) for i in hits),
+                   reverse=True)
+    cleaned = text
+    for start, end in spans:
+        cleaned = cleaned[:start] + " " + cleaned[end:]
+    return target, _req_tidy(cleaned)

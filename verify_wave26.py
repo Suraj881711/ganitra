@@ -60,13 +60,10 @@ and Teach on BOTH speech paths (instant-onend engine, and
 no speechSynthesis at all — the timed fallback must still
 blank, then reveal step-by-step).
 
-Dhyaan note (checked, NOT a bug): the "ध्यान आज" pill
-counted 4 after 2 questions in the Wave-25 live session
-because the counter is a device-local per-day localStorage
-record and the verifying browser is shared across test
-accounts (2 solves from the Wave-24 account earlier the
-same day + 2 = 4). dhyaanSolved() has exactly ONE call
-site — one increment per successful solve — pinned below.
+Dhyaan note (Wave 106): the Dhyaan meter that this note
+used to explain was removed completely on Suraj's order —
+no pill, no dhyaanSolved(), no localStorage record. The
+pin below now asserts its ABSENCE (zero occurrences).
 
 Run:  python verify_wave26.py
 """
@@ -185,9 +182,9 @@ check("history re-render uses the same addAnswerBubble",
 check("step numbers pinned inline on both steps lists",
       INDEX.count('ol.style.listStyleType = "none";') == 2,
       f"count={INDEX.count('ol.style.listStyleType = ')}")
-check("dhyaan increments once per solve (single call site)",
-      INDEX.count("dhyaanSolved();") == 1,
-      f"call sites={INDEX.count('dhyaanSolved();')}")
+check("dhyaan GONE from chat page (wave 106)",
+      INDEX.count("dhyaanSolved") == 0,
+      f"occurrences={INDEX.count('dhyaanSolved')}")
 
 # --- 5. Frozen logos untouched --------------------------------
 for _name, _want in (

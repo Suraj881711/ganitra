@@ -440,13 +440,24 @@ def _plain_result(kind, answer, hindi, steps=None):
 _HINGLISH_NOT_FOUND = "Answer nahi mila."
 
 
-def _not_found_line(question, hindi, lang=None):
+def _not_found_line(question, hindi, lang=None, lang_request=None):
     """The not-found line in the question's own language:
     Devanagari question -> Hindi (Marathi UI keeps its own
     line), Roman Hinglish -> "Answer nahi mila.", a bn/mr/ta/te
     UI language -> its i18n line, otherwise English. The
     Devanagari/Hinglish wording is Suraj's spec verbatim; the
-    rest ride the i18n "answer_not_found" key."""
+    rest ride the i18n "answer_not_found" key.
+
+    Wave 107: an explicit language request in the message
+    (lang_request: "hi" / "en" / "hinglish") outranks the
+    question's own language here exactly as it does for the
+    answer itself."""
+    if lang_request == "hi":
+        return get_strings("hi")["answer_not_found"]
+    if lang_request == "hinglish":
+        return _HINGLISH_NOT_FOUND
+    if lang_request == "en":
+        return get_strings("en")["answer_not_found"]
     q = str(question or "")
     if any("ऀ" <= ch <= "ॿ" for ch in q):
         if lang == "mr":
@@ -461,7 +472,7 @@ def _not_found_line(question, hindi, lang=None):
     return get_strings("en")["answer_not_found"]
 
 
-def _not_found_result(question, hindi, lang=None):
+def _not_found_result(question, hindi, lang=None, lang_request=None):
     """The ONLY answer to anything that was not solved: one
     short line, no steps, nothing else. fallback_kind ==
     "not_found" is the sentinel every renderer gates on (the
@@ -470,7 +481,8 @@ def _not_found_result(question, hindi, lang=None):
     return {
         "type": "Ganitra",
         "op": "not_found",
-        "answer": _not_found_line(question, hindi, lang),
+        "answer": _not_found_line(question, hindi, lang,
+                                  lang_request),
         "steps": [],
         "fallback": True,
         "fallback_kind": "not_found",
@@ -521,7 +533,7 @@ _GREETING_LINES = {
 }
 
 
-def _greeting_result(question, hindi):
+def _greeting_result(question, hindi, flavour=None):
     # Merge-5 (decided rule 1): a greeting gets Wave 68's
     # friendly per-flavour ONE line with plain rendering —
     # NOT Wave 67's "Answer not found." (a friendly hello
@@ -529,7 +541,8 @@ def _greeting_result(question, hindi):
     g = _greeting_kind(question)
     if g is None:
         return None
-    flavour = _flavour(question)
+    if flavour is None:
+        flavour = _flavour(question)
     if g in ("thank you", "thanks", "dhanyavaad", "dhanyavad",
              "shukriya", "धन्यवाद", "शुक्रिया"):
         group = "thanks"
@@ -564,9 +577,11 @@ _NONMATHS_LINES = {
 }
 
 
-def _nonmaths_result(question, hindi):
+def _nonmaths_result(question, hindi, flavour=None):
+    if flavour is None:
+        flavour = _flavour(question)
     return _plain_result(
-        "nonmaths", _NONMATHS_LINES[_flavour(question)], hindi)
+        "nonmaths", _NONMATHS_LINES[flavour], hindi)
 
 
 # ---------------------------------------------------------------------------
@@ -582,7 +597,7 @@ def _nonmaths_result(question, hindi):
 # properly) is never disturbed.
 # ---------------------------------------------------------------------------
 
-def _science_result(question, hindi):
+def _science_result(question, hindi, flavour=None):
     # Merge-5: Wave 68's per-flavour version, kept as-is;
     # _plain_result now also sets Wave 67's `plain` flag,
     # so the guard renders plainly under both waves.
@@ -594,7 +609,8 @@ def _science_result(question, hindi):
     # line already says what Ganitra does). The guidance
     # content itself is Wave 20's, unchanged.
     q = str(question or "").lower()
-    flavour = _flavour(question)
+    if flavour is None:
+        flavour = _flavour(question)
     if "refractive" in q or "speed of light" in q \
             or "ray of light" in q or "light ray" in q:
         steps = [
@@ -1110,8 +1126,9 @@ _VAGUE_LINES = {
 }
 
 
-def _guide_result(question, hindi, kind):
-    flavour = _flavour(question)
+def _guide_result(question, hindi, kind, flavour=None):
+    if flavour is None:
+        flavour = _flavour(question)
     if kind == "vague":
         return _plain_result(
             "vague", _VAGUE_LINES[flavour], hindi)
@@ -1130,6 +1147,9 @@ def _guide_result(question, hindi, kind):
 # Wave 37: the Gemini free-tier second brain (gemini_fallback.py)
 # Wave 41: Groq (groq_fallback.py) joins as the second brain —
 # consulted only when Gemini returned None.
+# Wave 108: OpenRouter (openrouter_fallback.py) joins as the
+# third brain — consulted only when Gemini AND Groq both
+# returned None.
 # ---------------------------------------------------------------------------
 
 # The fallback kinds that mean "the student's OWN question is
@@ -1142,7 +1162,18 @@ def _guide_result(question, hindi, kind):
 _GEMINI_KINDS = ("similar", "concept", "guide")
 
 
-def _gemini_answer(question, hindi):
+def _ai_lang(hindi, lang_request):
+    """The language instruction handed to the AI brains: a
+    Wave-107 explicit request verbatim ("en" / "hi" /
+    "hinglish"), else the pre-Wave-107 rule — "hi" for a
+    Hindi-looking question, None (the prompt's own
+    same-language rule) otherwise."""
+    if lang_request in ("en", "hi", "hinglish"):
+        return lang_request
+    return "hi" if hindi else None
+
+
+def _gemini_answer(question, hindi, lang_request=None):
     """Ask Gemini for the student's own question. Lazy import
     so the module (and its env key) stays fully optional; ANY
     failure returns None and the honest Wave-18 fallback is
@@ -1150,7 +1181,7 @@ def _gemini_answer(question, hindi):
     try:
         from gemini_fallback import try_gemini_answer
         return try_gemini_answer(question,
-                                 "hi" if hindi else None)
+                                 _ai_lang(hindi, lang_request))
     except Exception:
         return None
 
@@ -1172,7 +1203,7 @@ def _bank_answer(question):
         return None
 
 
-def _groq_answer(question, hindi):
+def _groq_answer(question, hindi, lang_request=None):
     """Wave 41: ask Groq for the student's own question —
     only ever called when Gemini returned None. Same contract
     as _gemini_answer: lazy import, ANY failure returns None
@@ -1180,7 +1211,21 @@ def _groq_answer(question, hindi):
     try:
         from groq_fallback import try_groq_answer
         return try_groq_answer(question,
-                               "hi" if hindi else None)
+                               _ai_lang(hindi, lang_request))
+    except Exception:
+        return None
+
+
+def _openrouter_answer(question, hindi):
+    """Wave 108: ask OpenRouter for the student's own
+    question — only ever called when Gemini AND Groq both
+    returned None. Same contract as _gemini_answer: lazy
+    import, ANY failure returns None and the honest Wave-18
+    fallback is served unchanged."""
+    try:
+        from openrouter_fallback import try_openrouter_answer
+        return try_openrouter_answer(question,
+                                     "hi" if hindi else None)
     except Exception:
         return None
 
@@ -1218,7 +1263,8 @@ def _log_not_found(question, lang, student_class, terminal_kind):
 
 # ---------------------------------------------------------------------------
 
-def with_fallback(question, result, lang=None, student_class=None):
+def with_fallback(question, result, lang=None, student_class=None,
+                  lang_request=None):
     """Return `result` unchanged when it is a real solver
     answer; otherwise return an honest fallback result (never
     None, never an error dict). `lang` is the app's UI /
@@ -1226,8 +1272,23 @@ def with_fallback(question, result, lang=None, student_class=None):
     for the bn/mr/ta/te UIs; the line otherwise follows the
     question's own script/words). `student_class` (Wave 90)
     is the signed-in student's class when the caller knows
-    it — used only by the not-found learning log."""
-    hindi = _looks_hindi(question)
+    it — used only by the not-found learning log.
+    `lang_request` (Wave 107) is an explicit answer-language
+    request detected in the message ("hi" / "en" /
+    "hinglish", from langdetect_local.detect_language_request)
+    — when present it outranks the question's own language for
+    every language choice made in this layer: the Hindi flag,
+    the one-line replies' flavour, the AI brains' prompt
+    language and the not-found line. When it is None every
+    choice below is exactly the pre-Wave-107 one."""
+    if lang_request in ("hi", "hinglish"):
+        hindi = True
+    elif lang_request == "en":
+        hindi = False
+    else:
+        hindi = _looks_hindi(question)
+    req_flavour = {"en": "en", "hi": "dev",
+                   "hinglish": "roman"}.get(lang_request)
 
     # Layer 0 / 0b run before the solver result is even looked
     # at: the solver's letter-products for "hi" / "what is the
@@ -1236,11 +1297,11 @@ def with_fallback(question, result, lang=None, student_class=None):
     # Wave 68's friendly per-flavour one line is served (kind
     # "greeting", plain rendering). Wave 67's collapse of
     # greetings to the not-found line is superseded here.
-    greeting = _greeting_result(question, hindi)
+    greeting = _greeting_result(question, hindi, req_flavour)
     if greeting is not None:
         return greeting
     if _is_nonmaths(question):
-        return _nonmaths_result(question, hindi)
+        return _nonmaths_result(question, hindi, req_flavour)
 
     if _is_real(question, result):
         # Wave 100: a multi-part bundle (mega-MCQ set, case
@@ -1330,7 +1391,7 @@ def with_fallback(question, result, lang=None, student_class=None):
     # guidance — BEFORE salvage, which would otherwise carve a
     # fake "maths part" out of it (the refractive-index case).
     if has_science_signal(question):
-        return _science_result(question, hindi)
+        return _science_result(question, hindi, req_flavour)
 
     # Wave 39: the Verified Data Bank exact-match layer. It sits
     # AFTER the science guard (a science question is never
@@ -1476,11 +1537,14 @@ def with_fallback(question, result, lang=None, student_class=None):
         if similar is not None:
             result_out = similar
         elif _is_vague(question):
-            result_out = _guide_result(question, hindi, "vague")
+            result_out = _guide_result(question, hindi, "vague",
+                                       req_flavour)
         elif _is_gibberish(question):
-            result_out = _guide_result(question, hindi, "gibberish")
+            result_out = _guide_result(question, hindi,
+                                       "gibberish", req_flavour)
         else:
-            result_out = _guide_result(question, hindi, "guide")
+            result_out = _guide_result(question, hindi, "guide",
+                                       req_flavour)
 
     # Wave 37: when the honest layers still could not answer
     # the student's own question (similar example, concept card
@@ -1491,15 +1555,19 @@ def with_fallback(question, result, lang=None, student_class=None):
     # gets the same question before we settle. Exact solves,
     # salvage, greetings, non-maths and science replies have
     # all returned earlier, so neither brain can reach them.
+    # Wave 108: when Groq also returns None, OpenRouter (also
+    # free tier) gets the same question as the last resort.
     # Wave 75: a topics-library concept answer (source
     # "topics") is verified in-app content (Wave 55) — like
     # the bank, it is exempt from the AI upgrade below, which
     # could otherwise rewrite it and burn free quota.
     if result_out.get("fallback_kind") in _GEMINI_KINDS \
             and result_out.get("source") != "topics":
-        ai_result = _gemini_answer(question, hindi)
+        ai_result = _gemini_answer(question, hindi, lang_request)
         if ai_result is None:
-            ai_result = _groq_answer(question, hindi)
+            ai_result = _groq_answer(question, hindi, lang_request)
+        if ai_result is None:
+            ai_result = _openrouter_answer(question, hindi)
         if ai_result is not None:
             return ai_result
 
@@ -1519,14 +1587,19 @@ def with_fallback(question, result, lang=None, student_class=None):
         # the AI chain all missed. Record it in the learning
         # log (observational only; the answer below is built
         # exactly as before, whether logging works or not).
-        _log_not_found(question, lang, student_class,
-                       result_out.get("fallback_kind"))
-        return _not_found_result(question, hindi, lang)
+        # Wave 107: a Hinglish request is logged as "hinglish"
+        # (the session lang only knows it as "hi").
+        _log_not_found(
+            question,
+            "hinglish" if lang_request == "hinglish" else lang,
+            student_class, result_out.get("fallback_kind"))
+        return _not_found_result(question, hindi, lang,
+                                 lang_request)
     return result_out
 
 
 def fallback_answer(question, result=None, lang=None,
-                    student_class=None):
+                    student_class=None, lang_request=None):
     """Convenience wrapper: solve (if no result was given) and
     guarantee a presentable answer dict."""
     if result is None:
@@ -1537,7 +1610,8 @@ def fallback_answer(question, result=None, lang=None,
                       "answer": f"Could not solve this one: {e}",
                       "steps": []}
     return with_fallback(question, result, lang=lang,
-                         student_class=student_class)
+                         student_class=student_class,
+                         lang_request=lang_request)
 
 
 __all__ = ["with_fallback", "fallback_answer"]

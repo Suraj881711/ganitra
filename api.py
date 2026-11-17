@@ -4,7 +4,8 @@ from flask import Blueprint, request, jsonify, session
 from i18n import (LANG_NAMES, SPEECH_LANGS, advice_for,
                   explanation_for, get_strings, normalise_lang,
                   result_unsolvable, solve_failed, teach_for)
-from langdetect_local import detect_language_confident
+from langdetect_local import detect_language_confident, \
+    detect_language_request
 from doubt import build_doubt_response, parse_followup
 from fallback import with_fallback
 from solver.answer_cache import get_negative, put_negative
@@ -48,7 +49,8 @@ def trimmed_history_entry(question, result):
     }
 
 
-def _solve_friendly(question, lang=None, student_class=None):
+def _solve_friendly(question, lang=None, student_class=None,
+                    lang_request=None):
     """Wave 5b: solve, and on failure gently re-ask once with a hint
     appended (same behaviour as the classic /solve route), so the
     chat never shows a raw solver failure when a small nudge fixes
@@ -56,7 +58,9 @@ def _solve_friendly(question, lang=None, student_class=None):
     UI/detected language forwarded to the fallback layer so the
     one-line not-found answer can use it. `student_class`,
     Wave 90, is forwarded the same way for the not-found
-    learning log only.)
+    learning log only. `lang_request`, Wave 107, is an explicit
+    answer-language request from the message, forwarded to the
+    fallback layer unchanged.)
 
     Wave 18: the result then passes through the no-dead-end
     layer (fallback.with_fallback) — real solver answers come
@@ -82,7 +86,15 @@ def _solve_friendly(question, lang=None, student_class=None):
     checked = step_check_result(question, lang=lang)
     if checked is not None:
         return checked
-    cached = get_negative(question)
+    # Wave 107: when the message carried an explicit language
+    # request, the negative cache is keyed per request — a
+    # fallback outcome's one-line texts are shaped by it, so
+    # the same question asked with two different requests (or
+    # with and without one) must not share one pinned outcome.
+    # No request -> the plain pre-Wave-107 key, exactly as
+    # before.
+    neg_variant = lang_request
+    cached = get_negative(question, variant=neg_variant)
     if cached is not None:
         return cached
     result = solve_question(question)
@@ -91,8 +103,9 @@ def _solve_friendly(question, lang=None, student_class=None):
         if not solve_failed(question, retry):
             result = retry
     result = with_fallback(question, result, lang=lang,
-                           student_class=student_class)
-    put_negative(question, result)
+                           student_class=student_class,
+                           lang_request=lang_request)
+    put_negative(question, result, variant=neg_variant)
     return result
 
 
@@ -165,7 +178,7 @@ _UI_EXTRA_KEYS = {
     "listen_btn", "listen_stop_btn", "handwriting_btn",
     "print_copy_link", "question_placeholder", "enter_question",
     "solve_btn", "voice_btn", "photo_btn", "lang_label", "menu_label",
-    "dhyaan_today", "dhyaan_label", "chat_waking_note",
+    "chat_waking_note",
     "flash_too_long", "chat_empty_sub", "chat_welcome",
     "chat_greeting_plain", "saathi_welcome_name",
     "lang_switched_toast",
@@ -244,13 +257,41 @@ def api_solve():
     # solid detection in a different language moves the session to
     # that language BEFORE solving, so the answer, explanation,
     # advice and any error card below are all in the new language.
-    detected, solid = detect_language_confident(question)
-    switched = False
-    if solid and detected != lang:
-        lang = detected
-        session["lang"] = lang
-        strings = get_strings(lang)
-        switched = True
+    # Wave 107 (Suraj, 17 Nov 2026): an explicit language request
+    # inside the message ("answer in Hindi", "hindi me batao",
+    # "हिंदी में जवाब दो") outranks detection — the answer comes
+    # in the REQUESTED language whatever the question's language
+    # is. The request phrase is stripped from the text that is
+    # solved (solve_text), so it can never pollute the solver,
+    # the bank's exact match or the fallback layers; the
+    # student's original message is still what history, the
+    # doubt follow-up and the response echo carry. A Hinglish
+    # request maps to the "hi" session language (the same place
+    # a Hinglish question lands today) and rides to the fallback
+    # layer as lang_request="hinglish" so its one-line replies
+    # and the AI prompt use Roman Hindi, not Devanagari.
+    lang_request = None
+    solve_text = question
+    req = detect_language_request(question)
+    if req is not None:
+        lang_request, req_cleaned = req
+        if req_cleaned:
+            solve_text = req_cleaned
+        req_lang = ("hi" if lang_request in ("hi", "hinglish")
+                    else "en")
+        switched = req_lang != lang
+        if switched:
+            lang = req_lang
+            session["lang"] = lang
+            strings = get_strings(lang)
+    else:
+        detected, solid = detect_language_confident(question)
+        switched = False
+        if solid and detected != lang:
+            lang = detected
+            session["lang"] = lang
+            strings = get_strings(lang)
+            switched = True
     fields = _lang_fields(lang, strings, switched)
 
     # Wave 96: doubt follow-up ("ye step samjhao") — answered
@@ -287,8 +328,9 @@ def api_solve():
             })
 
     result = _solve_friendly(
-        question, lang=lang,
-        student_class=session.get("saathi_class"))
+        solve_text, lang=lang,
+        student_class=session.get("saathi_class"),
+        lang_request=lang_request)
 
     # Wave 5 (additive): a chat solve on the homepage counts exactly
     # like a classic /solve — it lands in the session history and
@@ -304,7 +346,7 @@ def api_solve():
     history.insert(0, trimmed_history_entry(question, result))
     session["history"] = history[:_HISTORY_LIMIT]
 
-    if solve_failed(question, result):
+    if solve_failed(solve_text, result):
         # Wave 5b: the friendly error contract for the chat — the
         # client renders the localised error card + Retry in a
         # Ganitra bubble. No raw solver text leaves the server.
@@ -345,7 +387,7 @@ def api_solve():
         # compatibility (stored chats, the classic pages) but
         # the chat no longer renders it — it restated the
         # final answer, duplicating the answer line.
-        "intro": _intro_for(result, question),
+        "intro": _intro_for(result, solve_text),
         "explanation": explanation_for(result, lang),
         "advice": advice_for(result, lang),
         # Wave 12: genuinely-different extra methods for this
@@ -356,7 +398,7 @@ def api_solve():
         # Wave 14: the auto-teach methods pass runs with a hard
         # time budget (speedups.methods_nonblocking) — same data
         # in every normal case, but it can never delay the answer.
-        "methods": methods_nonblocking(question, result),
+        "methods": methods_nonblocking(solve_text, result),
         "teach": teach_for(result, lang),
         **fields,
     })

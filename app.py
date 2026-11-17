@@ -38,7 +38,8 @@ from test_mode import (TEST_TIME_LIMIT, TOPIC_LABELS as TEST_TOPICS,
 from solver.answer_cache import get_negative, put_negative
 from solver.router import solve_question
 from fallback import with_fallback
-from langdetect_local import detect_language_confident
+from langdetect_local import detect_language_confident, \
+    detect_language_request
 import accounts
 import ocr
 import weak_practice
@@ -541,11 +542,10 @@ def create_app():
                      or k.startswith("chats_")
                      or k.startswith("mm_")
                      or k in ("chat_waking_note", "flash_too_long",
-                              "dhyaan_today", "file_btn",
+                              "file_btn",
                               "chats_new", "voice_btn", "photo_btn",
                               "solve_btn", "acct_stats_questions",
                               "acct_stats_chats")},
-            "dhyaan_today": strings["dhyaan_today"],
             "voice_label": strings["voice_btn"],
             "saathi_name": saathi_name,
             "saathi_class": saathi_class,
@@ -1056,20 +1056,40 @@ def create_app():
         # solidly detected different language becomes the session
         # language BEFORE the answer page renders, so the whole
         # page (headings, explanation, advice) uses the new one.
-        detected, solid = detect_language_confident(question)
-        if solid and detected != _lang():
-            session["lang"] = detected
+        # Wave 107: an explicit language request in the message
+        # outranks detection here too (same rule as the chat
+        # API), and the request phrase is stripped from the text
+        # that is solved (solve_text); the page still shows the
+        # student's original message as the question.
+        lang_request = None
+        solve_text = question
+        req = detect_language_request(question)
+        if req is not None:
+            lang_request, req_cleaned = req
+            if req_cleaned:
+                solve_text = req_cleaned
+            req_lang = ("hi" if lang_request in ("hi", "hinglish")
+                        else "en")
+            if req_lang != _lang():
+                session["lang"] = req_lang
+        else:
+            detected, solid = detect_language_confident(question)
+            if solid and detected != _lang():
+                session["lang"] = detected
         # Wave 48: same negative-cache seam as api._solve_friendly
         # — a recently-failed question serves its finished fallback
         # result instead of re-paying the whole solve.
-        result = get_negative(question)
+        # Wave 107: keyed per explicit language request, as
+        # in api._solve_friendly.
+        neg_variant = lang_request
+        result = get_negative(solve_text, variant=neg_variant)
         if result is None:
-            result = solve_question(question)
+            result = solve_question(solve_text)
             # Wave 5b: on failure, gently re-ask once with a hint;
             # the second result decides what the student sees.
-            if solve_failed(question, result):
-                retry = solve_question(_ask_again(question))
-                if not solve_failed(question, retry):
+            if solve_failed(solve_text, result):
+                retry = solve_question(_ask_again(solve_text))
+                if not solve_failed(solve_text, retry):
                     result = retry
             # Wave 18: no dead-end — failures, letter-soup
             # "answers" and soft non-answers become honest fallback
@@ -1078,10 +1098,12 @@ def create_app():
             # a last resort that the fallback itself could not
             # cover.
             result = with_fallback(
-                question, result, lang=_lang(),
-                student_class=session.get("saathi_class"))
-            put_negative(question, result)
-        failed = solve_failed(question, result)
+                solve_text, result, lang=_lang(),
+                student_class=session.get("saathi_class"),
+                lang_request=lang_request)
+            put_negative(solve_text, result,
+                         variant=neg_variant)
+        failed = solve_failed(solve_text, result)
         # Wave 67: a one-line response (not-found / maths-only
         # guard) gets NO explanation, advice, methods or teach
         # extras on the answer page either — just its line.
@@ -1104,7 +1126,7 @@ def create_app():
                                # auto-teach budget as /api/solve.
                                methods=([] if quiet
                                         else methods_nonblocking(
-                                            question, result)),
+                                            solve_text, result)),
                                teach=([] if quiet
                                       else teach_for(result, _lang())),
                                unsolvable=failed)
@@ -1461,9 +1483,10 @@ def create_app():
     def parent_report():
         """Wave 6: a calm report for parents, built only from data
         this browser/session already holds — session history, the
-        session Mistake Notebook, the last test report, and (filled
-        in by the page's JS) today's Dhyaan record in localStorage.
-        There is no account or cloud record behind it."""
+        session Mistake Notebook and the last test report. There
+        is no account or cloud record behind it. (Wave 106: the
+        Dhyaan localStorage record the page's JS used to read was
+        removed on Suraj's order.)"""
         strings = _t()
         history_count = len(session.get("history", []))
         mistakes = session.get("mistakes", [])

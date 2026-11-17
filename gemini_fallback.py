@@ -83,6 +83,11 @@ _LANG_NAMES = {
     "mr": "Marathi",
     "ta": "Tamil",
     "te": "Telugu",
+    # Wave 107: an explicit "hinglish me samjhao" request is a
+    # distinct instruction from Hindi — Roman script, not
+    # Devanagari — so it gets its own prompt name.
+    "hinglish": "Hinglish (Hindi written in Roman/English "
+                "letters)",
 }
 
 _PROMPT = """You are the maths engine of Ganitra, a maths-only tutor for Indian school students (Classes 0-12, NCERT pattern).

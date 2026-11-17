@@ -2,7 +2,8 @@
 errors, no raw solver text, no JSON dump), chat failure contract,
 slow-server note, form safety, empty states, the CSS comfort audit,
 ✍️ Copy Style (handwriting) presentation, the board-style Copy
-Check card, the Dhyaan meter hooks and the Badhai celebration.
+Check card, the Badhai celebration, and (since Wave 106) the
+ABSENCE of the removed Dhyaan meter.
 
 Run with the project venv:  python verify_wave5b.py
 """
@@ -61,10 +62,13 @@ check("gibberish POST /solve status", r.status_code == 200,
 # friendly reply. The error-card strings stay in i18n as the
 # template's last resort; the checks below assert the NEW
 # contract (the no-raw-error guarantees are unchanged).
-check("gibberish friendly fallback reply",
-      esc("didn't look like a maths question") in body)
-check("gibberish fallback how-to-ask tip",
-      "Try writing it like" in body)
+# Wave 67 amendment: the friendly fallback reply is now the
+# ONE-LINE not-found answer — no guide text, no how-to-ask tip.
+check("gibberish one-line not-found reply (Wave 67)",
+      "Answer not found." in body)
+check("gibberish NO how-to-ask tip (Wave 67)",
+      "Try writing it like" not in body
+      and "Questions I solve for sure" not in body)
 check("gibberish NO error card", "error-card" not in body)
 check("gibberish answer block present (Wave 18)",
       'class="answer-big"' in body)
@@ -98,10 +102,11 @@ err = data.get("error") or {}
 # Wave 18 amendment: the chat failure contract is now the
 # fallback contract — gibberish returns ok=True with a flagged
 # friendly fallback result, not the unsolvable error payload.
-check("api gibberish answered (Wave 18 fallback)",
+check("api gibberish answered (Wave 18 fallback; "
+      "Wave 67: not_found)",
       r.status_code == 200 and data.get("ok") is True
       and (data.get("result") or {}).get("fallback_kind")
-      == "gibberish",
+      == "not_found",
       f"status={r.status_code}")
 check("api fallback contract (no error payload)",
       "error" not in data and "unsolvable" not in data
@@ -183,7 +188,8 @@ new_keys = {
     "copycheck_all_clear", "copycheck_practice_link",
     "remark_perfect", "remark_great", "remark_good", "remark_keep",
     "remark_try", "celebrate_msg", "mistakes_done_msg",
-    "dhyaan_label", "dhyaan_today",
+    # wave 106: "dhyaan_label" / "dhyaan_today" were in this set;
+    # the Dhyaan meter was removed on Suraj's order, keys and all.
 }
 for code in SUPPORTED_LANGS:
     missing = new_keys - set(STRINGS[code])
@@ -301,19 +307,21 @@ check("mistakes round done -> badhai", r.status_code == 200
       and esc(EN["mistakes_done_msg"]) in body
       and "confetti-piece" in body)
 
-# --- 11. Dhyaan meter hooks --------------------------------------------------------------
+# --- 11. Dhyaan meter REMOVED (Wave 106, Suraj's order) ----------------------------------
 r = c.get("/")
 body = r.get_data(as_text=True)
-check("dhyaan pill on homepage", 'id="dhyaan-pill"' in body
-      and esc(EN["dhyaan_label"]) in body)
-check("dhyaan localStorage logic", "ganitra-dhyaan" in body
-      and "ganitraDhyaanPaint" in body
-      and "visibilitychange" in body)
-check("dhyaan template (hi) formats", HI["dhyaan_today"].format(
-    minutes=3, count=2).startswith("आज"))
+check("dhyaan pill GONE from homepage (wave 106)",
+      'id="dhyaan-pill"' not in body
+      and 'id="dhyaan-text"' not in body)
+check("dhyaan localStorage logic GONE (wave 106)",
+      "ganitra-dhyaan" not in body
+      and "ganitraDhyaanPaint" not in body)
+check("dhyaan i18n keys GONE (wave 106)",
+      "dhyaan_label" not in EN and "dhyaan_today" not in EN
+      and "dhyaan_label" not in HI and "dhyaan_today" not in HI)
 r = c.get("/board")
-check("dhyaan pill on /board", 'id="dhyaan-pill"'
-      in r.get_data(as_text=True))
+check("dhyaan pill GONE from /board (wave 106)",
+      'id="dhyaan-pill"' not in r.get_data(as_text=True))
 check("celebration CSS hooks", "confetti-fall" in
       Path("static/style.css").read_text(encoding="utf-8")
       and "prefers-reduced-motion" in
