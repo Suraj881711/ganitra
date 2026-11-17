@@ -8,6 +8,7 @@ from langdetect_local import detect_language_confident, \
     detect_language_request
 from doubt import build_doubt_response, parse_followup
 from fallback import with_fallback
+from followups import w122_payload
 from solver.answer_cache import get_negative, put_negative
 from solver.methods import alternate_methods
 from solver.router import solve_question
@@ -253,6 +254,69 @@ def api_solve():
                         "message": strings["flash_too_long"],
                         **_lang_fields(lang, strings, False)})
 
+    # Wave 122: a follow-up chip tap (see followups.py). The
+    # visible message is only the chip's label; the kind and
+    # the ORIGINAL question ride as hidden context fields, and
+    # the answer is built deterministically from the session's
+    # last solution. This runs BEFORE the Wave-9 language
+    # detection on purpose: a chip label ("Give one more
+    # example") is not a new question and must never switch the
+    # session language or be solved as one. When there is no
+    # honest follow-up (no solved last answer, no perturbation
+    # solves, no simpler route), build_followup_response
+    # returns None and the normal path below answers the label
+    # text as an ordinary message — the honest one-liner.
+    followup_kind = _json_str(data, "followup") or ""
+    if followup_kind in ("example", "test", "simpler"):
+        from followups import build_followup_response
+        context_question = _json_str(data, "context_question") \
+            or ""
+        built = build_followup_response(
+            followup_kind, context_question,
+            session.get("last_result"),
+            session.get("last_question"),
+            lang=lang,
+            student_class=session.get("saathi_class"))
+        if built is not None:
+            result, fu_note, fu_advice, fu_new_question = built
+            if fu_new_question:
+                # The example IS a fresh solve of a new
+                # question: it becomes the last solution, so a
+                # doubt follow-up after it points at the
+                # example, exactly as after a typed question.
+                session["last_question"] = fu_new_question
+                session["last_result"] = result
+                session.pop("doubt_step", None)
+            history = session.get("history", [])
+            history.insert(0, trimmed_history_entry(question,
+                                                    result))
+            session["history"] = history[:_HISTORY_LIMIT]
+            return jsonify({
+                "ok": True,
+                "result": result,
+                "intro": None,
+                "followup_note": fu_note,
+                "explanation": explanation_for(result, lang),
+                "advice": (fu_advice if fu_advice is not None
+                           else advice_for(result, lang)),
+                "methods": (methods_nonblocking(fu_new_question,
+                                                result)
+                            if fu_new_question else []),
+                "teach": teach_for(result, lang),
+                # Wave 123: a chip-thread answer keeps its
+                # chips (followup=True); its step-label gate
+                # reads the ORIGINAL question, so a thread
+                # that began with "step by step" stays
+                # labelled and a plain thread stays plain.
+                "w122": w122_payload(
+                    result, lang=lang,
+                    question=fu_new_question or context_question,
+                    ask_text=context_question
+                    or session.get("last_question") or "",
+                    followup=True),
+                **_lang_fields(lang, strings, False),
+            })
+
     # Wave 9: auto language — detect from the question itself. A
     # solid detection in a different language moves the session to
     # that language BEFORE solving, so the answer, explanation,
@@ -294,6 +358,65 @@ def api_solve():
             switched = True
     fields = _lang_fields(lang, strings, switched)
 
+    # Wave 124: chat-based test / exam (chat_test.py). A test
+    # request starts a per-chat test; while one is active in
+    # THIS chat, every later message belongs to the test flow
+    # (an answer attempt, or a skip / stop / answer-batao /
+    # solve-karke-do command) until the test ends. This runs
+    # AFTER the language detection above (the whole test
+    # follows the student's language, incl. the Wave-107
+    # override) and BEFORE the Wave-96 doubt block (mid-test,
+    # a message is an answer attempt, never a step doubt —
+    # the documented rule). The chat id rides in the request
+    # body (Wave 124 added it to the client's two /api/solve
+    # posts); state is keyed by (user, chat), so a test never
+    # leaks into another chat of the same student.
+    _ct_raw = data.get("chat_id")
+    chat_id = str(_ct_raw) if isinstance(_ct_raw, (str, int)) \
+        and str(_ct_raw) != "" else None
+    import chat_test
+    ct_payload = chat_test.handle_message(
+        session, session.get("user_id"), chat_id, question,
+        lang=lang, lang_request=lang_request,
+        student_class=session.get("saathi_class"),
+        solve_fn=lambda q: _solve_friendly(
+            q, lang=lang,
+            student_class=session.get("saathi_class"),
+            lang_request=lang_request))
+    if ct_payload is not None:
+        ct_result = ct_payload["result"]
+        if ct_payload.pop("w124_set_last", False):
+            # The solve-command card IS a fresh solve of the
+            # test question: it becomes the last solution, so
+            # a doubt follow-up after the test points at it.
+            session["last_question"] = ct_payload.pop(
+                "w124_solved_question", question)
+            session["last_result"] = ct_result
+            session.pop("doubt_step", None)
+        else:
+            ct_payload.pop("w124_solved_question", None)
+        history = session.get("history", [])
+        history.insert(0, trimmed_history_entry(question,
+                                                ct_result))
+        session["history"] = history[:_HISTORY_LIMIT]
+        # Test turns NEVER carry follow-up chips (Wave 122/123
+        # interplay): plain test turns get none from
+        # w122_payload itself, and the solve-command card's
+        # are stripped here.
+        ct_w122 = w122_payload(ct_result, lang=lang,
+                               lang_request=lang_request,
+                               question=question)
+        ct_w122["chips"] = []
+        return jsonify({
+            **ct_payload,
+            "explanation": explanation_for(ct_result, lang),
+            "advice": None,
+            "methods": [],
+            "teach": teach_for(ct_result, lang),
+            "w122": ct_w122,
+            **fields,
+        })
+
     # Wave 96: doubt follow-up ("ye step samjhao") — answered
     # from the session's last solution (its steps are also what
     # the client stores inside the saved chat thread), never by
@@ -324,6 +447,11 @@ def api_solve():
                 "advice": advice_for(prev_result, lang),
                 "methods": [],
                 "teach": teach_for(prev_result, lang),
+                # Wave 122: label word only — a doubt card is
+                # not a solved answer, so it never gets chips
+                # (w122_payload enforces that itself).
+                "w122": w122_payload(result, lang=lang,
+                                     question=question),
                 **fields,
             })
 
@@ -400,6 +528,17 @@ def api_solve():
         # in every normal case, but it can never delay the answer.
         "methods": methods_nonblocking(solve_text, result),
         "teach": teach_for(result, lang),
+        # Wave 122: the conditional-features payload — the
+        # localised step-label word, and the follow-up chips
+        # (only when this result is a solved maths answer).
+        # Wave 123: the on-demand gates read the student's
+        # ORIGINAL message (ask_text) — step labels only on
+        # a steps request or a proof, chips only on a
+        # more-intent ask; a plain question stays plain.
+        "w122": w122_payload(result, lang=lang,
+                             lang_request=lang_request,
+                             question=solve_text,
+                             ask_text=question),
         **fields,
     })
 

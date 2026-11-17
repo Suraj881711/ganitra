@@ -47,7 +47,7 @@ caller keeps the current language.
 import re
 
 __all__ = ["detect_language", "detect_language_confident",
-           "detect_language_request"]
+           "detect_language_request", "detect_steps_request"]
 
 # ---------------------------------------------------------------- scripts
 # (language key or "deva", first codepoint, last codepoint)
@@ -470,3 +470,83 @@ def detect_language_request(text):
     for start, end in spans:
         cleaned = cleaned[:start] + " " + cleaned[end:]
     return target, _req_tidy(cleaned)
+
+
+# ---------------------------------------------------------------------------
+# Wave 123: explicit STEP requests inside a message.
+#
+# Suraj's revision (17 Nov 2026, after seeing Wave 122's
+# screenshots): step numbers must NOT be given by default —
+# "agar woh chat par bolta hai jabhi do" — only when the student
+# asks for steps in the chat (or the question is a proof /
+# derivation, which followups.is_proof_type covers). Otherwise
+# the answer stays simple plain.
+#
+# ``detect_steps_request(text)`` returns True only for a
+# request-shaped steps phrase, in the spirit of Wave 107's
+# detect_language_request: a bare "step" is CONTENT in real
+# maths questions ("step function", "one step me answer do"),
+# so it never fires by itself — every pattern below carries a
+# request shape around the word. The exact phrase set:
+#
+#   English / Roman (matched on the normalised text —
+#   lowercased, hyphens turned to spaces):
+#     "step by step"            (incl. "step by step batao /
+#                                samjhao" and "step-by-step")
+#     "stepwise"
+#     "step karke"              ("step karke batao")
+#     "ek ek step"              ("ek-ek step samjhao")
+#     "saare step(s)" / "sare step(s)" / "sab step(s)" /
+#       "har step" / "each step" / "all steps"
+#     "step(s) <me|mein|mai|se> <batao|samjhao|samjhaao|
+#       dikhao|chahiye|do>"     ("steps me batao", "step se
+#                                samjhao" — the postposition
+#                                alone never fires: "one step
+#                                me answer do" stays plain)
+#     "step(s) <batao|samjhao|samjhaao|dikhao|chahiye>"
+#                                ("step batao", "steps chahiye")
+#     "with steps" / "step(s) ke saath"
+#     "show steps" / "show me steps" / "show all the steps"
+#   Devanagari (exact phrases):
+#     "स्टेप बाय स्टेप", "चरण दर चरण",
+#     "क्रम से समझाओ", "क्रम से बताओ", "क्रम से बताइए"
+#     ("क्रम से" alone never fires — "आरोही क्रम में लिखो"
+#     is an ordering instruction, not a steps request.)
+# ---------------------------------------------------------------------------
+
+_STEPS_PATTERNS = tuple(re.compile(p) for p in (
+    r"step by step",
+    r"\bstepwise\b",
+    r"\bstep karke\b",
+    r"\bek ek step\b",
+    r"\b(?:saare|sare|sab|har|each|all) steps?\b",
+    r"\bsteps? (?:me|mein|mai|se) "
+    r"(?:batao|samjhao|samjhaao|dikhao|chahiye|do)\b",
+    r"\bsteps? (?:batao|samjhao|samjhaao|dikhao|chahiye)\b",
+    r"\bwith steps\b",
+    r"\bsteps? ke saath\b",
+    r"\bshow (?:me )?(?:all )?(?:the )?steps\b",
+))
+_STEPS_PHRASES_DEV = (
+    "स्टेप बाय स्टेप",
+    "चरण दर चरण",
+    "क्रम से समझाओ",
+    "क्रम से बताओ",
+    "क्रम से बताइए",
+)
+
+
+def detect_steps_request(text):
+    """Wave 123: True when the student's message explicitly
+    asks for step-by-step working (see the phrase set above).
+    Deterministic; no match means the answer renders with
+    plain unnumbered lines, exactly as before Wave 122."""
+    text = str(text or "")
+    if not text.strip():
+        return False
+    for phrase in _STEPS_PHRASES_DEV:
+        if phrase in text:
+            return True
+    normalised = re.sub(r"\s+", " ",
+                        text.lower().replace("-", " "))
+    return any(p.search(normalised) for p in _STEPS_PATTERNS)
