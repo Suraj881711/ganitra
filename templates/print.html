@@ -30,6 +30,14 @@
                    cursor: pointer;
                    border: 1px solid #8a6414; background: #fdf6dd;
                    border-radius: 12px; }
+      /* Wave 121 (Suraj): the way back is a BARE ARROW here
+         too — no box, no "Back" word; the word is aria-only. */
+      .print-back { display: inline-flex; align-items: center;
+                    justify-content: center; width: 48px;
+                    height: 48px; font-size: 24px; font-weight: 700;
+                    color: inherit; text-decoration: none;
+                    background: none; border: none;
+                    vertical-align: middle; margin-right: 10px; }
       /* Copy Style (handwriting) — Wave 5d: Kalam on a ruled
          notebook page with a soft pink margin line. */
       .notebook { background-color: #fffdf4;
@@ -78,7 +86,8 @@
     {% endif %}
 
     {% if result.steps %}
-      <h2>{{ t.steps_heading }}</h2>
+      {# Wave 120: no "Step-by-step solution" heading — the
+         solving lines stand on their own, no label. #}
       <ol class="steps{% if handwriting_style %} notebook handwriting-on{% endif %}">
         {% for step in result.steps %}<li>{{ step }}</li>{% endfor %}
       </ol>
@@ -87,9 +96,11 @@
     <p class="no-print" style="margin-top: 28px;">
       {# Wave 60: this standalone print view opens in its own
          tab from the answer page; give it the same way back
-         as every other page (never printed — .no-print). #}
-      <a class="print-btn" href="/"
-         style="display: inline-block; text-decoration: none; margin-right: 10px;">← {{ t.nav_back }}</a>
+         as every other page (never printed — .no-print).
+         Wave 121: that way back is the bare arrow, like
+         everywhere else. #}
+      <a class="print-back" href="/"
+         aria-label="{{ t.nav_back }}">←</a>
       <button class="print-btn" onclick="window.print()">{{ t.print_btn }}</button>
     </p>
 

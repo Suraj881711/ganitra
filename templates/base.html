@@ -2,7 +2,7 @@
 <html lang="{{ lang }}">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
     <title>Ganitra — {{ t.tagline }}</title>
     <link rel="icon" type="image/png"
           href="{{ url_for('static', filename='favicon.png') }}" />
@@ -66,6 +66,15 @@
   --muted: #66738d;
   --accent: #2f7d6e;
   --line: #e9dfc9;
+  /* Wave 116: --ink/--sub/--gold/--gold2 promoted from .hero
+     (Wave 2 scoped them there) — the chat bar, answer bubbles,
+     auth inputs and chats search already reference them
+     app-wide; outside .hero they silently fell back until
+     now. Values are the hero's own, unchanged. */
+  --ink: #16213a;
+  --sub: #5b6b8c;
+  --gold: #c9a24b;
+  --gold2: #e7c877;
 }
 
 * { box-sizing: border-box; }
@@ -529,7 +538,11 @@ body.chats-page main.chats-main {
   .chat-header:has(.nav-menu) { position: relative; padding-right: 58px; }
   .chat-header:has(.nav-menu) .nav-menu {
     position: absolute; right: 7px; top: 50%;
-    transform: translateY(-50%); margin: 0;
+    /* Wave 116: centred by negative margin, NOT a transform —
+       a transform on this element makes it the containing
+       block for the panel's position:fixed, which trapped
+       the open menu inside the button's 42×44px box. */
+    margin: -22px 0 0;
   }
 }
 
@@ -539,6 +552,8 @@ body.chats-page main.chats-main {
     font-size: .85rem;
   }
   .nav-menu-btn { width: 42px; height: 42px; }
+  /* Wave 116: the 42px button centres on a -21px margin. */
+  .chat-header:has(.nav-menu) .nav-menu { margin-top: -21px; }
 }
 
 @media (max-width: 380px) {
@@ -598,15 +613,15 @@ body.chat-page .chat-bar .send-btn {
 }
 
 .backnav-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  min-height: 44px; margin-top: 0; padding: 10px 18px 10px 14px;
-  background: #fff; color: var(--accent);
-  border: 1.5px solid #ddd3ba; border-radius: 999px;
-  font: inherit; font-size: 15px; font-weight: 700;
-  cursor: pointer; box-shadow: 0 4px 14px rgba(101, 84, 40, .10);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0;
+  background: none; color: var(--text);
+  border: 0; box-shadow: none; border-radius: 0;
+  font: inherit; font-size: 22px; font-weight: 700;
+  cursor: pointer; transition: transform .08s ease;
 }
 
-.backnav-btn:active { transform: translateY(1px); }
+.backnav-btn:active { transform: scale(.94); }
     </style>
     {# Wave 26: the stylesheet URL carries a version query
        (?v=38 — Wave 43 bumped it to 30, merge-2 to 31, Wave 55 to 32 for
@@ -626,7 +641,7 @@ body.chat-page .chat-bar .send-btn {
        brand-new cache key everywhere, so this deploy's CSS
        lands on the very next page load. BUMP THE NUMBER on
        every future style.css change. #}
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='41') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css', v='43') }}" />
     {% block head_extra %}{% endblock %}
     <style>
       .lang-switch { display: inline-flex; align-items: center; gap: .45rem;
@@ -671,7 +686,7 @@ body.chat-page .chat-bar .send-btn {
     <main class="{% block main_class %}{% endblock %}">
       {% block backnav %}
       {# Wave 60: the ONE back system (Suraj: "Ganitra ke andar
-         back system nahi hai"). The same top-left "← Back" bar
+         back system nahi hai"). The same top-left back bar
          on every inner page; the chat home and sign-in gate
          ("/") get none. The `backnav` context var comes from
          app.py's inject_backnav (path map in _backnav_for_path):
@@ -679,13 +694,17 @@ body.chat-page .chat-bar .send-btn {
          from inside the app, and uses data-fallback (the parent
          page) when there is no in-app history. A page whose
          fallback needs template data (the Board chapter test)
-         overrides this block with the same markup. #}
+         overrides this block with the same markup.
+         Wave 121 (Suraj, 17 Nov 2026): the control is a BARE
+         ARROW — "Back nhi likhana, circle nhi lagana, bs arrow
+         lagao". No visible word, no pill; the localised word
+         survives only as the aria-label for screen readers. #}
       {% if backnav %}
       <nav class="backnav">
         <button type="button" class="backnav-btn" data-backnav
                 data-fallback="{{ backnav.fallback }}"
                 {% if backnav.confirm_if %}data-confirm-if="{{ backnav.confirm_if }}" data-confirm-msg="{{ backnav.confirm_msg }}"{% endif %}
-                aria-label="{{ t.nav_back }}"><span aria-hidden="true">←</span> {{ t.nav_back }}</button>
+                aria-label="{{ t.nav_back }}"><span aria-hidden="true">←</span></button>
       </nav>
       {% endif %}
       {% endblock %}

@@ -299,7 +299,6 @@
         solving: {{ t.chat_thinking | tojson }},
         fullSolution: {{ t.chat_full_solution | tojson }},
         error: {{ t.chat_error | tojson }},
-        steps: {{ t.steps_heading | tojson }},
         explanation: {{ t.explanation_heading | tojson }},
         adviceHeading: {{ t.advice_heading | tojson }},
         answerHeading: {{ t.answer_heading | tojson }},
@@ -391,6 +390,149 @@
         }
       }
 
+      /* ---------- Wave 118: answer-arrival comfort ----------
+         Suraj (17 Nov 2026): "baaki AI jaisa comfortable kyu
+         nhi lag raha hai" — measured on a 390x667 phone, the
+         two arrival defects were: (1) a tall answer landed
+         BOTTOM-first — its start sat ~121px ABOVE the visible
+         area, so the student had to scroll up to find where
+         the answer begins; (2) late growth inside the card
+         (MathJax typesetting, a graph image loading) pushed
+         the final answer line out of view with zero scroll
+         compensation. ChatGPT/Gemini instead settle the view
+         so a long answer is read FROM ITS START. So: for the
+         student's OWN just-asked turn only (replayed/restored
+         chats keep the Wave-18 bottom landing), once the
+         answer's typeset settles, a too-tall turn is aligned
+         to its start — the student's question at the top,
+         the answer flowing below it; a turn that fits keeps
+         the bottom landing. For ~3 s afterwards a
+         ResizeObserver re-applies the same alignment if the
+         card still grows, unless the student takes over the
+         scroll (wheel / touch / pointer, or a scroll position
+         the aligner did not set). */
+      var liveAnswerPending = false;
+      var liveSettle = null;
+      /* "The student left" detection for the pending turn is
+         DIRECTION-aware, on purpose: stickBottom cannot be
+         trusted mid-glide (the submit glide's own first
+         scroll events report a >140px gap and flip it false,
+         which stood the aligner down on a fast answer in
+         this wave's own browser pass). The app's scrolls
+         during a wait only ever move DOWN toward the newest
+         message; a scrollTop that falls >6px below the
+         highest point reached since the question was asked
+         can only be the student scrolling up to re-read. */
+      var liveScrollAway = false;
+      var liveTurnMaxTop = 0;
+      if (scroller) {
+        scroller.addEventListener("scroll", function () {
+          if (!liveAnswerPending) return;
+          if (scroller.scrollTop < liveTurnMaxTop - 6) {
+            liveScrollAway = true;
+          } else if (scroller.scrollTop > liveTurnMaxTop) {
+            liveTurnMaxTop = scroller.scrollTop;
+          }
+        }, { passive: true });
+      }
+      function stopLiveSettle() {
+        if (!liveSettle) return;
+        if (liveSettle.ro) {
+          try { liveSettle.ro.disconnect(); } catch (e) {}
+        }
+        if (liveSettle.timer) {
+          window.clearTimeout(liveSettle.timer);
+        }
+        liveSettle = null;
+      }
+      if (scroller) {
+        ["wheel", "touchstart", "pointerdown"].forEach(
+          function (evt) {
+            scroller.addEventListener(evt, stopLiveSettle,
+                                      { passive: true });
+          });
+      }
+      function alignLiveAnswer(el, ready) {
+        if (!liveAnswerPending) return;
+        liveAnswerPending = false;
+        if (!scroller || !el) return;
+        stopLiveSettle();
+        // The student's own question bubble for this turn:
+        // walk back past any note bubbles to the last user one.
+        var anchor = el, node = el.previousElementSibling;
+        while (node) {
+          if (node.classList
+              && node.classList.contains("bubble")
+              && node.classList.contains("user")) {
+            anchor = node;
+            break;
+          }
+          node = node.previousElementSibling;
+        }
+        var state = { el: el, anchor: anchor, lastTop: null,
+                      graceUntil: Date.now() + 700,
+                      ro: null, timer: null };
+        liveSettle = state;
+        function apply(first) {
+          if (liveSettle !== state) return;
+          if (state.lastTop !== null
+              && Math.abs(scroller.scrollTop - state.lastTop) > 6
+              && Date.now() > state.graceUntil) {
+            stopLiveSettle();  // the student scrolled: his view
+            return;
+          }
+          var sr = scroller.getBoundingClientRect();
+          var er = el.getBoundingClientRect();
+          /* Positioning is INSTANT, never a glide: the
+             aligner must own an exact scroll position to
+             tell its own moves from the student's (the
+             deviation check below) — a glide's mid-flight
+             positions read exactly like a student scroll.
+             The card's own rise animation carries the
+             smoothness of the arrival. */
+          if (er.height > scroller.clientHeight * 0.92) {
+            var ar = anchor.getBoundingClientRect();
+            var target = scroller.scrollTop
+              + (ar.top - sr.top) - 10;
+            if (target < 0) target = 0;
+            scroller.scrollTo({ top: target, behavior: "auto" });
+          } else {
+            scroller.scrollTop = scroller.scrollHeight;
+            if (log) log.scrollTop = log.scrollHeight;
+          }
+          state.lastTop = scroller.scrollTop;
+        }
+        var started = false;
+        function start() {
+          if (started || liveSettle !== state) return;
+          started = true;
+          /* Wave 18 still rules: if the student scrolled up
+             to re-read while the answer was being made, the
+             landing must not yank him back — the aligner
+             stands down entirely. (Once the settle window is
+             armed, its own takeover guards take over.) */
+          if (liveScrollAway) { stopLiveSettle(); return; }
+          apply(true);
+          if (window.ResizeObserver) {
+            try {
+              state.ro = new ResizeObserver(function () {
+                apply(false);
+              });
+              state.ro.observe(el);
+            } catch (e) { state.ro = null; }
+          }
+          state.timer = window.setTimeout(stopLiveSettle, 3000);
+        }
+        if (ready && typeof ready.then === "function") {
+          ready.then(start, start);
+          window.setTimeout(start, 600);
+        } else if (window.requestAnimationFrame) {
+          window.requestAnimationFrame(start);
+        } else {
+          start();
+        }
+      }
+
       function hideEmpty() {
         var empty = document.getElementById("chat-empty");
         if (empty) empty.remove();
@@ -465,6 +607,7 @@
       }
 
       function loadThread(messages) {
+        liveAnswerPending = false;  // Wave 118: replays never align
         messages.forEach(function (rec) {
           if (rec && rec.role === "user") {
             thread.push({ role: "user", text: rec.text || "" });
@@ -1056,7 +1199,9 @@
               plain.appendChild(p);
             });
           log.appendChild(plain);
-          scrollLog();
+          /* Wave 118: same live-turn landing as the card. */
+          if (!liveAnswerPending) scrollLog();
+          alignLiveAnswer(plain, null);
           return;
         }
         /* Wave 25: the steps THIS bubble shows, speaks and
@@ -1561,21 +1706,16 @@
           }
           next();
         }
-        if (displaySteps.length || result.answer) {
-          teachBtn = document.createElement("button");
-          teachBtn.type = "button";
-          teachBtn.className = "method-chip act-btn teach-btn";
-          teachBtn.dataset.action = "teach";
-          teachBtn.setAttribute("data-role", "teach");
-          teachBtn.innerHTML = ICON_PLAY;
-          teachBtn.setAttribute("aria-label", CHAT.teachBtn);
-          teachBtn.title = CHAT.teachBtn;
-          teachBtn.addEventListener("click", function () {
-            if (teachState) stopTeachPlayback();
-            else startTeachPlayback();
-          });
-          actions.appendChild(teachBtn);
-        }
+        /* Wave 120 (Suraj, 17 Nov 2026): the Teach (play)
+           sign is REMOVED from the icon row — Suraj: the
+           speaker and the play sign do the same job; only
+           the speaker (Listen) stays. NOTE: Teach's playback
+           machinery above (startTeachPlayback /
+           stopTeachPlayback / the boy writer) is left in
+           place but is now UNREACHABLE — no button calls it.
+           Dormant code, like the parked 3D scene, kept for a
+           possible revival on Suraj's word; teachBtn stays
+           null and every guard on it already handles that. */
 
         /* -- 4. Teacher's Advice (on-demand) --
            Wave 24 design change (Suraj, 13 Nov 2026 ~00:08
@@ -1607,27 +1747,65 @@
           actions.appendChild(adviceBtn);
         }
 
-        /* -- 5. More Methods --
+        /* -- 5. More (•••): Full Solution + More Methods --
            Wave 21: each method choice is ONE full-row button —
            the whole row is the tap target (the old row was a
            plain-text label plus a small side pill, so tapping
-           the method's name — most of the row — did nothing). */
+           the method's name — most of the row — did nothing).
+           Wave 120 (Suraj, 17 Nov 2026): the ••• sign now
+           rides on EVERY answer card, and the panel's first
+           item is the Full Solution page — the standalone
+           "Full solution page →" link under the card is
+           GONE; the very form it used to submit (POST /solve
+           with the question) is built below as a menu row
+           inside this panel. Alternate methods still list
+           under their heading when they exist. */
         var methods = data.methods || [];
         var methodsPanel = null;
-        if (methods.length) {
+        {
           var chip = document.createElement("button");
           chip.type = "button";
           chip.className = "method-chip act-btn";
           chip.dataset.action = "methods";
           chip.innerHTML = ICON_METHODS;
-          var chipLabel = CHAT.moreMethods
-            + " (" + methods.length + ")";
+          var chipLabel = methods.length
+            ? CHAT.moreMethods + " (" + methods.length + ")"
+            : CHAT.moreMethods;
           chip.setAttribute("aria-label", chipLabel);
           chip.title = chipLabel;
           chip.setAttribute("aria-expanded", "false");
           methodsPanel = document.createElement("div");
           methodsPanel.className = "methods-panel";
           methodsPanel.hidden = true;
+          /* Wave 120: the Full Solution item — the same
+             POST /solve form the removed standalone link
+             submitted, as the panel's first menu row. The
+             label is the link's own text minus its trailing
+             arrow (the row carries the › sign instead). */
+          var full = document.createElement("form");
+          full.method = "post";
+          full.action = "/solve";
+          var fullHidden = document.createElement("input");
+          fullHidden.type = "hidden";
+          fullHidden.name = "question";
+          fullHidden.value = question;
+          var fullBtn = document.createElement("button");
+          fullBtn.type = "submit";
+          fullBtn.className = "method-row-btn";
+          var fullLbl = document.createElement("span");
+          fullLbl.className = "method-name";
+          fullLbl.textContent = CHAT.fullSolution.replace(
+            /\s*→\s*$/, "");
+          var fullGo = document.createElement("span");
+          fullGo.className = "method-go";
+          fullGo.setAttribute("aria-hidden", "true");
+          fullGo.textContent = "›";
+          fullBtn.appendChild(fullLbl);
+          fullBtn.appendChild(fullGo);
+          full.appendChild(fullHidden);
+          full.appendChild(fullBtn);
+          methodsPanel.appendChild(full);
+          if (methods.length) {
           var mh = document.createElement("p");
           mh.className = "methods-heading";
           mh.textContent = CHAT.otherHeading;
@@ -1656,6 +1834,7 @@
             methodsPanel.appendChild(rowBtn);
             methodsPanel.appendChild(host);
           });
+          }
           chip.addEventListener("click", function () {
             methodsPanel.hidden = !methodsPanel.hidden;
             chip.setAttribute("aria-expanded",
@@ -1747,25 +1926,20 @@
           det.className = "steps-section";
           det.open = true;
           var sum = document.createElement("summary");
-          sum.textContent = CHAT.steps;
+          /* Wave 120 (Suraj, 17 Nov 2026): NO heading over
+             the steps — the "Step-by-step solution" label is
+             removed from the card; the solving lines stand
+             on their own. The <summary> element itself stays
+             (a <details> without one grows a UA-default
+             "Details" label, and the board hosts measure
+             this element) but it renders nothing at all:
+             no text, display:none. */
+          sum.textContent = "";
+          sum.style.display = "none";
           det.appendChild(sum);
           det.appendChild(ol);
           stepsSection = det;
         }
-
-        var full = document.createElement("form");
-        full.method = "post";
-        full.action = "/solve";
-        var hidden = document.createElement("input");
-        hidden.type = "hidden";
-        hidden.name = "question";
-        hidden.value = question;
-        var btn = document.createElement("button");
-        btn.type = "submit";
-        btn.className = "linklike";
-        btn.textContent = CHAT.fullSolution;
-        full.appendChild(hidden);
-        full.appendChild(btn);
 
         /* Wave 24: THE reading sequence — the only place the
            pieces enter the DOM, in exactly this order. The
@@ -1776,7 +1950,8 @@
            ~00:15 IST: "uske neeche karna hai"): the icon row
            first, then the on-demand panels (Teacher's
            Advice — hidden until its bulb sign is tapped —
-           and more-methods), then the full-solution link. */
+           and the ••• panel, whose first item is the Full
+           Solution page since Wave 120). */
         div.appendChild(badge);
         if (introEl) div.appendChild(introEl);
         if (stepsSection) div.appendChild(stepsSection);
@@ -1789,13 +1964,20 @@
         if (actions.children.length) wrap.appendChild(actions);
         if (adviceEl) wrap.appendChild(adviceEl);
         if (methodsPanel) wrap.appendChild(methodsPanel);
-        wrap.appendChild(full);
 
         log.appendChild(wrap);
-        scrollLog();
+        /* Wave 118: for the student's own live turn the
+           aligner owns the landing (it waits for the typeset
+           below, then settles the view); every other render
+           keeps the classic bottom landing. */
+        var w118Live = liveAnswerPending;
+        if (!w118Live) scrollLog();
+        var w118Typeset = null;
         if (window.MathJax && window.MathJax.typesetPromise) {
-          window.MathJax.typesetPromise([div]).catch(function () {});
+          w118Typeset = window.MathJax.typesetPromise([div])
+            .catch(function () {});
         }
+        if (w118Live) alignLiveAnswer(wrap, w118Typeset);
       }
 
       function addErrorBubble(question, err, replay) {
@@ -1839,7 +2021,11 @@
           div.appendChild(retry);
         }
         log.appendChild(div);
-        scrollLog();
+        /* Wave 118: same live-turn landing as the card
+           (replays pass replay=true and never set the flag,
+           so their landing is unchanged). */
+        if (!liveAnswerPending) scrollLog();
+        alignLiveAnswer(div, null);
       }
 
       /* ---------- Wave 9: auto language switch ----------
@@ -1879,7 +2065,6 @@
           CHAT.fullSolution = ui.chat_full_solution;
         }
         if (ui.chat_error) CHAT.error = ui.chat_error;
-        if (ui.steps_heading) CHAT.steps = ui.steps_heading;
         if (ui.explanation_heading) {
           CHAT.explanation = ui.explanation_heading;
         }
@@ -1972,6 +2157,9 @@
         solving = true;
         hideEmpty();
         stickBottom = true;  // Wave 18: my own new question re-sticks
+        liveAnswerPending = true;  // Wave 118: this turn aligns
+        liveScrollAway = false;
+        liveTurnMaxTop = scroller ? scroller.scrollTop : 0;
         addBubble("user", question);
         // Wave 11: the user turn joins the account thread now;
         // the bot turn is appended when the answer lands.
@@ -2102,6 +2290,19 @@
       window.addEventListener("resize", function () {
         if (stickBottom) scrollLog(true);
       });
+
+      /* Wave 118: on phones the on-screen keyboard changes
+         the VISUAL viewport without always firing a window
+         resize (iOS Safari overlays the keyboard instead of
+         shrinking the layout) — follow visualViewport too,
+         so a student riding the bottom keeps the newest
+         answer in view as the keyboard opens or closes. */
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener("resize",
+          function () {
+            if (stickBottom) scrollLog(true);
+          });
+      }
 
       /* Wave 84: spoken-maths normalisation — a dictated question
          lands in the composer as TEXT the student can read and

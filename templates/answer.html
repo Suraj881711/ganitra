@@ -68,7 +68,9 @@
     {% endif %}
 
     {% if result.steps %}
-      <h2>{{ t.steps_heading }}</h2>
+      {# Wave 120 (Suraj, 17 Nov 2026): the "Step-by-step
+         solution" heading is REMOVED — the solving lines
+         stand on their own, no label. #}
       <div class="steps-tools">
         <button type="button" class="hw-toggle" id="hw-toggle"
           aria-pressed="true">{{ t.handwriting_btn }}</button>
