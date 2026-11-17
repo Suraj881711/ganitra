@@ -467,6 +467,472 @@ def _hence_result(question):
 
 
 # ---------------------------------------------------------------------------
+# Wave 141: general multi-part questions
+#
+# The Wave 100 shapes above are strict paper formats (MCQ
+# bundles, cued case studies, Hence chains). The Wave 135
+# NCERT audit found the much larger ordinary family failing:
+# book questions that carry 2+ plain sub-parts — (i)/(ii)/
+# (iii), (a)/(b)/(c), (क)/(ख)/(ग), (1)/(2), Part 1/Part 2,
+# Q1/Q2, numbered 1./2. asks, and unlabelled semicolon- or
+# newline-separated asks — under one shared stem ("Find the
+# value of the polynomial 5x - 4x^2 + 3 at (i) x = 0
+# (ii) x = -1 (iii) x = 2"). Treated as one blob, the whole
+# text solves nothing; split, most parts solve at once.
+#
+# split_general() is deliberately suspicious: every segment
+# must look like an ask (its own verb / '=' / '?', a set /
+# sequence / expression, or a noun-phrase part under a
+# commanding preamble), a bare value is never a part (that
+# is an MCQ's option list, the MCQ layer's territory), a
+# pure-expression segment counts only under a compute
+# preamble (a "which expression describes…" stem must not
+# have its options evaluated), Assertion–Reason and OR
+# bundles are deferred to formats.py, Hence chains to the
+# layer above, and mega/case shapes have already had their
+# turn by the time this runs. If NO part solves, the layer
+# returns None and the existing behaviour runs byte-for-byte
+# unchanged — the same honesty rule as every layer since
+# Wave 18. At most 5 parts are answered; further parts are
+# named in one plain line, never silently dropped.
+# ---------------------------------------------------------------------------
+
+_GENERAL_BUDGET = 25.0
+_GENERAL_MAX_PARTS = 5
+
+# Deploy-28 merge (Wave 141 x Wave 146): an explicit
+# choose-from-options instruction ("Choose the correct
+# answers ... from the given options") marks the labelled
+# segments as MCQ OPTIONS, never as sub-parts — splitting
+# them "solves" each option as if it were a question and
+# serves candidate answers as results (the CISCE audit's
+# paint-mixture MCQ: options (a)-(d) are assignments of the
+# very a, b, c the stem asks for). The MCQ layer owns such
+# questions; this layer must not split them.
+_MCQ_INSTRUCTION_RE = re.compile(
+    r"\b(?:choose|select|tick|pick)\b[^.]{0,60}?\bcorrect\b"
+    r"|\bcorrect\b[^.]{0,40}?\boptions?\b"
+    r"|सही\s+विकल्प\s+चुन|सही\s+उत्तर\s+चुन", re.I)
+
+_GEN_LETTER_RE = re.compile(r"\(\s*([a-h])\s*\)")
+_GEN_DEV_RE = re.compile(r"\(\s*(क|ख|ग|घ|ङ)\s*\)")
+_GEN_DEV_ORDER = "कखगघङ"
+_GEN_PARENNUM_RE = re.compile(r"\(\s*(\d{1,2})\s*\)")
+_GEN_PART_RE = re.compile(r"(?i)\bpart\s*[-–—]?\s*(\d{1,2})\b")
+_GEN_Q_RE = re.compile(r"(?<![A-Za-z])[Qq]\s*(\d{1,2})\s*[.):]")
+_GEN_NUM_MARK_RE = re.compile(r"(\d{1,2})[.)]\s+")
+
+_ASK_VERB_RE = re.compile(
+    r"\b(find|solve|evaluate|calculate|compute|prove|show|"
+    r"determine|simplify|factorise|factorize|rationalise|"
+    r"rationalize|expand|express|write|state|check|verify|"
+    r"justify|convert|draw|plot|construct|derive|obtain|"
+    r"describe|explain|represent|complete|arrange|classify|"
+    r"identify|mention|list|give|name|fill|mark|read|match|"
+    r"count|measure|predict|examine|batao|bataao|nikalo|"
+    r"likho|jodo|ghatayo|gyat)\b"
+    r"|ज्ञात|सिद्ध|लिखिए|लिखो|बताइए|बताओ|निकाल|जाँच|परिकलित",
+    re.I)
+_COMPUTE_VERB_RE = re.compile(
+    r"\b(find|calculate|evaluate|compute|simplify|solve)\b"
+    r"|ज्ञात|परिकलित", re.I)
+_MATHS_HINT_RE = re.compile(r"[\d^√∫=<>%{}]|\\b[xyz]\b")
+_EXPR_SEQ_RE = re.compile(
+    r"\{[^}]*\}|√|\^|∈|\d+\s*,\s*[-–—+]?\s*\d+\s*,")
+_PURE_EXPR_RE = re.compile(r"^[\d\s+\-*/×÷().,^]+$")
+_BARE_VALUE_RE = re.compile(
+    r"^[-+]?\d+(?:\.\d+)?(?:\s*/\s*\d+(?:\.\d+)?)?"
+    r"(?:\s*(?:cm|mm|km|m|cm²|cm2|m²|m2|mm²|km²|%|₹|"
+    r"rs\.?|sq\.?\s*cm))?$", re.I)
+_TRAILING_CONJ_RE = re.compile(r"\s+(and|aur|तथा|और)\s*$", re.I)
+
+
+def _gen_segments(q, run):
+    """(preamble, [(label, text), ...]) from a marker run."""
+    preamble = q[:run[0][2]].strip()
+    parts = []
+    for i, (label, _v, _s, end) in enumerate(run):
+        nxt = run[i + 1][2] if i + 1 < len(run) else len(q)
+        text = q[end:nxt].strip(" \t\n.,;:।")
+        text = _TRAILING_CONJ_RE.sub("", text).strip()
+        parts.append((label, text))
+    return preamble, parts
+
+
+_GEN_STOPWORDS = {
+    "and", "or", "the", "a", "an", "of", "in", "on", "for",
+    "to", "aur", "तथा", "और", "का", "की", "के",
+}
+# The shared-data tail of the "divided by (a) 10, (b) 5,
+# (c) 2. 78, 99, 173, …" shape: the last segment is a value
+# followed by the data list every part works on. An MCQ's
+# option list never carries one, which is what licenses the
+# bare-value relaxation in _gen_segment_ok below.
+_GEN_DATA_TAIL_RE = re.compile(
+    r"^\S{1,12}\s*[.:]\s*(?:\d+\s*,\s*){2,}\d+")
+
+
+def _gen_segment_ok(seg, preamble, preamble_has_verb,
+                    any_digit, allow_bare=False):
+    """One segment's ask-plausibility — see the section
+    header for the rules each clause enforces."""
+    s = (seg or "").strip(" .।,;:")
+    if _BARE_VALUE_RE.match(s):
+        # A bare value is an MCQ option — never a part —
+        # unless the run ends in a shared data list, where
+        # the values are the parts' own inputs (divisors).
+        # (Checked before the length gate: a divisor part
+        # can be a single digit.)
+        return allow_bare
+    if len(s) < 3 or len(s) > 1500:
+        return False
+    if _ASK_VERB_RE.search(s) or "=" in s or "?" in s:
+        return True
+    if _EXPR_SEQ_RE.search(s):
+        return True
+    s_expr = re.sub(r"(\d)\s*x\s*(?=\d)", r"\1×", s)
+    if _PURE_EXPR_RE.match(s_expr) \
+            and any(c in s_expr for c in "+-*/×÷^"):
+        # A bare expression is a part only when the stem
+        # commands a computation ("Calculate: (a) 2 × 50");
+        # under a "which expression…" stem it is an option.
+        # (The x between two digits is a multiplication
+        # sign, not the variable.)
+        return bool(preamble and _COMPUTE_VERB_RE.search(preamble))
+    if preamble_has_verb and any_digit:
+        # A noun-phrase part under a commanding stem —
+        # "(i) area and (ii) perimeter of a rectangle with
+        # length 5 cm…", "(i) its area (ii) its perimeter".
+        # The numbers live in the shared context; the part
+        # itself is just the quantity's name, so it needs
+        # one real content word, and must either stay short
+        # ("its area") or carry data of its own ("perimeter
+        # of a rectangle with length 5 cm…" — the part that
+        # carries the shared context for its siblings).
+        words = re.findall(r"[^\W\d_]+", s.lower())
+        if any(len(w) >= 3 and w not in _GEN_STOPWORDS
+               for w in words) and (
+                len(words) <= 6
+                or any(c.isdigit() for c in s)):
+            return True
+    return False
+
+
+def _gen_valid_split(preamble, parts, strong=False):
+    """Every segment must pass, or there is no split (the
+    Wave 100 all-or-nothing gate). `strong` (numbered and
+    Q-block families, whose markers also occur inside
+    ordinary prose) demands each segment carry its own verb,
+    '=' or '?'."""
+    if len(parts) < 2 or len(preamble) > 1200:
+        return False
+    preamble_has_verb = bool(_ASK_VERB_RE.search(preamble))
+    any_digit = any(c.isdigit() for c in preamble) or any(
+        c.isdigit() for _l, t in parts for c in t)
+    allow_bare = bool(_GEN_DATA_TAIL_RE.match(parts[-1][1]))
+    for _label, text in parts:
+        if strong and not (_ASK_VERB_RE.search(text)
+                           or "=" in text or "?" in text):
+            return False
+        if not _gen_segment_ok(text, preamble,
+                               preamble_has_verb, any_digit,
+                               allow_bare=allow_bare):
+            return False
+    return True
+
+
+def _gen_from_run(q, hits, first_value, strong=False):
+    run = _consecutive_run(hits, first_value)
+    if run is None or len(run) < 2:
+        return None
+    preamble, parts = _gen_segments(q, run)
+    if not _gen_valid_split(preamble, parts, strong=strong):
+        return None
+    return preamble, parts
+
+
+def _split_gen_roman(q):
+    hits = [(m.group(1), _ROMAN_VALUES[m.group(1)],
+             m.start(), m.end()) for m in _ROMAN_RE.finditer(q)]
+    return _gen_from_run(q, hits, 1)
+
+
+def _split_gen_letter(q):
+    hits = [(m.group(1).lower(),
+             "abcdefgh".index(m.group(1).lower()),
+             m.start(), m.end())
+            for m in _GEN_LETTER_RE.finditer(q)]
+    return _gen_from_run(q, hits, 0)
+
+
+def _split_gen_dev(q):
+    hits = [(m.group(1), _GEN_DEV_ORDER.index(m.group(1)),
+             m.start(), m.end())
+            for m in _GEN_DEV_RE.finditer(q)]
+    return _gen_from_run(q, hits, 0)
+
+
+def _split_gen_parennum(q):
+    hits = [(m.group(1), int(m.group(1)), m.start(), m.end())
+            for m in _GEN_PARENNUM_RE.finditer(q)]
+    return _gen_from_run(q, hits, 1)
+
+
+def _split_gen_part(q):
+    hits = [(m.group(1), int(m.group(1)), m.start(), m.end())
+            for m in _GEN_PART_RE.finditer(q)]
+    return _gen_from_run(q, hits, 1)
+
+
+def _split_gen_qblock(q):
+    hits = [(m.group(1), int(m.group(1)), m.start(), m.end())
+            for m in _GEN_Q_RE.finditer(q)]
+    return _gen_from_run(q, hits, 1, strong=True)
+
+
+def _split_gen_numbered(q):
+    hits = []
+    for m in _GEN_NUM_MARK_RE.finditer(q):
+        start = m.start()
+        if start >= 2 and q[start - 1] == "." \
+                and q[start - 2].isdigit():
+            continue  # a decimal's tail, not a marker
+        prefix = q[:start].rstrip()
+        if prefix and prefix[-1] not in "\n.;:।":
+            continue  # mid-sentence number, not a boundary
+        hits.append((m.group(1), int(m.group(1)),
+                     start, m.end()))
+    got = _gen_from_run(q, hits, 1, strong=True)
+    if got is None:
+        return None
+    preamble = got[0]
+    if preamble and not preamble.endswith((":", "?")) \
+            and not _ASK_VERB_RE.search(preamble):
+        return None  # "Fig. 1. … 2. …" prose, not a question set
+    return got
+
+
+def _split_gen_unlabelled(q):
+    """Semicolon- / newline-separated distinct asks with no
+    labels: every segment must carry its OWN ask verb and
+    its OWN digit (a word problem's clauses fail both)."""
+    if _ROMAN_RE.search(q) or _GEN_LETTER_RE.search(q) \
+            or _GEN_PARENNUM_RE.search(q):
+        return None  # a labelled shape owns labels, not this
+    segs = [s.strip(" .।,;:") for s in re.split(r"[;\n]+", q)]
+    segs = [s for s in segs if s]
+    if len(segs) < 2 or len(segs) > 5:
+        return None
+    for s in segs:
+        if len(s) < 12 or len(s) > 1200:
+            return None
+        if not _ASK_VERB_RE.search(s):
+            return None
+        if not any(c.isdigit() for c in s):
+            return None
+    labels = ["i", "ii", "iii", "iv", "v"]
+    return "", [(labels[i], s) for i, s in enumerate(segs)]
+
+
+def split_general(question):
+    """(preamble, [(label, part_text), ...]) for an ordinary
+    multi-part question, or None. Families run from the most
+    explicit markers to the least; the first valid split
+    wins. Split-level vetoes defer Assertion–Reason and OR
+    bundles to formats.py and Hence chains to the layer
+    above, exactly as the chain's order implies."""
+    q = str(question or "")
+    if len(q) < 12 or len(q) > 4000:
+        return None
+    if _CASE_CUE_RE.search(q):
+        return None  # case-study machinery owns these
+    if _MCQ_INSTRUCTION_RE.search(q):
+        return None  # options are not parts (see above)
+    low = q.lower()
+    if "assertion" in low and "reason" in low:
+        return None
+    if split_hence(q) is not None:
+        return None
+    try:
+        from formats import extract_ar, extract_or
+        if extract_ar(q) is not None \
+                or extract_or(q) is not None:
+            return None
+    except Exception:
+        pass
+    for splitter in (_split_gen_roman, _split_gen_letter,
+                     _split_gen_dev, _split_gen_parennum,
+                     _split_gen_part, _split_gen_qblock,
+                     _split_gen_numbered, _split_gen_unlabelled):
+        try:
+            got = splitter(q)
+        except Exception:
+            got = None
+        if got is not None:
+            return got
+    return None
+
+
+def _gen_tail_clause(parts):
+    """The shared context that trails the LAST part of the
+    "(i) area and (ii) perimeter of a rectangle with length
+    5 cm…" shape: the digit-bearing clause from the last
+    segment's first of/for/with/whose, bound into the
+    earlier parts that carry no digit of their own."""
+    if len(parts) < 2:
+        return None
+    last = parts[-1][1]
+    for m in re.finditer(r"\b(of|for|with|whose)\b", last, re.I):
+        clause = last[m.start():].strip()
+        if len(clause) >= 10 and any(c.isdigit() for c in clause):
+            return clause
+    return None
+
+
+def _gen_data_tail(parts):
+    """The shared data list trailing the last part of the
+    "divided by (a) 10, (b) 5, (c) 2. 78, 99, …" shape,
+    or None."""
+    if len(parts) < 2:
+        return None
+    m = re.match(r"^\S{1,12}\s*[.:]\s*"
+                 r"((?:\d+\s*,\s*){2,}\d+.*)$",
+                 parts[-1][1], re.S)
+    return m.group(1).strip() if m else None
+
+
+_VERDICT_ASK_RE = re.compile(r"\bwhether\b", re.I)
+_VERDICT_ANSWER_RE = re.compile(
+    r"\b(yes|no|true|false)\b|हाँ|नहीं|सही है|गलत है", re.I)
+_VERDICT_OP_HINTS = ("whether", "check", "verif", "valid",
+                     "identity", "is_")
+
+
+def _verdict_ok(result):
+    """For a "check whether…" stem, a part counts only when
+    its answer IS a verdict — an equation's solution set is
+    not an answer to a yes/no check (the NCERT "Check
+    whether the following are quadratic equations" set was
+    served cubic roots before this guard)."""
+    if _VERDICT_ANSWER_RE.search(str(result.get("answer")
+                                     or "")):
+        return True
+    op = str(result.get("op") or "")
+    return any(h in op for h in _VERDICT_OP_HINTS)
+
+
+def _solve_general_part(preamble, part, tail_clause, deadline,
+                        data_tail=None, verdict_ask=False):
+    """One general sub-part through the existing machinery:
+    preamble-bound first (the facts and the command usually
+    live in the stem), then alone, then — for a verb-less
+    stem — with the command supplied, then with the shared
+    trailing clause bound in; OR alternatives inside the
+    part are tried last, in order. Option-carrying parts go
+    through the MCQ layer, as in the case-study path."""
+    candidates = []
+
+    def add(text):
+        text = (text or "").strip()
+        if text and text not in candidates:
+            candidates.append(text)
+
+    bound = f"{preamble} {part}".strip() if preamble else part
+    add(bound)
+    add(part)
+    if data_tail and _BARE_VALUE_RE.match(
+            part.strip(" .।,;:")):
+        # A divisor-style bare part gets the shared data
+        # list appended: "… divided by 10. 78, 99, 173, …"
+        add(f"{bound}. {data_tail}")
+        add(f"{part}. {data_tail}")
+    if preamble and not _ASK_VERB_RE.search(part) \
+            and not _ASK_VERB_RE.search(preamble):
+        add(f"{preamble} Find {part}")
+    if tail_clause and not any(c.isdigit() for c in part):
+        add(f"{part} {tail_clause}")
+        if preamble:
+            add(f"{preamble} {part} {tail_clause}")
+    alts = [a.strip() for a in re.split(
+        r"\s+OR\s+|\s+अथवा\s+", part) if a.strip()]
+    if len(alts) > 1:
+        for alt in alts:
+            add(f"{preamble} {alt}".strip() if preamble else alt)
+            add(alt)
+    for text in candidates:
+        if time.monotonic() > deadline:
+            return None
+        result = None
+        try:
+            if len(_OPTION_MARK_RE.findall(text)) >= 2:
+                from mcq import mcq_result
+                result = mcq_result(text)
+            if result is None:
+                raw = solve_question(text)
+                if _part_is_real(text, raw):
+                    result = raw
+        except Exception:
+            result = None
+        if result is not None and verdict_ask \
+                and not _verdict_ok(result):
+            result = None  # a solve is not a verdict
+        if result is not None:
+            return result
+    return None
+
+
+def _gen_cap_note(question):
+    try:
+        from fallback import _flavour
+        flavour = _flavour(question)
+    except Exception:
+        flavour = "en"
+    if flavour == "dev":
+        return ("केवल पहले 5 भागों के उत्तर दिए गए हैं — "
+                "बाकी भाग अलग से पूछें।")
+    if flavour == "roman":
+        return ("Sirf pehle 5 parts ke answer diye gaye "
+                "hain — baaki parts alag se puchho.")
+    return ("Only the first 5 parts are answered here — "
+            "please ask the remaining parts separately.")
+
+
+def general_multipart_result(question):
+    """The general multi-part answer for `question`, or
+    None — None unless the question splits AND at least one
+    part verifiably solves (the honesty rule: a set with no
+    solved part keeps today's behaviour byte-for-byte)."""
+    got = split_general(question)
+    if got is None:
+        return None
+    preamble, parts = got
+    shown = parts[:_GENERAL_MAX_PARTS]
+    tail_clause = _gen_tail_clause(parts)
+    data_tail = _gen_data_tail(parts)
+    verdict_ask = bool(_VERDICT_ASK_RE.search(preamble))
+    deadline = time.monotonic() + _GENERAL_BUDGET
+    solved = {}
+    for label, text in shown:
+        result = _solve_general_part(preamble, text,
+                                     tail_clause, deadline,
+                                     data_tail=data_tail,
+                                     verdict_ask=verdict_ask)
+        if result is not None:
+            solved[label] = result
+    if not solved:
+        return None
+    out = _assemble("general", "multipart_general",
+                    [lab for lab, _t in shown], solved,
+                    question)
+    if len(parts) > _GENERAL_MAX_PARTS:
+        out["steps"] = list(out.get("steps") or []) + [
+            _gen_cap_note(question)]
+        out["multipart"]["truncated"] = True
+        out["multipart"]["parts_total"] = len(parts)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # The layer's two entry points (fallback.py calls both lazily)
 # ---------------------------------------------------------------------------
 
@@ -483,7 +949,11 @@ def multipart_preferred(question, result=None):
     cs = split_case_study(question)
     if cs is not None:
         return _case_result(cs[0], cs[1], question)
-    return None
+    # Wave 141: ordinary multi-part questions (plain
+    # sub-parts under one stem) — the parts are the
+    # authority here too, for the same reason as the
+    # Wave 100 shapes.
+    return general_multipart_result(question)
 
 
 def multipart_result(question):
@@ -497,4 +967,5 @@ def multipart_result(question):
 
 __all__ = ["multipart_result", "multipart_preferred",
            "split_mega_bundle", "split_case_study",
-           "split_hence"]
+           "split_hence", "split_general",
+           "general_multipart_result"]

@@ -848,6 +848,174 @@ TOPICS_BANDC = {
            ["Centre is (0, 0) and r = 4",
             "x² + y² = r² = 4²",
             "x² + y² = 16"]),
+        # --------- Conic Sections (Wave 142 fill) ---------
+        _t("focus-of-parabola-y2-12x", "Focus of a Parabola",
+           "conic-sections",
+           "Find the focus of the parabola y^2 = 12x",
+           "focus = (3, 0)",
+           "For y² = 4ax the focus is (a, 0): compare 4a "
+           "with the coefficient of x.",
+           "y² = 4ax के लिए नाभि (a, 0) होती है: 4a की तुलना "
+           "x के गुणांक से करो।",
+           ["Compare y² = 12x with y² = 4ax: 4a = 12, so "
+            "a = 3",
+            "Focus = (a, 0) = (3, 0)"]),
+        _t("focus-of-parabola-x2-8y",
+           "Focus of a Vertical Parabola", "conic-sections",
+           "Find the focus of the parabola x^2 = 8y",
+           "focus = (0, 2)",
+           "For x² = 4ay the parabola opens upwards and "
+           "the focus is (0, a).",
+           "x² = 4ay के लिए परवलय ऊपर खुलता है और नाभि "
+           "(0, a) होती है।",
+           ["Compare x² = 8y with x² = 4ay: 4a = 8, so "
+            "a = 2",
+            "Focus = (0, a) = (0, 2)"]),
+        _t("directrix-of-parabola-y2-minus-8x",
+           "Directrix of a Parabola", "conic-sections",
+           "Find the directrix of the parabola y^2 = -8x",
+           "directrix: x = 2",
+           "For y² = -4ax the parabola opens left and the "
+           "directrix is the line x = a.",
+           "y² = -4ax के लिए परवलय बाईं ओर खुलता है और "
+           "नियता रेखा x = a होती है।",
+           ["Compare y² = -8x with y² = -4ax: 4a = 8, so "
+            "a = 2",
+            "Directrix: x = a, that is x = 2"]),
+        _t("latus-rectum-of-parabola-x2-minus-16y",
+           "Latus Rectum of a Parabola", "conic-sections",
+           "Find the length of the latus rectum of the "
+           "parabola x^2 = -16y",
+           "length of latus rectum = 16",
+           "The latus rectum of x² = -4ay has length 4a: "
+           "read it straight off the coefficient.",
+           "x² = -4ay की नाभिलंब जीवा की लंबाई 4a होती है: "
+           "गुणांक से सीधे पढ़ो।",
+           ["Compare x² = -16y with x² = -4ay: 4a = 16",
+            "Length of latus rectum = 4a = 16"]),
+        _t("eccentricity-of-ellipse-16-9",
+           "Eccentricity of an Ellipse", "conic-sections",
+           "Find the eccentricity of the ellipse "
+           "x^2/16 + y^2/9 = 1",
+           "eccentricity e = sqrt(7)/4",
+           "For x²/a² + y²/b² = 1 with a > b, e = "
+           "√(1 - b²/a²).",
+           "x²/a² + y²/b² = 1 (a > b) के लिए e = "
+           "√(1 - b²/a²) होता है।",
+           ["a² = 16, b² = 9, so a = 4 and b = 3",
+            "e = √(1 - 9/16) = √(7/16)",
+            "e = sqrt(7)/4"]),
+        _t("foci-of-ellipse-25-9", "Foci of an Ellipse",
+           "conic-sections",
+           "Find the foci of the ellipse x^2/25 + y^2/9 = 1",
+           "foci = (+-4, 0)",
+           "The foci are (±ae, 0), and ae = √(a² - b²).",
+           "नाभियाँ (±ae, 0) होती हैं, और ae = √(a² - b²)।",
+           ["a² = 25, b² = 9",
+            "ae = √(25 - 9) = √16 = 4",
+            "Foci = (+-4, 0)"]),
+        _t("latus-rectum-of-ellipse-16-9",
+           "Latus Rectum of an Ellipse", "conic-sections",
+           "Find the length of the latus rectum of the "
+           "ellipse x^2/16 + y^2/9 = 1",
+           "length of latus rectum = 9/2",
+           "Each latus rectum of an ellipse has length "
+           "2b²/a.",
+           "दीर्घवृत्त की प्रत्येक नाभिलंब जीवा की लंबाई "
+           "2b²/a होती है।",
+           ["a² = 16 gives a = 4; b² = 9",
+            "Length = 2b²/a = 2 × 9 / 4",
+            "Length = 9/2"]),
+        _t("vertices-of-ellipse-9-25",
+           "Vertices of an Ellipse", "conic-sections",
+           "Find the vertices of the ellipse "
+           "x^2/9 + y^2/25 = 1",
+           "vertices = (0, +-5)",
+           "The vertices lie on the major axis: here "
+           "25 > 9, so the major axis is the y-axis and "
+           "the vertices are (0, ±5).",
+           "शीर्ष दीर्घ अक्ष पर होते हैं: यहाँ 25 > 9, अतः "
+           "दीर्घ अक्ष y-अक्ष है और शीर्ष (0, ±5) हैं।",
+           ["Compare denominators: 25 under y² is bigger",
+            "Major axis is the y-axis with a = 5",
+            "Vertices = (0, +-5)"]),
+        _t("axes-of-ellipse-16-9",
+           "Major and Minor Axes of an Ellipse",
+           "conic-sections",
+           "Find the lengths of the major axis and minor "
+           "axis of the ellipse x^2/16 + y^2/9 = 1",
+           "length of major axis = 8; length of minor "
+           "axis = 6",
+           "Major axis length is 2a and minor axis length "
+           "is 2b, where a and b are the semi-axes.",
+           "दीर्घ अक्ष की लंबाई 2a और लघु अक्ष की लंबाई 2b "
+           "होती है, जहाँ a, b अर्ध-अक्ष हैं।",
+           ["a² = 16 gives a = 4; b² = 9 gives b = 3",
+            "Major axis = 2a = 8",
+            "Minor axis = 2b = 6"]),
+        _t("foci-of-hyperbola-16-9", "Foci of a Hyperbola",
+           "conic-sections",
+           "Find the foci of the hyperbola "
+           "x^2/16 - y^2/9 = 1",
+           "foci = (+-5, 0)",
+           "For a hyperbola the foci are (±ae, 0) with "
+           "ae = √(a² + b²).",
+           "अतिपरवलय की नाभियाँ (±ae, 0) होती हैं, जहाँ "
+           "ae = √(a² + b²)।",
+           ["a² = 16, b² = 9",
+            "ae = √(16 + 9) = √25 = 5",
+            "Foci = (+-5, 0)"]),
+        _t("eccentricity-of-hyperbola-16-9",
+           "Eccentricity of a Hyperbola", "conic-sections",
+           "Find the eccentricity of the hyperbola "
+           "x^2/16 - y^2/9 = 1",
+           "eccentricity e = 5/4",
+           "For x²/a² - y²/b² = 1, e = √(1 + b²/a²), "
+           "always greater than 1.",
+           "x²/a² - y²/b² = 1 के लिए e = √(1 + b²/a²), "
+           "जो सदैव 1 से बड़ा होता है।",
+           ["a² = 16, b² = 9",
+            "e = √(1 + 9/16) = √(25/16)",
+            "e = 5/4"]),
+        _t("latus-rectum-of-hyperbola-9-16",
+           "Latus Rectum of a Hyperbola", "conic-sections",
+           "Find the length of the latus rectum of the "
+           "hyperbola x^2/9 - y^2/16 = 1",
+           "length of latus rectum = 32/3",
+           "A hyperbola's latus rectum has length 2b²/a, "
+           "the same form as the ellipse.",
+           "अतिपरवलय की नाभिलंब जीवा की लंबाई 2b²/a होती "
+           "है, दीर्घवृत्त जैसा ही रूप।",
+           ["a² = 9 gives a = 3; b² = 16",
+            "Length = 2b²/a = 2 × 16 / 3",
+            "Length = 32/3"]),
+        _t("centre-and-radius-of-a-circle-from-general-form",
+           "Centre and Radius of a Circle from Its "
+           "General Equation", "conic-sections",
+           "Find the centre and radius of the circle "
+           "x^2 + y^2 - 4x - 6y + 4 = 0",
+           "Centre = (2, 3), radius = 3",
+           "For x² + y² + 2gx + 2fy + c = 0 the centre "
+           "is (-g, -f) and the radius is √(g² + f² - c).",
+           "x² + y² + 2gx + 2fy + c = 0 के लिए केंद्र "
+           "(-g, -f) और त्रिज्या √(g² + f² - c) होती है।",
+           ["2g = -4 gives g = -2; 2f = -6 gives f = -3; "
+            "c = 4",
+            "Centre = (-g, -f) = (2, 3)",
+            "Radius = √(4 + 9 - 4) = √9 = 3"]),
+        _t("radius-of-a-circle-from-general-form",
+           "Radius of a Circle from Its General Equation",
+           "conic-sections",
+           "Find the radius of the circle "
+           "x^2 + y^2 + 6x - 4y - 12 = 0",
+           "Radius = 5",
+           "Complete the square, or use radius = "
+           "√(g² + f² - c) for the general form.",
+           "वर्ग पूर्ण करो, या व्यापक रूप के लिए त्रिज्या "
+           "= √(g² + f² - c) प्रयोग करो।",
+           ["g = 3, f = -2, c = -12",
+            "Radius = √(9 + 4 + 12) = √25",
+            "Radius = 5"]),
         # ---------------- 3D Geometry (intro) ----------------
         _t("distance-of-a-point-from-the-origin-in-3d",
            "Distance of a Point from the Origin in 3D",
@@ -2587,6 +2755,137 @@ TOPICS_BANDC = {
            ["Antiderivative: x log x - x",
             "At e: e × 1 - e = 0; at 1: 0 - 1 = -1",
             "Integral = 0 - (-1) = 1"]),
+        # ------- Application of Integrals (Wave 142) -------
+        _t("area-under-parabola-x2-from-1-to-2",
+           "Area Under a Parabola", "application-of-integrals",
+           "Find the area under the curve y = x^2, x = 1, "
+           "x = 2 and x-axis",
+           "7/3 sq. units",
+           "The area under y = f(x) from a to b is "
+           "∫|f(x)| dx between the limits.",
+           "y = f(x) के नीचे a से b तक का क्षेत्रफल सीमाओं "
+           "के बीच ∫|f(x)| dx होता है।",
+           ["Integrate x²: ∫x² dx = x³/3",
+            "From 1 to 2: 8/3 - 1/3",
+            "Area = 7/3 sq. units"]),
+        _t("area-under-x4-from-1-to-5",
+           "Area Under a Quartic Curve",
+           "application-of-integrals",
+           "Find the area under the curve y = x^4, x = 1, "
+           "x = 5 and x-axis",
+           "3124/5 sq. units",
+           "Same rule: integrate the curve between the "
+           "two ordinates.",
+           "वही नियम: दोनों कोटियों के बीच वक्र का समाकलन "
+           "करो।",
+           ["Integrate x⁴: ∫x⁴ dx = x⁵/5",
+            "From 1 to 5: 3125/5 - 1/5",
+            "Area = 3124/5 sq. units"]),
+        _t("area-under-sin-x-from-0-to-pi",
+           "Area Under a Sine Curve",
+           "application-of-integrals",
+           "Find the area bounded by the curve y = sin x "
+           "between x = 0 and x = pi, the x-axis",
+           "2 sq. units",
+           "sin x is positive on [0, π], so the area is "
+           "just ∫sin x dx there.",
+           "[0, π] पर sin x धनात्मक है, अतः क्षेत्रफल वहाँ "
+           "∫sin x dx ही है।",
+           ["Integrate: ∫sin x dx = -cos x",
+            "From 0 to π: -cos π + cos 0 = 1 + 1",
+            "Area = 2 sq. units"]),
+        _t("area-of-an-ellipse-16-9",
+           "Area of an Ellipse", "application-of-integrals",
+           "Find the area of the region bounded by the "
+           "ellipse x^2/16 + y^2/9 = 1",
+           "12·pi ≈ 37.6991 square units",
+           "The area of the ellipse x²/a² + y²/b² = 1 is "
+           "πab — π times the product of the semi-axes.",
+           "दीर्घवृत्त x²/a² + y²/b² = 1 का क्षेत्रफल πab "
+           "होता है — π गुणा अर्ध-अक्षों का गुणनफल।",
+           ["a² = 16 gives a = 4; b² = 9 gives b = 3",
+            "Area = π × 4 × 3",
+            "Area = 12·pi ≈ 37.6991 square units"]),
+        _t("area-enclosed-by-a-circle-16",
+           "Area Enclosed by a Circle",
+           "application-of-integrals",
+           "Find the area enclosed by the circle "
+           "x^2 + y^2 = 16",
+           "16·pi sq. units",
+           "By integration (four times the first-quadrant "
+           "area) the circle x² + y² = r² encloses πr².",
+           "समाकलन से (प्रथम चतुर्थांश क्षेत्रफल का चार "
+           "गुना) वृत्त x² + y² = r² का क्षेत्रफल πr² होता "
+           "है।",
+           ["r² = 16, so r = 4",
+            "Area = πr² = π × 16",
+            "Area = 16·pi sq. units"]),
+        _t("area-of-a-quarter-circle-in-first-quadrant",
+           "Area of a Quarter Circle",
+           "application-of-integrals",
+           "Find the area lying in the first quadrant "
+           "and bounded by the circle x^2 + y^2 = 4 and "
+           "the lines x = 0 and x = 2",
+           "pi sq. units",
+           "The first-quadrant part of a circle is one "
+           "quarter of it: area = πr²/4.",
+           "वृत्त का प्रथम चतुर्थांश भाग उसका चौथाई होता "
+           "है: क्षेत्रफल = πr²/4।",
+           ["r² = 4, so r = 2",
+            "Quarter area = π × 4 / 4",
+            "Area = pi sq. units"]),
+        _t("area-between-a-line-and-a-parabola",
+           "Area Between a Line and a Parabola",
+           "application-of-integrals",
+           "Find the area bounded by the curves y = x "
+           "and y = x^2",
+           "1/6 ≈ 0.1667 square units",
+           "Between two curves, integrate (top − bottom) "
+           "between their meeting points.",
+           "दो वक्रों के बीच, उनके मिलने के बिंदुओं के बीच "
+           "(ऊपर − नीचे) का समाकलन करो।",
+           ["x = x² at x = 0 and x = 1",
+            "Integrate x − x² from 0 to 1: 1/2 − 1/3",
+            "Area = 1/6 ≈ 0.1667 square units"]),
+        _t("area-under-x3-between-ordinates",
+           "Area Under a Cubic Between Ordinates",
+           "application-of-integrals",
+           "Find the area bounded by the curve y = x^3, "
+           "the x-axis and the ordinates x = -2 and x = 1",
+           "17/4 sq. units",
+           "x³ is negative before 0 and positive after: "
+           "area adds |integral| on each side of 0.",
+           "x³, 0 से पहले ऋणात्मक और बाद में धनात्मक है: "
+           "क्षेत्रफल में 0 के दोनों ओर |समाकल| जुड़ता है।",
+           ["From -2 to 0: |∫x³ dx| = 4",
+            "From 0 to 1: ∫x³ dx = 1/4",
+            "Area = 4 + 1/4 = 17/4 sq. units"]),
+        _t("area-under-x-abs-x",
+           "Area Under y = x|x|", "application-of-integrals",
+           "Find the area bounded by the curve "
+           "y = x | x |, x-axis and the ordinates "
+           "x = -1 and x = 1",
+           "2/3 sq. units",
+           "x|x| equals −x² for x < 0 and x² for x ≥ 0, "
+           "so |y| is x² on both sides.",
+           "x|x|, x < 0 के लिए −x² और x ≥ 0 के लिए x² "
+           "होता है, अतः |y| दोनों ओर x² है।",
+           ["Split at 0: |y| = x² on [-1, 0] and on "
+            "[0, 1]",
+            "Each side gives ∫x² dx = 1/3",
+            "Area = 1/3 + 1/3 = 2/3 sq. units"]),
+        _t("area-under-cos-x-from-0-to-pi-by-2",
+           "Area Under a Cosine Curve",
+           "application-of-integrals",
+           "Find the area under the curve y = cos x, "
+           "x = 0, x = pi/2 and x-axis",
+           "1 sq. units",
+           "∫cos x dx = sin x; read it between the "
+           "limits.",
+           "∫cos x dx = sin x होता है; सीमाओं के बीच पढ़ो।",
+           ["Integrate: ∫cos x dx = sin x",
+            "From 0 to π/2: sin(π/2) − sin 0 = 1",
+            "Area = 1 sq. units"]),
         # ---------------- Differential Equations ----------------
         _t("order-of-a-differential-equation",
            "Order of a Differential Equation", "differential-equations",

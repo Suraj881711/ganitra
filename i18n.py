@@ -185,6 +185,13 @@ _EN = {
     "js_file_reading": "Reading the file… ⏳",
     "js_file_unsupported": "I can't read this file type yet — please send a photo, a PDF, a Word (.docx) or a text (.txt) file.",
     "js_file_too_large": "That file is too big — please send a file under 2 MB.",
+    # Wave 144: file/PDF system messages stay English or
+    # Hinglish (Roman) in EVERY language (Suraj's standing
+    # rule for system messages) — every locale carries these
+    # same lines, never a translated-script rendering.
+    "js_file_check": "I read this from your file — please check it, fix any mistake, then press Solve.",
+    "js_pdf_reading": "Reading the PDF… ⏳",
+    "js_pdf_unavailable": "The PDF reader could not load — please check your connection and try again, or send a photo of the page.",
     "js_photo_error": "There was a problem reading the photo — please "
                       "try again or type the question.",
 }
@@ -328,6 +335,11 @@ _HI = {
     "js_file_reading": "File padh raha hoon… ⏳",
     "js_file_unsupported": "Ye file type main abhi nahi padh sakta — photo, PDF, Word (.docx) ya text (.txt) file bhejo.",
     "js_file_too_large": "Ye file bahut badi hai — 2 MB se chhoti file bhejo.",
+    # Wave 144: system messages — Hinglish (Roman) only,
+    # per Suraj's standing rule (see the _EN note).
+    "js_file_check": "Ye sawal maine tumhari file se padha hai — check kar lo, koi galti ho to theek karke Solve dabao.",
+    "js_pdf_reading": "PDF padh raha hoon… ⏳",
+    "js_pdf_unavailable": "PDF reader load nahi ho paya — connection check karke phir try karo, ya page ki photo bhej do.",
     "js_photo_error": "फ़ोटो पढ़ने में समस्या आई — फिर प्रयास कीजिए या "
                       "प्रश्न लिख दीजिए।",
 }
@@ -474,6 +486,11 @@ _BN = {
     "js_file_reading": "ফাইল পড়ছি… ⏳",
     "js_file_unsupported": "এই ধরনের ফাইল আমি এখনো পড়তে পারি না — ছবি, PDF, Word (.docx) বা text (.txt) ফাইল পাঠাও।",
     "js_file_too_large": "ফাইলটা খুব বড় — 2 MB-এর ছোট ফাইল পাঠাও।",
+    # Wave 144: system messages stay English in every
+    # language (Suraj's standing rule) — not translated.
+    "js_file_check": "I read this from your file — please check it, fix any mistake, then press Solve.",
+    "js_pdf_reading": "Reading the PDF… ⏳",
+    "js_pdf_unavailable": "The PDF reader could not load — please check your connection and try again, or send a photo of the page.",
     "js_photo_error": "ছবি পড়তে সমস্যা হয়েছে — আবার চেষ্টা করুন বা "
                       "প্রশ্নটি লিখে দিন।",
 }
@@ -618,6 +635,11 @@ _MR = {
     "js_file_reading": "फाइल वाचत आहे… ⏳",
     "js_file_unsupported": "हा फाइल प्रकार मी अजून वाचू शकत नाही — फोटो, PDF, Word (.docx) किंवा text (.txt) फाइल पाठव.",
     "js_file_too_large": "ही फाइल खूप मोठी आहे — 2 MB पेक्षा लहान फाइल पाठव.",
+    # Wave 144: system messages stay English in every
+    # language (Suraj's standing rule) — not translated.
+    "js_file_check": "I read this from your file — please check it, fix any mistake, then press Solve.",
+    "js_pdf_reading": "Reading the PDF… ⏳",
+    "js_pdf_unavailable": "The PDF reader could not load — please check your connection and try again, or send a photo of the page.",
     "js_photo_error": "फोटो वाचण्यात अडचण आली — पुन्हा प्रयत्न करा किंवा "
                       "प्रश्न लिहा.",
 }
@@ -783,6 +805,11 @@ _TA = {
     "js_file_reading": "கோப்பைப் படிக்கிறேன்… ⏳",
     "js_file_unsupported": "இந்த வகை கோப்பை என்னால் இன்னும் படிக்க முடியாது — புகைப்படம், PDF, Word (.docx) அல்லது text (.txt) கோப்பை அனுப்பு.",
     "js_file_too_large": "அந்தக் கோப்பு மிகப் பெரியது — 2 MB-க்கு குறைவான கோப்பை அனுப்பு.",
+    # Wave 144: system messages stay English in every
+    # language (Suraj's standing rule) — not translated.
+    "js_file_check": "I read this from your file — please check it, fix any mistake, then press Solve.",
+    "js_pdf_reading": "Reading the PDF… ⏳",
+    "js_pdf_unavailable": "The PDF reader could not load — please check your connection and try again, or send a photo of the page.",
     "js_photo_error": "புகைப்படத்தைப் படிப்பதில் சிக்கல் ஏற்பட்டது — "
                       "மீண்டும் முயற்சிக்கவும் அல்லது கேள்வியைத் "
                       "தட்டச்சு செய்யவும்.",
@@ -937,6 +964,11 @@ _TE = {
     "js_file_reading": "ఫైల్ చదువుతున్నాను… ⏳",
     "js_file_unsupported": "ఈ రకం ఫైల్‌ను నేను ఇంకా చదవలేను — ఫోటో, PDF, Word (.docx) లేదా text (.txt) ఫైల్ పంపు.",
     "js_file_too_large": "ఆ ఫైల్ చాలా పెద్దది — 2 MB కంటే చిన్న ఫైల్ పంపు.",
+    # Wave 144: system messages stay English in every
+    # language (Suraj's standing rule) — not translated.
+    "js_file_check": "I read this from your file — please check it, fix any mistake, then press Solve.",
+    "js_pdf_reading": "Reading the PDF… ⏳",
+    "js_pdf_unavailable": "The PDF reader could not load — please check your connection and try again, or send a photo of the page.",
     "js_photo_error": "ఫోటో చదవడంలో సమస్య వచ్చింది — మళ్లీ "
                       "ప్రయత్నించండి లేదా ప్రశ్నను టైప్ చేయండి.",
 }
@@ -1421,6 +1453,10 @@ SYSTEM_MESSAGE_KEYS = frozenset({
     # chat status / connection / error notices
     "chat_offline_note", "chat_waking_note", "chat_error",
     "chat_thinking", "chat_solving",
+    # Wave 145: the honest line for a slow/failed SERVER while the
+    # student's own connection is fine (timeout, 502 page) — the
+    # offline note must never blame his internet for those.
+    "chat_server_slow",
     # the couldn't-solve card (a fixed system surface, not an answer)
     "error_heading", "error_intro", "error_tip1", "error_tip2",
     "error_tip3", "error_encourage", "error_encourage_name",
@@ -1510,6 +1546,7 @@ _EN_W5 = {
     "chat_solving": "Solving…",
     "chat_full_solution": "Full solution page →",
     "chat_error": "Something went wrong — please try again.",
+    "chat_server_slow": "Server is slow right now — please try again in a moment.",
     # board mode
     "board_heading": "Board Mode 📚",
     "board_intro": "NCERT maths chapters for Classes 6–12. The chapter "
@@ -1561,6 +1598,7 @@ _HI_W5 = {
     "chat_solving": "हल हो रहा है…",
     "chat_full_solution": "पूरे हल का पृष्ठ →",
     "chat_error": "कुछ गड़बड़ हो गई — कृपया फिर प्रयास कीजिए।",
+    "chat_server_slow": "Server is slow right now — please try again in a moment.",
     "board_heading": "बोर्ड मोड 📚",
     "board_intro": "कक्षा 6–12 के NCERT गणित अध्याय। अध्याय सूची "
                    "CBSE, ICSE और राज्य बोर्डों के लिए एक समान है — "
@@ -1607,6 +1645,7 @@ _BN_W5 = {
     "chat_solving": "সমাধান হচ্ছে…",
     "chat_full_solution": "সম্পূর্ণ সমাধানের পৃষ্ঠা →",
     "chat_error": "কিছু একটা ভুল হয়েছে — আবার চেষ্টা করুন।",
+    "chat_server_slow": "Server is slow right now — please try again in a moment.",
     "board_heading": "বোর্ড মোড 📚",
     "board_intro": "ষষ্ঠ থেকে দ্বাদশ শ্রেণির NCERT গণিত অধ্যায়। "
                    "অধ্যায়ের তালিকা CBSE, ICSE ও রাজ্য বোর্ডগুলির "
@@ -1654,6 +1693,7 @@ _MR_W5 = {
     "chat_solving": "सोडवत आहे…",
     "chat_full_solution": "संपूर्ण उत्तराचे पान →",
     "chat_error": "काहीतरी चुकले — कृपया पुन्हा प्रयत्न करा.",
+    "chat_server_slow": "Server is slow right now — please try again in a moment.",
     "board_heading": "बोर्ड मोड 📚",
     "board_intro": "इयत्ता ६–१२ साठी NCERT गणित प्रकरणे. "
                    "प्रकरणांची यादी CBSE, ICSE आणि राज्य बोर्डांसाठी "
@@ -1701,6 +1741,7 @@ _TA_W5 = {
     "chat_solving": "தீர்த்து வருகிறது…",
     "chat_full_solution": "முழு தீர்வுப் பக்கம் →",
     "chat_error": "ஏதோ தவறு நடந்துவிட்டது — மீண்டும் முயற்சிக்கவும்.",
+    "chat_server_slow": "Server is slow right now — please try again in a moment.",
     "board_heading": "போர்டு பயன்முறை 📚",
     "board_intro": "6–12 ஆம் வகுப்புகளுக்கான NCERT கணித "
                    "அத்தியாயங்கள். அத்தியாயப் பட்டியல் CBSE, ICSE "
@@ -1752,6 +1793,7 @@ _TE_W5 = {
     "chat_solving": "పరిష్కరిస్తోంది…",
     "chat_full_solution": "పూర్తి పరిష్కార పేజీ →",
     "chat_error": "ఏదో తప్పు జరిగింది — దయచేసి మళ్లీ ప్రయత్నించండి.",
+    "chat_server_slow": "Server is slow right now — please try again in a moment.",
     "board_heading": "బోర్డు మోడ్ 📚",
     "board_intro": "6–12 తరగతుల కోసం NCERT గణిత అధ్యాయాలు. "
                    "అధ్యాయాల జాబితా CBSE, ICSE మరియు రాష్ట్ర "

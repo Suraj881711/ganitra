@@ -434,13 +434,49 @@ def _numbers_match(a_text, b_text):
     return False
 
 
+def _match_canon(text):
+    """Wave 146: canonical surface for the symbolic matcher,
+    applied to BOTH sides identically. School texts write
+    "logx" for log(x) — the expression parser otherwise
+    reads it as l*o*g*x and a correct integrating-factor
+    answer (exp(x log x - x)) can never match its option
+    (the Wave 80 timeout-item pin). Also folds the middle
+    dot some solver answers carry, and rewrites a
+    parenthesised e^(...) power as exp(...) — the parser's
+    bare "e" is a plain symbol, not Euler's number."""
+    t = str(text or "").replace("·", "*")
+    t = re.sub(r"\b(log|ln)\s*([a-zA-Z])\b", r"\1(\2)", t)
+    _epow = re.compile(r"(?<![A-Za-z0-9_])e\s*(?:\*\*|\^)\s*\(")
+    out, i = [], 0
+    m = _epow.search(t, i)
+    while m:
+        out.append(t[i:m.start()])
+        j = m.end()  # just past the "("
+        depth, k = 1, j
+        while k < len(t) and depth:
+            if t[k] == "(":
+                depth += 1
+            elif t[k] == ")":
+                depth -= 1
+            k += 1
+        if depth:  # unbalanced — leave the rest untouched
+            out.append(t[m.start():])
+            i = len(t)
+            break
+        out.append("exp(" + t[j:k - 1] + ")")
+        i = k
+        m = _epow.search(t, i)
+    out.append(t[i:])
+    return "".join(out)
+
+
 def _sympy_match(a_text, b_text):
     """Symbolic equivalence through the app's own expression
     parser: (π + 2)10 vs 10π + 20, n² vs n*n, √2 vs sqrt(2)."""
     try:
         from solver.expression_parser import parse_expression
-        ea = parse_expression(a_text)
-        eb = parse_expression(b_text)
+        ea = parse_expression(_match_canon(a_text))
+        eb = parse_expression(_match_canon(b_text))
     except Exception:
         return False
     try:

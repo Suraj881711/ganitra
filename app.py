@@ -45,6 +45,7 @@ from langdetect_local import detect_language_confident, \
 import accounts
 import ocr
 import photofix
+import gemini_vision
 import weak_practice
 import full_paper
 import progress as progress_mod
@@ -1471,6 +1472,92 @@ def create_app():
             if fixed is not None:
                 payload["prefill"] = fixed["question"]
                 payload["confirm"] = fixed["confirm"]
+        return jsonify(payload)
+
+    def _vision_mime(data):
+        """The IANA mime type for an upload's MAGIC BYTES (the
+        same image set /photo-ocr accepts), or None — the
+        vision API needs the type declared, and it is never
+        taken from the file name."""
+        kind = _photo_kind(data)
+        if kind == "png":
+            return "image/png"
+        if kind == "jpeg":
+            return "image/jpeg"
+        if data[:4] == b"GIF8":
+            return "image/gif"
+        if data[:2] == b"BM":
+            return "image/bmp"
+        if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+            return "image/webp"
+        if data[4:8] == b"ftyp" and data[8:12] in \
+                (b"heic", b"heix", b"mif1", b"msf1"):
+            return "image/heic"
+        return None
+
+    @app.post("/photo-vision")
+    def photo_vision():
+        # Wave 144: the photo system's PRIMARY read — Gemini
+        # vision TRANSCRIBES the photographed question (see
+        # gemini_vision.py; it never solves). Same upload rules
+        # as /photo-ocr (2 MB cap, magic bytes, nothing stored:
+        # the bytes live in memory for this request only and
+        # are dropped with it). Replies the chat script
+        # understands:
+        #   {"kind": "text", "text": ..., "prefill": ...,
+        #    "confirm": ... | null, "backend": "gemini-vision"}
+        #        -> the transcription, which the script ALWAYS
+        #           lands in the editable composer (never
+        #           auto-solved): prefill is the Wave 137
+        #           reconstruction when photofix found an
+        #           unclear slot (confirm names it, at most
+        #           one line), else the transcription itself.
+        #   {"ok": false, "code": "vision_unavailable" |
+        #    "vision_quota" | "vision_failed"}
+        #        -> the script falls back silently to the old
+        #           chain (/photo-ocr -> browser Tesseract).
+        #   {"ok": false, "code": "no_question"}
+        #        -> the photo WAS read; there is no readable
+        #           maths question in it. No fallback (a second
+        #           read would only garble) — the script says
+        #           the one honest not-found line.
+        #   {"ok": false, "code": "too_large" | "unsupported" |
+        #    "no_file"} -> same meanings as /photo-ocr.
+        upload = request.files.get("file")
+        if upload is None:
+            return jsonify({"ok": False, "code": "no_file"}), 400
+        data = upload.stream.read(_FILE_MAX_BYTES + 1)
+        if len(data) > _FILE_MAX_BYTES:
+            return jsonify({"ok": False, "code": "too_large"})
+        mime = _vision_mime(data)
+        if mime is None:
+            return jsonify({"ok": False, "code": "unsupported"})
+        try:
+            text = gemini_vision.transcribe_image(data, mime)
+        except gemini_vision.VisionUnavailable:
+            return jsonify({"ok": False,
+                            "code": "vision_unavailable"})
+        except gemini_vision.VisionQuota:
+            return jsonify({"ok": False, "code": "vision_quota"})
+        except gemini_vision.VisionFailed:
+            return jsonify({"ok": False, "code": "vision_failed"})
+        if not text:
+            return jsonify({"ok": False, "code": "no_question"})
+        payload = {
+            "kind": "text",
+            "text": text[:_FILE_TEXT_LIMIT],
+            "prefill": text[:_FILE_TEXT_LIMIT],
+            "confirm": None,
+            "backend": "gemini-vision",
+        }
+        # Wave 137 discipline, unchanged: when the surviving
+        # words identify the family but a slot is unclear, the
+        # composer is prefilled with the REBUILT question plus
+        # the one confirmation line — never a silent guess.
+        fixed = photofix.analyse(normalize_ocr_text(text))
+        if fixed is not None and fixed.get("confirm"):
+            payload["prefill"] = fixed["question"]
+            payload["confirm"] = fixed["confirm"]
         return jsonify(payload)
 
     @app.post("/photo-fix")

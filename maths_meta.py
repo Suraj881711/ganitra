@@ -91,7 +91,39 @@ _WHO_WORD_EN = re.compile(r"\bwho\b")
 
 # A real computation riding in the text (digit op digit) is a
 # problem to solve, never a meta question.
-_COMPUTATION = re.compile(r"\d\s*[-+*/=×÷]\s*\d")
+# Wave 146: the operator class also covers the Unicode minus
+# signs (U+2212 −, U+2013 –, U+2014 —) that board-paper text
+# extraction produces — "x = 100 − 4p" (with U+2212) slipped
+# past the veto and a marginal-revenue problem was served
+# the Zero history card (CISCE audit idx 190).
+_COMPUTATION = re.compile(r"\d\s*[-+*/=×÷−–—]\s*\d")
+
+
+def _trigger_hit(q, t):
+    """Wave 146: ADVICE triggers match on WORD BOUNDARIES for
+    plain-ASCII triggers. The old bare-substring test let the
+    problem-statement verb "prepared" (inside "a mixture is
+    prepared by mixing...", "the machine prepares...") fire
+    the practice-advice card on real problems (CISCE audit
+    idx 9 and 52). A genuine "How to prepare for maths exam?"
+    still matches — "prepare" stands alone there. A light
+    inflection tolerance (a trailing s/es/d/ed on the last
+    word) keeps the curated singular forms matching natural
+    text — "silly mistake" must still catch "Silly mistakes
+    kaise kam karu?" and "confuse" must catch "confused" —
+    with ONE exception: "prepare" itself, whose inflected
+    forms are exactly the audited hijack. Non-ASCII
+    (Devanagari) triggers keep substring matching, where
+    word boundaries do not apply."""
+    if t.isascii() and re.fullmatch(r"[a-z ]+", t):
+        if re.search(r"\b" + re.escape(t) + r"\b", q):
+            return True
+        if t == "prepare":
+            return False
+        return re.search(
+            r"\b" + re.escape(t) + r"(?:s|es|d|ed)\b",
+            q) is not None
+    return t in q
 
 
 def _has_who_shape(q):
@@ -1652,9 +1684,13 @@ def meta_result(question, flavour=None):
         return None
     maths_ok = _has_maths_signal(q) \
         or not _names_other_subject(q)
+    # Wave 146: a question carrying MCQ options is a problem
+    # to solve, never an advice ask.
+    if sum(q.count(m) for m in ("(a)", "(b)", "(c)", "(d)")) >= 2:
+        maths_ok = False
     if maths_ok:
         for entry in ADVICE:
-            if any(t in q for t in entry["triggers"]):
+            if any(_trigger_hit(q, t) for t in entry["triggers"]):
                 return _result("advice", entry, flavour)
     return None
 
@@ -1679,7 +1715,7 @@ def is_meta_shaped(question):
             or any(_entry_hit(q, e) for e in HISTORY)):
         return True
     if _has_maths_signal(q) and any(
-            w in q for w in _ADVICE_SHAPE_WORDS):
+            _trigger_hit(q, w) for w in _ADVICE_SHAPE_WORDS):
         return True
     return False
 

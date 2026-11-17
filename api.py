@@ -4,7 +4,8 @@ from flask import Blueprint, Response, request, jsonify, \
     session, stream_with_context
 from i18n import (LANG_NAMES, SPEECH_LANGS, advice_for,
                   explanation_for, get_strings, normalise_lang,
-                  result_unsolvable, solve_failed, teach_for)
+                  result_is_plain, result_unsolvable,
+                  solve_failed, teach_for)
 from langdetect_local import detect_detail_request, \
     detect_language_confident, detect_language_request
 from context_ref import build_context_response, make_turn, \
@@ -115,6 +116,26 @@ def _solve_friendly(question, lang=None, student_class=None,
     natural = natural_check_result(question, lang=lang)
     if natural is not None:
         return natural
+    # Wave 147: the kind-tone pre-pass ("pyar se baat"). A
+    # frustrated student's message is cleaned of exactly its
+    # abusive words and the CLEANED text is solved, so the
+    # answer is the polite question's answer, byte for byte,
+    # with the abuse never mentioned; a message that is ONLY
+    # venting earns one short kind line instead of the
+    # not-found line. No abuse/frustration -> prepass returns
+    # None and everything below is exactly the pre-Wave-147
+    # flow. The step checkers above run first on purpose: a
+    # "my solution:" message is checked as working even when
+    # the student is annoyed. (Deploy-28 merge: the pre-pass
+    # sits after BOTH step-check hooks — Wave 85's marker
+    # check and Wave 129's natural check — and before the
+    # negative cache, preserving Wave 147's design intent.)
+    from tone import prepass as _tone_prepass
+    _tone = _tone_prepass(question, lang_request=lang_request)
+    if _tone is not None:
+        if "result" in _tone:
+            return _tone["result"]
+        question = _tone["question"]
     # Wave 107: when the message carried an explicit language
     # request, the negative cache is keyed per request — a
     # fallback outcome's one-line texts are shaped by it, so
@@ -670,6 +691,65 @@ def api_solve():
                 "methods": [],
                 "teach": teach_for(advice_source, lang)
                          if advice_source else [],
+                **fields,
+            })
+
+    # Wave 147: anger about the last answer ("tumne galat
+    # jawab diya", "ye app bekar hai") with a real previous
+    # answer in this chat — never argued with, never scolded:
+    # one short apology line and that same answer served once
+    # more, so the student can point at the step they doubt
+    # (the Wave-96 machinery below then takes over). This
+    # branch only fires when the message carries NO new
+    # question — a fresh question riding along is cleaned of
+    # its frustration and solved normally by the tone
+    # pre-pass inside _solve_friendly. A step-level complaint
+    # ("step 2 galat hai") matches none of the answer-level
+    # phrases and stays with the doubt block. With no real
+    # previous answer there is nothing to re-serve: the
+    # message falls through, and the pre-pass answers pure
+    # venting with its one kind line. (Deploy-28 merge: the
+    # branch sits after the Wave-127 context block and
+    # immediately before the Wave-96 doubt block — the
+    # Wave-129 galti block above has already had its chance
+    # to expire/consume a parked pending on this message,
+    # exactly as its spec requires, and a context reference
+    # is never an anger message, so the two never compete.)
+    from tone import analyse as _tone_analyse, apology_line
+    _tone = _tone_analyse(question)
+    if (_tone["anger"] or _tone["app_directed"]) \
+            and not _tone["has_question"]:
+        _prev_q = session.get("last_question")
+        _prev_r = session.get("last_result")
+        if isinstance(_prev_r, dict) and _prev_r.get("answer") \
+                and not result_is_plain(_prev_r) \
+                and not result_unsolvable(_prev_r):
+            session.pop("doubt_step", None)
+            history = session.get("history", [])
+            history.insert(0, trimmed_history_entry(question,
+                                                    _prev_r))
+            session["history"] = history[:_HISTORY_LIMIT]
+            return jsonify({
+                "ok": True,
+                # Deploy-28 merge: the re-served result carries
+                # the Wave-138 typeset twins on a copy, exactly
+                # like the main/doubt response boundaries — the
+                # session's stored dict stays pristine, and the
+                # response matches what the original solve
+                # returned for this same answer.
+                "result": annotate_result(dict(_prev_r)),
+                "intro": apology_line(question,
+                                      lang_request=lang_request),
+                "explanation": explanation_for(_prev_r, lang),
+                "advice": advice_for(_prev_r, lang),
+                "methods": (methods_nonblocking(_prev_q, _prev_r)
+                            if _prev_q else []),
+                "teach": teach_for(_prev_r, lang),
+                "w122": w122_payload(
+                    _prev_r, lang=lang,
+                    lang_request=lang_request,
+                    question=_prev_q or question,
+                    ask_text=_prev_q or question),
                 **fields,
             })
 

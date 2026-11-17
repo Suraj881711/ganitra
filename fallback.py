@@ -230,7 +230,343 @@ def _is_real(question, result):
         return False
     if _is_soft(result) or _is_junk(question, result):
         return False
-    return bool(_answer_text(result).strip())
+    if not _answer_text(result).strip():
+        return False
+    if _w146_veto(question, result):
+        return False
+    return True
+
+
+# ---------------------------------------------------------------------------
+# Wave 146: ask/result coherence vetoes (from the Wave 135
+# CISCE audit, which hand-checked 189 specimen questions
+# against the official marking schemes and found ~50 served
+# "answers" that were spurious). Each veto is narrow and
+# shape-based: it fires only when the question's ASK and the
+# result's FORM provably disagree — the signature of a schema
+# that solved a different question, or carved a fragment out
+# of this one. A vetoed result is not discarded as "wrong
+# looking"; the fallback chain below gets its honest chances
+# (bank, MCQ stem solve, formats, not-found). A guard that
+# eats a legitimate answer is a regression, so every pattern
+# here is pinned by test_wave146.py, including a
+# false-positive battery.
+# ---------------------------------------------------------------------------
+
+_W146_PROOF_MARKERS = ("lhs", "rhs", "hence proved", "proved",
+                       "verified", "∴", "hence,")
+
+
+def _w146_bare_number(ans):
+    """The float value when `ans` is JUST a number (optional
+    sign, commas, decimal, simple fraction, one trailing unit
+    word), else None."""
+    s = str(ans or "").strip()
+    s = s.split("≈")[0].strip()
+    s = re.sub(r"(?i)^(?:rs\.?|₹)\s*", "", s)
+    s = re.sub(r"(?i)\s*(?:rs\.?|₹|square\s+units?|sq\.?\s*"
+               r"units?|units?|cm\^?2|m\^?2|cm|m|km|hours?|hrs?|"
+               r"minutes?|mins?|seconds?|secs?|days?|years?|"
+               r"months?|students?|marks?|rupees?|paise|"
+               r"litres?|kg|g|%)\s*$", "", s)
+    s = s.replace(",", "").replace("−", "-") \
+        .replace("–", "-").strip()
+    m = re.fullmatch(r"(-?\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)",
+                     s)
+    if m:
+        den = float(m.group(2))
+        return float(m.group(1)) / den if den else None
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", s):
+        return float(s)
+    return None
+
+
+def _w146_has_plausible_options(question):
+    """True when the question carries a PLAUSIBLE MCQ option
+    list: at least 3 parsed options, or exactly 2 whose texts
+    are both short value-like strings (a True/False pair).
+    mcq.extract_mcq also "parses" probability event notation
+    — "P(A) = 0.5, P(B) = 0.4" yields two "options" whose
+    texts are "= 0.5, P" and a whole sentence; those are
+    event NAMES, not options, and a union-probability
+    question must keep its real solver answer (the Wave 58
+    pins). The Wave 146 authority / salvage-yield checks use
+    this test, never the raw extract."""
+    try:
+        from mcq import extract_mcq
+        got = extract_mcq(question)
+    except Exception:
+        got = None
+    if got is None:
+        return False
+    _stem, options = got
+    # Option labels are letters (a-d / A-D). A parse whose
+    # "labels" are digits — "(x - 1) / (x + 2)" read as
+    # options '1' and '2' — is an expression, not an MCQ
+    # (the Wave 55 rational-inequality pin).
+    if not all(str(label).strip().isalpha()
+               for label, _text in options):
+        return False
+    # An option text that starts with "=" is notation
+    # continuing an equation ("P(A) = 0.5"), never an option.
+    if any(str(text).strip().startswith("=")
+           for _label, text in options):
+        return False
+    if len(options) >= 3:
+        return True
+    if len(options) == 2:
+        return all(
+            len(str(text).strip()) <= 12
+            for _label, text in options)
+    return False
+
+
+def _w146_ar_shaped(question):
+    """True for an Assertion–Reason shaped text, including
+    the OCR-degraded shape (plain "Assertion:" / "Reason:"
+    words plus (a)…(d) options) that formats.extract_ar
+    cannot parse."""
+    ql = str(question or "").lower()
+    return "assertion" in ql and "reason" in ql \
+        and "(a)" in ql and "(d)" in ql
+
+
+def _w146_veto(question, result):
+    q = str(question or "")
+    ql = q.lower()
+    ans = _answer_text(result)
+    blob = (ans + " " + " ".join(
+        str(s) for s in (result.get("steps") or []))).lower()
+    num = _w146_bare_number(ans)
+
+    # V0 — absurd magnitude: a bare integer answer of 13+
+    # digits, when every number in the question is small and
+    # the student never wrote a factorial / counting notation
+    # or a counting frame. (The audit's RD question was
+    # answered with a 31-digit "qualifying sum".)
+    if num is not None and float(num).is_integer() \
+            and len(str(abs(int(num)))) >= 13:
+        qnums = [float(v) for v in re.findall(
+            r"\d+(?:\.\d+)?", q.replace(",", ""))]
+        if (not qnums or max(qnums) < 1e6) and not re.search(
+                r"[CP]\s*\(\s*\d+\s*,|\d+\s*[CP]\s*\d+|"
+                r"factorial|\d+\s*!|how\s+many\s+ways|"
+                r"number\s+of\s+ways|arrang|permutation|"
+                r"combination|how\s+many\s+\d+\s*-?\s*digit",
+                ql):
+            return True
+
+    # V1 — proof asks ("prove that / show that") answered
+    # with an assignment chain, a bare matrix or an evaluator
+    # number, with no proof working anywhere in the result.
+    # (A matrix identity "proof" was served X + I; a
+    # continued-proportion proof was served four equation
+    # roots.) Genuine proof results carry LHS/RHS working or
+    # a verified verdict and pass.
+    if re.search(r"\b(?:prove|show)\s+that\b|सिद्ध\s+करो", ql):
+        if not any(mk in blob for mk in _W146_PROOF_MARKERS):
+            a = ans.strip()
+            if re.match(r"^[a-z]\s*=", a) \
+                    or a.startswith("[[") \
+                    or (num is not None
+                        and result.get("op") == "evaluate"):
+                return True
+
+    # V2 — a true/false ask needs a verdict word somewhere in
+    # the result; a bare carved fraction is not a verdict.
+    if re.search(r"\btrue\s+or\s+false\b|\bstate\s+whether\b|"
+                 r"\bis\s+it\s+true\b|सही\s+या\s+गलत", ql):
+        if not any(w in blob for w in (
+                "true", "false", "correct", "incorrect",
+                "सही", "गलत")):
+            return True
+
+    # V3 — a construction-only ask (construct / ruler and
+    # compass, with no computation verb) cannot be answered
+    # by a numeric value. (A "construct a circle of radius
+    # 4.5 cm" ask was served the circle's area, "20.25·pi" —
+    # a numeric-LEADING answer, not a bare number, so the
+    # test is on the answer's first character.)
+    if re.search(r"\bconstruct\b|ruler\s+and\s+compass", ql) \
+            and not re.search(
+                r"\bfind\b|\bcalculate\b|\bdetermine\b|"
+                r"\bmeasure\b|\bwhat\s+is\b|\bvalue\s+of\b",
+                ql) \
+            and re.match(r"^\s*-?\d", ans):
+        return True
+
+    # V4 — "express ... in terms of <var>" wants an
+    # expression, not a bare number (a cylinder case's
+    # "express h in terms of r" was served 539/2, the volume
+    # fraction carved out of the stem); "express ... in the
+    # form R sin(...)" (or cos / tan) wants that function in
+    # the answer.
+    if re.search(r"\bexpress\b[^.]{0,80}\bin\s+terms?\s+of\b",
+                 ql) and num is not None:
+        return True
+    m = re.search(r"\bexpress\b[^.]{0,100}\bin\s+the\s+form\b"
+                  r"[^.]{0,40}?(sin|cos|tan)\b", ql)
+    if m and m.group(1) not in ans.lower():
+        return True
+
+    # V5 — "find the value of <a + b>" cannot be answered by
+    # a single-letter assignment ("b = 0"); "find the value
+    # of <k>" cannot be answered by an expression still
+    # carrying other free variables (an integral ask for k
+    # was served the whole antiderivative in x).
+    m = re.search(r"find\s+the\s+value\s+of\s+"
+                  r"['‘’]?\s*([a-z])\s*['‘’]?\s*(?:\+|plus)\s*"
+                  r"['‘’]?\s*([a-z])\b", ql)
+    if m and re.match(r"^\s*[a-z]\s*=", ans):
+        return True
+    m = re.search(r"(?:find\s+the\s+value\s+of|find)\s+"
+                  r"['‘’]?\s*([a-z])\s*['‘’]?\s*"
+                  r"(?=[\?\.\,\)]|$|\bwhen\b|\bif\b|\bfor\b)",
+                  ql)
+    if m:
+        var = m.group(1)
+        if not re.search(r"\b" + var + r"\s*=", ans):
+            others = set(re.findall(r"[a-z]", ans.lower())) \
+                - {var}
+            if num is None and others:
+                return True
+
+    # V6 — an equation ask ("find the equation of ...") needs
+    # an equation: the answer must contain "=". The second
+    # shape is the case-study part whose final segment IS the
+    # equation ask ("... find the following: Equation of the
+    # elliptical orbit.") — the audit's ellipse case answered
+    # it with the foci distance.
+    if "=" not in ans:
+        if re.search(r"(?:find|determine|what\s+is)\s+"
+                     r"(?:the\s+)?equation\s+of", ql):
+            return True
+        _seg = re.split(r"[.?]\s+", ql)[-1].strip()
+        _tail = _seg.rsplit(":", 1)[-1].strip()
+        if re.match(r"(?:find\s+|determine\s+|what\s+is\s+)?"
+                    r"(?:the\s+)?equation\s+of\b", _seg) \
+                or re.match(
+                    r"(?:find\s+|determine\s+|what\s+is\s+)?"
+                    r"(?:the\s+)?equation\s+of\b", _tail):
+            return True
+
+    # V7 — domain sanity for bare numeric answers: a
+    # probability lives in [0, 1], a correlation coefficient
+    # in [-1, 1], an ellipse eccentricity in [0, 1).
+    if num is not None:
+        if ("probability" in ql or "प्रायिकता" in ql) \
+                and not re.search(
+                    r"\bmean\b|\bexpected\b|\bexpectation\b|"
+                    r"\bvariance\b|standard\s+deviation", ql) \
+                and not (0 <= num <= 1):
+            return True
+        if "correlation" in ql and abs(num) > 1:
+            return True
+        if "eccentricity" in ql and "ellip" in ql \
+                and num >= 1:
+            return True
+
+    # V8 — the given-echo: "x = 8500" served for a question
+    # that GIVES "∑ x = 8500" as data (a regression-estimate
+    # ask). The answer merely restates a given sum.
+    m = re.match(r"^\s*([a-zA-Z])\s*=\s*(-?[\d,]+(?:\.\d+)?)"
+                 r"\s*$", ans)
+    if m:
+        var = m.group(1)
+        val = m.group(2).replace(",", "")
+        if re.search(r"(?:∑|Σ|\bsum\b)[^=]{0,14}?"
+                     + re.escape(var) + r"\s*=\s*"
+                     + re.escape(val) + r"\b", q):
+            return True
+
+    # V9 — the arithmetic evaluator's fragment carve: an
+    # "evaluate" op result for a question whose data is a
+    # grouped table (3+ class intervals — an ogive case was
+    # answered "-10" from the interval "0 − 10") or whose ask
+    # is a derivative / rate of change (answered with an echo
+    # of the given t value).
+    if str(result.get("op") or "") == "evaluate":
+        if len(re.findall(
+                r"\d+(?:\.\d+)?\s*[-–—]\s*\d+(?:\.\d+)?",
+                q)) >= 3 \
+                or re.search(r"\bdy\s*/\s*dx\b|\bderivative\b|"
+                             r"\brate\s+of\s+change\b|"
+                             r"\bdifferentiat", ql) \
+                or re.search(r"geometric\s+progression|"
+                             r"arithmetic\s+progression", ql) \
+                or re.search(
+                    r"\bfind\s+(?:the\s+)?(?:height|radius|"
+                    r"diameter|area|volume|length|width|"
+                    r"breadth|perimeter|circumference|side|"
+                    r"distance|speed|time|cost|price)\b", ql):
+            # A series ask ("Find S1 + S2 + ... + Sn" for n
+            # geometric progressions) answered by evaluating
+            # ONE fraction out of the text is a carve, not a
+            # sum. The same holds for a mensuration find-ask
+            # ("Find the height of the tank" answered with the
+            # stem's volume fraction 539 ÷ 2): the evaluator
+            # has no formula, so its number is a fragment.
+            return True
+
+    # V10 — the support-set mean: for a probability /
+    # distribution question whose random variable takes the
+    # values in a brace set {0, 1, 2, 3}, the plain mean of
+    # the SET (1.5) is not E(X) — E(X) needs the
+    # probabilities. (The router's candidate extraction
+    # synthesised "mean of 0,1,2,3" out of the case and
+    # served it for every part; the true mean was 2.4.)
+    if num is not None:
+        _sup = re.search(r"\{\s*(\d+(?:\s*,\s*\d+)+)\s*\}", q)
+        if _sup and ("probab" in ql or "distribution" in ql
+                     or "random variable" in ql
+                     or "∈" in q
+                     or re.search(r"let\s+x\s+be", ql)):
+            _vals = [float(v) for v in
+                     _sup.group(1).split(",")]
+            if _vals and abs(
+                    num - sum(_vals) / len(_vals)) < 1e-9:
+                return True
+
+    # V11 — triangle medians are not a data median: when the
+    # question is about the medians of a triangle (their
+    # intersection point G), a statistics "median" result is
+    # a hijack of the word (the audit's vectors case was
+    # answered "Median = 1" from the point (0, 1, 2)). The
+    # router's candidate text may lose the triangle context,
+    # so the check sits here, on the original question.
+    if str(result.get("op") or "") == "median" and re.search(
+            r"medians?\s+of\s+(?:the\s+)?(?:triangle|∆|Δ)|"
+            r"intersection\s+of\s+the\s+medians", ql):
+        return True
+
+    # V12 — coordinates are a PAIR, never a bare number:
+    # "find the coordinates of B and C" (turning points of
+    # a cubic) was answered "0" — a derivative value carved
+    # out of the working. Judged on the FINAL ask segment
+    # only, and exempt for single-axis asks ("y-coordinate
+    # of B" — that answer IS a bare number) and for
+    # distance/length asks that merely mention coordinates.
+    _seg = re.split(r"[.?]\s+", ql)[-1]
+    if num is not None and re.search(
+            r"coordinates?\s+of", _seg) and not re.search(
+            r"\b[xy]\s*-?\s*coordinates?\s+of|"
+            r"distance|length|area|perimeter", _seg):
+        return True
+
+    # V8b — the given-value echo for derived-quantity asks:
+    # "Find the marginal revenue when x = 5" answered with
+    # "x = 5" — the answer restates the GIVEN evaluation
+    # point instead of computing the derived quantity.
+    m = re.match(r"^\s*([a-z])\s*=\s*(-?[\d]+(?:\.\d+)?)\s*$",
+                 ans)
+    if m and re.search(
+            r"\b(?:when|at)\s+" + re.escape(m.group(1))
+            + r"\s*=\s*" + re.escape(m.group(2)) + r"\b", ql) \
+            and re.search(
+                r"marginal|derivative|dy\s*/\s*dx|"
+                r"rate\s+of|differentiat|gradient", ql):
+        return True
+    return False
 
 
 def _with_figure(question, result):
@@ -418,6 +754,21 @@ def _is_nonmaths(question):
                 "अंतर", "त्रिज्या", "आयतन", "क्षेत्रफल",
                 "परिधि", "दूरी", "ऊँचाई", "अनुपात",
                 "संभावना", "औसत", "ब्याज", "चाल")):
+        return False
+    # Wave 146: arranging the LETTERS OF A WORD is maths even
+    # when the word itself is a non-maths keyword — "The
+    # letters of the word 'CRICKET' are written in all
+    # possible orders" and "the rank of the word CRICKET in a
+    # dictionary" are permutation questions, and both were
+    # refused as non-maths in the CISCE audit. The exemption
+    # needs the arrangement frame, so "who won the cricket
+    # match" stays non-maths.
+    if "letters of the word" in q or "letters in the word" in q \
+            or "शब्द के अक्षर" in q \
+            or re.search(r"(?:rank|dictionary)\s+of\s+the\s+word",
+                         q) \
+            or re.search(r"\bword\b[^.]{0,30}\b(?:arrang\w*|"
+                         r"permut\w*|dictionary|rank)\b", q):
         return False
     return any(kw in q for kw in _NONMATHS_KEYWORDS)
 
@@ -1569,6 +1920,50 @@ def _with_fallback_chain(question, result, lang=None,
             upgraded = None
         if upgraded is not None:
             return _with_figure(question, upgraded)
+        # Wave 142: the hijacked Class 12 book-gap asks —
+        # a partially parsed inverse-trig sum served as
+        # one term's value ("sec^-1(2/sqrt(3))" came back
+        # pi/3, the "2" alone), a scalar triple product
+        # served as "b = 2", a triangle area served as a
+        # decimal approximation of the wrong vectors.
+        # Those results are "real" answers to different
+        # (partially parsed) questions, so the router's
+        # failure gate can never see them.
+        # c12gaps142_upgrade fires only when a strict
+        # Wave 142 schema settles the question completely
+        # AND the served answer verifiably differs (numeric
+        # value mismatch, or a yes/no verdict flip),
+        # leaving every other real answer untouched.
+        try:
+            from solver.c12gaps142 import c12gaps142_upgrade
+            upgraded = c12gaps142_upgrade(question, result)
+        except Exception:
+            upgraded = None
+        if upgraded is not None:
+            return _with_figure(question, upgraded)
+        # Wave 143: an explicit graph-METHOD ask ("by
+        # graphical method", "graph se hal karo") whose
+        # pair the solver answered algebraically, or a
+        # zeros ask it answered without the graph. The
+        # student asked for the graph way, so when the
+        # graphical answer AGREES with the standing one —
+        # the plotted intersection, computed independently
+        # from the drawn lines' own points, equals the
+        # standing (x, y); the standing answer names
+        # exactly the graph's zeros — the graphical answer
+        # stands instead: both lines drawn, the solution
+        # read off the crossing point. On any disagreement
+        # graphsolve_upgrade returns None and the standing
+        # algebraic answer is served untouched, WITHOUT
+        # the graph claim.
+        try:
+            from graphsolve import graphsolve_upgrade
+            upgraded = graphsolve_upgrade(question, result,
+                                          hindi)
+        except Exception:
+            upgraded = None
+        if upgraded is not None:
+            return upgraded
         # Wave 125: the hijacked solver-depth asks — the
         # Hindi-equation path's "z = 3" for an LPP ask, the
         # unconditional dice/card probability served for a
@@ -1604,7 +1999,45 @@ def _with_fallback_chain(question, result, lang=None,
             upgraded = None
         if upgraded is not None:
             return upgraded
-        return _with_figure(question, result)
+        # Wave 146: MCQ / Assertion–Reason AUTHORITY. When
+        # the question carries options (or is an
+        # assertion–reason item) and NONE of the authority
+        # layers above could certify the whole-text result —
+        # no multipart split, no verified proof, no exact
+        # one-option match (mcq_preferred), no format part —
+        # the raw whole-text result is NOT served: for an MCQ
+        # the option numbers pollute the full-text parse, and
+        # mcq_wrap can even certify a garbage value that
+        # happens to coincide with a distractor (the CISCE
+        # audit served "(b) 0" for a derivative MCQ whose
+        # whole-text "solve" was C(2, 7) = 0 from the stem's
+        # own numbers). Fall through to the lower chain: the
+        # bank, the MCQ STEM solve (mcq_result), the formats
+        # layer, or the honest not-found. An option is never
+        # echoed and never guessed.
+        _w146_options_bearing = _w146_has_plausible_options(
+            question)
+        if not _w146_options_bearing:
+            try:
+                from formats import extract_ar
+                _w146_options_bearing = \
+                    extract_ar(question) is not None
+            except Exception:
+                _w146_options_bearing = False
+        if not _w146_options_bearing \
+                and _w146_ar_shaped(question):
+            # Wave 146: OCR'd papers often lose the "(A)"
+            # markers formats.extract_ar expects — the words
+            # "Assertion:" / "Reason:" arrive plain, with
+            # (a)-(d) options. The shape alone is enough to
+            # withhold the raw whole-text result (the audit's
+            # A–R item was served "x = 2", carved out of the
+            # Reason's identity).
+            _w146_options_bearing = True
+        if not _w146_options_bearing:
+            return _with_figure(question, result)
+        # else: fall out of the _is_real branch — the layers
+        # below decide.
 
     # Wave 20, Layer 0c: a SCIENCE question the solver could not
     # really answer gets the honest maths-only reply + formula
@@ -1747,6 +2180,38 @@ def _with_fallback_chain(question, result, lang=None,
     if formatted is not None:
         return formatted
 
+    # Wave 143: the graph-METHOD layer (graphsolve.py).
+    # Suraj's standing rule — a graph-type question is
+    # solved USING the graph, not merely pictured. Three
+    # shapes the layers above miss: a linear pair solved
+    # by its graph (the parallel / coincident phrasings
+    # and "draw the graph and find the solution" end at
+    # not-found today; the unique-solution phrasings are
+    # repaired in the real branch above), the zeros of a
+    # polynomial read off its graph's x-intercepts ("kitne
+    # zero hai graph se" ends at a salvage fragment
+    # today), and chart-reading asks whose data is stated
+    # in the question — the chart drawn AND the
+    # sub-question (sabse zyada / antar / kul) answered
+    # from it, where Wave 128 deliberately only drew or
+    # refused. It sits here — before the Wave 128 graph
+    # layer, whose pure-ask gate vetoes these solve-verb
+    # shapes — under its own strict gates: an explicit
+    # graph-method / zeros / chart-reading trigger, a
+    # full parse, and an exact cross-check of every
+    # read-off (plotted intersection vs algebraic
+    # solution; sp.solve vs sp.real_roots; chart values
+    # from the validated parse). It returns None on any
+    # doubt, so the layers below run byte-for-byte as
+    # before.
+    try:
+        from graphsolve import graphsolve_result
+        gsolved = graphsolve_result(question, hindi)
+    except Exception:
+        gsolved = None
+    if gsolved is not None:
+        return gsolved
+
     # Wave 128: the graph layer (graphs.py). A graph /
     # plot / number-line / chart request the solver could
     # not answer at all ("draw the graph of y = x^2" ended
@@ -1771,7 +2236,41 @@ def _with_fallback_chain(question, result, lang=None,
         return graphed
 
     # The solver did not really answer. Work the layers.
-    salvaged = _salvage(question, hindi)
+    # Wave 146: salvage YIELDS to options-bearing questions,
+    # for the same reason the concept layers yield below
+    # (Wave 100): salvage carves a solvable fragment out of
+    # the text, and in an MCQ the most carve-able fragments
+    # are the OPTIONS themselves — the CISCE audit's
+    # sum-of-squares MCQ was "salvaged" into the mean of its
+    # own option values (298). An MCQ no solving layer could
+    # settle ends at the honest not-found, never at a carved
+    # fragment of its options.
+    _w146_is_mcq_text = _w146_has_plausible_options(question)
+    if not _w146_is_mcq_text and _w146_ar_shaped(question):
+        _w146_is_mcq_text = True
+    # Wave 146: salvage also yields to PROOF asks — "solving
+    # the maths part" of a proof means solving the identity
+    # as an equation and serving its roots, which is the
+    # audit's spurious pattern verbatim (a continued-
+    # proportion proof was salvaged into four equation
+    # roots). The proofs layer below gets the ask instead.
+    _w146_is_proof_ask = bool(re.search(
+        r"\b(?:prove|show)\s+that\b|सिद्ध\s+करो",
+        str(question or "").lower()))
+    # Wave 146: salvage also yields when the Wave 146 veto
+    # layer rejected the solver's whole-text result for this
+    # question — carving a fragment out of the same text
+    # reproduces the same incoherence (the "find the value
+    # of a + b" ask was salvaged into solving "+ b = 0").
+    _w146_vetoed = False
+    try:
+        _w146_vetoed = _w146_veto(question, result)
+    except Exception:
+        _w146_vetoed = False
+    salvaged = None
+    if not _w146_is_mcq_text and not _w146_is_proof_ask \
+            and not _w146_vetoed:
+        salvaged = _salvage(question, hindi)
     if salvaged is not None:
         return salvaged
 
@@ -1803,6 +2302,10 @@ def _with_fallback_chain(question, result, lang=None,
         options_bearing = extract_mcq(question) is not None
     except Exception:
         options_bearing = False
+    if not options_bearing and _w146_ar_shaped(question):
+        # Wave 146: an Assertion–Reason item is a problem to
+        # decide, not a concept to teach, either.
+        options_bearing = True
     concept = None
     if not options_bearing:
         try:
