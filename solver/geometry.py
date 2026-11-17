@@ -2294,6 +2294,35 @@ def _wave65_geometry(q):
     return None
 
 
+def _wave140_with_unit(question, op, answer):
+    """Wave 140: mensuration answers dropped the question's
+    unit — "bhuja 5 cm, kshetrafal?" was answered "25"
+    instead of "25 cm²", and cube volumes likewise lost
+    their cm³. When the op is an area (incl. surface areas)
+    or a volume and the question itself carries a length
+    unit, the final answer carries the matching square /
+    cube unit. No unit in the question -> answer untouched;
+    an answer already carrying a unit is left alone."""
+    opl = str(op or "").lower()
+    if "volume" in opl:
+        power = "³"
+    elif "area" in opl or opl.endswith(("tsa", "csa")):
+        power = "²"
+    else:
+        return answer
+    a = str(answer)
+    if power in a or "units" in a:
+        return answer
+    m = re.search(r"\d+(?:\.\d+)?\s*(cm|mm|km|m)\b",
+                  str(question).lower())
+    if not m:
+        return answer
+    unit = m.group(1)
+    if re.search(r"\b" + unit + r"\b", a):
+        return answer
+    return f"{a} {unit}{power}"
+
+
 def solve_geometry(question: str):
     q = question.lower()
     # Wave 57 (merge-3): Devanagari mensuration first, as in
@@ -2329,4 +2358,5 @@ def solve_geometry(question: str):
             "steps": [],
         }
     op, answer, steps = out
+    answer = _wave140_with_unit(question, op, answer)
     return {"type": "geometry", "op": op, "answer": answer, "steps": steps}

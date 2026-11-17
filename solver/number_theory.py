@@ -1,5 +1,6 @@
 """Number theory: primes, prime factorisation, GCD/HCF, LCM, modulo."""
 import re
+from math import isqrt
 
 from sympy import factorint, isprime
 
@@ -20,8 +21,138 @@ def _all_ints(text: str):
     return [int(v) for v in re.findall(r"\d+", text)]
 
 
+def _icbrt140(a: int) -> int:
+    """Exact integer cube root (floor) of a non-negative int."""
+    if a <= 0:
+        return 0
+    r = round(a ** (1 / 3))
+    while r * r * r > a:
+        r -= 1
+    while (r + 1) ** 3 <= a:
+        r += 1
+    return r
+
+
+def _perfect_power_check140(question, q):
+    """Wave 140: "1024 perfect square hai ya nahi?" — a
+    haan-nahi ask no solver owned, so it fell to the plain
+    parser (error) and then to the slow AI fallback (~30 s
+    on the live check). Deterministic yes/no with the root
+    shown; non-powers get the two neighbouring powers in one
+    line. Fires ONLY on a yes/no-shaped ask, so word problems
+    that merely mention a perfect square ("smallest number
+    to multiply ... to make a perfect square") never land
+    here. Wording follows the question's language: English,
+    Hinglish (Roman) or Hindi (Devanagari)."""
+    if re.search(r"perfect\s+square|purna\s+varg|पूर्ण\s*वर्ग",
+                 q):
+        kind = 2
+    elif re.search(r"perfect\s+cube|purna\s+ghan|पूर्ण\s*घन",
+                   q):
+        kind = 3
+    else:
+        return None
+    yn = (re.search(r"hai\s+ya\s+nahi|ya\s+nahi|or\s+not\b", q)
+          or re.search(r"\bkya\b|क्या", q)
+          or re.search(r"\bis\s+-?\d+\s+an?\s+perfect", q)
+          or re.search(r"(?:hai|है)\s*\??\s*$", q)
+          or ("?" in q and re.search(r"\bis\b[^?]*\bperfect\b",
+                                     q)))
+    if not yn:
+        return None
+    mnum = re.search(r"-?\d+", question)
+    if not mnum:
+        return None
+    n = int(mnum.group(0))
+    hindi = bool(re.search(r"[ऀ-ॿ]", question))
+    hinglish = (not hindi) and bool(re.search(
+        r"\b(hai|nahi|kya|purna|varg|ghan)\b", q))
+    op = "perfect_square_check" if kind == 2 \
+        else "perfect_cube_check"
+    sup = "²" if kind == 2 else "³"
+    if kind == 2:
+        # lo = floor root of |n|; a negative is never a square.
+        lo = isqrt(abs(n))
+        yes = n >= 0 and lo * lo == n
+        r = lo
+    else:
+        lo = _icbrt140(abs(n))
+        yes = lo ** 3 == abs(n)
+        r = -lo if n < 0 else lo
+    if yes:
+        fac = " × ".join([str(r)] * kind)
+        if hindi:
+            naam = "पूर्ण वर्ग" if kind == 2 else "पूर्ण घन"
+            return {"type": "number_theory", "op": op,
+                    "answer": f"हाँ — {n} = {r}{sup}",
+                    "steps": [f"{fac} = {n}",
+                              f"इसलिए {n} एक {naam} है।"]}
+        if hinglish:
+            return {"type": "number_theory", "op": op,
+                    "answer": f"Haan — {n} = {r}{sup}",
+                    "steps": [f"{fac} = {n}",
+                              f"Isliye {n} ek perfect "
+                              f"{'square' if kind == 2 else 'cube'} "
+                              f"hai."]}
+        return {"type": "number_theory", "op": op,
+                "answer": f"Yes — {n} = {r}{sup}",
+                "steps": [f"{fac} = {n}",
+                          f"So {n} is a perfect "
+                          f"{'square' if kind == 2 else 'cube'}."]}
+    # Not a perfect power: one line of nearest-power reasoning
+    # on |n| (for a negative cube, |n| between two cubes is
+    # exactly why n is not one either).
+    shown = abs(n)
+    if hindi:
+        naam = "पूर्ण वर्ग" if kind == 2 else "पूर्ण घन"
+        if kind == 2 and n < 0:
+            step = ("ऋणात्मक संख्या किसी भी पूर्ण संख्या का "
+                    "वर्ग नहीं होती।")
+        else:
+            step = (f"{lo}{sup} = {lo ** kind} और "
+                    f"{lo + 1}{sup} = {(lo + 1) ** kind} — "
+                    f"{shown} इनके बीच है, इसलिए किसी पूर्ण "
+                    f"संख्या का "
+                    f"{'वर्ग' if kind == 2 else 'घन'} नहीं है।")
+        return {"type": "number_theory", "op": op,
+                "answer": f"नहीं — {n} {naam} नहीं है",
+                "steps": [step]}
+    if hinglish:
+        naam = "perfect square" if kind == 2 else "perfect cube"
+        if kind == 2 and n < 0:
+            step = ("Negative sankhya kisi bhi poori sankhya "
+                    "ka varg nahi hoti.")
+        else:
+            step = (f"{lo}{sup} = {lo ** kind} aur "
+                    f"{lo + 1}{sup} = {(lo + 1) ** kind} — "
+                    f"{shown} inke beech hai, isliye kisi bhi "
+                    f"poori sankhya ka "
+                    f"{'varg' if kind == 2 else 'ghan'} nahi hai.")
+        return {"type": "number_theory", "op": op,
+                "answer": f"Nahi — {n} {naam} nahi hai",
+                "steps": [step]}
+    naam = "perfect square" if kind == 2 else "perfect cube"
+    if kind == 2 and n < 0:
+        step = ("A negative number is not the square of any "
+                "whole number.")
+    else:
+        step = (f"{lo}{sup} = {lo ** kind} and "
+                f"{lo + 1}{sup} = {(lo + 1) ** kind} — {shown} "
+                f"lies between them, so it is not the "
+                f"{'square' if kind == 2 else 'cube'} of any "
+                f"whole number.")
+    return {"type": "number_theory", "op": op,
+            "answer": f"No — {n} is not a {naam}",
+            "steps": [step]}
+
+
 def solve_number_theory(question: str):
     q = question.lower()
+
+    # Wave 140: perfect square / cube haan-nahi asks.
+    _pc140 = _perfect_power_check140(question, q)
+    if _pc140 is not None:
+        return _pc140
 
     # Wave 47: "How many factors does 36 have?" — the count
     # of divisors, tau(n) = product of (exponent + 1) over

@@ -60,6 +60,20 @@ def clean_text(text: str) -> str:
                r"÷(\1/\2)", t)
     t = re.sub(r"\s/\s+(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)",
                r" / (\1/\2)", t)
+    # Wave 140: "√" must become a FUNCTION CALL, not the bare
+    # word "sqrt" — the old chain replace turned "√144" into
+    # "sqrt144", which SymPy tokenised letter by letter and
+    # SERVED as "144*q*r*s*t". Wrap the radicand instead: a
+    # bracketed group, a number (decimals included) or a
+    # letter token. Two passes so a nested "√√16" resolves
+    # inside-out (the sqrt(...) produced by the first pass is
+    # a valid radicand for the second). Mirrors the correct
+    # handling solver/calculus.py already had.
+    for _ in range(2):
+        t = re.sub(r"√\s*(sqrt\([^()]*\))", r"sqrt(\1)", t)
+        t = re.sub(r"√\s*\(([^()]*)\)", r"sqrt(\1)", t)
+        t = re.sub(r"√\s*(\d+(?:\.\d+)?)", r"sqrt(\1)", t)
+        t = re.sub(r"√\s*((?!sqrt\b)[A-Za-z]+)", r"sqrt(\1)", t)
     t = (
         t.replace("×", "*")
         .replace("÷", "/")

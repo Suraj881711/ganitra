@@ -604,6 +604,39 @@ def _strip_hinglish_filler(question):
     return cleaned
 
 
+# Wave 140: the operand of a square/cube ask can be a whole
+# fraction or a bracketed fraction, not just a lone number.
+# "(3/4) ka square batao" matched NO handler (the bracket
+# broke the plain-number capture) and fell to the plain
+# parser, which served 3/4 with the square silently dropped;
+# "3/4 ka varg" captured only the denominator 4 and served
+# 16. The alternation order matters: bracketed fraction,
+# then bare fraction, then the plain number.
+_OPERAND140 = (r"(?:\(\s*-?\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?\s*\)"
+               r"|-?\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?"
+               r"|-?\d+(?:\.\d+)?)")
+
+
+def _operand140_value(text):
+    """Captured operand text -> exact Fraction."""
+    from fractions import Fraction
+    t = str(text).strip().strip("()").replace(" ", "")
+    if "/" in t:
+        a, b = t.split("/", 1)
+        return Fraction(a) / Fraction(b)
+    return Fraction(t)
+
+
+def _operand140_fmt(n, raw):
+    """Display a value in the student's own form: a decimal
+    operand ("0.5") gets a decimal result ("0.25"); anything
+    else takes the usual fmt_num fraction/integer form."""
+    if "." in str(raw) and "/" not in str(raw):
+        f = float(n)
+        return str(int(f)) if f == int(f) else repr(f)
+    return fmt_num(n)
+
+
 def _square_cube_word(question):
     """Wave 58: "Find the square of 15", "What is 9 cubed?",
     "25 ka cube kitna hota hai?" — none had a pattern, so
@@ -612,38 +645,43 @@ def _square_cube_word(question):
     "of" directly, which is exactly what keeps "square ROOT
     of 144" and "area of a square of side 15" out of this
     branch.
+
+    Wave 140: the operand grammar is _OPERAND140 (fraction /
+    bracketed operands included), and a decimal operand is
+    answered in decimals ("0.5 ka square" -> 0.25).
     """
-    from fractions import Fraction
     q = question.lower()
-    N = r"(-?\d+(?:\.\d+)?)"
+    OP = "(" + _OPERAND140 + ")"
     power, m = None, None
     for pat, p in (
-            (r"square\s+of\s+" + N, 2),
-            (r"cube\s+of\s+" + N, 3),
-            (N + r"\s+squared\b", 2),
-            (N + r"\s+cubed\b", 3),
-            (N + r"\s+ka\s+square\b(?!\s*root)", 2),
-            (N + r"\s+ka\s+cube\b(?!\s*root)", 3)):
+            (r"square\s+of\s+" + OP, 2),
+            (r"cube\s+of\s+" + OP, 3),
+            (OP + r"\s+squared\b", 2),
+            (OP + r"\s+cubed\b", 3),
+            (OP + r"\s+ka\s+square\b(?!\s*root)", 2),
+            (OP + r"\s+ka\s+cube\b(?!\s*root)", 3)):
         m = re.search(pat, q)
         if m:
             power = p
             break
     if m is None:
         return None
+    raw = m.group(1)
     try:
-        n = Fraction(m.group(1))
+        n = _operand140_value(raw)
     except Exception:
         return None
     v = n ** power
     word = "Square" if power == 2 else "Cube"
-    factors = " × ".join(fmt_num(n) for _ in range(power))
-    steps = [f"{word} of {fmt_num(n)} = {factors} "
-             f"= {fmt_num(v)}"]
+    factors = " × ".join(_operand140_fmt(n, raw)
+                         for _ in range(power))
+    steps = [f"{word} of {_operand140_fmt(n, raw)} = {factors} "
+             f"= {_operand140_fmt(v, raw)}"]
     out = {"type": "arithmetic",
            "op": "square_of" if power == 2 else "cube_of",
-           "answer": fmt_num(v), "numeric": float(v),
+           "answer": _operand140_fmt(v, raw), "numeric": float(v),
            "steps": steps}
-    if v.denominator != 1:
+    if v.denominator != 1 and not ("." in raw and "/" not in raw):
         out["fraction"] = f"{v.numerator}/{v.denominator}"
     return out
 
@@ -700,10 +738,28 @@ def _wave73_word_arithmetic(question):
                    f"= {fmt_num(2 * a)}")
     # A ka varg (square) / A ka ghan (cube) — Hindi siblings
     # of _square_cube_word's "ka square / ka cube".
-    m = re.search(N + r"\s+ka\s+(varg|ghan)\b", q)
+    # Wave 140: A takes the shared _OPERAND140 grammar —
+    # "3/4 ka varg" used to capture only the denominator 4
+    # and serve 16.
+    m = re.search("(" + _OPERAND140 + r")\s+ka\s+(varg|ghan)\b",
+                  q)
     if m:
-        a = Fraction(m.group(1))
+        raw = m.group(1)
+        a = _operand140_value(raw)
         power = 2 if m.group(2) == "varg" else 3
+        wname = "varg" if power == 2 else "ghan"
+        if "." in raw and "/" not in raw:
+            # Decimal operand: answer in decimals, like
+            # _square_cube_word ("0.5 ka varg" -> 0.25).
+            d = _operand140_fmt
+            factors = " × ".join(d(a, raw) for _ in range(power))
+            return {"type": "arithmetic",
+                    "op": "square_of" if power == 2 else "cube_of",
+                    "expression": f"{d(a, raw)}^{power}",
+                    "answer": d(a ** power, raw),
+                    "numeric": float(a ** power),
+                    "steps": [f"{d(a, raw)} ka {wname} = "
+                              f"{factors} = {d(a ** power, raw)}"]}
         factors = " × ".join(fmt_num(a) for _ in range(power))
         return _mk("square_of" if power == 2 else "cube_of",
                    f"{fmt_num(a)}^{power}", a ** power,

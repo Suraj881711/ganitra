@@ -178,7 +178,48 @@ def _ode_order_degree_result(q):
 
 
 def _guess_symbol(expr):
-    return next(iter(expr.free_symbols), _x)
+    # Wave 125: deterministic. This used to be
+    # next(iter(expr.free_symbols)) — a SET iteration, whose
+    # order follows the symbols' hashes (which embed the
+    # name string's hash, randomised per process). For a
+    # one-symbol expression the pick was stable, but for a
+    # multi-letter product (a prose sentence the parser had
+    # letter-split into a·c·d·e·…) the "variable" changed
+    # from run to run, so the same question answered 0 in
+    # one process and letter-soup in the next (the Band C
+    # routing-battery flake). Sort instead, preferring x —
+    # the school-default variable — so the pick is a pure
+    # function of the expression.
+    try:
+        syms = sorted(expr.free_symbols,
+                      key=lambda s: (str(s) != "x", str(s)))
+    except Exception:
+        return _x
+    return syms[0] if syms else _x
+
+
+# Wave 125: prose guard for the command branches below.
+# After "derivative of" / "integrate" is stripped, what
+# remains must be a maths expression. A how-to question
+# ("second derivative kaise nikalte hai kisi function ka")
+# leaves a whole natural-language sentence there, and
+# parse_expression's implicit multiplication letter-splits
+# it into a product of one-letter symbols whose
+# "derivative" is meaningless (and, pre-fix, nondetermin-
+# istic). A genuine expression's only multi-letter words
+# are function names / constants, so any other word of 2+
+# letters marks the text as prose: decline (op "unknown")
+# and let the concept layer answer the how-to question.
+_EXPR_WORDS_OK = frozenset(
+    "sin cos tan cot sec csc asin acos atan sinh cosh tanh "
+    "log ln exp sqrt abs theta pi".split())
+
+
+def _is_prose_expr(text):
+    for w in re.findall(r"[A-Za-z]{2,}", str(text or "")):
+        if w.lower() not in _EXPR_WORDS_OK:
+            return True
+    return False
 
 
 def _poly_terms(expr, var):
@@ -1787,6 +1828,9 @@ def solve_calculus(question: str):
             expr_text, varname = m.group(1), m.group(2)
         else:
             varname, expr_text = m.group(1), m.group(2)
+        if _is_prose_expr(expr_text):
+            return {"type": "calculus", "op": "unknown",
+                    "answer": "", "steps": []}
         expr = parse_expression(expr_text)
         var = symbols(varname)
         result = diff(expr, var)
@@ -1806,6 +1850,9 @@ def solve_calculus(question: str):
     # d/dx style derivative
     m = re.search(r"d\s*/\s*d([a-zA-Z])\s+(?:of\s+)?(.+)$", q)
     if m:
+        if _is_prose_expr(m.group(2)):
+            return {"type": "calculus", "op": "unknown",
+                    "answer": "", "steps": []}
         var = symbols(m.group(1))
         expr = parse_expression(m.group(2))
         _dres = _textbook_trig(diff(expr, var))
@@ -1874,6 +1921,16 @@ def solve_calculus(question: str):
                     return expr.subs(_es[0], sp.E)
             return expr
 
+        # Wave 125: prose guard (see _is_prose_expr) — what
+        # is about to be parsed must be an expression, not
+        # the sentence of a how-to question.
+        _m2w125 = re.search(
+            r"(.+?)\s+with\s+respect\s+to\s+([a-zA-Z])",
+            text, re.I)
+        if _is_prose_expr(_m2w125.group(1) if _m2w125
+                          else text):
+            return {"type": "calculus", "op": "unknown",
+                    "answer": "", "steps": []}
         m2 = re.search(r"(.+?)\s+with\s+respect\s+to\s+([a-zA-Z])", text, re.I)
         if m2:
             expr = _euler(parse_expression(m2.group(1)), text)
@@ -1944,6 +2001,12 @@ def solve_calculus(question: str):
                 bound_b = mb.group(1)
         if bound_b:
             bound_b = bound_b.strip().rstrip(".")
+        # Wave 125: prose guard, same as the derivative
+        # branch — "integration kaise karte hain…" leaves a
+        # sentence here, not an integrand.
+        if _is_prose_expr(expr_text):
+            return {"type": "calculus", "op": "unknown",
+                    "answer": "", "steps": []}
         expr = parse_expression(expr_text)
         # Wave 52: the Wave 47 Euler swap, mirrored for
         # integrals — it was applied to the derivative paths

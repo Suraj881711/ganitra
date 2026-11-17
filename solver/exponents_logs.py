@@ -8,6 +8,14 @@ from .expression_parser import fmt, fmt_num, parse_expression
 x = sp.symbols("x")
 
 
+def _ordinal140(n: int) -> str:
+    """Wave 140: proper English ordinal ("4th", "21st",
+    "23rd") for the nth-root working line."""
+    if 10 <= n % 100 <= 20:
+        return f"{n}th"
+    return f"{n}" + {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+
+
 def solve_exponents_logs(question: str):
     q = question.strip()
     qlow = q.lower()
@@ -117,6 +125,23 @@ def solve_exponents_logs(question: str):
         _res = sp.nsimplify(sp.real_root(
             sp.Rational(_vroot).limit_denominator(), _nroot))
         _exact = _res.is_Integer or _res.is_Rational
+        # Wave 140: the working line read "The 2th root of
+        # 729.0 is the number whose 2th power is 729.0" —
+        # square/cube roots have proper names, other roots
+        # take a proper ordinal, and a whole-number radicand
+        # is shown without the ".0".
+        _vtxt = str(int(_vroot)) if float(_vroot).is_integer() \
+            else fmt(_vroot)
+        if _nroot == 2:
+            _w140 = (f"The square root of {_vtxt} is the "
+                     f"number whose square is {_vtxt}.")
+        elif _nroot == 3:
+            _w140 = (f"The cube root of {_vtxt} is the "
+                     f"number whose cube is {_vtxt}.")
+        else:
+            _o140 = _ordinal140(_nroot)
+            _w140 = (f"The {_o140} root of {_vtxt} is the "
+                     f"number whose {_o140} power is {_vtxt}.")
         return {
             "type": "exponents_logs",
             "op": "nth_root",
@@ -124,9 +149,7 @@ def solve_exponents_logs(question: str):
                       fmt(float(_res)),
             "value": float(_res),
             "steps": [
-                f"The {_nroot}th root of {fmt(_vroot)} is the "
-                f"number whose {_nroot}th power is "
-                f"{fmt(_vroot)}.",
+                _w140,
                 f"Answer = {fmt(_res) if _exact else fmt(float(_res))}",
             ],
         }

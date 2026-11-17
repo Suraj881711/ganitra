@@ -4330,6 +4330,30 @@ def _hindi_schemas(q):
 _PCT56 = r"(?:percent|pratishat|parcent|parsant|feesadi|%)"
 _RUP56 = r"(?:rupay|rupaye|rupya|rs\.?|₹)"
 
+# Wave 140: the operand of the "ka square / ka cube / ka
+# square root" schemas can be a whole fraction or a bracketed
+# fraction — the plain _NUM capture squared only the
+# denominator of "3/4 ka square" (or missed "(3/4)" entirely
+# behind its bracket). Same grammar as solver/arithmetic.py's
+# _OPERAND140.
+_OP140H = (r"(?:\(\s*\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?\s*\)"
+           r"|\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?|" + _NUM + r")")
+
+
+def _op140h_disp(text):
+    """Captured operand text, brackets/spaces stripped."""
+    return str(text).strip().strip("()").replace(" ", "")
+
+
+def _op140h_fraction(text):
+    """Captured operand text -> exact Fraction."""
+    from fractions import Fraction
+    t = _op140h_disp(text)
+    if "/" in t:
+        a, b = t.split("/", 1)
+        return Fraction(a) / Fraction(b)
+    return Fraction(t)
+
 
 def _hinglish_schemas(q):
     """Wave 56: Roman-Hindi (Hinglish) word schemas.
@@ -4347,18 +4371,32 @@ def _hinglish_schemas(q):
             return _we
     # --- "144 ka square root batao" / "25 ka cube kitna
     # hota hai" / "16 ka square batao"
-    m = re.search(r"(" + _NUM + r")\s+ka\s+(?:square\s*root|"
+    # Wave 140: operands take _OP140H (fractions included).
+    m = re.search(r"(" + _OP140H + r")\s+ka\s+(?:square\s*root|"
                   r"vargmool|sqrt)", q)
     if m:
         from .expression_parser import fmt as _fmt56h
-        v = sp.sqrt(sp.Rational(m.group(1)))
+        _disp = _op140h_disp(m.group(1))
+        v = sp.sqrt(sp.Rational(_disp))
         return {"type": "applied", "op": "hinglish_root",
                 "answer": _fmt56h(v),
-                "steps": [f"sqrt({fmt_num(_num(m.group(1)))}) "
+                "steps": [f"sqrt({_disp}) "
                           f"= {_fmt56h(v)}"],
                 "value": float(v)}
-    m = re.search(r"(" + _NUM + r")\s+ka\s+cube\b", q)
+    m = re.search(r"(" + _OP140H + r")\s+ka\s+cube\b", q)
     if m:
+        _disp = _op140h_disp(m.group(1))
+        if "/" in _disp:
+            _fr = _op140h_fraction(m.group(1))
+            _v = _fr ** 3
+            return {"type": "applied", "op": "hinglish_power",
+                    "answer": fmt_num(_v),
+                    "steps": [f"{fmt_num(_fr)} ka cube "
+                              f"= {fmt_num(_fr)} × "
+                              f"{fmt_num(_fr)} × "
+                              f"{fmt_num(_fr)} = "
+                              f"{fmt_num(_v)}"],
+                    "value": float(_v)}
         v = _num(m.group(1)) ** 3
         return {"type": "applied", "op": "hinglish_power",
                 "answer": fmt_num(v),
@@ -4368,9 +4406,18 @@ def _hinglish_schemas(q):
                           f"{fmt_num(_num(m.group(1)))} = "
                           f"{fmt_num(v)}"],
                 "value": v}
-    m = re.search(r"(" + _NUM + r")\s+ka\s+(?:square|varg)\b",
+    m = re.search(r"(" + _OP140H + r")\s+ka\s+(?:square|varg)\b",
                   q)
     if m:
+        _disp = _op140h_disp(m.group(1))
+        if "/" in _disp:
+            _fr = _op140h_fraction(m.group(1))
+            _v = _fr ** 2
+            return {"type": "applied", "op": "hinglish_power",
+                    "answer": fmt_num(_v),
+                    "steps": [f"{fmt_num(_fr)} ka "
+                              f"square = {fmt_num(_v)}"],
+                    "value": float(_v)}
         v = _num(m.group(1)) ** 2
         return {"type": "applied", "op": "hinglish_power",
                 "answer": fmt_num(v),

@@ -35,6 +35,7 @@ from .word_problems import solve_word_problem
 from .papers10 import solve_papers10
 from .gaps103 import solve_gaps103
 from .rekha import solve_rekha
+from .depth125 import solve_depth125
 
 # --------------------------------------------------------------------------
 # Hinglish normalisation:  "5 aur 3 ko jodo" -> "5 + 3",
@@ -536,6 +537,21 @@ def _normalize_spelling(question: str) -> str:
     # up downstream, so "15 squared minus 9 squared" answered
     # 225.) Digits only: letter powers ("x squared") are the
     # algebra parser's own forms.
+    # Wave 140: a fraction operand takes the power as a
+    # whole — "2/3 squared" used to rewrite to "2/3^2"
+    # (= 2/9); it is "(2/3)^2" (= 4/9). Fraction rules first,
+    # bracketed and bare, then the plain-number rules.
+    _FR140 = r"\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?"
+    text = re.sub(r"(\(\s*" + _FR140 + r"\s*\))\s+squared\b",
+                  r"\1^2", text)
+    text = re.sub(r"(\(\s*" + _FR140 + r"\s*\))\s+cubed\b",
+                  r"\1^3", text)
+    text = re.sub(r"(" + _FR140 + r")\s+squared\b",
+                  r"(\1)^2", text)
+    text = re.sub(r"(" + _FR140 + r")\s+cubed\b",
+                  r"(\1)^3", text)
+    text = re.sub(r"(" + _FR140 + r")\s+to\s+the\s+power\s+"
+                  r"(\d+(?:\.\d+)?)\b", r"(\1)^\2", text)
     text = re.sub(r"(\d+(?:\.\d+)?)\s+squared\b", r"\1^2", text)
     text = re.sub(r"(\d+(?:\.\d+)?)\s+cubed\b", r"\1^3", text)
     text = re.sub(r"(\d+(?:\.\d+)?)\s+to\s+the\s+power\s+"
@@ -854,15 +870,18 @@ def normalize_hinglish(question: str) -> str:
     if m:
         return f"perimeter of a square with side {m.group(1)}"
     m = re.search(r"varg\s+ka\s+(?:area|kshetrafal)[^0-9]{0,30}?"
-                  r"side\s+(\d+(?:\.\d+)?)", ql)
+                  r"side\s+(\d+(?:\.\d+)?)"
+                  r"(?:\s*(cm|mm|km|m)\b)?", ql)
     if m:
-        return f"area of a square with side {m.group(1)}"
+        return (f"area of a square with side {m.group(1)}"
+                f"{' ' + m.group(2) if m.group(2) else ''}")
     # Circle area / circumference with trijya or radius.
     m = re.search(r"(?:vritt|circle)[^0-9]{0,50}?(?:kshetrafal|"
                   r"area)[^0-9]{0,50}?(?:trijya|radius)\s+"
-                  r"(\d+(?:\.\d+)?)", ql)
+                  r"(\d+(?:\.\d+)?)(?:\s*(cm|mm|km|m)\b)?", ql)
     if m:
-        return f"area of a circle with radius {m.group(1)}"
+        return (f"area of a circle with radius {m.group(1)}"
+                f"{' ' + m.group(2) if m.group(2) else ''}")
     m = re.search(r"(?:vritt|circle)[^0-9]{0,50}?paridhi"
                   r"[^0-9]{0,50}?(?:trijya|radius)\s+"
                   r"(\d+(?:\.\d+)?)", ql)
@@ -1032,23 +1051,29 @@ def normalize_hinglish(question: str) -> str:
     # uska area kitna hoga") — the Wave 57 rules need the ask
     # word first; these accept either order.
     if re.search(r"(?:vritt|circle|gol)\b", ql):
-        _mr = re.search(r"(?:trijya|radius)\s+(?:hai\s+)?" + _N,
-                        ql)
+        # Wave 140: group 2 carries the radius unit into the
+        # translation (it was dropped, so area answers lost
+        # their cm² — same fix as the square/cube rules).
+        _mr = re.search(r"(?:trijya|radius)\s+(?:hai\s+)?" + _N +
+                        r"(?:\s*(cm|mm|km|m)\b)?", ql)
         _md = re.search(r"(?:vyas|diameter)\)?\s+(?:hai\s+)?"
                         + _N, ql)
         if _mr is None:
             # "7 cm trijya wale vritt" — radius before the word.
-            _mr = re.search(_N + r"\s*(?:cm|m|mm)?\s*"
+            _mr = re.search(_N + r"\s*(cm|mm|km|m)?\s*"
                             r"(?:trijya|radius)\b", ql)
+        _umr = (f" {_mr.group(2)}" if _mr and _mr.group(2)
+                else "")
         if _mr and ("paridhi" in ql or wants_circumference(ql)) \
                 and "ring" not in ql and "segment" not in ql:
             return (f"circumference of a circle with radius "
-                    f"{_mr.group(1)}")
+                    f"{_mr.group(1)}{_umr}")
         if _mr and ("area" in ql or "kshetrafal" in ql) \
                 and "sector" not in ql \
                 and "trijyakhand" not in ql \
                 and "ring" not in ql and "segment" not in ql:
-            return f"area of a circle with radius {_mr.group(1)}"
+            return (f"area of a circle with radius "
+                    f"{_mr.group(1)}{_umr}")
         if _md and ("paridhi" in ql or wants_circumference(ql)) \
                 and "ring" not in ql and "segment" not in ql:
             return (f"circumference of a circle with diameter "
@@ -1061,14 +1086,16 @@ def normalize_hinglish(question: str) -> str:
             return (f"find the radius of a circle with diameter "
                     f"{_md.group(1)} cm")
         # "7 cm radius wale circle ka area"
-        _mr2 = re.search(_N + r"\s*(?:cm\s+)?(?:radius|trijya)"
+        _mr2 = re.search(_N + r"\s*(cm|mm|km|m)?\s*"
+                         r"(?:radius|trijya)"
                          r"\s+wale\s+(?:circle|vritt|gol)", ql)
         if _mr2 and ("area" in ql or "kshetrafal" in ql) \
                 and "sector" not in ql \
                 and "trijyakhand" not in ql \
                 and "segment" not in ql:
             return (f"area of a circle with radius "
-                    f"{_mr2.group(1)}")
+                    f"{_mr2.group(1)}"
+                    f"{' ' + _mr2.group(2) if _mr2.group(2) else ''}")
         # Sector: radius + degree angle + sector word.
         if _mr and ("sector" in ql or "trijyakhand" in ql):
             _ma = re.search(_N + r"\s*(?:degree|°)", ql)
@@ -1095,14 +1122,20 @@ def normalize_hinglish(question: str) -> str:
             return (f"perimeter of a rectangle with length "
                     f"{_ml.group(1)} and breadth {_mb.group(1)}")
     # Square: "varg ki (ek) bhuja S hai, kshetrafal/parimap?"
+    # Wave 140: carry the side's unit into the translation —
+    # it used to be dropped here, so the area answer lost
+    # its cm² (see geometry._wave140_with_unit).
     _msq = re.search(r"varg[^0-9]{0,40}?(?:bhuja|side)\s+"
-                     r"(?:hai\s+)?" + _N, ql)
+                     r"(?:hai\s+)?" + _N +
+                     r"(?:\s*(cm|mm|km|m)\b)?", ql)
     if _msq:
+        _usq = f" {_msq.group(2)}" if _msq.group(2) else ""
         if "parimap" in ql or "perimeter" in ql:
             return (f"perimeter of a square with side "
-                    f"{_msq.group(1)}")
+                    f"{_msq.group(1)}{_usq}")
         if "area" in ql or "kshetrafal" in ql:
-            return f"area of a square with side {_msq.group(1)}"
+            return (f"area of a square with side "
+                    f"{_msq.group(1)}{_usq}")
     # Parallelogram: aadhar + unchai (the triangle branch used
     # to halve these — the shape word decides).
     _mpa = re.search(r"(?:samantar\s+chaturbhuj|parallelogram)"
@@ -1176,21 +1209,27 @@ def normalize_hinglish(question: str) -> str:
                 f"{_mcu.group(1)}, breadth {_mcu.group(2)} and "
                 f"height {_mcu.group(3)}")
     _mcb = re.search(r"(?:ghan|cube)[^0-9]{0,50}?"
-                     r"(?:bhuja|side)\s+" + _N, ql)
+                     r"(?:bhuja|side)\s+" + _N +
+                     r"(?:\s*(cm|mm|km|m)\b)?", ql)
     if _mcb and ("prasth" in ql or "surface" in ql):
         return (f"total surface area of a cube with side "
-                f"{_mcb.group(1)}")
+                f"{_mcb.group(1)}"
+                f"{' ' + _mcb.group(2) if _mcb.group(2) else ''}")
     if _mcb and ("aayatan" in ql or "volume" in ql):
-        return f"volume of a cube with side {_mcb.group(1)}"
+        return (f"volume of a cube with side {_mcb.group(1)}"
+                f"{' ' + _mcb.group(2) if _mcb.group(2) else ''}")
     # Wave 59 round 2: number-first forms — "5 cm kinare wale
     # ghan", "7 cm trijya wale gole", "7 cm bhuja wale varg".
-    _mcube2 = re.search(_N + r"\s*(?:cm|m)?\s*(?:kinare\s+)?"
+    _mcube2 = re.search(_N + r"\s*(cm|mm|km|m)?\s*"
+                        r"(?:(?:kinare|bhuja)\s+)?"
                         r"wale\s+(?:ghan|cube)", ql) or _mcb
     if _mcube2 and ("prasth" in ql or "surface" in ql):
         return (f"total surface area of a cube with side "
-                f"{_mcube2.group(1)}")
+                f"{_mcube2.group(1)}"
+                f"{' ' + _mcube2.group(2) if _mcube2.group(2) else ''}")
     if _mcube2 and ("aayatan" in ql or "volume" in ql):
-        return f"volume of a cube with side {_mcube2.group(1)}"
+        return (f"volume of a cube with side {_mcube2.group(1)}"
+                f"{' ' + _mcube2.group(2) if _mcube2.group(2) else ''}")
     _msph2 = re.search(_N + r"\s*(?:cm|m)?\s*(?:trijya|radius)"
                        r"\s+wale\s+(?:gole|gola|sphere)", ql)
     if _msph2 and ("aayatan" in ql or "volume" in ql):
@@ -1199,13 +1238,15 @@ def normalize_hinglish(question: str) -> str:
     if _msph2 and ("prasth" in ql or "surface" in ql):
         return (f"surface area of a sphere with radius "
                 f"{_msph2.group(1)}")
-    _msq2 = re.search(_N + r"\s*(?:cm|m)?\s*bhuja\s+wale\s+"
+    _msq2 = re.search(_N + r"\s*(cm|mm|km|m)?\s*bhuja\s+wale\s+"
                       r"varg", ql)
     if _msq2 and ("parimap" in ql or "perimeter" in ql):
         return (f"perimeter of a square with side "
-                f"{_msq2.group(1)}")
+                f"{_msq2.group(1)}"
+                f"{' ' + _msq2.group(2) if _msq2.group(2) else ''}")
     if _msq2 and ("area" in ql or "kshetrafal" in ql):
-        return f"area of a square with side {_msq2.group(1)}"
+        return (f"area of a square with side {_msq2.group(1)}"
+                f"{' ' + _msq2.group(2) if _msq2.group(2) else ''}")
     # Ring between two circles.
     _mrg = re.search(r"(?:bahari|bahar\s+wale)\s+(?:radius|"
                      r"trijya)\s+" + _N + r"[^0-9]{0,40}?"
@@ -3292,6 +3333,7 @@ _W77_LOCAL = threading.local()
 _W94_LOCAL = threading.local()
 _W103_LOCAL = threading.local()
 _W115_LOCAL = threading.local()
+_W125_LOCAL = threading.local()
 
 _W77_FILLER_WORDS = {
     "please", "plz", "batao", "bata", "samjhao", "samjha", "do",
@@ -3717,6 +3759,26 @@ def _solve_question_uncached(question: str):
             r"\bhow\s+many\b", working, re.I):
         out = solve_units(working)
         if out is not None:
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 140: "1024 perfect square hai ya nahi?" — a
+    # haan-nahi number-theory ask no solver owned, so it fell
+    # to the expression parser's error and then to the slow
+    # AI fallback (~30 s on the live check). Try number
+    # theory FIRST and accept ONLY its perfect-power check
+    # ops, so other perfect-square word problems route
+    # exactly as before.
+    if re.search(r"perfect\s+(?:square|cube)"
+                 r"|purna\s+(?:varg|ghan)"
+                 r"|पूर्ण\s*(?:वर्ग|घन)", working, re.I):
+        try:
+            out = solve_number_theory(working)
+        except Exception:
+            out = None
+        if out is not None and out.get("op") in (
+                "perfect_square_check", "perfect_cube_check"):
             if was_translated:
                 out["interpreted_as"] = translated
             return out
@@ -4456,6 +4518,32 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     w115.setdefault("interpreted_as", translated)
                 return w115
+        # Wave 125: solver depth (solver/depth125.py) — the
+        # same failure-only gate: LPP in Hindi/Hinglish
+        # dress + the NCERT word templates, the P(...)
+        # probability-relations family, conditional dice /
+        # card / coin+die forms, homogeneous + initial-
+        # condition differential equations, area between
+        # curves, and the Wave 103 leftovers (ratio angles,
+        # g(x) evaluation). Strict schemas only; a real
+        # primary answer is never displaced. (The hijack
+        # shapes whose primary results ARE "real" are
+        # repaired by depth125_upgrade in fallback.py.)
+        if getattr(_W125_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W125_LOCAL.depth = 1
+            try:
+                w125 = solve_depth125(original)
+                if w125 is None and working != original:
+                    w125 = solve_depth125(working)
+            except Exception:
+                w125 = None
+            finally:
+                _W125_LOCAL.depth = 0
+            if w125 is not None:
+                if was_translated:
+                    w125.setdefault("interpreted_as", translated)
+                return w125
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])
