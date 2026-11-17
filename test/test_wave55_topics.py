@@ -38,7 +38,7 @@ from api import _solve_friendly
 
 # Deploy-25 merge: Band B adds 9:+131, 10:+151 and Band C
 # adds 11:+144, 12:+115 to the original per-class counts.
-EXPECTED_PER_CLASS = {6: 22, 7: 32, 8: 33, 9: 162, 10: 205, 11: 199, 12: 155}
+EXPECTED_PER_CLASS = {6: 22, 7: 32, 8: 33, 9: 162, 10: 205, 11: 213, 12: 165}
 
 
 @pytest.fixture()

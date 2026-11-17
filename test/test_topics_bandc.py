@@ -50,7 +50,7 @@ def _w125_isolated_livebank(tmp_path, monkeypatch):
     clear_negative_cache()
     yield
 
-BANDC_COUNT = 259
+BANDC_COUNT = 283
 BASE_COUNT = 267
 
 
@@ -65,7 +65,9 @@ def test_bandc_topic_count():
     total = sum(len(ts) for ts in TOPICS_BY_CLASS.values())
     # Deploy-25 merge: Band B is wired into topics_data too,
     # so the combined total is 267 + 282 + 259 = 808.
-    assert total == 808
+    # Wave 142: Band C grows by 24 (14 Conic Sections fill +
+    # 10 Application of Integrals) -> 283 and 832.
+    assert total == 832
 
 
 def test_no_slug_collisions_with_existing():

@@ -48,8 +48,9 @@ def test_band_counts():
     # (Deploy-25 merge: Bands B and C are also wired in, so
     # the combined index is 267 + 268 + 282 + 259 = 1076 and
     # topics_data holds 267 + 282 + 259 = 808)
-    assert len(concept_topics._ORDERED) == 1076
-    assert topics_data.TOPIC_COUNT == 808
+    # Wave 142: +24 Band C topics -> 1100 and 832.
+    assert len(concept_topics._ORDERED) == 1100
+    assert topics_data.TOPIC_COUNT == 832
 
 
 def test_no_slug_or_name_collisions():

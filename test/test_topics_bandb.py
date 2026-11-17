@@ -44,7 +44,8 @@ def test_bandb_counts():
         assert len(topics_bandb.TOPICS_BY_CLASS_BANDB[cls]) == n
     # Deploy-25 merge: Band C is wired into topics_data too,
     # so the combined count is 267 + 282 + 259 = 808.
-    assert topics_data.TOPIC_COUNT == 808
+    # Wave 142: +24 Band C topics -> 832.
+    assert topics_data.TOPIC_COUNT == 832
     for cls, total in EXPECTED_CLASS_TOTALS.items():
         assert len(topics_data.TOPICS_BY_CLASS[cls]) == total
 
