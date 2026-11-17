@@ -1307,6 +1307,22 @@ def with_fallback(question, result, lang=None, student_class=None):
             preferred = None
         if preferred is not None:
             return _with_figure(question, preferred)
+        # Wave 103: a polynomial-degree ask whose primary
+        # result is the simplify path's mangled expression
+        # ("degree of 3x^3 + 2x^2 + 5x + 7" came back as
+        # "2*x**2 + 5*x + 10" — the words are eaten into the
+        # expression, so the router's failure gate can never
+        # see it) is upgraded to the verified degree.
+        # degree_upgrade fires only on a strict degree ask
+        # whose answer is not already the true degree, so
+        # every other real answer is untouched.
+        try:
+            from solver.gaps103 import degree_upgrade
+            upgraded = degree_upgrade(question, result)
+        except Exception:
+            upgraded = None
+        if upgraded is not None:
+            return _with_figure(question, upgraded)
         return _with_figure(question, result)
 
     # Wave 20, Layer 0c: a SCIENCE question the solver could not
