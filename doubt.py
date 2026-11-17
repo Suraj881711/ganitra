@@ -182,6 +182,78 @@ def _words(text):
     return out
 
 
+# ------------------------------------------------------------------ #
+# Wave 148: fresh-request veto. A message that carries a NEW,
+# self-contained request is a new question — never a doubt
+# about the previous answer — however frustrated its wording.
+# The live failure: after a (wrong) answer, "mujhe kuch
+# samajh nahi aa raha, tum bhi bekaar ho, 7 ka table hi bata
+# do" was claimed by the confusion signal below and the last
+# step was re-explained; the student's actual ask — the 7
+# times table — was never served. Two fresh shapes veto:
+# a multiplication-table request (never a step reference,
+# vetoes unconditionally), and a fresh computation sitting
+# in its own clause, free of step/confusion words (vetoes
+# when no explicit step number is pinned — the concept-veto
+# discipline above).
+# ------------------------------------------------------------------ #
+
+_TABLE_REQUEST_RE = re.compile(
+    r"\d{1,3}\s+(?:ka|ki)\s+table\b"
+    r"|\btable\s+of\s+\d{1,3}\b"
+    r"|\bmultiplication\s+table\s+of\s+\d{1,3}\b"
+    r"|\d{1,3}\s+(?:ka|ki)\s+pahada\b"
+    r"|\d{1,3}\s+का\s+पहाड़ा",
+    re.I)
+
+_FRESH_COMPUTATION_RES = tuple(re.compile(p) for p in (
+    r"\d+(?:\.\d+)?\s*%\s*of\s*\d+",          # 15% of 200
+    r"\d+\s*/\s*\d+\s+of\s+\d+",              # 3/5 of 45
+    r"\d+(?:\.\d+)?\s*[-+×÷*/]\s*\d+(?:\.\d+)?",  # 2 + 3
+    r"\d*\s*[a-z]\s*[-+]\s*\d+(?:\.\d+)?\s*=",    # 3x + 7 =
+    r"\d+\s*[a-z]\s*=",                       # 2x =
+))
+
+_CLAUSE_OP_WORD_RE = re.compile(
+    r"divide|multiply|bhaag|भाग|guna|गुणा|jodo|ghatao|घटा",
+    re.I)
+
+
+def _clause_about_previous(clause):
+    """True when a clause points at the PREVIOUS answer: a
+    confusion / kaise / why phrase, a step word, an ordinal,
+    or an operation word (the op-hint family — "divide by 3"
+    is a doubt about a step, not a fresh ask)."""
+    if any(p in clause for p in _CONFUSION):
+        return True
+    if any(p in clause for p in _KAISE):
+        return True
+    if any(p in clause for p in _WHY):
+        return True
+    words = set(_words(clause))
+    if words & _STEP_WORDS:
+        return True
+    if words & set(_ORDINALS):
+        return True
+    return bool(_CLAUSE_OP_WORD_RE.search(clause))
+
+
+def _has_fresh_computation(text):
+    """True when some clause of the message is a fresh,
+    self-contained computation and no part of that clause
+    points at the previous answer."""
+    for clause in re.split(r"[,;।]+", text):
+        clause = clause.strip()
+        if not clause:
+            continue
+        if _clause_about_previous(clause):
+            continue
+        if any(p.search(clause)
+               for p in _FRESH_COMPUTATION_RES):
+            return True
+    return False
+
+
 def parse_followup(question):
     """Classify a chat message as a doubt follow-up.
 
@@ -249,6 +321,16 @@ def parse_followup(question):
     # it pins an explicit step number ("step 2 me HCF kya hai"
     # still points at step 2 of the previous answer).
     if index is None and any(p in text for p in _CONCEPT_VETO):
+        return None
+
+    # Wave 148 fresh-request veto (see the section above):
+    # a table request is never about a step; a fresh
+    # computation in its own clause is a new question riding
+    # along, not a doubt — the tone layer cleans its
+    # frustration and the normal solve serves it.
+    if _TABLE_REQUEST_RE.search(text):
+        return None
+    if index is None and _has_fresh_computation(text):
         return None
 
     strong = (index is not None or relative is not None or confusion

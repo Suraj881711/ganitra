@@ -173,7 +173,7 @@ _RULES = [
     _R(r"^Move everything to one side: (?P<rest>.+)$",
        hi="सब कुछ एक ओर ले जाइए: {rest}",
        hinglish="Sab kuch ek side le jao: {rest}"),
-    _R(r"^(?P<verb>Add|Subtract) (?P<n>.+?) from both sides: "
+    _R(r"^(?P<verb>Add|Subtract) (?P<n>.+?) (?:from|to) both sides: "
        r"(?P<rest>.+)$",
        hi=lambda g, t: "%s: %s" % (
            {"Add": "दोनों ओर %s जोड़िए" % g["n"],

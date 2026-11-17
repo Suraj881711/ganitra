@@ -540,6 +540,19 @@ _MATHS_HINT_RE = re.compile(r"[\d^√∫=<>%{}]|\\b[xyz]\b")
 _EXPR_SEQ_RE = re.compile(
     r"\{[^}]*\}|√|\^|∈|\d+\s*,\s*[-–—+]?\s*\d+\s*,")
 _PURE_EXPR_RE = re.compile(r"^[\d\s+\-*/×÷().,^]+$")
+# Wave 148: an "X% of Y" / "a/b of c" segment — the word
+# "of" keeps it out of _PURE_EXPR_RE and it carries no ask
+# verb, so the NCERT staple "Find: (i) 15% of 200 (ii) 3/5
+# of 45" never split at all and the whole text fell to the
+# expression parser, which served letter-soup. The shape is
+# a complete computation ask in its own right (an MCQ option
+# is a bare value, vetoed above; an option LIST rides in a
+# longer segment this anchored pattern cannot match).
+_OF_ASK_RE = re.compile(
+    r"^(?:\d+(?:\.\d+)?\s*%|\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?)"
+    r"\s+of\s+\d+(?:\.\d+)?"
+    r"(?:\s*(?:cm|mm|km|m|kg|g|ml|litres?|₹|rs\.?|rupees?))?$",
+    re.I)
 _BARE_VALUE_RE = re.compile(
     r"^[-+]?\d+(?:\.\d+)?(?:\s*/\s*\d+(?:\.\d+)?)?"
     r"(?:\s*(?:cm|mm|km|m|cm²|cm2|m²|m2|mm²|km²|%|₹|"
@@ -589,6 +602,10 @@ def _gen_segment_ok(seg, preamble, preamble_has_verb,
     if _ASK_VERB_RE.search(s) or "=" in s or "?" in s:
         return True
     if _EXPR_SEQ_RE.search(s):
+        return True
+    if _OF_ASK_RE.match(s):
+        # Wave 148: "15% of 200" / "3/5 of 45" — a complete
+        # computation ask (see _OF_ASK_RE above).
         return True
     s_expr = re.sub(r"(\d)\s*x\s*(?=\d)", r"\1×", s)
     if _PURE_EXPR_RE.match(s_expr) \

@@ -766,6 +766,61 @@ def api_solve():
     # below is the pre-Wave-136 behaviour.
     detail = detect_detail_request(question)
 
+    # Wave 148: a BARE steps / detail request ("step by step
+    # batao", "detail me batao", "vistar se samjhao") sent
+    # ALONE right after an answer is a request ABOUT that
+    # answer, not a new question — the Wave-122/123 design
+    # applies an explicit request to the answer it belongs
+    # to. Re-serve the stored answer: for a steps ask the
+    # w122 payload below reads THIS message as the ask, so
+    # the labels gate opens on the same steps; for a detail
+    # ask the stored answer is first expanded by Wave 136.
+    # With no previous solved answer there is nothing to
+    # re-serve and the normal path below answers (the honest
+    # one-liner) — nothing is invented. The stored last
+    # solution is NOT overwritten, exactly like the doubt
+    # block below: later follow-ups keep pointing at the
+    # same answer. A question+request in ONE message ("12
+    # aur 18 ka HCF step by step batao") is not bare (see
+    # followups.parse_bare_view_request) and keeps its
+    # Wave-123 path byte-for-byte.
+    from followups import is_solved_result, \
+        parse_bare_view_request
+    _view = parse_bare_view_request(question)
+    if _view is not None:
+        _prev_r = session.get("last_result")
+        _prev_q = session.get("last_question")
+        if is_solved_result(_prev_r) \
+                and (_prev_r.get("steps") or []):
+            if _view == "detail":
+                result = expand_detail(
+                    _prev_q or question, _prev_r, lang=lang,
+                    lang_request=lang_request)
+            else:
+                result = _prev_r
+            history = session.get("history", [])
+            history.insert(0, trimmed_history_entry(question,
+                                                    result))
+            session["history"] = history[:_HISTORY_LIMIT]
+            return jsonify({
+                "ok": True,
+                # Wave 138 annotation on a copy, like every
+                # re-serve boundary (the session's stored
+                # dict stays pristine).
+                "result": annotate_result(dict(result)),
+                "intro": None,
+                "explanation": explanation_for(result, lang),
+                "advice": advice_for(_prev_r, lang),
+                "methods": [],
+                "teach": teach_for(_prev_r, lang),
+                "w122": w122_payload(
+                    result, lang=lang,
+                    lang_request=lang_request,
+                    question=_prev_q or question,
+                    ask_text=question),
+                **fields,
+            })
+
     # Wave 96: doubt follow-up ("ye step samjhao") — answered
     # from the session's last solution (its steps are also what
     # the client stores inside the saved chat thread), never by
@@ -1034,6 +1089,45 @@ def api_solve_stream():
             strings = get_strings(lang)
             switched = True
     fields = _lang_fields(lang, strings, switched)
+
+    # Wave 148: a BARE steps / detail request re-serves the
+    # session's last answer (see api_solve) — one final
+    # event with the classic payload, never the AI legs.
+    from followups import is_solved_result as _is_solved_148, \
+        parse_bare_view_request as _bare_view_148
+    _view = _bare_view_148(question)
+    if _view is not None:
+        _prev_r = session.get("last_result")
+        _prev_q = session.get("last_question")
+        if _is_solved_148(_prev_r) \
+                and (_prev_r.get("steps") or []):
+            if _view == "detail":
+                result = expand_detail(
+                    _prev_q or question, _prev_r, lang=lang,
+                    lang_request=lang_request)
+            else:
+                result = _prev_r
+            history = session.get("history", [])
+            history.insert(0, trimmed_history_entry(question,
+                                                    result))
+            session["history"] = history[:_HISTORY_LIMIT]
+            payload = {
+                "ok": True,
+                "result": annotate_result(dict(result)),
+                "intro": None,
+                "explanation": explanation_for(result, lang),
+                "advice": advice_for(_prev_r, lang),
+                "methods": [],
+                "teach": teach_for(_prev_r, lang),
+                "w122": w122_payload(
+                    result, lang=lang,
+                    lang_request=lang_request,
+                    question=_prev_q or question,
+                    ask_text=question),
+                **fields,
+            }
+            return _sse_response(sse_event(
+                {"type": "final", "payload": payload}))
 
     # Wave 96 doubt follow-up: answered from the session's
     # last solution, never by the AI legs — served as one

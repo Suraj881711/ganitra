@@ -98,6 +98,35 @@ _WHO_WORD_EN = re.compile(r"\bwho\b")
 # the Zero history card (CISCE audit idx 190).
 _COMPUTATION = re.compile(r"\d\s*[-+*/=×÷−–—]\s*\d")
 
+# Wave 148: a fresh, self-contained problem that is not
+# digit-op-digit — a multiplication-table request ("7 ka
+# table", "table of 7", "7 ka pahada") or an "X% of Y" /
+# "a/b of c" computation — is likewise a problem to solve,
+# never a meta question. "mujhe kuch samajh nahi aa raha,
+# tum bhi bekaar ho, 7 ka table hi bata do" was served the
+# fear-advice card (the "samajh nahi" trigger) while the
+# student's actual request — the table — went unanswered;
+# the solver had it all along.
+_TABLE_REQUEST = re.compile(
+    r"\d{1,3}\s+(?:ka|ki)\s+table\b"
+    r"|\btable\s+of\s+\d{1,3}\b"
+    r"|\bmultiplication\s+table\s+of\s+\d{1,3}\b"
+    r"|\d{1,3}\s+(?:ka|ki)\s+pahada\b"
+    r"|\d{1,3}\s+का\s+पहाड़ा",
+    re.I)
+_FRESH_OF = re.compile(
+    r"\d+(?:\.\d+)?\s*%\s*of\s*\d+"
+    r"|\d+\s*/\s*\d+\s+of\s+\d+",
+    re.I)
+
+
+def _has_fresh_problem(q):
+    """True when the text carries a real problem to solve
+    (the _COMPUTATION veto's shapes plus Wave 148's)."""
+    return bool(_COMPUTATION.search(q)
+                or _TABLE_REQUEST.search(q)
+                or _FRESH_OF.search(q))
+
 
 def _trigger_hit(q, t):
     """Wave 146: ADVICE triggers match on WORD BOUNDARIES for
@@ -1651,7 +1680,7 @@ def meta_result(question, flavour=None):
     q = str(question or "").lower()
     if not q.strip():
         return None
-    if _COMPUTATION.search(q):
+    if _has_fresh_problem(q):
         return None  # a real problem rides along; not ours
     if flavour not in ("en", "roman", "dev"):
         flavour = "dev" if any("ऀ" <= ch <= "ॿ" for ch in q) \
@@ -1707,7 +1736,7 @@ def is_meta_shaped(question):
     so "Who is the president of India?" and "History ki
     taiyaari kaise karu?" stay exactly where they were."""
     q = str(question or "").lower()
-    if not q.strip() or _COMPUTATION.search(q):
+    if not q.strip() or _has_fresh_problem(q):
         return False
     if _has_who_shape(q) and (
             _has_maths_signal(q)

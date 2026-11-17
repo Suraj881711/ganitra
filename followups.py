@@ -54,7 +54,8 @@ from langdetect_local import detect_detail_request, \
 
 __all__ = ["is_solved_result", "flavour_for", "w122_payload",
            "build_followup_response", "FOLLOWUP_KINDS",
-           "detect_more_intent", "is_proof_type"]
+           "detect_more_intent", "is_proof_type",
+           "parse_bare_view_request"]
 
 FOLLOWUP_KINDS = ("example", "test", "simpler")
 
@@ -516,3 +517,127 @@ def build_followup_response(kind, context_question, prev_result,
         return None
     result, note, _unused = built
     return result, note, None, None
+
+
+# ------------------------------------------------------------------
+# Wave 148: a BARE view request — "step by step batao" /
+# "detail me batao" / "vistar se samjhao" sent ALONE, as its
+# own message, right after an answer.
+#
+# Wave 123 put the labels on the ANSWER THE MESSAGE CARRIES;
+# a bare request carries no question, so it fell through to
+# the new-question path and earned an AI-fallback "please
+# write your question in a complete sentence" — the student
+# never got the stepped version of the answer sitting right
+# above (live check, Deploy-28). The design intent is that
+# an explicit step/detail request applies to the LAST
+# answer in the chat; api_solve now re-serves that stored
+# answer when this detector fires (labels via the w122 ask
+# gate for a steps ask, the Wave-136 expansion for a detail
+# ask).
+#
+# BARE is the whole discipline: the message must consist of
+# ONLY a steps/detail request phrase plus filler (address
+# and ask words). Any digit, "=" or "%", and any leftover
+# content word (a topic, a number, a new question) makes it
+# a question+request message — "12 aur 18 ka HCF step by
+# step batao", "HCF detail me batao hindi me" — which keeps
+# its ordinary Wave-123/136 path byte-for-byte. The fire
+# decision itself reuses the Wave-123/136 detectors, so the
+# phrase families can never drift apart.
+# ------------------------------------------------------------------
+
+_VIEW_STEP_REMOVALS = tuple(re.compile(p) for p in (
+    r"step by step",
+    r"\bstepwise\b",
+    r"\bstep karke\b",
+    r"\bek ek step\b",
+    r"\b(?:saare|sare|sab|har|each|all) steps?\b",
+    r"\bsteps? (?:me|mein|mai|se) "
+    r"(?:batao|samjhao|samjhaao|dikhao|chahiye|do)\b",
+    r"\bsteps? (?:batao|samjhao|samjhaao|dikhao|chahiye)\b",
+    r"\bwith steps\b",
+    r"\bsteps? ke saath\b",
+    r"\bshow (?:me )?(?:all )?(?:the )?steps\b",
+))
+_VIEW_DETAIL_REMOVALS = tuple(re.compile(p) for p in (
+    r"\bin detail\b",
+    r"\bdetailed (?:answer|solution|explanation|working)\b",
+    r"\bdetail (?:me|mein|mai|se) "
+    r"(?:batao|samjhao|samjhaao|dikhao|chahiye|do|samjha)\b",
+    r"\bdetailme (?:batao|samjhao|samjhaao|dikhao|chahiye|do)\b",
+    r"\bdetail (?:batao|samjhao|samjhaao|dikhao|chahiye)\b",
+    r"\bvistar se\b",
+    r"\bvistaar se\b",
+    r"\blamba (?:answer|jawab|solution)\b",
+    r"\blong (?:answer|explanation|solution)\b",
+    r"\bfull (?:solution|answer|explanation)\b",
+    r"\bpoora (?:samjhao|samjha|batao|answer|jawab|solution)\b",
+    r"\bpoori detail\b",
+    r"\bexplain fully\b",
+))
+_VIEW_DEV_PHRASES = (
+    "स्टेप बाय स्टेप", "चरण दर चरण",
+    "क्रम से समझाओ", "क्रम से बताओ", "क्रम से बताइए",
+    "विस्तार से", "विस्तार में", "विस्तारपूर्वक", "विस्तृत",
+    "डिटेल में", "डिटेल से", "डिटेल बताओ", "डिटेल समझाओ",
+    "लंबा उत्तर", "लम्बा उत्तर", "लंबा जवाब",
+)
+_VIEW_FILLER = {
+    # Latin ask / address / glue words — never content.
+    "batao", "bata", "bataao", "samjhao", "samjhaao",
+    "samjha", "do", "dikhao", "chahiye", "please", "plz",
+    "me", "mein", "mai", "se", "ko", "ke", "ka", "ki",
+    "the", "a", "an", "ye", "yeh", "is", "wala", "wale",
+    "aur", "or", "and", "bhi", "hi", "ek", "baar", "phir",
+    "dobara", "again", "ab", "zara", "tum", "mujhe",
+    "mere", "liye",
+    # The request families' own nouns/heads: a leftover one
+    # ("step", "detail", "full") is still just the request.
+    "step", "steps", "detail", "vistar", "vistaar",
+    "lamba", "full", "poora", "poori", "long", "answer",
+    "jawab", "solution", "explanation", "working", "in",
+    "with", "show", "all", "each", "har", "sab", "saare",
+    "sare", "karke", "saath",
+    # Devanagari equivalents.
+    "बताओ", "बताइए", "समझाओ", "समझाइए", "में", "से", "दो",
+    "दीजिए", "चरण", "दर", "स्टेप", "बाय", "विस्तार",
+    "लंबा", "लम्बा", "उत्तर", "जवाब", "डिटेल", "विस्तृत",
+    "क्रम", "पूर्वक",
+}
+
+
+def parse_bare_view_request(text):
+    """Classify a message that is ONLY a view request.
+
+    Returns "detail" for a bare detail ask ("detail me
+    batao", "vistar se samjhao", "डिटेल में बताओ"), "steps"
+    for a bare steps ask ("step by step batao", "steps me
+    batao", "स्टेप बाय स्टेप बताओ"), else None. A detail
+    ask outranks a steps ask when both ride in one bare
+    message — the detailed version carries the labels too
+    (the Wave-136 w122 gate)."""
+    raw = str(text or "")
+    if not raw.strip():
+        return None
+    wants_detail = detect_detail_request(raw)
+    wants_steps = detect_steps_request(raw)
+    if not (wants_detail or wants_steps):
+        return None
+    # A digit, "=" or "%" is question payload — the message
+    # is a question WITH a request, never a bare request.
+    if any(ch.isdigit() for ch in raw) \
+            or "=" in raw or "%" in raw:
+        return None
+    cleaned = raw
+    for phrase in _VIEW_DEV_PHRASES:
+        cleaned = cleaned.replace(phrase, " ")
+    normalised = re.sub(r"\s+", " ",
+                        cleaned.lower().replace("-", " "))
+    for pattern in _VIEW_STEP_REMOVALS + _VIEW_DETAIL_REMOVALS:
+        normalised = pattern.sub(" ", normalised)
+    words = [w for w in re.split(r"[\s.,;:!?\"'()।/]+",
+                                  normalised) if w]
+    if any(w not in _VIEW_FILLER for w in words):
+        return None
+    return "detail" if wants_detail else "steps"
