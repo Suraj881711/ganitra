@@ -124,8 +124,9 @@ data = r.get_json() or {}
 check("api success shape unchanged",
       # Wave 9: the success contract gained language_switched +
       # language (auto-language); for a neutral English question
-      # nothing else is added (ui/lang_notice appear only on a
-      # switch), so the exact key set below is the Wave-9 contract.
+      # nothing else is added (ui appears only on a switch;
+      # lang_notice never — Wave 139 removed it), so the exact
+      # key set below is the Wave-9 contract.
       # Wave 12: the success contract gains "methods" + "teach"
       # (additive, per the §5c brief) — key set updated here.
       sorted(data.keys()) == ["advice", "explanation", "language",

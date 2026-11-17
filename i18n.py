@@ -1404,11 +1404,59 @@ def solve_failed(question, result):
             or question_looks_like_gibberish(question, result))
 
 
+# --- Wave 139: fixed SYSTEM messages are English/Hinglish only -------------
+# Suraj's standing rule (17 Nov 2026): fixed system/UI messages —
+# the offline/no-internet notice, error toasts, connection/retry
+# notices, status lines, form-validation errors and similar fixed
+# chrome strings — render in English or Hinglish (Roman script)
+# ONLY, never in Devanagari (or any other Indic script), whatever
+# language the conversation is in. Answer content is NOT in this
+# set: answers, steps, explanations and the not-found line keep
+# following the student's language exactly as before. The keys
+# below are pinned to their English text for every language —
+# here in get_strings (the funnel every page/API consumer uses)
+# and again at the end of this file inside STRINGS itself, so
+# the translated versions are gone from the shipped tables.
+SYSTEM_MESSAGE_KEYS = frozenset({
+    # chat status / connection / error notices
+    "chat_offline_note", "chat_waking_note", "chat_error",
+    "chat_thinking", "chat_solving",
+    # the couldn't-solve card (a fixed system surface, not an answer)
+    "error_heading", "error_intro", "error_tip1", "error_tip2",
+    "error_tip3", "error_encourage", "error_encourage_name",
+    "error_retry_btn",
+    # server feedback flashes + the photo no-text flash
+    "flash_no_question", "flash_too_long", "flash_photo_empty",
+    "flash_download_first", "flash_start_quiz", "photo_no_text",
+    # chat JS notices: photo/file/voice errors, status lines, notes
+    "js_photo_error", "js_photo_not_found", "js_photo_unavailable",
+    "js_photo_check", "js_photo_reading", "js_photo_sending",
+    "js_file_reading", "js_file_too_large", "js_file_unsupported",
+    "js_voice_denied", "js_voice_failed", "js_voice_no_api",
+    "js_voice_heard", "js_voice_speak", "js_voice_listening_btn",
+    "js_chats_saved_note",
+    # account / sign-in form errors + the saved confirmation
+    "acct_err_old_password", "acct_err_password_wrong",
+    "acct_err_photo_size", "acct_err_photo_type", "acct_err_required",
+    "acct_saved_note",
+    "auth_err_class", "auth_err_fav", "auth_err_fav_short",
+    "auth_err_fill_all", "auth_err_lockout", "auth_err_login",
+    "auth_err_name_taken", "auth_err_password_short",
+    # misc fixed failure notices
+    "mm_method_failed", "weak_gen_failed",
+})
+
+
 def get_strings(lang):
     """UI strings for `lang`, merged over English (fallback)."""
     merged = dict(STRINGS["en"])
     if lang in STRINGS and lang != "en":
         merged.update(STRINGS[lang])
+    # Wave 139: system messages are pinned to English/Hinglish
+    # for every language (see SYSTEM_MESSAGE_KEYS above).
+    for key in SYSTEM_MESSAGE_KEYS:
+        if key in STRINGS["en"]:
+            merged[key] = STRINGS["en"][key]
     return merged
 
 
@@ -3220,36 +3268,18 @@ STRINGS["mr"].update(_MR_W7)
 STRINGS["ta"].update(_TA_W7)
 STRINGS["te"].update(_TE_W7)
 
-# --- Wave 9 additions: auto-language switch toast --------------------------
-# Shown once in the chat after an automatic language switch (the
-# student chatted in another language). "{lang}" is the language's
-# own name (e.g. हिन्दी). The client also receives the full chat-UI
-# string set in the NEW language inside the /api/solve response so
-# it can re-skin the page without a reload.
-STRINGS["en"].update({
-    "lang_switched_toast": "🌐 Language changed to {lang} — "
-                           "keep asking in any language!",
-})
-STRINGS["hi"].update({
-    "lang_switched_toast": "🌐 भाषा {lang} में बदल गई है — "
-                           "किसी भी भाषा में पूछते रहो!",
-})
-STRINGS["bn"].update({
-    "lang_switched_toast": "🌐 ভাষা {lang}-এ বদলে গেছে — "
-                           "যেকোনো ভাষায় জিজ্ঞেস করতে থাকো!",
-})
-STRINGS["mr"].update({
-    "lang_switched_toast": "🌐 भाषा {lang} मध्ये बदलली आहे — "
-                           "कोणत्याही भाषेत विचारत राहा!",
-})
-STRINGS["ta"].update({
-    "lang_switched_toast": "🌐 மொழி {lang} ஆக மாறிவிட்டது — "
-                           "எந்த மொழியிலும் கேட்கலாம்!",
-})
-STRINGS["te"].update({
-    "lang_switched_toast": "🌐 భాష {lang}కి మారింది — "
-                           "ఏ భాషలోనైనా అడగండి!",
-})
+# --- Wave 9 additions: auto-language switch toast — REMOVED, Wave 139 -----
+# Wave 9 added a "lang_switched_toast" string per language, shown
+# once in the chat after an automatic language switch. Wave 139
+# (Suraj's direct order, 17 Nov 2026): the announcement must NOT
+# be shown — the language switches AUTOMATICALLY and SILENTLY, and
+# when a student asks in chat for another language the answer
+# simply comes in that language. No banner, toast or pill, ever.
+# The strings, the api.py `lang_notice` field and the client
+# bubble are all removed; the switch behaviour itself (and the
+# full chat-UI string set in the NEW language inside the
+# /api/solve response, so the client can re-skin without a
+# reload) is unchanged.
 
 # --- Wave 10 additions: the first-page sign-in ---------------------------
 # Suraj's approved design (one page, one background, logo on top):
@@ -5709,3 +5739,16 @@ STRINGS["te"].update({
                       "పేజీలో కనిపిస్తుంది.",
     "progress_ask_btn": "ప్రశ్న అడగండి",
 })
+
+
+# --- Wave 139 (end-of-file pin): system messages in STRINGS itself ---------
+# Companion to the get_strings pin above: rewrite every language's
+# SYSTEM_MESSAGE_KEYS values to the English canonical text, so the
+# Devanagari (and Bengali/Tamil/Telugu) versions are gone from the
+# shipped string tables themselves, not just from one call path.
+# Key sets are untouched — i18n completeness is preserved.
+for _code in list(STRINGS):
+    for _key in SYSTEM_MESSAGE_KEYS:
+        if _key in STRINGS[_code] and _key in STRINGS["en"]:
+            STRINGS[_code][_key] = STRINGS["en"][_key]
+del _code, _key

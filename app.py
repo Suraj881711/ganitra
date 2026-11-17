@@ -15,7 +15,8 @@ from fractions import Fraction
 
 from flask import (Flask, Response, jsonify, render_template, request,
                    redirect, session, url_for, flash)
-from api import api_bp, trimmed_history_entry
+from api import (api_bp, trimmed_history_entry,
+                 _methods_localised)
 from i18n import (LANG_NAMES, SPEECH_LANGS, SUPPORTED_LANGS,
                   advice_for, explanation_for, get_strings,
                   normalise_lang, remark_key_for, result_is_plain,
@@ -38,10 +39,12 @@ from test_mode import (TEST_TIME_LIMIT, TOPIC_LABELS as TEST_TOPICS,
 from solver.answer_cache import get_negative, put_negative
 from solver.router import solve_question
 from fallback import with_fallback
+from notation import annotate_method, annotate_result
 from langdetect_local import detect_language_confident, \
     detect_language_request
 import accounts
 import ocr
+import photofix
 import weak_practice
 import full_paper
 import progress as progress_mod
@@ -205,6 +208,23 @@ def normalize_ocr_text(text):
     (⁰¹⁴⁵⁶⁷⁸⁹) become ^n like ²/³ already did. These run BEFORE
     the exponent rule below, which would otherwise read "l5" as
     the variable l to the power 5.
+
+    Wave 126 adds the next tier of measured confusions (each one
+    seen in the Wave-126 Chromium OCR runs, each fenced so plain
+    words cannot trip it): an S/s between digits or an S right
+    after a digit at a token's end is a 5 ("3S" -> "35", the
+    handwritten "35" the engine read as "3S"), a Z/z between
+    digits is a 2, a B between digits is an 8, a g between
+    digits is a 9, a digit followed by "o/o" is a percent
+    ("15 o/o" -> "15%"), a decimal point split by spaces is
+    rejoined ("3. 5" / "3 .5" -> "3.5"), and a V or ✓ touching
+    digits with no letter/digit before it is a square root
+    ("V625" -> "√625" — the solver reads √ natively; this runs
+    before the exponent rule, which would otherwise read "V625"
+    as the variable V to the power 625). Deliberately NOT fixed:
+    "3°" for 3³ — ° is a real angle mark in geometry, so
+    rewriting it would corrupt genuine angle questions; the
+    student's editable check path covers that one instead.
     """
     if not text:
         return ""
@@ -225,12 +245,25 @@ def normalize_ocr_text(text):
         t = t.replace(frac, " " + ab + " ")
     # Multiplication / division symbols
     t = t.replace("×", "*").replace("✕", "*").replace("÷", "/")
+    # Wave 126: "%" read as "o/o" — must run BEFORE the Wave-83
+    # O->0 rule below, which would otherwise eat the first o
+    # ("15o/o" -> "150/o" instead of "15%")
+    t = re.sub(r"(\d)\s*o/o(?![A-Za-z])", r"\g<1>%", t)
     # Wave 83: digit confusions, fenced by digits (see docstring)
     t = re.sub(r"(\d)[Oo](?=\d)", r"\g<1>0", t)
     t = re.sub(r"(\d)[Oo]\b", r"\g<1>0", t)
     t = re.sub(r"(\d)[lI](?=\d)", r"\g<1>1", t)
     t = re.sub(r"(?<![A-Za-z])[lI](?=\d)", "1", t)
     t = re.sub(r"(?<![A-Za-z0-9])O(?=\d{2,})", "0", t)
+    # Wave 126: the next tier of digit confusions (see docstring)
+    t = re.sub(r"(\d)[Ss](?=\d)", r"\g<1>5", t)
+    t = re.sub(r"(\d)S\b", r"\g<1>5", t)
+    t = re.sub(r"(\d)[Zz](?=\d)", r"\g<1>2", t)
+    t = re.sub(r"(\d)B(?=\d)", r"\g<1>8", t)
+    t = re.sub(r"(\d)g(?=\d)", r"\g<1>9", t)
+    t = re.sub(r"(\d)\s*\.\s+(?=\d)", r"\g<1>.", t)
+    t = re.sub(r"(\d)\s+\.(?=\d)", r"\g<1>.", t)
+    t = re.sub(r"(?<![A-Za-z0-9])[V✓]\s*(?=\d)", "√", t)
     # "3X4" / "3 x 4" style: an X between two digits is multiplication
     t = re.sub(r"(\d)\s*[Xx]\s*(?=\d)", r"\1*", t)
     # "x2" / "x 2": isolated variable letter + digits is an exponent
@@ -664,7 +697,13 @@ def create_app():
             if mode != "login":
                 mode = "signup"
             return _signin(mode)
-        return render_template("index.html")
+        # Wave 131: the chat page learns whether the streamed
+        # solve endpoint is live (GANITRA_AI_STREAM) — with the
+        # flag off (the default) the page renders
+        # AI_STREAM=false and behaves exactly as before.
+        from ai_stream import stream_enabled
+        return render_template(
+            "index.html", ai_stream_enabled=stream_enabled())
 
     # ------------------------------------------------------ wave 10 auth
     @app.post("/signup")
@@ -1137,7 +1176,12 @@ def create_app():
         history.insert(0, trimmed_history_entry(question, result))
         session["history"] = history[:_HISTORY_LIMIT]
         return render_template("answer.html", question=question,
-                               result=result,
+                               # Wave 138: typeset variants are a
+                               # display concern — annotated on a
+                               # copy for the template only; the
+                               # session's stored result (print,
+                               # history) stays the solver's own.
+                               result=annotate_result(dict(result)),
                                explanation=(None if quiet
                                             else explanation_for(result,
                                                                  _lang())),
@@ -1145,9 +1189,17 @@ def create_app():
                                        else advice_for(result, _lang())),
                                # Wave 14: same non-blocking
                                # auto-teach budget as /api/solve.
+                               # Wave 130: an explicit language
+                               # request relanguages the method
+                               # steps too (api._methods_localised
+                               # does the same for the chat API).
                                methods=([] if quiet
-                                        else methods_nonblocking(
-                                            solve_text, result)),
+                                        else [annotate_method(m)
+                                              for m in
+                                              _methods_localised(
+                                                  solve_text,
+                                                  result,
+                                                  lang_request)]),
                                teach=([] if quiet
                                       else teach_for(result, _lang())),
                                unsolvable=failed)
@@ -1400,14 +1452,54 @@ def create_app():
         text = normalize_ocr_text(outcome.text)
         if not text:
             return jsonify({"ok": False, "code": "empty"})
-        return jsonify({
+        payload = {
             "kind": "text",
             "text": text[:_FILE_TEXT_LIMIT],
             "confidence": (None if outcome.confidence is None
                            else round(outcome.confidence, 1)),
             "low_confidence": bool(outcome.low_confidence),
             "backend": outcome.backend,
-        })
+        }
+        if outcome.low_confidence:
+            # Wave 137: a weak read earns the partial-read
+            # analysis — when the surviving words identify the
+            # question family, the composer is prefilled with
+            # the REBUILT question (plus at most one short
+            # confirmation line) instead of the raw garble.
+            # No match -> no extra fields -> Wave 126 behaviour.
+            fixed = photofix.analyse(text)
+            if fixed is not None:
+                payload["prefill"] = fixed["question"]
+                payload["confirm"] = fixed["confirm"]
+        return jsonify(payload)
+
+    @app.post("/photo-fix")
+    def photo_fix():
+        # Wave 137: partial-read analysis for the BROWSER OCR
+        # flow (the server backend above is unavailable on the
+        # free host, so the browser's weak reads come here).
+        # The chat script posts the recognised text whenever
+        # Wave 126's confidence gate decides the read must be
+        # checked before solving; the reply either carries a
+        # rebuilt question (+ at most one confirmation line)
+        # for the editable composer, or {"reconstructed":
+        # false}, which leaves the raw text in the composer
+        # exactly as Wave 126 did. This route NEVER solves
+        # anything — a reconstruction reaches the solver only
+        # after the student sees it, fixes it and presses
+        # Solve himself (Suraj's rule: pehle confirm, phir
+        # solve).
+        data = request.get_json(silent=True) or {}
+        raw = data.get("text") or request.form.get("text") or ""
+        text = normalize_ocr_text(raw)
+        if not text:
+            return jsonify({"ok": False, "code": "empty"})
+        fixed = photofix.analyse(text)
+        if fixed is None:
+            return jsonify({"ok": True, "reconstructed": False})
+        return jsonify({"ok": True, "reconstructed": True,
+                        "question": fixed["question"],
+                        "confirm": fixed["confirm"]})
 
     @app.post("/photo-solve")
     def photo_solve():
@@ -1459,7 +1551,9 @@ def create_app():
         history.insert(0, trimmed_history_entry(question, result))
         session["history"] = history[:_HISTORY_LIMIT]
         return render_template("answer.html", question=question,
-                               result=result, photo_text=question,
+                               # Wave 138: as in /solve above.
+                               result=annotate_result(dict(result)),
+                               photo_text=question,
                                source=source,
                                explanation=(None if quiet
                                             else explanation_for(result,
@@ -1469,8 +1563,11 @@ def create_app():
                                # Wave 14: same non-blocking
                                # auto-teach budget as /api/solve.
                                methods=([] if quiet
-                                        else methods_nonblocking(
-                                            question, result)),
+                                        else [annotate_method(m)
+                                              for m in
+                                              methods_nonblocking(
+                                                  question,
+                                                  result)]),
                                teach=([] if quiet
                                       else teach_for(result, _lang())),
                                unsolvable=failed)
@@ -1796,7 +1893,9 @@ def create_app():
             flash(_t()["flash_download_first"])
             return redirect(url_for("index"))
         return render_template(
-            "print.html", question=question, result=result,
+            "print.html", question=question,
+            # Wave 138: typeset variants on a display copy.
+            result=annotate_result(dict(result)),
             explanation=explanation_for(result, _lang()),
             advice=advice_for(result, _lang()),
             handwriting_style=(request.args.get("style") == "hand"))

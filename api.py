@@ -1,14 +1,20 @@
 import re
 
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, Response, request, jsonify, \
+    session, stream_with_context
 from i18n import (LANG_NAMES, SPEECH_LANGS, advice_for,
                   explanation_for, get_strings, normalise_lang,
                   result_unsolvable, solve_failed, teach_for)
-from langdetect_local import detect_language_confident, \
-    detect_language_request
+from langdetect_local import detect_detail_request, \
+    detect_language_confident, detect_language_request
+from context_ref import build_context_response, make_turn, \
+    parse_context_ref
+from detail import expand_detail
 from doubt import build_doubt_response, parse_followup
-from fallback import with_fallback
+from fallback import log_deferred_not_found, record_outcome, \
+    with_fallback
 from followups import w122_payload
+from notation import annotate_method, annotate_result
 from solver.answer_cache import get_negative, put_negative
 from solver.methods import alternate_methods
 from solver.router import solve_question
@@ -51,7 +57,8 @@ def trimmed_history_entry(question, result):
 
 
 def _solve_friendly(question, lang=None, student_class=None,
-                    lang_request=None):
+                    lang_request=None, detail=False,
+                    defer_ai=False):
     """Wave 5b: solve, and on failure gently re-ask once with a hint
     appended (same behaviour as the classic /solve route), so the
     chat never shows a raw solver failure when a small nudge fixes
@@ -61,7 +68,13 @@ def _solve_friendly(question, lang=None, student_class=None,
     Wave 90, is forwarded the same way for the not-found
     learning log only. `lang_request`, Wave 107, is an explicit
     answer-language request from the message, forwarded to the
-    fallback layer unchanged.)
+    fallback layer unchanged. `detail`, Wave 136, is an explicit
+    long-answer request from the message: it selects the AI
+    legs' DETAIL prompt variant inside the fallback layer and
+    expands a deterministic answer with the topic's why block
+    + one verified worked example (detail.expand_detail) —
+    only ever when the student asked; the default False is
+    byte-identical to before this wave.)
 
     Wave 18: the result then passes through the no-dead-end
     layer (fallback.with_fallback) — real solver answers come
@@ -75,7 +88,12 @@ def _solve_friendly(question, lang=None, student_class=None,
     same unsolved question) is then served the identical result
     instead of re-paying solve x2 + fallback layers every time.
     Real solver answers never enter that store; they keep the
-    positive answer-cache behaviour inside solve_question."""
+    positive answer-cache behaviour inside solve_question.
+
+    Wave 131: `defer_ai` is forwarded to with_fallback — the
+    streaming endpoint's solves stop at the AI legs and come
+    back with the chain's deferred marker instead of a
+    finished answer (see api_solve_stream)."""
     # Wave 85: the step checker ("meri galti kahan hai"). A
     # message carrying the student's own working after a
     # "my solution:" marker is CHECKED against the solver's
@@ -87,6 +105,16 @@ def _solve_friendly(question, lang=None, student_class=None,
     checked = step_check_result(question, lang=lang)
     if checked is not None:
         return checked
+    # Wave 129: the same checker, reached the natural way —
+    # "maine aise kiya hai, galti kahan hai?" with the working
+    # in the same message, no marker line needed. galti only
+    # splits the message and hands it to the unchanged Wave 85
+    # machinery; no intent phrase or no usable steps -> None,
+    # and the normal flow below is untouched.
+    from galti import natural_check_result
+    natural = natural_check_result(question, lang=lang)
+    if natural is not None:
+        return natural
     # Wave 107: when the message carried an explicit language
     # request, the negative cache is keyed per request — a
     # fallback outcome's one-line texts are shaped by it, so
@@ -94,7 +122,15 @@ def _solve_friendly(question, lang=None, student_class=None,
     # with and without one) must not share one pinned outcome.
     # No request -> the plain pre-Wave-107 key, exactly as
     # before.
+    # Wave 136: a detail outcome is a DIFFERENT (longer)
+    # answer to the same question, so it is keyed apart the
+    # same way — a plain ask never inherits a pinned detailed
+    # outcome, and a detail ask never inherits the plain one.
+    # No detail request -> the key is exactly the Wave-107
+    # one.
     neg_variant = lang_request
+    if detail:
+        neg_variant = f"{lang_request or ''}|w136detail"
     cached = get_negative(question, variant=neg_variant)
     if cached is not None:
         return cached
@@ -103,10 +139,39 @@ def _solve_friendly(question, lang=None, student_class=None,
         retry = solve_question(f"{question} find the value")
         if not solve_failed(question, retry):
             result = retry
+    # Wave 136: the detail flag rides along ONLY when it is
+    # on, so with detail off this call is byte-identical to
+    # before the wave — the pre-136 test doubles for
+    # with_fallback (e.g. Wave 48's, which predate the
+    # detail parameter) keep working unchanged. Wave 131:
+    # the defer_ai flag follows the same discipline — it is
+    # passed only on the streaming path, so the classic call
+    # stays byte-identical to the pre-131 one (test_wave48
+    # caught exactly that).
+    extra = {}
+    if detail:
+        extra["detail"] = True
+    if defer_ai:
+        extra["defer_ai"] = True
     result = with_fallback(question, result, lang=lang,
                            student_class=student_class,
-                           lang_request=lang_request)
-    put_negative(question, result, variant=neg_variant)
+                           lang_request=lang_request,
+                           **extra)
+    if detail:
+        # Wave 136: expand AFTER the fallback layer (so the
+        # Live Bank, recorded inside with_fallback, stores
+        # the plain outcome) and BEFORE the negative cache
+        # files this outcome under the detail key.
+        result = expand_detail(question, result, lang=lang,
+                               lang_request=lang_request)
+    # Wave 131: a deferred-AI marker is not an outcome — the
+    # streaming layer writes the negative cache itself once
+    # the AI legs have answered or missed, with the FINAL
+    # result. Every finished outcome is cached exactly as
+    # before.
+    if not (isinstance(result, dict)
+            and result.get("ai_deferred")):
+        put_negative(question, result, variant=neg_variant)
     return result
 
 
@@ -169,7 +234,9 @@ def _intro_for(result, question):
 # rendered in the new language. Every response gains
 # language_switched/language; on a switch it also carries `ui` (the
 # chat page's strings in the new language, so the client can re-skin
-# without a reload) and a localised `lang_notice` toast line. A
+# without a reload). Wave 139 (Suraj's order): the switch is
+# SILENT — the localised `lang_notice` toast line Wave 9 added
+# here is removed; nothing announces the change to the student. A
 # manual language pick is never overridden by anything except a
 # later chat message in yet another language.
 
@@ -182,7 +249,6 @@ _UI_EXTRA_KEYS = {
     "chat_waking_note",
     "flash_too_long", "chat_empty_sub", "chat_welcome",
     "chat_greeting_plain", "saathi_welcome_name",
-    "lang_switched_toast",
 }
 
 
@@ -194,11 +260,7 @@ def _lang_fields(lang, strings, switched):
               if k.startswith(_UI_PREFIXES) or k in _UI_EXTRA_KEYS}
         ui["speech_lang"] = SPEECH_LANGS[lang]
         fields["ui"] = ui
-        try:
-            fields["lang_notice"] = strings[
-                "lang_switched_toast"].format(lang=LANG_NAMES[lang])
-        except (KeyError, IndexError, ValueError):
-            fields["lang_notice"] = ""
+        # Wave 139: no `lang_notice` — the switch is never announced.
     return fields
 
 
@@ -227,6 +289,94 @@ def _json_str(data, field):
     if value is None:
         return ""
     return value if isinstance(value, str) else None
+
+
+def _methods_localised(question, result, lang_request):
+    """Wave 130: the alternate-method payload with its steps
+    rendered in an explicitly requested language. Methods are
+    generated in English (solver/methods.py); a Hindi or
+    Hinglish request relanguages their boilerplate lines (and,
+    for Hindi, the method labels) through steplang — the same
+    template layer that fixes the main steps. No request (or
+    an English one) returns the payload exactly as computed.
+    Guarded like every other hook: any failure leaves the
+    methods untouched."""
+    methods = methods_nonblocking(question, result)
+    if lang_request in ("hi", "hinglish"):
+        try:
+            from steplang import relanguage_methods
+            methods = relanguage_methods(methods, lang_request)
+        except Exception:
+            pass
+    return methods
+
+
+# --- Wave 127: per-chat solved-turn log --------------------------------
+# The context resolver (context_ref.py) answers references to
+# earlier turns ("uska answer batao", "usi ka ek aur example
+# do") from a small log of THIS chat's solved turns, kept in
+# the session next to last_result/history. The chat page sends
+# its chat id with every solve (Wave 11 chats), so the log is
+# namespaced per chat — references never cross chats. A caller
+# that sends no chat id (the classic flows, tests) shares the
+# "default" bucket, exactly the scoping Wave 96's doubt layer
+# has always had. Entries are trimmed like history entries
+# (question + final answer + type/op/topic) because the log
+# rides in the session cookie; only the LAST turn's full
+# result lives in session["last_result"], as before.
+
+_CTX_TURNS_PER_CHAT = 8
+_CTX_CHATS_KEPT = 3
+
+
+def _chat_key(data):
+    """The context-log bucket for this request: "c<id>" when
+    the body carries a usable chat id, else "default"."""
+    raw = data.get("chat_id")
+    if isinstance(raw, bool):
+        return "default"
+    if isinstance(raw, int) and raw > 0:
+        return f"c{raw}"
+    if isinstance(raw, str) and raw.strip().isdigit() \
+            and int(raw.strip()) > 0:
+        return f"c{int(raw.strip())}"
+    return "default"
+
+
+def _ctx_turns(chat_key):
+    """This chat's solved-turn log (oldest first)."""
+    store = session.get("ctx_turns")
+    if not isinstance(store, dict):
+        return []
+    turns = store.get(chat_key)
+    return turns if isinstance(turns, list) else []
+
+
+def _ctx_record(chat_key, question, result):
+    """Append a fresh solve to the chat's turn log. Only real
+    answers are recorded — plain one-liners (not-found, maths-
+    only guard, greetings) and solver errors are not turns a
+    student can point back at."""
+    if not isinstance(result, dict):
+        return
+    if result.get("op") == "error" or result.get("plain"):
+        return
+    if result.get("fallback_kind") not in (None, "concept"):
+        return
+    if not str(result.get("answer", "") or "").strip():
+        return
+    store = session.get("ctx_turns")
+    if not isinstance(store, dict):
+        store = {}
+    turns = store.get(chat_key)
+    if not isinstance(turns, list):
+        turns = []
+    turns.append(make_turn(question, result))
+    store[chat_key] = turns[-_CTX_TURNS_PER_CHAT:]
+    # Keep only the most recently used chat buckets (cookie).
+    while len(store) > _CTX_CHATS_KEPT:
+        store.pop(next(iter(store)))
+    session["ctx_turns"] = store
 
 
 @api_bp.post("/solve")
@@ -417,6 +567,125 @@ def api_solve():
             **fields,
         })
 
+    # Wave 129: "meri galti kahan hai" — the two-turn flow
+    # around the Wave 85 step checker.
+    # (a) A parked "apne steps bhejo" prompt is waiting: this
+    # message is read as the student's steps first. When it
+    # cannot be read as steps (or it is itself a fresh
+    # check-my-work message), the parked state simply expires
+    # and the message is answered normally below — the student
+    # is never trapped in the flow.
+    # (b) A fresh check-my-work intent carrying NO steps: park
+    # the question (the message's own question line, else the
+    # chat's last question — e.g. when the steps arrived alone
+    # for a question just solved here) and answer with the
+    # one-line prompt. An intent that DOES carry its steps
+    # falls through: _solve_friendly's Wave 85 / Wave 129
+    # hooks produce the verdict there.
+    from galti import (check_pending_steps, flavour_of,
+                       prompt_result, split_intent_message)
+    from stepcheck import _split_message as _marker_split
+    galti_reply = None
+    pending = session.get("galti_pending")
+    if pending is not None:
+        session.pop("galti_pending", None)
+        if split_intent_message(question) is None:
+            verdict = check_pending_steps(
+                pending.get("question")
+                if isinstance(pending, dict) else None,
+                question, lang=lang,
+                flavour_hint=pending.get("flavour")
+                if isinstance(pending, dict) else None)
+            if verdict is not None:
+                galti_reply = verdict
+    if galti_reply is None and _marker_split(question) is None:
+        split = split_intent_message(question)
+        if split is not None and split.get("steps_only"):
+            last_q = session.get("last_question")
+            if last_q:
+                verdict = check_pending_steps(
+                    last_q, "\n".join(split["steps"]), lang=lang,
+                    flavour_hint=flavour_of(question))
+                if verdict is not None:
+                    galti_reply = verdict
+        elif split is not None and not split.get("steps"):
+            park_q = split.get("question") \
+                or session.get("last_question")
+            session["galti_pending"] = {
+                "question": park_q, "flavour": flavour_of(question)}
+            galti_reply = prompt_result(question, bool(park_q))
+    if galti_reply is not None:
+        history = session.get("history", [])
+        history.insert(0, trimmed_history_entry(question,
+                                                galti_reply))
+        session["history"] = history[:_HISTORY_LIMIT]
+        return jsonify({
+            "ok": True,
+            "result": galti_reply,
+            "intro": None,
+            "explanation": explanation_for(galti_reply, lang),
+            "advice": advice_for(galti_reply, lang),
+            "methods": [],
+            "teach": teach_for(galti_reply, lang),
+            **fields,
+        })
+
+    # Wave 127: conversation context ("uska answer batao",
+    # "usi ka ek aur example do", "dusra tarika batao", "ye
+    # wala phir se samjhao") — a REFERENCE to an earlier turn
+    # of THIS chat, resolved from the per-chat turn log before
+    # anything solves it as a new question. The detector is
+    # deliberately narrow (see context_ref.py): a message
+    # carrying a self-contained new question is never claimed,
+    # and step references are never claimed either — they fall
+    # through to the Wave 96 doubt layer right below, which
+    # owns them. When the reference cannot be honoured (no
+    # earlier turn, topic never discussed, example cannot be
+    # regenerated), build_context_response returns None and
+    # the normal path answers — never an invented answer. A
+    # context reply does NOT overwrite the last solution and
+    # is NOT recorded as a turn, so references keep pointing
+    # at the real solves.
+    chat_key = _chat_key(data)
+    ctx_ref = parse_context_ref(solve_text)
+    if ctx_ref is not None:
+        built = build_context_response(
+            question, ctx_ref, _ctx_turns(chat_key),
+            prev_question=session.get("last_question"),
+            prev_result=session.get("last_result"), lang=lang)
+        if built is not None:
+            result, advice_source = built
+            history = session.get("history", [])
+            history.insert(0, trimmed_history_entry(question, result))
+            session["history"] = history[:_HISTORY_LIMIT]
+            return jsonify({
+                "ok": True,
+                "result": result,
+                "intro": None,
+                "explanation": "" if result.get("op") in (
+                    "clarify", "show_answer")
+                    else explanation_for(result, lang),
+                "advice": advice_for(advice_source, lang)
+                          if advice_source else "",
+                "methods": [],
+                "teach": teach_for(advice_source, lang)
+                         if advice_source else [],
+                **fields,
+            })
+
+    # Wave 136: an explicit long-answer request in the message
+    # ("detail me samjhao", "vistar se batao", "explain in
+    # detail") — detected on the student's ORIGINAL message,
+    # like Wave 123's gates read the original ask. The phrase
+    # is NOT stripped from solve_text (the solver tolerates
+    # request filler, exactly as it does Wave 123's step
+    # phrases); the flag alone rides into the solve, where it
+    # selects the AI legs' detail prompt variant and expands
+    # a deterministic answer with the why block + one worked
+    # example. No request -> the flag is False and every byte
+    # below is the pre-Wave-136 behaviour.
+    detail = detect_detail_request(question)
+
     # Wave 96: doubt follow-up ("ye step samjhao") — answered
     # from the session's last solution (its steps are also what
     # the client stores inside the saved chat thread), never by
@@ -441,7 +710,11 @@ def api_solve():
             session["history"] = history[:_HISTORY_LIMIT]
             return jsonify({
                 "ok": True,
-                "result": result,
+                # Wave 138: the typeset variants are a DISPLAY
+                # concern, added on a copy at this response
+                # boundary only — the solver's own dict (and
+                # the session's last_result) stays pristine.
+                "result": annotate_result(dict(result)),
                 "intro": None,
                 "explanation": explanation_for(result, lang),
                 "advice": advice_for(prev_result, lang),
@@ -458,14 +731,39 @@ def api_solve():
     result = _solve_friendly(
         solve_text, lang=lang,
         student_class=session.get("saathi_class"),
-        lang_request=lang_request)
+        lang_request=lang_request, detail=detail)
 
     # Wave 5 (additive): a chat solve on the homepage counts exactly
     # like a classic /solve — it lands in the session history and
     # becomes the "last solution" for /history, /download and the
     # print/PDF page. Existing response fields are unchanged.
+    # (Wave 131: the writes live in _commit_solve_session and
+    # the payload in _solve_response_payload, shared with the
+    # streaming endpoint so both paths serve identical bytes.)
+    _commit_solve_session(question, result, chat_key=chat_key)
+    return jsonify(_solve_response_payload(
+        question, solve_text, result, lang, strings, fields,
+        lang_request=lang_request))
+
+
+def _commit_solve_session(question, result, chat_key=None):
+    """The session writes of a finished chat solve (Wave 5 +
+    Wave 96 + Wave 46): the question and its full result
+    become the session's last solution (for /history,
+    /download, the print/PDF page and doubt follow-ups), the
+    explained-step cursor resets, and a trimmed entry joins
+    the session history."""
     session["last_question"] = question
     session["last_result"] = result
+    # Wave 127: the fresh solve joins THIS chat's turn log —
+    # the log later references ("uska...", "usi ka...") point
+    # into. (Filtered inside: plain/fallback outcomes are not
+    # recorded.) The streaming callers pass no chat key (their
+    # commit body carries no chat id), so a streamed solve is
+    # not turn-logged — the flag-gated path is inert in
+    # production (GANITRA_AI_STREAM off).
+    if chat_key is not None:
+        _ctx_record(chat_key, question, result)
     # Wave 96: a fresh solve replaces the answer any follow-up
     # points at, so the explained-step cursor resets with it.
     session.pop("doubt_step", None)
@@ -474,6 +772,15 @@ def api_solve():
     history.insert(0, trimmed_history_entry(question, result))
     session["history"] = history[:_HISTORY_LIMIT]
 
+
+def _solve_response_payload(question, solve_text, result, lang,
+                            strings, fields, lang_request=None):
+    """The JSON payload of a finished chat solve: the Wave-5b
+    friendly error card when the solve failed, else the
+    success payload. Pure construction — the caller owns the
+    session writes (_commit_solve_session) and the wrapping
+    (jsonify for /api/solve, a final SSE event for
+    /api/solve/stream), so both paths serve the same dict."""
     if solve_failed(solve_text, result):
         # Wave 5b: the friendly error contract for the chat — the
         # client renders the localised error card + Retry in a
@@ -492,7 +799,7 @@ def api_solve():
                 encouragement = strings["error_encourage_name"]
         else:
             encouragement = strings["error_encourage"]
-        return jsonify({
+        return {
             "ok": False,
             "unsolvable": True,
             "question": question,
@@ -505,10 +812,12 @@ def api_solve():
                 "retry_label": strings["error_retry_btn"],
             },
             **fields,
-        })
-    return jsonify({
+        }
+    return {
         "ok": True,
-        "result": result,
+        # Wave 138: display-only typeset variants on a copy
+        # (see the doubt path above).
+        "result": annotate_result(dict(result)),
         # Wave 68: "intro" is the card's opening line (the
         # solver's own givens/framing step for word problems,
         # else None). "explanation" is still sent for payload
@@ -526,7 +835,9 @@ def api_solve():
         # Wave 14: the auto-teach methods pass runs with a hard
         # time budget (speedups.methods_nonblocking) — same data
         # in every normal case, but it can never delay the answer.
-        "methods": methods_nonblocking(solve_text, result),
+        "methods": [annotate_method(m) for m in
+                    _methods_localised(solve_text, result,
+                                       lang_request)],
         "teach": teach_for(result, lang),
         # Wave 122: the conditional-features payload — the
         # localised step-label word, and the follow-up chips
@@ -540,7 +851,255 @@ def api_solve():
                              question=solve_text,
                              ask_text=question),
         **fields,
-    })
+    }
+
+
+def _sse_response(body):
+    """A text/event-stream response with the headers
+    progressive delivery needs: no-cache, and
+    X-Accel-Buffering: no — the header PythonAnywhere's own
+    Buffering help page prescribes so its nginx layers flush
+    each event as it is yielded instead of buffering the
+    whole answer (see ganitra-wave131-notes.md)."""
+    resp = Response(body, mimetype="text/event-stream")
+    resp.headers["X-Accel-Buffering"] = "no"
+    resp.headers["Cache-Control"] = "no-cache"
+    return resp
+
+
+@api_bp.post("/solve/stream")
+def api_solve_stream():
+    """Wave 131: /api/solve, streamed — the same solve, with
+    the AI fallback leg delivered piece by piece as the
+    provider produces it (ai_stream.py; the deterministic
+    layers answer in ~0.13 s and are served as one final
+    event, there is nothing real to stream there).
+
+    PROTOTYPE, flag-gated: with GANITRA_AI_STREAM unset (the
+    default) this endpoint answers 404 and the chat uses
+    /api/solve exactly as before. Progressive delivery is
+    proven on the local stack and plausible on
+    PythonAnywhere by its own documented buffering rules,
+    but UNVERIFIED on PA's free tier until a live deploy
+    watches an AI answer arrive progressively — see
+    ganitra-wave131-notes.md. The client falls back to
+    /api/solve on ANY problem with this endpoint (non-200,
+    no readable stream, a stream that ends without a final
+    event), so enabling the flag can never make the chat
+    worse than the classic path.
+
+    Events (SSE, one JSON object per data: frame):
+    {"type": "delta", "text": ...} — a piece of the AI
+    leg's reply, shown live; {"type": "reset"} — the leg on
+    screen failed/truncated and the next leg is starting,
+    clear the live text; {"type": "final", "payload": {...}}
+    — the finished solve, the very dict /api/solve would
+    have returned (built by _solve_response_payload from the
+    same result), plus "commit_required": true when the
+    result was finished inside the stream and the client
+    must hand it to /api/solve/stream-commit for the session
+    writes (a streaming response's session cookie is fixed
+    before the first chunk leaves, so those writes cannot
+    happen here)."""
+    from ai_stream import sse_event, stream_ai_events, \
+        stream_enabled
+    if not stream_enabled():
+        return jsonify({"ok": False,
+                        "message": "streaming is off"}), 404
+    data = _json_object()
+    lang = normalise_lang(session.get("lang", "en"))
+    strings = get_strings(lang)
+    if data is None:
+        return jsonify({"ok": False,
+                        "message": strings["flash_no_question"],
+                        **_lang_fields(lang, strings, False)}), 400
+    question = _json_str(data, "question")
+    if question is None:
+        return jsonify({"ok": False,
+                        "message": strings["flash_no_question"],
+                        **_lang_fields(lang, strings, False)}), 400
+    question = question.strip()
+    if not question:
+        return jsonify({"ok": False,
+                        "message": strings["flash_no_question"],
+                        **_lang_fields(lang, strings, False)})
+    if len(question) > _QUESTION_LIMIT:
+        return jsonify({"ok": False,
+                        "message": strings["flash_too_long"],
+                        **_lang_fields(lang, strings, False)})
+
+    # Language handling identical to api_solve (Wave 9
+    # auto-detect + the Wave 107 explicit-request override) —
+    # see the long comment there; the same fields result.
+    lang_request = None
+    solve_text = question
+    req = detect_language_request(question)
+    if req is not None:
+        lang_request, req_cleaned = req
+        if req_cleaned:
+            solve_text = req_cleaned
+        req_lang = ("hi" if lang_request in ("hi", "hinglish")
+                    else "en")
+        switched = req_lang != lang
+        if switched:
+            lang = req_lang
+            session["lang"] = lang
+            strings = get_strings(lang)
+    else:
+        detected, solid = detect_language_confident(question)
+        switched = False
+        if solid and detected != lang:
+            lang = detected
+            session["lang"] = lang
+            strings = get_strings(lang)
+            switched = True
+    fields = _lang_fields(lang, strings, switched)
+
+    # Wave 96 doubt follow-up: answered from the session's
+    # last solution, never by the AI legs — served as one
+    # final event with api_solve's exact payload, its
+    # session writes done here, before the response starts.
+    doubt_ref = parse_followup(question)
+    if doubt_ref is not None:
+        prev_result = session.get("last_result")
+        built = build_doubt_response(
+            question, doubt_ref, prev_result, lang=lang,
+            last_step=session.get("doubt_step"))
+        if built is not None:
+            result, step_index = built
+            session["doubt_step"] = step_index
+            history = session.get("history", [])
+            history.insert(0, trimmed_history_entry(question, result))
+            session["history"] = history[:_HISTORY_LIMIT]
+            payload = {
+                "ok": True,
+                # Deploy-27 merge: mirrors the classic doubt
+                # payload exactly (Wave 138 annotation on a
+                # copy + the Wave 122 label-only w122 field).
+                "result": annotate_result(dict(result)),
+                "intro": None,
+                "explanation": explanation_for(result, lang),
+                "advice": advice_for(prev_result, lang),
+                "methods": [],
+                "teach": teach_for(prev_result, lang),
+                "w122": w122_payload(result, lang=lang,
+                                     question=question),
+                **fields,
+            }
+            return _sse_response(sse_event(
+                {"type": "final", "payload": payload}))
+
+    student_class = session.get("saathi_class")
+    result = _solve_friendly(
+        solve_text, lang=lang, student_class=student_class,
+        lang_request=lang_request, defer_ai=True)
+
+    if not (isinstance(result, dict)
+            and result.get("ai_deferred")):
+        # A finished outcome (solver, bank, concept, step
+        # check, cached fallback...): the session writes
+        # happen now, before the response starts, exactly as
+        # api_solve does them, and the payload rides as the
+        # single final event.
+        _commit_solve_session(question, result)
+        payload = _solve_response_payload(
+            question, solve_text, result, lang, strings, fields,
+            lang_request=lang_request)
+        return _sse_response(sse_event(
+            {"type": "final", "payload": payload}))
+
+    # The chain stopped at the AI legs. Everything the
+    # stream needs is captured in plain values now — the
+    # generator below runs after the response (and its
+    # session cookie) has been fixed, so it must not touch
+    # the session; the writes that remain possible (the
+    # Wave-117 record, the Wave-48 negative cache, the
+    # Wave-90 log) are server-side stores and are done
+    # there, with the FINAL result, exactly as the classic
+    # path does them for a finished outcome.
+    honest = result["ai_honest"]
+    hindi = result["ai_hindi"]
+
+    def generate():
+        final_result = None
+        try:
+            events = stream_ai_events(solve_text, hindi,
+                                      lang_request)
+            while True:
+                try:
+                    event = next(events)
+                except StopIteration as stop:
+                    final_result = stop.value
+                    break
+                yield sse_event(event)
+        except Exception:
+            final_result = None
+        if final_result is None:
+            # Every leg missed or failed: the honest outcome
+            # the classic chain would have served, with the
+            # Wave-90 log fired now (and only now — an
+            # AI-answered question is never logged not-found).
+            final_result = honest
+            try:
+                log_deferred_not_found(
+                    solve_text, result, lang=lang,
+                    student_class=student_class,
+                    lang_request=lang_request)
+            except Exception:
+                pass
+        try:
+            record_outcome(solve_text, final_result, lang,
+                           lang_request)
+        except Exception:
+            pass
+        try:
+            put_negative(solve_text, final_result,
+                         variant=lang_request)
+        except Exception:
+            pass
+        payload = _solve_response_payload(
+            question, solve_text, final_result, lang, strings,
+            fields, lang_request=lang_request)
+        yield sse_event({"type": "final",
+                         "commit_required": True,
+                         "payload": payload})
+
+    return _sse_response(stream_with_context(generate()))
+
+
+@api_bp.post("/solve/stream-commit")
+def api_solve_stream_commit():
+    """Wave 131: the session half of a streamed solve. A
+    streaming response's session cookie is computed before
+    the first chunk leaves, so the writes /api/solve does
+    inline (_commit_solve_session) cannot happen inside the
+    stream; the client hands the final result it was served
+    (in the stream's final event) to this endpoint, which
+    performs exactly those writes. The result only ever
+    shapes the caller's OWN session (last solution, history)
+    — the same trust the account-chat thread save already
+    places in the client — and the server's own stores (Live
+    Bank, negative cache, not-found log) were already
+    written by the stream itself, from the server's own
+    copy of the result."""
+    from ai_stream import stream_enabled
+    if not stream_enabled():
+        return jsonify({"ok": False,
+                        "message": "streaming is off"}), 404
+    data = _json_object()
+    if data is None:
+        return jsonify({"ok": False,
+                        "message": "bad request"}), 400
+    question = _json_str(data, "question")
+    result = data.get("result")
+    if question is None or not question.strip() \
+            or len(question) > _QUESTION_LIMIT \
+            or not isinstance(result, dict) \
+            or "answer" not in result:
+        return jsonify({"ok": False,
+                        "message": "bad request"}), 400
+    _commit_solve_session(question.strip(), result)
+    return jsonify({"ok": True})
 
 
 @api_bp.post("/solve-method")
@@ -571,8 +1130,21 @@ def api_solve_method():
     primary = _solve_friendly(question)
     if solve_failed(question, primary):
         return jsonify({"ok": False, "error": "method-unavailable"})
+    # Wave 130: the question may itself carry an explicit
+    # language request ("... answer Hindi me chahiye") — the
+    # re-served method's steps follow it, like /api/solve's.
+    req = detect_language_request(question)
+    req_target = req[0] if req else None
     for method in alternate_methods(question, primary):
         if method.get("id") == method_id:
-            return jsonify({"ok": True, "method": method,
+            if req_target in ("hi", "hinglish"):
+                try:
+                    from steplang import relanguage_methods
+                    method = relanguage_methods(
+                        [method], req_target)[0]
+                except Exception:
+                    pass
+            return jsonify({"ok": True,
+                            "method": annotate_method(method),
                             "teach": teach_for(primary, lang)})
     return jsonify({"ok": False, "error": "method-unavailable"})

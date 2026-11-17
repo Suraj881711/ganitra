@@ -47,7 +47,8 @@ caller keeps the current language.
 import re
 
 __all__ = ["detect_language", "detect_language_confident",
-           "detect_language_request", "detect_steps_request"]
+           "detect_language_request", "detect_steps_request",
+           "detect_detail_request"]
 
 # ---------------------------------------------------------------- scripts
 # (language key or "deva", first codepoint, last codepoint)
@@ -550,3 +551,101 @@ def detect_steps_request(text):
     normalised = re.sub(r"\s+", " ",
                         text.lower().replace("-", " "))
     return any(p.search(normalised) for p in _STEPS_PATTERNS)
+# ---------------------------------------------------------------------------
+# Wave 136: explicit DETAIL requests inside a message.
+#
+# Suraj's LAMBA ANSWER RULE (17 Nov 2026, standing): Ganitra's
+# answers stay SHORT by default; ONLY when the student
+# explicitly asks for a long / detailed answer does the SAME
+# answer come in a detailed version (the reason behind the
+# working + one example). Never long without being asked.
+#
+# ``detect_detail_request(text)`` returns True only for a
+# request-shaped detail phrase — the same discipline as Wave
+# 107's detect_language_request and Wave 123's
+# detect_steps_request: the bare words "detail" / "long" /
+# "full" / "lamba" are CONTENT in real maths questions ("the
+# details are given below", "how long is the train", "full
+# marks", "train kitni lambi hai"), so every pattern below
+# carries a request shape around the word. The exact set:
+#
+#   English / Roman (matched on the normalised text —
+#   lowercased, hyphens turned to spaces):
+#     "in detail"
+#     "detailed <answer|solution|explanation|working>"
+#     "detail <me|mein|mai|se> <batao|samjhao|samjhaao|
+#       dikhao|chahiye|do|samjha>"   ("detail me samjhao",
+#       "detail mein batao" — the postposition alone never
+#       fires: "detail galat hai" stays plain)
+#     "detailme <verb>"              (attached postposition,
+#       as students type it)
+#     "detail <batao|samjhao|samjhaao|dikhao|chahiye>"
+#     "vistar se" / "vistaar se"     (Hinglish: in detail)
+#     "lamba <answer|jawab|solution>"
+#     "long <answer|explanation|solution>"
+#     "full <solution|answer|explanation>"
+#     "poora <samjhao|samjha|batao|answer|jawab|solution>"
+#     "poori detail"
+#     "explain fully"
+#   Devanagari (exact substrings):
+#     "विस्तार से", "विस्तार में", "विस्तारपूर्वक", "विस्तृत"
+#       ("विस्तार" ALONE never fires — in Hindi maths it is
+#       the algebra instruction EXPAND: "(x + 3)^2 का विस्तार
+#       कीजिए" is a plain expand ask, not a detail request)
+#     "डिटेल में", "डिटेल से", "डिटेल बताओ", "डिटेल समझाओ"
+#     "लंबा उत्तर", "लम्बा उत्तर", "लंबा जवाब"
+#
+# A steps request ("step by step batao") is NOT a detail
+# request — Wave 123's gate owns it; the two compose (a
+# detail ask also earns step labels at the w122 gate, see
+# detail.py's notes) but neither detector fires for the
+# other's phrases.
+# ---------------------------------------------------------------------------
+
+_DETAIL_PATTERNS = tuple(re.compile(p) for p in (
+    r"\bin detail\b",
+    r"\bdetailed (?:answer|solution|explanation|working)\b",
+    r"\bdetail (?:me|mein|mai|se) "
+    r"(?:batao|samjhao|samjhaao|dikhao|chahiye|do|samjha)\b",
+    r"\bdetailme (?:batao|samjhao|samjhaao|dikhao|chahiye|do)\b",
+    r"\bdetail (?:batao|samjhao|samjhaao|dikhao|chahiye)\b",
+    r"\bvistar se\b",
+    r"\bvistaar se\b",
+    r"\blamba (?:answer|jawab|solution)\b",
+    r"\blong (?:answer|explanation|solution)\b",
+    r"\bfull (?:solution|answer|explanation)\b",
+    r"\bpoora (?:samjhao|samjha|batao|answer|jawab|solution)\b",
+    r"\bpoori detail\b",
+    r"\bexplain fully\b",
+))
+_DETAIL_PHRASES_DEV = (
+    "विस्तार से",
+    "विस्तार में",
+    "विस्तारपूर्वक",
+    "विस्तृत",
+    "डिटेल में",
+    "डिटेल से",
+    "डिटेल बताओ",
+    "डिटेल समझाओ",
+    "लंबा उत्तर",
+    "लम्बा उत्तर",
+    "लंबा जवाब",
+)
+
+
+def detect_detail_request(text):
+    """Wave 136: True when the student's message explicitly
+    asks for a LONG / DETAILED answer (see the phrase set
+    above). Deterministic; no match means the answer stays
+    SHORT, exactly as before this wave — Suraj's rule is
+    that length is earned by asking, never given by
+    default."""
+    text = str(text or "")
+    if not text.strip():
+        return False
+    for phrase in _DETAIL_PHRASES_DEV:
+        if phrase in text:
+            return True
+    normalised = re.sub(r"\s+", " ",
+                        text.lower().replace("-", " "))
+    return any(p.search(normalised) for p in _DETAIL_PATTERNS)

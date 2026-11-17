@@ -848,10 +848,16 @@ def _scope_of(ref):
     return None
 
 
-def step_check_result(question, lang=None):
+def step_check_result(question, lang=None, flavour_hint=None):
     """The step-check reply for a chat message, or None when
     the message is not a checkable step-check request (the
-    caller then runs the completely normal solve flow)."""
+    caller then runs the completely normal solve flow).
+
+    Wave 129: ``flavour_hint`` lets the two-turn chat flow
+    (galti.py) keep the reply in the flavour of the student's
+    ORIGINAL intent message — the steps message on its own is
+    bare maths and carries no language signal. Default None
+    keeps the Wave 85 behaviour byte-for-byte."""
     split = _split_message(question)
     if split is None:
         return None
@@ -867,7 +873,7 @@ def step_check_result(question, lang=None):
     if _is_junk(q_text, ref):
         return None
     scope = _scope_of(ref)
-    flavour = _flavour(question)
+    flavour = flavour_hint or _flavour(question)
     S = _STR.get(flavour, _STR["en"])
     if scope is None:
         return _out_of_scope(ref, S)

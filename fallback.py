@@ -241,16 +241,34 @@ def _with_figure(question, result):
     else returns the result untouched (byte-identical). The
     result is copied before the key is added: the router's
     positive answer cache hands out shared dicts, and they
-    must never gain keys."""
+    must never gain keys.
+
+    Wave 128: when figures.py has no diagram, graphs.py
+    gets the same chance for the picture the student
+    actually asked for — a matplotlib plot result rebuilt
+    as a verified SVG, a number line for an inequality
+    solve, a points plot for a coordinate solve — under
+    the same cross-check discipline (graphs.py's module
+    docstring). When the SVG replaces a plot result, the
+    matplotlib "image" key is dropped from the copy: the
+    card shows ONE graph, not two."""
     try:
         from figures import figure_for
         fig = figure_for(question, result)
     except Exception:
         fig = None
     if fig is None:
+        try:
+            from graphs import graph_figure_for
+            fig = graph_figure_for(question, result)
+        except Exception:
+            fig = None
+    if fig is None:
         return result
     out = dict(result)
     out["figure"] = fig
+    if out.get("op") == "graph":
+        out.pop("image", None)
     return out
 
 
@@ -1173,15 +1191,19 @@ def _ai_lang(hindi, lang_request):
     return "hi" if hindi else None
 
 
-def _gemini_answer(question, hindi, lang_request=None):
+def _gemini_answer(question, hindi, lang_request=None,
+                   detail=False):
     """Ask Gemini for the student's own question. Lazy import
     so the module (and its env key) stays fully optional; ANY
     failure returns None and the honest Wave-18 fallback is
-    served exactly as before."""
+    served exactly as before. `detail` (Wave 136) selects the
+    prompt's DETAIL variant for an explicit long-answer
+    request."""
     try:
         from gemini_fallback import try_gemini_answer
         return try_gemini_answer(question,
-                                 _ai_lang(hindi, lang_request))
+                                 _ai_lang(hindi, lang_request),
+                                 detail=detail)
     except Exception:
         return None
 
@@ -1203,30 +1225,93 @@ def _bank_answer(question):
         return None
 
 
-def _groq_answer(question, hindi, lang_request=None):
+def _groq_answer(question, hindi, lang_request=None,
+                 detail=False):
     """Wave 41: ask Groq for the student's own question —
     only ever called when Gemini returned None. Same contract
     as _gemini_answer: lazy import, ANY failure returns None
-    and the honest Wave-18 fallback is served unchanged."""
+    and the honest Wave-18 fallback is served unchanged.
+    `detail` (Wave 136) selects the prompt's DETAIL
+    variant."""
     try:
         from groq_fallback import try_groq_answer
         return try_groq_answer(question,
-                               _ai_lang(hindi, lang_request))
+                               _ai_lang(hindi, lang_request),
+                               detail=detail)
     except Exception:
         return None
 
 
-def _openrouter_answer(question, hindi):
+def _openrouter_answer(question, hindi, detail=False):
     """Wave 108: ask OpenRouter for the student's own
     question — only ever called when Gemini AND Groq both
     returned None. Same contract as _gemini_answer: lazy
     import, ANY failure returns None and the honest Wave-18
-    fallback is served unchanged."""
+    fallback is served unchanged. `detail` (Wave 136)
+    selects the prompt's DETAIL variant."""
     try:
         from openrouter_fallback import try_openrouter_answer
         return try_openrouter_answer(question,
-                                     "hi" if hindi else None)
+                                     "hi" if hindi else None,
+                                     detail=detail)
     except Exception:
+        return None
+
+
+def _verified_ai_answer(question, hindi, lang_request,
+                        rejected_sink=None, detail=False):
+    """Wave 133: the AI chain behind aiverify's verification
+    gate ("jawab ki jaanch"). The three legs keep their
+    Wave 37/41/108 order and contracts; what changed is that
+    a leg's answer is no longer served on sight — aiverify
+    first runs the sanity gate, then a deterministic check
+    of the claimed final value against the question itself,
+    then (only when no deterministic check applies) a
+    cross-leg consensus. A candidate that fails is rejected
+    and the next leg gets its chance; when nothing servable
+    remains, this returns None and the chain falls through
+    to the honest Wave 67 not-found, exactly as when every
+    leg returned None before this wave.
+
+    `rejected_sink` (a list, when the caller passes one)
+    receives one {"question", "rejected"} bundle on total
+    verification failure — the Wave 134 deep-solve seam (see
+    the AI block in _with_fallback_chain). aiverify never
+    raises by contract; if the module itself cannot be
+    imported, the pre-Wave-133 chain runs unchanged (first
+    leg answer wins) rather than losing the AI fallback to
+    an import problem."""
+    # Wave 136 (Deploy-27 merge): `detail` rides to the legs
+    # ONLY as a keyword when it is on — with it off, the three
+    # calls are byte-for-byte the pre-Wave-136 ones (older test
+    # doubles for these seams take no detail argument).
+    extra = {"detail": True} if detail else {}
+    legs = [
+        ("gemini", lambda: _gemini_answer(question, hindi,
+                                          lang_request, **extra)),
+        ("groq", lambda: _groq_answer(question, hindi,
+                                      lang_request, **extra)),
+        ("openrouter", lambda: _openrouter_answer(question,
+                                                  hindi,
+                                                  **extra)),
+    ]
+
+    def _seam(q, rejected):
+        if rejected_sink is not None:
+            rejected_sink.append({"question": q,
+                                  "rejected": rejected})
+
+    try:
+        from aiverify import verify_chain
+        return verify_chain(question, legs, on_rejected=_seam)
+    except Exception:
+        for _name, call in legs:
+            try:
+                result = call()
+            except Exception:
+                result = None
+            if result is not None:
+                return result
         return None
 
 
@@ -1263,8 +1348,59 @@ def _log_not_found(question, lang, student_class, terminal_kind):
 
 # ---------------------------------------------------------------------------
 
+def _honest_after_ai_miss(question, result_out, hindi, lang,
+                          lang_request, student_class=None,
+                          log=True):
+    """The chain's ending when the AI legs could not answer
+    (factored out in Wave 131 so the deferred-AI path can
+    compute the identical outcome without serving it yet):
+    a similar example, gibberish or the general guide means
+    the student's OWN question was not solved, so the answer
+    collapses to the one not-found line (Wave 67); anything
+    else still standing — a concept card above all — is
+    served as-is. `log` fires the Wave-90 not-found learning
+    log; the deferred path passes log=False at defer time
+    and logs later, only if this outcome is actually served
+    (see log_deferred_not_found)."""
+    if result_out.get("fallback_kind") in (
+            "similar", "gibberish", "guide"):
+        # Wave 90: this collapse is THE "Answer not found"
+        # outcome — solver, bank, MCQ, salvage, concepts and
+        # the AI chain all missed. Record it in the learning
+        # log (observational only; the answer below is built
+        # exactly as before, whether logging works or not).
+        # Wave 107: a Hinglish request is logged as "hinglish"
+        # (the session lang only knows it as "hi").
+        if log:
+            _log_not_found(
+                question,
+                "hinglish" if lang_request == "hinglish" else lang,
+                student_class, result_out.get("fallback_kind"))
+        return _not_found_result(question, hindi, lang,
+                                 lang_request)
+    return result_out
+
+
+def log_deferred_not_found(question, deferred, lang=None,
+                           student_class=None, lang_request=None):
+    """Wave 131: a deferred-AI solve (see _with_fallback_chain's
+    defer_ai) ended up serving the honest collapse — fire the
+    Wave-90 log the classic chain would have fired at exactly
+    this point, with the pre-collapse kind the marker kept.
+    A deferred solve whose AI leg answered never reaches
+    here, so an AI-answered question is never logged as
+    not-found."""
+    kind = (deferred or {}).get("ai_pre_collapse_kind")
+    if kind in ("similar", "gibberish", "guide"):
+        _log_not_found(
+            question,
+            "hinglish" if lang_request == "hinglish" else lang,
+            student_class, kind)
+
+
 def _with_fallback_chain(question, result, lang=None,
-                         student_class=None, lang_request=None):
+                         student_class=None, lang_request=None,
+                         defer_ai=False, detail=False):
     """Return `result` unchanged when it is a real solver
     answer; otherwise return an honest fallback result (never
     None, never an error dict). `lang` is the app's UI /
@@ -1280,7 +1416,14 @@ def _with_fallback_chain(question, result, lang=None,
     every language choice made in this layer: the Hindi flag,
     the one-line replies' flavour, the AI brains' prompt
     language and the not-found line. When it is None every
-    choice below is exactly the pre-Wave-107 one."""
+    choice below is exactly the pre-Wave-107 one. `detail`
+    (Wave 136) is an explicit long-answer request detected
+    in the message (langdetect_local.detect_detail_request):
+    it is forwarded ONLY to the AI brains' prompt builder
+    (their DETAIL variant) — no deterministic layer's output
+    changes here; api.py expands those itself via
+    detail.expand_detail. When it is False the AI calls
+    below are made exactly as before this wave."""
     if lang_request in ("hi", "hinglish"):
         hindi = True
     elif lang_request == "en":
@@ -1353,7 +1496,8 @@ def _with_fallback_chain(question, result, lang=None,
         # is untouched.
         try:
             from proofs import proof_result
-            proof = proof_result(question, hindi)
+            proof = proof_result(question, hindi,
+                                 lang_request=lang_request)
         except Exception:
             proof = None
         if proof is not None:
@@ -1425,6 +1569,41 @@ def _with_fallback_chain(question, result, lang=None,
             upgraded = None
         if upgraded is not None:
             return _with_figure(question, upgraded)
+        # Wave 125: the hijacked solver-depth asks — the
+        # Hindi-equation path's "z = 3" for an LPP ask, the
+        # unconditional dice/card probability served for a
+        # "given that …" conditional ask, the equation
+        # solver's "y = 1" for a DE-with-initial-condition
+        # ask, "x = 0" for a sin/cos area ask. Those results
+        # are "real" answers to different questions, so the
+        # router's failure gate can never see them.
+        # depth125_upgrade fires only when a strict schema
+        # settles the question completely AND the served
+        # answer is not already the schema's value.
+        try:
+            from solver.depth125 import depth125_upgrade
+            upgraded = depth125_upgrade(question, result)
+        except Exception:
+            upgraded = None
+        if upgraded is not None:
+            return _with_figure(question, upgraded)
+        # Wave 128: a PURE graph request the router solved
+        # as something else — "y = 2x + 3 ka graph banao"
+        # came back as a hindi_equation solve ("y = 2"),
+        # "draw the graph of y = x^3" as a solve-for-x.
+        # The graph IS the answer asked for, so on the
+        # strict pure-ask shape (explicit picture trigger,
+        # no surviving solve verb, a supported target) the
+        # graph answer stands instead. graph_upgrade
+        # returns None for every genuine solve, leaving
+        # the real result untouched.
+        try:
+            from graphs import graph_upgrade
+            upgraded = graph_upgrade(question, result, hindi)
+        except Exception:
+            upgraded = None
+        if upgraded is not None:
+            return upgraded
         return _with_figure(question, result)
 
     # Wave 20, Layer 0c: a SCIENCE question the solver could not
@@ -1433,6 +1612,29 @@ def _with_fallback_chain(question, result, lang=None,
     # fake "maths part" out of it (the refractive-index case).
     if has_science_signal(question):
         return _science_result(question, hindi, req_flavour)
+
+    # Wave 125: a primary solve that ran past its time
+    # budget returns the router's op "error" refusal from
+    # OUTSIDE _solve_question_uncached, so the Wave 125
+    # failure gate inside the router never ran for it (the
+    # dy/dx = (x + y)/(x - y) homogeneous DE is the known
+    # case — the primary dsolve grinds for ~10 s and the
+    # answer flip-flops between its implicit form and a
+    # timeout). Consult the strict Wave 125 schemas once
+    # here, before the bank: they return None unless one
+    # settles the question completely, so every other
+    # fall-through runs exactly as before.
+    if isinstance(result, dict) and \
+            result.get("op") == "error" and \
+            result.get("answer") == \
+            "That one is too big to work out here.":
+        try:
+            from solver.depth125 import solve_depth125
+            w125 = solve_depth125(question)
+        except Exception:
+            w125 = None
+        if w125 is not None:
+            return _with_figure(question, w125)
 
     # Wave 39: the Verified Data Bank exact-match layer. It sits
     # AFTER the science guard (a science question is never
@@ -1514,7 +1716,8 @@ def _with_fallback_chain(question, result, lang=None,
     # returns None and the layers below run as before.
     try:
         from proofs import proof_result
-        proof = proof_result(question, hindi)
+        proof = proof_result(question, hindi,
+                             lang_request=lang_request)
     except Exception:
         proof = None
     if proof is not None:
@@ -1543,6 +1746,29 @@ def _with_fallback_chain(question, result, lang=None,
         formatted = None
     if formatted is not None:
         return formatted
+
+    # Wave 128: the graph layer (graphs.py). A graph /
+    # plot / number-line / chart request the solver could
+    # not answer at all ("draw the graph of y = x^2" ended
+    # at the not-found line; "plot the points (2, 3) and
+    # (4, 5)" likewise) is answered here with a hand-built
+    # verified SVG — but only on the strict pure-ask shape:
+    # an explicit picture trigger, no surviving solve
+    # verb, and a supported target (validated function
+    # form, stated points, a re-solvable linear
+    # inequality, stated chart data). It sits here —
+    # after the science guard, the bank and the format
+    # layers, before salvage (which would otherwise carve
+    # a fragment out of the request) — and returns None
+    # on any doubt, so the layers below run byte-for-byte
+    # as before.
+    try:
+        from graphs import graph_result
+        graphed = graph_result(question, hindi)
+    except Exception:
+        graphed = None
+    if graphed is not None:
+        return graphed
 
     # The solver did not really answer. Work the layers.
     salvaged = _salvage(question, hindi)
@@ -1629,19 +1855,145 @@ def _with_fallback_chain(question, result, lang=None,
     # all returned earlier, so neither brain can reach them.
     # Wave 108: when Groq also returns None, OpenRouter (also
     # free tier) gets the same question as the last resort.
+    # Wave 133: "gets the same question" now happens behind
+    # a verification gate — a leg's answer must pass
+    # aiverify's sanity + deterministic / consensus checks
+    # before it can be served (see _verified_ai_answer); a
+    # rejected answer moves the chain to the next leg, and
+    # total rejection falls through to the honest collapse
+    # below, with the rejected bundle parked for Wave 134.
     # Wave 75: a topics-library concept answer (source
     # "topics") is verified in-app content (Wave 55) — like
     # the bank, it is exempt from the AI upgrade below, which
     # could otherwise rewrite it and burn free quota.
+    # Wave 134: the deep-solve stage (deep_solve.py) — before
+    # any AI brain is asked, Ganitra tries HARDER itself:
+    # reformulated variants of the question through the real
+    # solver, guard schemas for the two known partial-answer
+    # shapes, and part-wise splitting. It runs for every
+    # standing the AI chain would have served (the topics
+    # exemption below is about AI rewriting verified content
+    # and burning quota — the deep stage is Ganitra's own
+    # solver, so it runs for topics standings too: a concrete
+    # problem wearing spelled-out numbers deserves its real
+    # answer, not just the concept card). Any failure of the
+    # stage itself leaves the chain exactly as it was.
+    # (A "gibberish"-classified standing is covered too: a
+    # spelled-out equation ("three x plus five equals
+    # twenty") carries no digits for the gibberish gate to
+    # see, yet its reformulation solves exactly. True
+    # gibberish produces no viable variant and falls
+    # through untouched, at the cost of a few regex passes.)
+    if result_out.get("fallback_kind") in _GEMINI_KINDS + (
+            "gibberish",):
+        try:
+            from deep_solve import deep_solve
+            deep = deep_solve(question, hindi=hindi, lang=lang,
+                              lang_request=lang_request,
+                              student_class=student_class)
+        except Exception:
+            deep = None
+        if deep is not None:
+            return _with_figure(question, deep)
+
     if result_out.get("fallback_kind") in _GEMINI_KINDS \
             and result_out.get("source") != "topics":
-        ai_result = _gemini_answer(question, hindi, lang_request)
-        if ai_result is None:
-            ai_result = _groq_answer(question, hindi, lang_request)
-        if ai_result is None:
-            ai_result = _openrouter_answer(question, hindi)
+        # Wave 133: the legs now run behind aiverify's
+        # verification gate — an AI answer is served only
+        # when its claimed final value survives the sanity
+        # gate plus a deterministic check or a cross-leg
+        # consensus (see _verified_ai_answer). On total
+        # verification failure the rejected candidates are
+        # parked on result_out["_ai_rejected"] — the Wave
+        # 134 deep-solve seam: that stage hooks in HERE,
+        # between this block and the Wave 67 collapse below,
+        # and consumes the bundle from result_out before the
+        # collapse builds the (fresh) not-found dict, which
+        # never carries the key.
+        # Wave 131: a caller streaming the answer (the
+        # /api/solve/stream endpoint, flag-gated) needs the
+        # chain to STOP here: the AI legs are the slow part
+        # and only they can be streamed. The marker carries
+        # everything the streaming layer needs to finish the
+        # job with identical outcomes — the Hindi flag this
+        # chain computed, the pre-collapse kind (for the
+        # Wave-90 log, fired later only if the honest outcome
+        # is really served) and that honest outcome itself,
+        # computed by the same code the classic ending runs.
+        # The marker is internal: it is never served, never
+        # recorded and never cached.
+        if defer_ai:
+            deferred = dict(result_out)
+            deferred["ai_deferred"] = True
+            deferred["ai_hindi"] = hindi
+            deferred["ai_pre_collapse_kind"] = \
+                result_out.get("fallback_kind")
+            deferred["ai_honest"] = _honest_after_ai_miss(
+                question, result_out, hindi, lang, lang_request,
+                student_class=student_class, log=False)
+            return deferred
+        rejected_sink = []
+        ai_result = _verified_ai_answer(
+            question, hindi, lang_request, rejected_sink,
+            detail=detail)
         if ai_result is not None:
+            # Wave 134: method transfer at the accept seam —
+            # when the AI's demonstrated METHOD recomputes
+            # (from the question's own numbers) to a
+            # DIFFERENT value than the AI claimed, Ganitra
+            # serves its OWN recomputed answer instead. An
+            # agreeing recomputation (or an unrecognised
+            # method) leaves the AI answer byte-identical.
+            # Deploy-27 merge decision: a result Wave 133's
+            # gate marked "deterministic" was recomputed from
+            # the question itself and matched — verification
+            # is decisive there, so transfer never overrides
+            # it (Wave 134's own merge recommendation:
+            # "Verified → serve it"). Transfer guards the
+            # weaker marks — consensus, single-leg and the
+            # unmarked pre-133 path (kill switch) — exactly
+            # the answers nobody has recomputed yet.
+            if ai_result.get("ai_verification") != \
+                    "deterministic":
+                try:
+                    from deep_solve import deep_solve
+                    own = deep_solve(
+                        question, hindi=hindi, lang=lang,
+                        lang_request=lang_request,
+                        ai_result=ai_result,
+                        student_class=student_class)
+                except Exception:
+                    own = None
+                if own is not None:
+                    return _with_figure(question, own)
             return ai_result
+        if rejected_sink:
+            result_out["_ai_rejected"] = rejected_sink[0]
+            # Wave 134 (Deploy-27 merge, per its notes'
+            # recommended order): verification failed for
+            # every candidate — before collapsing, give
+            # method transfer the rejected results: a wrong
+            # VALUE carried by a right METHOD is exactly its
+            # case, and a recomputation from the question's
+            # own numbers can still give the student
+            # Ganitra's own correct answer. No extractable
+            # method (or agreement) → the honest collapse
+            # below stands.
+            for _rec in rejected_sink[0].get("rejected") or []:
+                _rej = _rec.get("result")
+                if not isinstance(_rej, dict):
+                    continue
+                try:
+                    from deep_solve import deep_solve
+                    own = deep_solve(
+                        question, hindi=hindi, lang=lang,
+                        lang_request=lang_request,
+                        ai_result=_rej,
+                        student_class=student_class)
+                except Exception:
+                    own = None
+                if own is not None:
+                    return _with_figure(question, own)
 
     # Wave 67: whatever honest layer is still standing here —
     # a similar example, gibberish, the general guide — means
@@ -1652,22 +2004,11 @@ def _with_fallback_chain(question, result, lang=None,
     # Merge-5 (decided rule 1): a VAGUE ask no longer collapses
     # — _guide_result already settled it as Wave 68's friendly
     # per-flavour line (kind "vague", plain rendering).
-    if result_out.get("fallback_kind") in (
-            "similar", "gibberish", "guide"):
-        # Wave 90: this collapse is THE "Answer not found"
-        # outcome — solver, bank, MCQ, salvage, concepts and
-        # the AI chain all missed. Record it in the learning
-        # log (observational only; the answer below is built
-        # exactly as before, whether logging works or not).
-        # Wave 107: a Hinglish request is logged as "hinglish"
-        # (the session lang only knows it as "hi").
-        _log_not_found(
-            question,
-            "hinglish" if lang_request == "hinglish" else lang,
-            student_class, result_out.get("fallback_kind"))
-        return _not_found_result(question, hindi, lang,
-                                 lang_request)
-    return result_out
+    # (Wave 131: the collapse itself lives in
+    # _honest_after_ai_miss now — one source for both endings.)
+    return _honest_after_ai_miss(
+        question, result_out, hindi, lang, lang_request,
+        student_class=student_class)
 
 
 # ---------------------------------------------------------------------------
@@ -1731,10 +2072,32 @@ def _record_livebank(question, result, lang, lang_request):
             _livebank_lang_key(question, lang, lang_request))
     except Exception:
         pass
+    # Wave 133: an AI answer this wave's verification gate
+    # marked "deterministic" has EARNED verified status — its
+    # claimed value was recomputed from the question itself
+    # and matched. Promote its Live Bank row through the
+    # store's own set_status machinery (the same hook the
+    # offline databank pipeline uses). Consensus and single
+    # marks are weaker evidence and stay "pending", exactly
+    # as Wave 117 designed. Guarded like everything here:
+    # promotion is bookkeeping and can never alter the
+    # answer the student already has.
+    if isinstance(result, dict) and \
+            result.get("ai_verification") == "deterministic":
+        try:
+            from bank import normalise_question
+            from livebank import VERIFIED, set_status
+            set_status(
+                normalise_question(question),
+                _livebank_lang_key(question, lang, lang_request),
+                VERIFIED)
+        except Exception:
+            pass
 
 
 def with_fallback(question, result, lang=None, student_class=None,
-                  lang_request=None):
+                  lang_request=None, defer_ai=False,
+                  detail=False):
     """The chain above (_with_fallback_chain), plus Wave
     117's record hook: every finished outcome — solver,
     bank, deterministic layer or AI — is offered to the
@@ -1744,16 +2107,58 @@ def with_fallback(question, result, lang=None, student_class=None,
     after the answer is final and can never change it; the
     not-found / non-maths / greeting outcomes are refused
     by the store's own classifier (Wave 90's log owns the
-    not-found ones)."""
+    not-found ones).
+
+    Wave 130 (steps language): Wave 107 made an explicit
+    request switch the chrome, the explanation and the AI
+    prompt, but the solver's own STEP sentences kept the
+    question's language — an English question with "answer
+    in Hindi" got English working lines under a Hindi card.
+    When a request is in force, solver-family results now
+    pass through steplang.relanguage_result, which renders
+    the solver's recurring boilerplate step templates in the
+    requested language (EN / Hindi Devanagari / Hinglish
+    Roman) without ever touching formulas, numbers or answer
+    values; untranslatable free-form lines pass through
+    unchanged. The relanguaging happens BEFORE the Live Bank
+    record below, so what is stored under the request's
+    language key is the answer the student actually saw.
+    Concept cards, proofs (bilingual data switched by the
+    chain's own flag) and the AI legs are language-aware
+    already and are never touched by the transform. With no
+    request this hook is skipped entirely and behaviour is
+    byte-identical to before this wave."""
     out = _with_fallback_chain(question, result, lang=lang,
                                student_class=student_class,
-                               lang_request=lang_request)
-    _record_livebank(question, out, lang, lang_request)
+                               lang_request=lang_request,
+                               defer_ai=defer_ai, detail=detail)
+    if lang_request in ("hi", "en", "hinglish"):
+        try:
+            from steplang import relanguage_result
+            out = relanguage_result(out, lang_request)
+        except Exception:
+            pass
+    # Wave 131: a deferred marker is not a finished outcome —
+    # the streaming layer records the FINAL result itself
+    # (record_outcome below) once the AI legs have answered
+    # or missed, so the store never sees the marker.
+    if not (isinstance(out, dict) and out.get("ai_deferred")):
+        _record_livebank(question, out, lang, lang_request)
     return out
 
 
+def record_outcome(question, result, lang=None, lang_request=None):
+    """Wave 131: the public face of the Wave-117 record hook
+    for a caller that finishes an answer asynchronously —
+    the streaming endpoint records the result it actually
+    served (an AI answer, or the honest outcome when every
+    leg missed), exactly as with_fallback would have."""
+    _record_livebank(question, result, lang, lang_request)
+
+
 def fallback_answer(question, result=None, lang=None,
-                    student_class=None, lang_request=None):
+                    student_class=None, lang_request=None,
+                    detail=False):
     """Convenience wrapper: solve (if no result was given) and
     guarantee a presentable answer dict."""
     if result is None:
@@ -1765,7 +2170,9 @@ def fallback_answer(question, result=None, lang=None,
                       "steps": []}
     return with_fallback(question, result, lang=lang,
                          student_class=student_class,
-                         lang_request=lang_request)
+                         lang_request=lang_request,
+                         detail=detail)
 
 
-__all__ = ["with_fallback", "fallback_answer"]
+__all__ = ["with_fallback", "fallback_answer", "record_outcome",
+           "log_deferred_not_found"]

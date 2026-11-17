@@ -49,7 +49,8 @@ Roman text is "roman" (Hinglish labels), everything else "en".
 
 import re
 
-from langdetect_local import detect_steps_request
+from langdetect_local import detect_detail_request, \
+    detect_steps_request
 
 __all__ = ["is_solved_result", "flavour_for", "w122_payload",
            "build_followup_response", "FOLLOWUP_KINDS",
@@ -276,7 +277,12 @@ def w122_payload(result, lang=None, lang_request=None,
               else question or "")
     payload = {"step_label": STEP_LABELS[flavour],
                "flavour": flavour,
+               # Wave 136 (Deploy-27 merge): an explicit
+               # detail request also earns the labels — the
+               # detailed version shows the working's
+               # structure (see ganitra-wave136-notes.md).
                "labels": bool(detect_steps_request(ask)
+                              or detect_detail_request(ask)
                               or is_proof_type(result, ask)),
                "chips": []}
     if is_solved_result(result) \

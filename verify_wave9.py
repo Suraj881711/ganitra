@@ -9,9 +9,11 @@ another language the site language switches AUTOMATICALLY:
   Roman Marathi, and conservative Roman Bengali/Tamil/Telugu.
 - POST /api/solve: a solid detection in a different language moves
   the session BEFORE solving; the response gains
-  language_switched/language (+ ui string map and a localised
-  lang_notice toast on a switch), and every localised field of
-  that response is rendered in the NEW language.
+  language_switched/language (+ ui string map on a switch), and
+  every localised field of that response is rendered in the NEW
+  language. (Wave 139 amendment, Suraj's order: the localised
+  lang_notice toast this wave originally added is REMOVED — the
+  switch is silent; the checks below now pin its ABSENCE.)
 - Classic POST /solve: same rule — the answer page renders in the
   detected language.
 - Manual control stays king: /set-lang still just sets the
@@ -105,9 +107,8 @@ check("api Hindi explanation localised",
       and data.get("explanation")
       != explanation_for(data.get("result") or {}, "en"),
       f"explanation={data.get('explanation')!r}")
-check("api Hindi toast in Hindi",
-      data.get("lang_notice") == HI["lang_switched_toast"].format(
-          lang=LANG_NAMES["hi"]), f"notice={data.get('lang_notice')!r}")
+check("api Hindi switch is silent (Wave 139)",
+      "lang_notice" not in data, f"notice={data.get('lang_notice')!r}")
 ui = data.get("ui") or {}
 check("api switch carries ui map",
       ui.get("question_placeholder") == HI["question_placeholder"]
@@ -160,8 +161,8 @@ check("api Marathi fallback reply (Wave 18)",
       and bool((data.get("result") or {}).get("fallback_kind"))
       and "error" not in data,
       f"kind={(data.get('result') or {}).get('fallback_kind')}")
-check("api Marathi toast", data.get("lang_notice")
-      == MR["lang_switched_toast"].format(lang=LANG_NAMES["mr"]))
+check("api Marathi switch is silent (Wave 139)",
+      "lang_notice" not in data)
 check("session language now mr", session_lang(c) == "mr")
 
 # --- 5. API: Hinglish switches to hi; Devanagari Marathi to mr -----------------
@@ -241,20 +242,13 @@ check("classic English unchanged", r.status_code == 200
       and EN["answer_heading"] in body
       and session_lang(c) in (None, "en"))
 
-# --- 8. i18n completeness incl. the new toast -----------------------------------
+# --- 8. i18n completeness; the toast key is gone (Wave 139) ---------------------
 base = set(STRINGS["en"])
 for code in SUPPORTED_LANGS:
     check(f"i18n complete {code}",
           set(STRINGS[code]) == base
-          and "lang_switched_toast" in STRINGS[code],
+          and "lang_switched_toast" not in STRINGS[code],
           f"keys={len(STRINGS[code])}")
-    try:
-        STRINGS[code]["lang_switched_toast"].format(
-            lang=LANG_NAMES[code])
-        ok = True
-    except (KeyError, IndexError, ValueError):
-        ok = False
-    check(f"toast formats {code}", ok)
 
 # --- 9. Client wiring + frozen logo untouched ------------------------------------
 c = app.test_client()
@@ -268,10 +262,10 @@ check("homepage 200 with frozen logo wiring",
 check("client applies auto switch",
       "applyLanguage" in tpl and "data.language_switched" in tpl
       and 'fetch("/set-lang/" + data.language)' in tpl)
-check("client toast bubble", "lang_notice" in tpl
-      and "lang-note" in tpl)
+check("client has no toast bubble (Wave 139)", "lang_notice" not in tpl
+      and "lang-note" not in tpl)
 CSS = Path("static/style.css").read_text(encoding="utf-8")
-check("css lang-note style", ".bubble.lang-note" in CSS)
+check("css has no lang-note style (Wave 139)", ".bubble.lang-note" not in CSS)
 
 # --- 10. JS syntax (node --check) --------------------------------------------------
 node = shutil.which("node")

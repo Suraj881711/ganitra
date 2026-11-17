@@ -43,12 +43,21 @@ FINAL): plain solving lines — no step numbers, no labels —
 one plain final answer line, the maths-only NOT_MATHS
 sentinel, and the result flags set (fallback=True,
 fallback_kind="openrouter", ai_generated=True).
+
+Wave 132: because the prompt and the shaping are shared,
+this leg also speaks in GANITRA'S OWN VOICE — whichever
+free model the router lands on, its reply is re-voiced by
+ganitra_voice.normalize_ai_text inside the shared
+shaping into Ganitra's simple, normal language, and
+never served same-to-same (see gemini_fallback's
+Wave 132 note).
 """
 import json
 import os
 import urllib.request
 
-from gemini_fallback import _build_prompt, _shape_result
+from gemini_fallback import _build_prompt, _iter_sse_payloads, \
+    _shape_result
 
 MODEL = "openrouter/free"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
@@ -106,12 +115,14 @@ def _shape_openrouter_result(text):
     return shaped
 
 
-def try_openrouter_answer(question, lang=None):
+def try_openrouter_answer(question, lang=None, detail=False):
     """Ask OpenRouter to solve `question` and return a shaped
     Ganitra result dict — or None on ANY problem (no key,
     timeout/stall, HTTP/API error, non-JSON, empty or
     non-maths reply). Never raises: the caller falls back to
-    the Wave-18 answer."""
+    the Wave-18 answer. `detail` (Wave 136) selects the
+    shared prompt's DETAIL variant; the default False is
+    byte-identical to before."""
     question = str(question or "").strip()
     if not question:
         return None
@@ -121,7 +132,8 @@ def try_openrouter_answer(question, lang=None):
     payload = {
         "model": MODEL,
         "messages": [{"role": "user",
-                      "content": _build_prompt(question, lang)}],
+                      "content": _build_prompt(
+                          question, lang, detail=detail)}],
         "temperature": 0.2,
         "max_tokens": MAX_TOKENS,
     }
@@ -141,5 +153,91 @@ def try_openrouter_answer(question, lang=None):
     return _shape_openrouter_result(_extract_text(response))
 
 
-__all__ = ["try_openrouter_answer", "MODEL", "ENV_KEY",
-           "TIMEOUT_SECONDS", "MAX_TOKENS"]
+def _post_sse(url, payload, api_key, timeout):
+    """One STREAMING POST of JSON with the key as a Bearer
+    token. Returns the raw response object — the caller
+    iterates its lines as they arrive. Raises on any
+    transport or HTTP error before the stream opens, exactly
+    like _post_json. Kept as a separate module-level function
+    so tests can mock the whole HTTP layer."""
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+    )
+    request.add_header("Content-Type", "application/json")
+    request.add_header("Authorization", f"Bearer {api_key}")
+    return urllib.request.urlopen(request, timeout=timeout)
+
+
+def stream_openrouter_answer(question, lang=None):
+    """The streamed twin of try_openrouter_answer (Wave 131,
+    transport only): same prompt, same payload plus
+    "stream": true, same shaping
+    (_shape_openrouter_result), same Wave-119 guard — a
+    closing finish_reason of "length" means the reply was
+    cut at the cap and is NEVER shaped or served. The
+    stall hazard from the module docstring applies doubly
+    here: the socket timeout bounds every read, and any
+    stall or error ends the leg silently.
+
+    Yields reply-text pieces (str) as they arrive (only
+    delta.content, mirroring _extract_text). Returns
+    (status, shaped) as the generator's return value, with
+    the same status meanings as
+    gemini_fallback.stream_gemini_answer ("ok" / "miss" /
+    "truncated" / "error" / "unavailable"). Never raises."""
+    question = str(question or "").strip()
+    if not question:
+        return ("unavailable", None)
+    api_key = (os.environ.get(ENV_KEY) or "").strip()
+    if not api_key:
+        return ("unavailable", None)
+    payload = {
+        "model": MODEL,
+        "messages": [{"role": "user",
+                      "content": _build_prompt(question, lang)}],
+        "temperature": 0.2,
+        "max_tokens": MAX_TOKENS,
+        "stream": True,
+    }
+    try:
+        resp = _post_sse(API_URL, payload, api_key,
+                         TIMEOUT_SECONDS)
+    except Exception:
+        return ("error", None)
+    pieces = []
+    try:
+        for chunk in _iter_sse_payloads(resp):
+            if not isinstance(chunk, dict) or chunk.get("error"):
+                return ("error", None)
+            choices = chunk.get("choices") or []
+            if not choices:
+                continue
+            choice = choices[0] or {}
+            delta = choice.get("delta") or {}
+            content = delta.get("content")
+            if isinstance(content, str) and content:
+                pieces.append(content)
+                yield content
+            reason = choice.get("finish_reason")
+            if reason == "length":
+                # Wave 119: cut at the cap — never serve.
+                return ("truncated", None)
+            if reason:
+                break
+    except Exception:
+        return ("error", None)
+    finally:
+        try:
+            resp.close()
+        except Exception:
+            pass
+    shaped = _shape_openrouter_result("".join(pieces))
+    if shaped is None:
+        return ("miss", None)
+    return ("ok", shaped)
+
+
+__all__ = ["try_openrouter_answer", "stream_openrouter_answer",
+           "MODEL", "ENV_KEY", "TIMEOUT_SECONDS", "MAX_TOKENS"]

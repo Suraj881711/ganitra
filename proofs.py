@@ -661,7 +661,7 @@ def _identity_result(question, hindi):
 # Entry point
 # ---------------------------------------------------------------------------
 
-def proof_result(question, hindi=False):
+def proof_result(question, hindi=False, lang_request=None):
     """The Wave 95 proof answer for `question`, or None.
 
     None means: not a proof ask, or a proof ask this wave
@@ -674,10 +674,22 @@ def proof_result(question, hindi=False):
     Hinglish — gets English. (The caller's `hindi` flag is
     marker-based and fires for Roman Hinglish too, which
     would have served a Devanagari proof to a student who
-    typed in Roman letters.)"""
+    typed in Roman letters.)
+
+    Wave 130: when an explicit Wave-107 language request is
+    in force (`lang_request` is not None), the request wins
+    over the script rule — the caller's `hindi` flag already
+    encodes the request (True for "hi"/"hinglish", False for
+    "en"), so it is used as passed. A Hinglish request still
+    lands on the Roman/English proof text, matching this
+    layer's documented Roman behaviour. With no request
+    (`lang_request=None`) the script rule above runs exactly
+    as before."""
     if not question or not _has_proof_intent(question):
         return None
-    hindi = any("ऀ" <= ch <= "ॿ" for ch in str(question))
+    if lang_request is None:
+        hindi = any("ऀ" <= ch <= "ॿ"
+                    for ch in str(question))
     try:
         result = _irrationality_result(question, hindi)
         if result is not None:
