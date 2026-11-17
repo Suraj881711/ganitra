@@ -41,6 +41,16 @@ Negative cache (Wave 48, Wave-45 audit Part B item 3):
   (personalisation is layered on by the routes, outside the
   result dict) — so, like the positive cache, entries are shared
   across users and contain nothing user-specific.
+  Wave 107: the one language-shaped exception — when a
+  message carried an explicit answer-language request, the
+  fallback result's one-line texts are shaped by that request,
+  so the two solve routes pass it as a ``variant`` and it
+  becomes part of the negative key. Without it, an unsolvable
+  question asked with "answer in Hindi" would pin its Hindi
+  not-found line onto the next ask of the same question (with
+  a different request, or none) for the whole TTL. Callers
+  that pass no variant — including every no-request ask —
+  keep the exact pre-Wave-107 key.
 - Real solver answers are never filed here (they keep the
   positive LRU behaviour), and neither are bank-verified answers
   if a future seam flags them as fallback-shaped: a verified
@@ -179,10 +189,20 @@ def _is_negative_worthy(result):
     return _graphs_exist(result)
 
 
-def get_negative(question):
+def _neg_key(question, variant=None):
+    """The negative-cache key: the normalised question, plus
+    the caller's language variant when it supplies one
+    (Wave 107 — see the module docstring)."""
+    key = _cache_key(question)
+    if variant:
+        key = key + "\x1f" + str(variant)
+    return key
+
+
+def get_negative(question, variant=None):
     """Return a deep copy of the cached fallback outcome for
     question, or None on a miss / expired / stale-graph entry."""
-    key = _cache_key(question)
+    key = _neg_key(question, variant)
     entry = _neg_cache.get(key)
     if entry is None:
         _neg_stats["misses"] += 1
@@ -200,12 +220,12 @@ def get_negative(question):
     return copy.deepcopy(result)
 
 
-def put_negative(question, result):
+def put_negative(question, result, variant=None):
     """Store a deep copy of a fallback outcome for the TTL;
     silently skip anything that is not one."""
     if not _is_negative_worthy(result):
         return False
-    key = _cache_key(question)
+    key = _neg_key(question, variant)
     _neg_cache[key] = (time.monotonic(), copy.deepcopy(result))
     _neg_cache.move_to_end(key)
     while len(_neg_cache) > _NEG_MAX_ENTRIES:
