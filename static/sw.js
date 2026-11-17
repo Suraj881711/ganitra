@@ -83,7 +83,8 @@
    the menu panel rules were already correct live, but a
    pre-Wave-72 cached shell could still replay the old
    unstyled menu. No CSS content change rides along. */
-/* Wave 98: kam-net mode — cache v17, stylesheet ?v=40.
+/* Wave 98: kam-net mode — cache v18, stylesheet ?v=41
+   (cache pins bumped by Wave 104's menu-button CSS change).
    Two changes: (1) the install handler now PRECACHES the
    chat shell (below) — until now the worker cached only
    what a visit happened to fetch, so a first load that was
@@ -95,7 +96,7 @@
    rules themselves are unchanged: code network-first with
    revalidation, media stale-while-revalidate, navigations
    network-first with the cached shell as the fallback. */
-var GANITRA_CACHE = "ganitra-static-v17";
+var GANITRA_CACHE = "ganitra-static-v18";
 
 /* Wave 98: the chat shell, precached on install. Each URL
    is added on its own so one failure (e.g. a sprite the
@@ -106,7 +107,7 @@ var GANITRA_CACHE = "ganitra-static-v17";
    (which keys on the full URL) hits it offline. */
 var GANITRA_SHELL = [
   "/",
-  "/static/style.css?v=40",
+  "/static/style.css?v=41",
   "/static/offline.js",
   "/static/logo-mark-t.png",
   "/static/logo-full-t.png",

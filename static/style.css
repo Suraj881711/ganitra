@@ -286,7 +286,7 @@ details summary { cursor: pointer; color: var(--accent); }
 .bubble .listen-btn { margin-top: 10px; }
 
 /* --- Wave 5b/5d/5e: student-proofing, Copy Style, copy check,
-   Dhyaan + Badhai ------------------------------------------------ */
+   Badhai (Wave 106 removed the Dhyaan meter) -------------------- */
 
 /* No horizontal scroll at 360px: long maths strings wrap, wide
    elements shrink to the viewport. */
@@ -536,15 +536,15 @@ footer a { color: var(--accent); font-weight: 600; }
   gap: 8px; flex-wrap: nowrap; min-width: 0;
 }
 .header-tools .lang-switch select { min-height: 40px; padding: .3rem .5rem; }
-.header-tools .dhyaan-pill { min-height: 40px; padding: .2rem .6rem; font-size: .85rem; }
 .header-tools .saathi-pill { min-height: 40px; margin-right: 0; padding: .2rem .6rem; font-size: .88rem; }
 .nav-menu { position: relative; }
 .nav-menu-btn {
+  /* Wave 104 (Suraj, 17 Nov 2026): NO circle — the ☰ is a
+     plain glyph now, exactly like the plain "+" beside it. */
   list-style: none; cursor: pointer; display: inline-flex;
   align-items: center; justify-content: center;
-  width: 44px; height: 44px; border-radius: 999px;
-  border: 1.5px solid #ddd3ba; background: #fff; font-size: 19px;
-  color: var(--text); box-shadow: 0 3px 10px rgba(22, 33, 58, .05);
+  width: 44px; height: 44px; border: 0; background: none;
+  font-size: 19px; color: var(--text); box-shadow: none;
 }
 .nav-menu-btn::-webkit-details-marker { display: none; }
 .nav-dropdown {
@@ -668,9 +668,7 @@ body.chat-page .tool-note {
   .chat-header { padding: 6px 10px; gap: 6px; }
   .chat-brand { font-size: 19px; }
   .header-tools { gap: 5px; }
-  .header-tools .dhyaan-label,
   .header-tools .lang-label-text { display: none; }
-  .header-tools .dhyaan-pill { font-size: .8rem; padding: .15rem .5rem; }
   .header-tools .saathi-pill { font-size: .82rem; }
   .composer-wrap { padding: 6px 10px calc(8px + env(safe-area-inset-bottom)); }
   body.chat-page .chat-log { padding: 16px 10px 10px; }
@@ -1361,8 +1359,9 @@ body.account-page main.account-main {
        dropdown filled the bar and the menu button was pushed
        off-screen. The bar now shrinks gracefully — brand text
        truncates, the tools row may shrink, the ☰ and + never do —
-       and on small screens the ☰ moves to the FAR LEFT (his
-       approved mockup position), the Today pill hides (its
+       and on small screens the ☰ was pinned to the FAR LEFT
+       (his approved mockup position; Wave 104 moved it to the
+       FAR RIGHT, beside the "+"), the Today pill hides (its
        numbers also live inside the menu) and the language select
        goes compact. On very narrow screens only the logo mark
        shows, not the wordmark.
@@ -1381,21 +1380,21 @@ body.account-page main.account-main {
 .header-tools .lang-switch select { max-width: 160px; }
 
 @media (max-width: 560px) {
-  /* ☰ pinned to the far left of the bar, always visible: the
-     details element is lifted out of the tools row (its open
-     panel is position:fixed, so this cannot disturb it) and
-     the bar reserves its space. :has() scopes this to bars
-     that actually carry a menu (the sign-in bar has none). */
-  .chat-header:has(.nav-menu) { position: relative; padding-left: 58px; }
+  /* Wave 104 (Suraj, 17 Nov 2026): ☰ pinned to the far RIGHT
+     of the bar, always visible — the same side as the "+",
+     which it now follows in the bar. (Before Wave 104 it was
+     pinned to the far left.) The details element is lifted
+     out of the tools row (its open panel is position:fixed,
+     so this cannot disturb it) and the bar reserves its
+     space on the right. :has() scopes this to bars that
+     actually carry a menu (the sign-in bar has none). */
+  .chat-header:has(.nav-menu) { position: relative; padding-right: 58px; }
   .chat-header:has(.nav-menu) .nav-menu {
-    position: absolute; left: 7px; top: 50%;
+    position: absolute; right: 7px; top: 50%;
     transform: translateY(-50%); margin: 0;
   }
 }
 @media (max-width: 480px) {
-  /* The Today stats pill yields its space to the menu; the
-     same numbers are one tap away inside the menu itself. */
-  .header-tools .dhyaan-pill { display: none; }
   .header-tools .lang-switch select {
     max-width: 108px; min-height: 38px; padding: .25rem .35rem;
     font-size: .85rem;
@@ -2334,3 +2333,106 @@ body.chat-page .bubble ol.steps li.step-verify::before {
 body.chat-page .bubble details.steps-section { margin-top: 8px; }
 /* Wave 69: the example-question chip styles were removed with
    the chips themselves (Suraj's order — no example questions). */
+
+/* ================= Wave 105: compact + comfortable chat =======
+   Suraj (17 Nov 2026): study the big AIs (ChatGPT, Gemini,
+   Claude, Perplexity, DeepSeek), take the best of each in
+   Ganitra's own design — "chat choti chahiye but achhi
+   comfortable chahiye" — and align how the ANSWER itself is
+   presented ("kaise ans deta hai, uss hisab se dekho"). Full
+   research + spec: research.md in the wave folder. What the
+   five agree on, adapted here:
+   - A 768px reading column (the ChatGPT / Claude /
+     Perplexity consensus) instead of 800px: shorter lines,
+     easier eye travel. Thread and composer narrow together,
+     so the Wave-12 rule (the box matches the cards above
+     it) still holds.
+   - Compactness from RHYTHM, not smaller text (DeepSeek's
+     flat density; Suraj's own small-text rule): no font
+     size changes anywhere — thread gap 18 -> 14, card
+     padding 20/22 -> 16/18, step margins 9 -> 7, composer
+     wrap and bar trimmed one notch. Measured on a real
+     4-step answer: the card sheds 14px (phone) / 16px
+     (desktop), each turn ~25-30px with gap and padding.
+   - The working starts sooner (Perplexity's answer-first):
+     the intro line's top margin 12 -> 6, so the first
+     solving line lands right under the framing.
+   - Display maths breathes (all five): a rendered display
+     equation gets 8px of air above and below.
+   - Comfort mechanics: the scroll area no longer chains
+     its scroll to the page behind it and gets a thin
+     scrollbar; the answer action glyphs reach a full 40px
+     tap height; the card shadow calms to 0 4px 14px (the
+     shared .bubble rule, so the /solve answer page calms
+     down with it); the composer textarea keeps a 24px
+     floor (Claude's notepad lesson) and its auto-grow
+     caps at 128px (~5 lines) instead of 160px.
+   Frozen, as always: the answer card's internals (plain
+   solving lines, the plain bold answer line, advice
+   behind the bulb toggle, the 5 glyphs below the card),
+   no chips anywhere, the logo, the menu and its order,
+   the scene (OFF), the composer element order and the
+   plain send sign. The header is untouched — Wave 104
+   owns the header buttons. */
+
+/* The 768px reading column: thread + composer together. */
+body.chat-page .chat-log { max-width: 768px; }
+body.chat-page .chat-form { max-width: 768px; }
+
+/* Tighter thread rhythm. */
+body.chat-page .chat-log { gap: 14px; padding: 20px 16px 16px; }
+
+/* A calmer, flatter card (shared rule — /solve page too). */
+.bubble { box-shadow: 0 4px 14px rgba(101, 84, 40, .07); }
+
+/* Slimmer cards and bubbles on the chat page. */
+body.chat-page .bubble.bot { padding: 16px 18px; }
+body.chat-page .bubble.bot.plain-reply { padding: 12px 16px; }
+body.chat-page .bubble.user { padding: 12px 16px; }
+
+/* The working starts sooner; the steps keep their 1.7
+   breathing line-height on a tighter 7px rhythm. */
+body.chat-page .bubble .answer-intro { margin: 6px 0 2px; }
+body.chat-page .bubble ol.steps li { margin: 7px 0; }
+body.chat-page .bubble .explain { margin: 8px 0; }
+
+/* Display maths gets its own air. */
+body.chat-page .bubble mjx-container[display="true"] {
+  margin: 8px 0;
+}
+
+/* The on-demand advice card trims with the rest of the card. */
+body.chat-page .answer-wrap .advice-card {
+  margin: 8px 0 4px; padding: 13px 15px;
+}
+
+/* The glyph row reaches a full 40px tap height. */
+body.chat-page .answer-actions .act-btn { padding: 11px 3px; }
+
+/* Scroll comfort: no chaining to the page, thin scrollbar. */
+.chat-scroll {
+  overscroll-behavior: contain; scrollbar-width: thin;
+}
+
+/* Composer: a notch tighter outside, the writing line
+   keeps its floor inside; growth caps at ~5 lines. */
+.composer-wrap {
+  padding-top: 6px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+}
+body.chat-page .chat-bar { padding: 12px 14px; }
+body.chat-page .chat-bar textarea {
+  min-height: 24px; max-height: 128px;
+}
+
+/* The empty state trims its greeting one notch. */
+.empty-greeting { font-size: clamp(24px, 4.6vw, 32px); }
+
+@media (max-width: 560px) {
+  body.chat-page .chat-log { padding: 16px 12px 16px; }
+  body.chat-page .bubble.bot { padding: 14px 16px; }
+  .composer-wrap {
+    padding-top: 6px;
+    padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  }
+}
