@@ -8,6 +8,15 @@
   --muted: #66738d;
   --accent: #2f7d6e;
   --line: #e9dfc9;
+  /* Wave 116: --ink/--sub/--gold/--gold2 promoted from .hero
+     (Wave 2 scoped them there) — the chat bar, answer bubbles,
+     auth inputs and chats search already reference them
+     app-wide; outside .hero they silently fell back until
+     now. Values are the hero's own, unchanged. */
+  --ink: #16213a;
+  --sub: #5b6b8c;
+  --gold: #c9a24b;
+  --gold2: #e7c877;
 }
 * { box-sizing: border-box; }
 body {
@@ -24,9 +33,29 @@ header h1 { margin: 0; font-size: 21px; }
 header a { color: var(--text); text-decoration: none; }
 main { padding: 28px 24px; max-width: 880px; margin: 0 auto; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 26px 28px; box-shadow: 0 14px 34px rgba(101, 84, 40, .08); }
+/* Wave 116: one heading voice on the .card pages (Papers,
+   Board, Practice, Progress, Parent Report…) — Fraunces like
+   the Topics / Account / menu headings. Direct children only,
+   so the exam sheet's own print styling is untouched. */
+.card > h2 {
+  font-family: "Fraunces", Georgia, serif; font-size: 24px;
+  margin: 2px 0 10px; text-wrap: balance;
+}
+.card > h3 {
+  font-family: "Fraunces", Georgia, serif; font-size: 19px;
+  margin: 20px 0 8px;
+}
 label { display: block; margin-bottom: 8px; color: var(--muted); }
 textarea { width: 100%; background: #fff; color: var(--text); border: 1.5px solid #ddd3ba; border-radius: 12px; padding: 13px 14px; font-size: 16px; line-height: 1.55; }
 button { margin-top: 12px; background: var(--accent); border: none; color: #fff; padding: 12px 20px; min-height: 44px; border-radius: 12px; cursor: pointer; font-weight: 600; font-size: 15.5px; }
+/* Wave 116 finish: one visible focus ring for keyboard and
+   switch users, plus a soft hover/press feel on plain
+   buttons (class rules with their own states are more
+   specific and keep their behaviour). */
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+button { transition: filter .15s ease, transform .08s ease; }
+button:hover { filter: brightness(1.05); }
+button:active { transform: translateY(1px); }
 .help { margin-top: 24px; }
 .help code { background: #f4efe2; padding: 2px 6px; border-radius: 6px; }
 .flash { background: #fdeeee; border: 1px solid #eec9c9; color: #7c3535; padding: 12px 16px; border-radius: 12px; margin-bottom: 14px; }
@@ -140,7 +169,7 @@ details summary { cursor: pointer; color: var(--accent); }
 .bubble p { margin: 5px 0; overflow-wrap: break-word; }
 .bubble.bot {
   align-self: flex-start; background: #fff; color: var(--ink);
-  border: 1px solid #eee2c6; border-bottom-left-radius: 6px;
+  border: 1px solid var(--line); border-bottom-left-radius: 6px;
 }
 .bubble.user {
   align-self: flex-end; color: #5c4303;
@@ -225,12 +254,14 @@ details summary { cursor: pointer; color: var(--accent); }
 .topics .sub, .how .sub { text-align: center; color: var(--muted); margin: 0 0 18px; }
 .topic-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
 .topic-card {
-  background: linear-gradient(180deg, #ffffff, #f4f7fc);
-  color: #16213a; border: 1px solid #e2e8f3; border-radius: 16px;
-  padding: 16px; box-shadow: 0 10px 24px rgba(22, 33, 58, .07);
+  /* Wave 116: warmed to the app's cream/teal/gold family —
+     this was the only cool blue-grey card left. */
+  background: linear-gradient(180deg, #ffffff, #fdf9ef);
+  color: #16213a; border: 1px solid #e7dec9; border-radius: 16px;
+  padding: 16px; box-shadow: 0 10px 24px rgba(101, 84, 40, .07);
   transition: transform .18s ease, box-shadow .18s ease;
 }
-.topic-card:hover { transform: translateY(-4px); box-shadow: 0 18px 34px rgba(22, 33, 58, .12); }
+.topic-card:hover { transform: translateY(-4px); box-shadow: 0 18px 34px rgba(101, 84, 40, .12); }
 .topic-card .ic { font-size: 24px; }
 .topic-card h3 { margin: 8px 0 4px; font-size: 15.5px; color: #16213a; }
 .topic-card p { margin: 0; color: #5b6b8c; font-size: 13px; line-height: 1.5; }
@@ -918,10 +949,11 @@ body.chats-list-view .chats-grid { grid-template-columns: 1fr; }
 }
 .chats-new-big {
   width: 62px; height: 62px; border: none; cursor: pointer;
-  border-radius: 16px; background: #2563eb; color: #fff;
+  /* Wave 116: the app's teal, not the leftover browser blue. */
+  border-radius: 16px; background: var(--accent); color: #fff;
   font-size: 38px; line-height: 1; font-weight: 400;
   display: inline-flex; align-items: center; justify-content: center;
-  box-shadow: 0 12px 26px rgba(37, 99, 235, .35);
+  box-shadow: 0 12px 26px rgba(47, 125, 110, .32);
 }
 .chats-new-big:hover { filter: brightness(1.08); }
 .chats-more { position: absolute; right: 2px; bottom: 12px; }
@@ -1201,7 +1233,7 @@ body.account-page main.account-main {
   margin-top: 12px;
 }
 .method-chip {
-  margin: 0; min-height: 34px; padding: 6px 12px;
+  margin: 0; min-height: 40px; padding: 6px 12px;
   font-size: 13px; font-weight: 700; cursor: pointer;
   background: #f6ead0; color: #7a5a10;
   border: 1.5px solid #e4cf9e; border-radius: 999px;
@@ -1209,7 +1241,7 @@ body.account-page main.account-main {
 }
 .method-chip:hover { border-color: #c9a24b; }
 .listen-chip {
-  margin: 0; min-height: 34px; padding: 6px 12px;
+  margin: 0; min-height: 40px; padding: 6px 12px;
   font-size: 13px; font-weight: 700;
   background: #f6ead0; color: #7a5a10;
   border: 1.5px solid #e4cf9e; border-radius: 999px;
@@ -1228,7 +1260,7 @@ body.account-page main.account-main {
 }
 .method-name { font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
 .method-solve-btn {
-  margin: 0; min-height: 34px; padding: 5px 12px; flex: none;
+  margin: 0; min-height: 40px; padding: 5px 12px; flex: none;
   font-size: 13px; font-weight: 700; border-radius: 999px;
   background: #fff; color: var(--accent);
   border: 1.5px solid #bcdcd2; box-shadow: none;
@@ -1239,7 +1271,7 @@ body.account-page main.account-main {
 .method-steps { font-size: 14px; }
 .method-steps li { overflow-wrap: anywhere; }
 .method-listen {
-  margin: 6px 0 0; min-height: 34px; padding: 6px 12px;
+  margin: 6px 0 0; min-height: 40px; padding: 6px 12px;
   font-size: 13px; background: #fff; color: #7a5a10;
   border: 1.5px solid #e3d9c2; box-shadow: none;
 }
@@ -1260,7 +1292,7 @@ body.account-page main.account-main {
 /* Wave 16: Previous Papers — paper entries, question blocks with
    chapter/marks chips, and the analysis weightage bars. Same warm
    cream/teal/gold palette as the rest of the site. */
-.paper-entry { border-top: 1px solid var(--line); padding: 16px 0 6px; }
+.paper-entry { border-top: 1px solid var(--line); padding: 16px 0 14px; }
 .paper-entry-title { margin: 0 0 4px; }
 /* Wave 64: medium chip on every Previous Papers entry, so the
    Hindi-medium papers are unmistakable in the list. */
@@ -1391,7 +1423,11 @@ body.account-page main.account-main {
   .chat-header:has(.nav-menu) { position: relative; padding-right: 58px; }
   .chat-header:has(.nav-menu) .nav-menu {
     position: absolute; right: 7px; top: 50%;
-    transform: translateY(-50%); margin: 0;
+    /* Wave 116: centred by negative margin, NOT a transform —
+       a transform on this element makes it the containing
+       block for the panel's position:fixed, which trapped
+       the open menu inside the button's 42×44px box. */
+    margin: -22px 0 0;
   }
 }
 @media (max-width: 480px) {
@@ -1400,6 +1436,8 @@ body.account-page main.account-main {
     font-size: .85rem;
   }
   .nav-menu-btn { width: 42px; height: 42px; }
+  /* Wave 116: the 42px button centres on a -21px margin. */
+  .chat-header:has(.nav-menu) .nav-menu { margin-top: -21px; }
 }
 @media (max-width: 380px) {
   /* Mark only — the "Ganitra" wordmark no longer fits beside
@@ -2276,20 +2314,26 @@ a.topic-card { text-decoration: none; display: block; }
    the logo or the page title) and never appears on the chat
    screen, so the docked composer is untouched. The pill
    reuses the app's own tokens (white card, warm line border,
-   accent text — the .back link's colour, made tappable). */
+   accent text — the .back link's colour, made tappable).
+   Wave 121 (Suraj, 17 Nov 2026): "Back nhi likhana, circle
+   nhi lagana, bs arrow lagao" — the control is now a BARE
+   ARROW: no "Back" word, no pill/circle/box around it, just
+   the ← glyph at the top-left in the same plain-glyph
+   language as the ☰ menu button (Wave 104/116). The 44px
+   tap target stays — it is simply invisible. */
 .backnav {
   position: sticky; top: 8px; z-index: 60;
   margin: -6px 0 14px; text-align: left;
 }
 .backnav-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  min-height: 44px; margin-top: 0; padding: 10px 18px 10px 14px;
-  background: #fff; color: var(--accent);
-  border: 1.5px solid #ddd3ba; border-radius: 999px;
-  font: inherit; font-size: 15px; font-weight: 700;
-  cursor: pointer; box-shadow: 0 4px 14px rgba(101, 84, 40, .10);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0;
+  background: none; color: var(--text);
+  border: 0; box-shadow: none; border-radius: 0;
+  font: inherit; font-size: 22px; font-weight: 700;
+  cursor: pointer; transition: transform .08s ease;
 }
-.backnav-btn:active { transform: translateY(1px); }
+.backnav-btn:active { transform: scale(.94); }
 
 /* ================= Wave 68: chat answer overhaul =============
    Suraj (15 Nov 2026): the chat page is the product — answers
@@ -2333,6 +2377,17 @@ body.chat-page .bubble ol.steps li.step-verify::before {
 body.chat-page .bubble details.steps-section { margin-top: 8px; }
 /* Wave 69: the example-question chip styles were removed with
    the chips themselves (Suraj's order — no example questions). */
+
+/* --- Wave 116 finish: warm selection, thin scrollbars,
+   reduced-motion coverage for the card hovers. --- */
+::selection { background: #f3e2ac; color: #4a3603; }
+.chat-log, .chats-grid, .nav-menu[open] .nav-dropdown {
+  scrollbar-width: thin;
+}
+@media (prefers-reduced-motion: reduce) {
+  .topic-card, .tool-btn { transition: none; }
+}
+
 
 /* ================= Wave 105: compact + comfortable chat =======
    Suraj (17 Nov 2026): study the big AIs (ChatGPT, Gemini,
@@ -2436,3 +2491,24 @@ body.chat-page .chat-bar textarea {
     padding-bottom: calc(8px + env(safe-area-inset-bottom));
   }
 }
+
+/* ================= Wave 118: chat comfort (arrival + taps) ====
+   Suraj (17 Nov 2026): "baaki AI jaisa comfortable kyu nhi lag
+   raha hai." The arrival/scroll half of this wave lives in
+   templates/index.html (the aligner); this block carries its
+   tap-target half. Presentation only — no glyph, colour or
+   font changes anywhere. */
+
+/* The answer glyph row reaches a full 44px tap target in
+   BOTH dimensions. Wave 105 took the height to 40px, but the
+   width stayed ~24px (18px glyph + 3px sides): five signs in
+   a row were easy to mis-tap on a phone. The glyphs keep
+   their exact size; only the air around them grows, and the
+   row's gap opens a notch so the targets never crowd. */
+body.chat-page .answer-actions .act-btn { padding: 13px 13px; }
+body.chat-page .answer-actions { gap: 4px; }
+
+/* Composer signs: Wave 27's invisible tap halo grows from
+   ~40px to a full 44px. The visible signs stay 36px. */
+body.chat-page .chat-bar .composer-btn::after,
+body.chat-page .chat-bar .send-btn::after { inset: -4px; }
