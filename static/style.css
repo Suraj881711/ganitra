@@ -178,17 +178,21 @@ details summary { cursor: pointer; color: var(--accent); }
   border-bottom-right-radius: 6px;
 }
 .bubble.typing { color: var(--sub); font-style: italic; }
-.bubble.typing .dots { display: inline-flex; gap: 5px; margin-left: 8px; vertical-align: middle; }
+/* Wave 145: the three dots ARE the loading indicator (Suraj:
+   "agar time lag raha hai toh load kar sakte hai 3 dot mai") —
+   a clear ChatGPT-style bounce in the answer placeholder for
+   the whole wait, in the house gold. */
+.bubble.typing .dots { display: inline-flex; gap: 6px; margin-left: 9px; vertical-align: middle; }
 .bubble.typing .dots i {
-  width: 7px; height: 7px; border-radius: 50%;
+  width: 9px; height: 9px; border-radius: 50%;
   background: #c9a24b; display: inline-block;
-  animation: softpulse 1.15s ease-in-out infinite;
+  animation: softpulse 1.1s ease-in-out infinite;
 }
-.bubble.typing .dots i:nth-child(2) { animation-delay: .18s; }
-.bubble.typing .dots i:nth-child(3) { animation-delay: .36s; }
+.bubble.typing .dots i:nth-child(2) { animation-delay: .15s; }
+.bubble.typing .dots i:nth-child(3) { animation-delay: .3s; }
 @keyframes softpulse {
   0%, 100% { opacity: .25; transform: translateY(0); }
-  50% { opacity: 1; transform: translateY(-2.5px); }
+  50% { opacity: 1; transform: translateY(-4.5px); }
 }
 .bubble .steps li { color: var(--ink); }
 .bubble .graph { max-width: 100%; border-radius: 10px; margin-top: 8px; }
