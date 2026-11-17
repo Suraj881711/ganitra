@@ -34,6 +34,7 @@ from .units import solve_units
 from .word_problems import solve_word_problem
 from .papers10 import solve_papers10
 from .gaps103 import solve_gaps103
+from .rekha import solve_rekha
 
 # --------------------------------------------------------------------------
 # Hinglish normalisation:  "5 aur 3 ko jodo" -> "5 + 3",
@@ -3290,6 +3291,7 @@ def solve_question(question: str):
 _W77_LOCAL = threading.local()
 _W94_LOCAL = threading.local()
 _W103_LOCAL = threading.local()
+_W115_LOCAL = threading.local()
 
 _W77_FILLER_WORDS = {
     "please", "plz", "batao", "bata", "samjhao", "samjha", "do",
@@ -4425,6 +4427,35 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     w103.setdefault("interpreted_as", translated)
                 return w103
+        # Wave 115: Rekha Ganit method schemas
+        # (solver/rekha.py) — the same failure-only gate as
+        # Waves 77/94/103: straight-line families the primary
+        # paths miss (slope from an equation, inclination,
+        # intercept forms, parallel/perpendicular equations
+        # and checks, line distances, angle between lines,
+        # foot/image, section-point phrasings, intersection
+        # family, bisector/locus, normal form) in English,
+        # Hindi and Hinglish phrasings. A real primary answer
+        # is never displaced, and rekha returns None unless
+        # one of its strict schemas matches completely. (The
+        # hijacked check/angle/bisector asks, whose primary
+        # results ARE "real", are repaired by rekha_upgrade
+        # in fallback.py instead.)
+        if getattr(_W115_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W115_LOCAL.depth = 1
+            try:
+                w115 = solve_rekha(original)
+                if w115 is None and working != original:
+                    w115 = solve_rekha(working)
+            except Exception:
+                w115 = None
+            finally:
+                _W115_LOCAL.depth = 0
+            if w115 is not None:
+                if was_translated:
+                    w115.setdefault("interpreted_as", translated)
+                return w115
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])
