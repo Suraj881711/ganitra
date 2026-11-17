@@ -592,6 +592,45 @@ _DIFF_PAIRS = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Topics Expansion — Band A (Classes 0-8): topics_banda.py
+# appends its foundational / middle-school topics to the
+# index above and merges its routing tables into the ones
+# defined in this module. topics_data.TOPICS_BY_CLASS is
+# NOT touched — its per-class counts are locked by
+# test_wave55_topics.py — so Band A topics live only in
+# this concept index.
+# ---------------------------------------------------------------------------
+
+from topics_banda import (
+    ALIASES_BANDA, DEV_PHRASES_BANDA, DIFF_PAIRS_BANDA,
+    ROMAN_PHRASES_BANDA, TOKEN_ALIASES_BANDA, TOPICS_BANDA)
+
+for _cls in sorted(TOPICS_BANDA):
+    for _bt in TOPICS_BANDA[_cls]:
+        _ORDERED.append((_cls, _bt))
+        _BY_SLUG.setdefault(_bt["slug"], (_cls, _bt))
+_ALIASES.extend(ALIASES_BANDA)
+_TOKEN_ALIASES.update(TOKEN_ALIASES_BANDA)
+_DEV_PHRASES.extend(DEV_PHRASES_BANDA)
+_ROMAN_PHRASES.extend(ROMAN_PHRASES_BANDA)
+_DIFF_PAIRS.extend(DIFF_PAIRS_BANDA)
+
+# Topics Scale-Up, Band C: routing extensions for the topics
+# in topics_bandc.py. Band C phrase aliases are PREPENDED
+# (earliest position wins; ties go to the longer phrase, so a
+# specific Band C phrase beats a generic built-in one at the
+# same spot); token aliases and phrase translations merge
+# with Band C entries first for the same reason.
+from topics_bandc import (ALIASES_BANDC, TOKEN_ALIASES_BANDC,
+                          DEV_PHRASES_BANDC, ROMAN_PHRASES_BANDC)
+
+_ALIASES = ALIASES_BANDC + _ALIASES
+_TOKEN_ALIASES = {**TOKEN_ALIASES_BANDC, **_TOKEN_ALIASES}
+_DEV_PHRASES = DEV_PHRASES_BANDC + _DEV_PHRASES
+_ROMAN_PHRASES = ROMAN_PHRASES_BANDC + _ROMAN_PHRASES
+
+
 def _alias_match(mtext, toks):
     """Best alias hit for the whole question, or None.
     HCF+LCM together (a how-to ask about both) belong to the
@@ -861,3 +900,21 @@ def topic_concept_result(question):
 
 
 __all__ = ["topic_concept_result"]
+
+
+# --- Band B topics expansion (Classes 9-10) -------------------------------
+# Register the new topics' chat aliases. Any phrase that already
+# exists in _ALIASES is dropped, so a Band B alias can never
+# steal an older route.
+try:
+    from topics_bandb import ALIASES_BANDB as _ALIASES_BANDB
+
+    _bandb_phrases = {phrase for phrase, _slug in _ALIASES}
+    _ALIASES.extend(
+        (phrase, slug)
+        for phrase, slug in _ALIASES_BANDB
+        if phrase not in _bandb_phrases
+    )
+except Exception:  # pragma: no cover - topics module is optional
+    pass
+# --- end Band B wiring -----------------------------------------------------

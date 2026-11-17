@@ -1657,6 +1657,25 @@ TOPICS_BY_CLASS = {
 }
 
 
+# --- Band B topics expansion (Classes 9-10) -------------------------------
+# Merged in from the standalone topics_bandb module so the three
+# band waves combine mechanically. Runs before CLASS_NUMBERS /
+# TOPIC_COUNT are computed, so every count stays automatic.
+from topics_bandb import TOPICS_BY_CLASS_BANDB as _BANDB
+
+for _band_cls, _band_topics in _BANDB.items():
+    TOPICS_BY_CLASS.setdefault(_band_cls, []).extend(_band_topics)
+# --- end Band B wiring -----------------------------------------------------
+
+# Topics Scale-Up, Band C (Classes 11-12 + applied maths):
+# entries live in topics_bandc.py so the three band waves can
+# be combined mechanically; they join the same aggregation.
+from topics_bandc import TOPICS_BANDC
+
+for _cls, _ts in TOPICS_BANDC.items():
+    TOPICS_BY_CLASS.setdefault(_cls, []).extend(_ts)
+
+
 CLASS_NUMBERS = tuple(sorted(TOPICS_BY_CLASS))
 
 

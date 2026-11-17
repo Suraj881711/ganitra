@@ -54,6 +54,13 @@ MODEL = "openrouter/free"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 ENV_KEY = "GANITRA_OPENROUTER_API_KEY"
 TIMEOUT_SECONDS = 12
+# Wave 119: the output-token budget, raised with the other
+# two legs (see gemini_fallback's Wave 119 note): the free
+# router can land on a reasoning model whose reasoning
+# counts toward this cap, and the old 1024 risked a reply
+# cut mid-answer being served as if complete. A ceiling,
+# not a target — a reply costs only the tokens it uses.
+MAX_TOKENS = 8192
 
 
 def _post_json(url, payload, api_key, timeout):
@@ -116,7 +123,7 @@ def try_openrouter_answer(question, lang=None):
         "messages": [{"role": "user",
                       "content": _build_prompt(question, lang)}],
         "temperature": 0.2,
-        "max_tokens": 1024,
+        "max_tokens": MAX_TOKENS,
     }
     try:
         response = _post_json(API_URL, payload, api_key,
@@ -125,8 +132,14 @@ def try_openrouter_answer(question, lang=None):
         return None
     if not isinstance(response, dict) or response.get("error"):
         return None
+    # Wave 119: a reply the provider cut off at the token cap
+    # (finish_reason "length") ends mid-answer — never serve
+    # it; degrade to None exactly like any other failure.
+    choices = response.get("choices") or []
+    if choices and choices[0].get("finish_reason") == "length":
+        return None
     return _shape_openrouter_result(_extract_text(response))
 
 
 __all__ = ["try_openrouter_answer", "MODEL", "ENV_KEY",
-           "TIMEOUT_SECONDS"]
+           "TIMEOUT_SECONDS", "MAX_TOKENS"]

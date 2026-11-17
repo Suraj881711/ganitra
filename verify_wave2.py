@@ -165,7 +165,8 @@ disp = r.headers.get("Content-Disposition", "")
 check("download solution txt", r.status_code == 200
       and "attachment" in disp and "solution.txt" in disp
       and "Question: mean of 2, 4, 6, 8" in body
-      and "Step-by-step" in body,
+      and "Step-by-step solution:" not in body
+      and "\n1. " in body,
       f"status={r.status_code} disp={disp}")
 
 r = client.get("/practice")

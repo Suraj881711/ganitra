@@ -114,8 +114,10 @@ expected_expl = EXPLANATIONS["hi"]["algebra:equation"].format(
     answer="x = 2, x = 3")
 check("hindi explanation line", expected_expl in body,
       expected_expl[:60] + "…")
-check("steps stay English", STRINGS["hi"]["steps_heading"] in body
-      and "Step-by-step" not in body)
+check("steps stay English, heading gone (Wave 120)",
+      "<h2>Step-by-step solution</h2>" not in body
+      and "<h2>चरण-दर-चरण हल</h2>" not in body
+      and 'id="steps-list"' in body)
 
 # --- 4. bn / mr / ta / te homepages ---------------------------------------
 for code in ("bn", "mr", "ta", "te"):

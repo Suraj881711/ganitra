@@ -1263,8 +1263,8 @@ def _log_not_found(question, lang, student_class, terminal_kind):
 
 # ---------------------------------------------------------------------------
 
-def with_fallback(question, result, lang=None, student_class=None,
-                  lang_request=None):
+def _with_fallback_chain(question, result, lang=None,
+                         student_class=None, lang_request=None):
     """Return `result` unchanged when it is a real solver
     answer; otherwise return an honest fallback result (never
     None, never an error dict). `lang` is the app's UI /
@@ -1302,6 +1302,29 @@ def with_fallback(question, result, lang=None, student_class=None,
         return greeting
     if _is_nonmaths(question):
         return _nonmaths_result(question, hindi, req_flavour)
+
+    # Wave 111: the maths-META layer (maths_meta.py) — maths
+    # history/creator facts and study/practice/exam advice.
+    # It sits here, after the greeting and non-maths guards
+    # (so the guards stay authoritative) and before every
+    # solving/concept layer, because its whole point is the
+    # questions those layers mishandle: a WHO-shaped ask
+    # ("Pythagoras theorem kisne banaya tha?") used to be
+    # served the WHAT card by the concept layers below, and
+    # person/advice asks fell through to the not-found line.
+    # The layer's own double gate (who shape + curated
+    # topic/person keyword; advice trigger + maths gate) plus
+    # its computation veto keep every real problem and every
+    # concept ask out — it returns None for all of them, and
+    # the flow below is then exactly the pre-Wave-111 one.
+    try:
+        from maths_meta import meta_result
+        meta = meta_result(question,
+                           req_flavour or _flavour(question))
+    except Exception:
+        meta = None
+    if meta is not None:
+        return meta
 
     if _is_real(question, result):
         # Wave 100: a multi-part bundle (mega-MCQ set, case
@@ -1384,6 +1407,24 @@ def with_fallback(question, result, lang=None, student_class=None,
             upgraded = None
         if upgraded is not None:
             return _with_figure(question, upgraded)
+        # Wave 115: the hijacked Rekha Ganit asks — a 2x2
+        # system solution served for a parallel/perpendicular
+        # CHECK, an angle-between-lines ask or a line-through-
+        # intersection ask; the ratio echoed back for a
+        # dividing-POINT ask; the segment's own line served
+        # for its perpendicular bisector. Those results are
+        # "real" answers to different questions, so the
+        # router's failure gate can never see them.
+        # rekha_upgrade fires only on the strict ask shape
+        # whose rekha schema settles the question completely,
+        # leaving every other real answer untouched.
+        try:
+            from solver.rekha import rekha_upgrade
+            upgraded = rekha_upgrade(question, result)
+        except Exception:
+            upgraded = None
+        if upgraded is not None:
+            return _with_figure(question, upgraded)
         return _with_figure(question, result)
 
     # Wave 20, Layer 0c: a SCIENCE question the solver could not
@@ -1407,6 +1448,20 @@ def with_fallback(question, result, lang=None, student_class=None,
     banked = _bank_answer(question)
     if banked is not None:
         return banked
+
+    # Wave 117: the Live Bank (livebank.py) — questions
+    # students actually asked, answered before by a
+    # deterministic layer and stored VERIFIED at ask time.
+    # It sits exactly where the master bank sits (after the
+    # science guard, after a real solver answer, before the
+    # fall-through layers it can only ever reproduce), and
+    # serves only a language-key match: a repeat ask gets
+    # its stored answer instantly instead of re-paying the
+    # salvage / concept / AI layers. Pending (AI) rows are
+    # never served — they wait for offline verification.
+    live = _livebank_answer(question, lang, lang_request)
+    if live is not None:
+        return live
 
     # Wave 76: the MCQ layer (mcq.py). A question that arrives
     # WITH its options ("(a) 12 (b) 18 (c) 24 (d) 36") usually
@@ -1540,8 +1595,25 @@ def with_fallback(question, result, lang=None, student_class=None,
             result_out = _guide_result(question, hindi, "vague",
                                        req_flavour)
         elif _is_gibberish(question):
-            result_out = _guide_result(question, hindi,
-                                       "gibberish", req_flavour)
+            # Wave 111: a WHO/ADVICE-shaped MATHS question the
+            # curated meta layer missed ("Euler kaun the?")
+            # is not gibberish — it is a real question this
+            # app cannot answer itself. Classify it as
+            # "guide" instead: the content served locally is
+            # the identical one-line not-found (via the
+            # collapse below), but "guide" is in _GEMINI_KINDS,
+            # so in production the AI chain gets its chance
+            # at the student's actual question first. Genuine
+            # gibberish (no meta shape) is untouched.
+            try:
+                from maths_meta import is_meta_shaped
+                meta_shaped = is_meta_shaped(question)
+            except Exception:
+                meta_shaped = False
+            result_out = _guide_result(
+                question, hindi,
+                "guide" if meta_shaped else "gibberish",
+                req_flavour)
         else:
             result_out = _guide_result(question, hindi, "guide",
                                        req_flavour)
@@ -1596,6 +1668,88 @@ def with_fallback(question, result, lang=None, student_class=None,
         return _not_found_result(question, hindi, lang,
                                  lang_request)
     return result_out
+
+
+# ---------------------------------------------------------------------------
+# Wave 117: the Live Bank hooks (livebank.py)
+# ---------------------------------------------------------------------------
+
+def _livebank_lang_key(question, lang, lang_request):
+    """The live bank's language key for one ask — Wave 107's
+    rules, owned here because this layer owns the language
+    choices: an explicit in-message request wins verbatim
+    ("en" / "hi" / "hinglish"); a bn/mr/ta/te session
+    language keys under itself (conservative — its answers
+    are stored and served only within that language); else
+    the question's own flavour decides, with the same
+    mapping the Wave 90 log uses (dev -> "hi", roman ->
+    "hinglish", en -> "en"). Record and lookup compute the
+    key through this one function, so the two sides always
+    agree."""
+    if lang_request in ("en", "hi", "hinglish"):
+        return lang_request
+    if lang and lang not in ("en", "hi"):
+        return lang
+    return {"dev": "hi", "roman": "hinglish",
+            "en": "en"}[_flavour(question)]
+
+
+def _livebank_answer(question, lang, lang_request):
+    """The Live Bank's stored VERIFIED answer for this exact
+    question + language key (livebank.lookup_live_result),
+    or None. Lazy import + blanket guard, same pattern as
+    the bank layer above: the store is an accelerator, and
+    any failure must leave the chain exactly as it was."""
+    try:
+        from livebank import lookup_live_result
+        return lookup_live_result(
+            question,
+            _livebank_lang_key(question, lang, lang_request))
+    except Exception:
+        return None
+
+
+def _record_livebank(question, result, lang, lang_request):
+    """Record one finished outcome in the Live Bank.
+    Double-guarded like the Wave 90 hook:
+    livebank.record_answer never raises by contract, and
+    this wrapper swallows even an import failure — storing
+    is observational and must never slow, break or alter
+    the answer. Note what is NOT passed: no student class,
+    no session, no identity of any kind — the store's
+    privacy rule is question text only. A result the Live
+    Bank itself just served is not re-recorded (its hit was
+    already counted by the serve, and re-storing the served
+    copy would bake the live_bank marker into the stored
+    payload)."""
+    if isinstance(result, dict) and result.get("live_bank"):
+        return
+    try:
+        from livebank import record_answer
+        record_answer(
+            question, result,
+            _livebank_lang_key(question, lang, lang_request))
+    except Exception:
+        pass
+
+
+def with_fallback(question, result, lang=None, student_class=None,
+                  lang_request=None):
+    """The chain above (_with_fallback_chain), plus Wave
+    117's record hook: every finished outcome — solver,
+    bank, deterministic layer or AI — is offered to the
+    Live Bank, which stores the storeable ones (verified
+    for deterministic answers, pending for AI answers) so a
+    repeat ask can be served instantly. Recording happens
+    after the answer is final and can never change it; the
+    not-found / non-maths / greeting outcomes are refused
+    by the store's own classifier (Wave 90's log owns the
+    not-found ones)."""
+    out = _with_fallback_chain(question, result, lang=lang,
+                               student_class=student_class,
+                               lang_request=lang_request)
+    _record_livebank(question, out, lang, lang_request)
+    return out
 
 
 def fallback_answer(question, result=None, lang=None,

@@ -174,7 +174,7 @@ def _intro_for(result, question):
 
 _UI_PREFIXES = ("js_", "error_", "chat_", "nav_")
 _UI_EXTRA_KEYS = {
-    "steps_heading", "explanation_heading", "advice_heading",
+    "explanation_heading", "advice_heading",
     "listen_btn", "listen_stop_btn", "handwriting_btn",
     "print_copy_link", "question_placeholder", "enter_question",
     "solve_btn", "voice_btn", "photo_btn", "lang_label", "menu_label",

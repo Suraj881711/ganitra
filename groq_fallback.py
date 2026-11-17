@@ -36,6 +36,13 @@ MODEL = "openai/gpt-oss-120b"
 API_URL = "https://api.groq.com/openai/v1/chat/completions"
 ENV_KEY = "GANITRA_GROQ_API_KEY"
 TIMEOUT_SECONDS = 15
+# Wave 119: the output-token budget. MODEL is a reasoning
+# model whose reasoning counts toward this cap; the old 1024
+# carried the same truncation risk fixed in gemini_fallback
+# (a reply cut at the cap was served as if complete). 8192
+# is a ceiling, not a target — a reply costs only the tokens
+# it actually uses.
+MAX_TOKENS = 8192
 
 
 def _post_json(url, payload, api_key, timeout):
@@ -95,7 +102,7 @@ def try_groq_answer(question, lang=None):
         "messages": [{"role": "user",
                       "content": _build_prompt(question, lang)}],
         "temperature": 0.2,
-        "max_tokens": 1024,
+        "max_tokens": MAX_TOKENS,
     }
     try:
         response = _post_json(API_URL, payload, api_key,
@@ -104,8 +111,14 @@ def try_groq_answer(question, lang=None):
         return None
     if not isinstance(response, dict) or response.get("error"):
         return None
+    # Wave 119: a reply the provider cut off at the token cap
+    # (finish_reason "length") ends mid-answer — never serve
+    # it; degrade to None exactly like any other failure.
+    choices = response.get("choices") or []
+    if choices and choices[0].get("finish_reason") == "length":
+        return None
     return _shape_groq_result(_extract_text(response))
 
 
 __all__ = ["try_groq_answer", "MODEL", "ENV_KEY",
-           "TIMEOUT_SECONDS"]
+           "TIMEOUT_SECONDS", "MAX_TOKENS"]

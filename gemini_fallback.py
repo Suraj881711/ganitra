@@ -33,6 +33,20 @@ verified working on his key: a model-level failure (HTTP
 the next model; any other failure (no key, timeout, a 400,
 an unusable reply) still degrades silently to None exactly
 as before.
+
+Wave 119: the chain's primary model (gemini-3-flash-preview)
+is a THINKING model — its reasoning tokens count against
+maxOutputTokens. The Wave-37 cap of 1024 could be almost
+entirely consumed by thinking (measured live 17 Nov 2026:
+839-979 thoughts tokens for one worked answer), leaving a
+few dozen tokens of visible answer, so replies arrived cut
+mid-line ("Answer: Area = (1^2/2 -", "x = 0 and") and were
+served as if complete — the app never looked at
+finishReason. Two fixes: the budget is now
+MAX_OUTPUT_TOKENS (8192), and a reply whose finishReason is
+MAX_TOKENS is treated like a model failure — the chain moves
+on, and if every model truncates, the honest fallback is
+served instead of a cut answer.
 """
 import json
 import os
@@ -51,6 +65,12 @@ _API_BASE = ("https://generativelanguage.googleapis.com/"
 API_URL = f"{_API_BASE}/{MODEL}:generateContent"
 ENV_KEY = "GANITRA_GEMINI_API_KEY"
 TIMEOUT_SECONDS = 15
+# Wave 119: the output-token budget (see the module
+# docstring). A ceiling, not a target — a reply costs only
+# the tokens it actually uses; the headroom exists so a
+# thinking model's reasoning can never starve the visible
+# worked answer the prompt demands.
+MAX_OUTPUT_TOKENS = 8192
 
 # HTTP statuses that mean "this MODEL cannot serve right now"
 # (gated off / free-tier quota / transient overload) — the
@@ -141,6 +161,17 @@ def _extract_text(payload):
     return "".join(parts).strip()
 
 
+def _was_truncated(payload):
+    """Wave 119: True when the model's reply was cut off by
+    the output-token cap (finishReason MAX_TOKENS). Such a
+    reply ends mid-line and must never be shaped and served
+    as a complete answer."""
+    for candidate in (payload or {}).get("candidates", []) or []:
+        if candidate.get("finishReason") == "MAX_TOKENS":
+            return True
+    return False
+
+
 _ANSWER_LINE = re.compile(
     r"^\s*(?:final\s+answer|answer|उत्तर|jawab)\s*[:\-–]\s*(.+)$",
     re.IGNORECASE)
@@ -204,7 +235,7 @@ def try_gemini_answer(question, lang=None):
         "contents": [{"parts": [
             {"text": _build_prompt(question, lang)}]}],
         "generationConfig": {"temperature": 0.2,
-                             "maxOutputTokens": 1024},
+                             "maxOutputTokens": MAX_OUTPUT_TOKENS},
     }
     # Wave 41: walk the model chain. A model-level failure
     # (404/429/503) tries the next model; every other failure
@@ -223,9 +254,16 @@ def try_gemini_answer(question, lang=None):
             if _is_model_failure(response=response):
                 continue
             return None
+        # Wave 119: a reply cut off by the token cap is not an
+        # answer — move to the next model exactly like a
+        # model-level failure. If every model truncates, the
+        # loop ends in None and the caller serves the honest
+        # Wave-18 fallback rather than a cut answer.
+        if _was_truncated(response):
+            continue
         return _shape_result(_extract_text(response))
     return None
 
 
 __all__ = ["try_gemini_answer", "MODEL", "MODELS", "ENV_KEY",
-           "TIMEOUT_SECONDS"]
+           "TIMEOUT_SECONDS", "MAX_OUTPUT_TOKENS"]

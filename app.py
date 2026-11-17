@@ -127,9 +127,11 @@ def _backnav_for_path(path):
     bar shows and where its no-history fallback points:
 
     - returns None -> no bar (the chat home / sign-in gate at
-      "/", and the in-progress Board chapter test, whose
-      template overrides the block with its chapter URL and an
-      always-on confirmation);
+      "/", the sign-in POST endpoints whose failure responses
+      re-render that same gate — Wave 121 found the bar leaking
+      onto it after a failed login — and the in-progress Board
+      chapter test, whose template overrides the block with its
+      chapter URL and an always-on confirmation);
     - returns (fallback, confirm_if) -> show the bar. The
       button first tries history.back() when the referrer is
       same-origin; `fallback` is only used when there is no
@@ -141,6 +143,13 @@ def _backnav_for_path(path):
     """
     if path == "/" or path == "/board/test/start":
         return None
+    if path in ("/login", "/signup", "/login-favourite"):
+        # Wave 121: these POSTs re-render the sign-in gate on
+        # failure — the gate is a root screen and gets no bar.
+        return None
+    if path == "/practice/classic":
+        # Wave 121: the classic set's parent is the practice hub.
+        return ("/practice", None)
     if path == "/test":
         # Chapter Test: the paper card exists only while a test
         # is running (setup/result need no confirmation).
@@ -159,9 +168,19 @@ def _backnav_for_path(path):
             return (f"/board/{seg[1]}", None)
         return (f"/board/{seg[1]}/{seg[2]}", None)
     if seg[:1] == ["papers"]:
+        if len(seg) >= 3 and seg[2] == "attempt":
+            # Wave 121: the exam-mode intro/result live UNDER one
+            # paper — their parent is that paper's page, not the
+            # whole list. (The attempt itself overrides the block
+            # with the same fallback + a confirmation.)
+            return (f"/papers/{seg[1]}", None)
         return ("/papers", None) if len(seg) >= 2 else ("/", None)
     if seg[:1] == ["mistakes"] and len(seg) >= 2:
         return ("/mistakes", None)
+    if seg[:1] == ["weak-topics"] and len(seg) >= 2:
+        # Wave 121: the weak-topic practice/result pages' parent
+        # is the weak-topics list, not the chat home.
+        return ("/weak-topics", None)
     return ("/", None)
 
 
@@ -231,8 +250,10 @@ def _solution_text(question, result):
     lines.append(f"Answer: {result.get('answer', '')}")
     steps = result.get("steps") or []
     if steps:
+        # Wave 120 (Suraj, 17 Nov 2026): no "Step-by-step
+        # solution:" label line — the steps stand on their
+        # own, in the download exactly as on the card.
         lines.append("")
-        lines.append("Step-by-step solution:")
         for i, step in enumerate(steps, 1):
             lines.append(f"{i}. {step}")
     if result.get("interpreted_as"):

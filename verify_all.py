@@ -120,7 +120,7 @@ print("GET /practice ->", r.status_code,
 r = client.post("/solve", data={"question": "derivative of x^3 + 2x"})
 body = r.get_data(as_text=True)
 print("POST /solve (derivative) ->", r.status_code,
-      "| steps shown:", "Step-by-step" in body,
+      "| steps shown:", 'id="steps-list"' in body,
       "| answer present:", "3" in body)
 r = client.post("/api/solve", json={"question": "integrate x^2 from 0 to 1"})
 data = r.get_json()
