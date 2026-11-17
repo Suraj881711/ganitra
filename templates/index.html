@@ -1164,6 +1164,236 @@
           }).catch(function () { showMethodFailed(host, btn); });
       }
 
+      /* ---------- Wave 122: conditional answer features ----------
+         Suraj (17 Nov 2026) approved all four Wave-118 decision
+         items — "Charo ko done karo or condition ke hisab se
+         ans dena" — so each feature below appears ONLY when
+         its condition matches, and every other answer renders
+         exactly as before:
+         (1) Streaming reveal — only a FRESH in-page answer on
+             the student's own just-asked turn (the same arming
+             flag as Wave 118's aligner, liveAnswerPending);
+             restored history, print and the classic page never
+             reveal. (2) The final answer BOX — only when the
+             answer is a solved maths answer (w122Solved, the
+             exact mirror of followups.is_solved_result).
+         (3) Follow-up chips — only under a solved answer, only
+             on the live (latest) turn, only with the server's
+             per-answer `w122.chips` (labels in the ANSWER's
+             language); asking anything new removes them.
+         (4) "Step 1 / Step 2" labels — only when a card shows
+             2+ solving lines; the label rides in a data
+             attribute rendered by CSS ::before, so the step
+             TEXT itself (copy, narration, saved chats) never
+             changes. The Wave-120 removal of the overall
+             heading stays removed.
+         Wave 123 (Suraj's revision): (3) and (4) are now
+         ON-DEMAND — the server sends chips only when the
+         student's own message asked for more (or the answer
+         continues a chip thread), and sends `w122.labels`
+         only when the student asked for steps or the
+         question is a proof / derivation. Everything else
+         renders simple plain, as before Wave 122. */
+      var W122_NOT_SOLVED_KINDS = ["not_found", "concept",
+        "history", "advice", "greeting", "nonmaths", "science",
+        "vague", "gibberish", "guide", "similar", "step_check",
+        "followup_test"];
+      var W122_NOT_SOLVED_OPS = ["error", "explain_step",
+        "check_steps", "not_found"];
+      /* Wave 124: a chat-test solve-command turn returns the
+         normal solved card PLUS plain trailing lines in
+         data.w124_next (the progress + next question, or the
+         result card lines when the test just ended). They
+         render as one plain bubble right under the card —
+         and because the whole payload is what gets stored in
+         the thread, a reopened chat re-renders them too. */
+      function w124AppendNext(data) {
+        if (!data || !data.w124_next || !data.w124_next.length) {
+          return;
+        }
+        var nxt = document.createElement("div");
+        nxt.className = "bubble bot plain-reply";
+        data.w124_next.forEach(function (line, i) {
+          if (!line) return;
+          var p = document.createElement("p");
+          p.className = i === 0 ? "plain-main" : "plain-sub";
+          p.textContent = line;
+          nxt.appendChild(p);
+        });
+        log.appendChild(nxt);
+      }
+      function w122Solved(result) {
+        if (!result || !result.answer
+            || !String(result.answer).trim()) return false;
+        if (result.plain_reply || result.plain === true) {
+          return false;
+        }
+        if (W122_NOT_SOLVED_KINDS.indexOf(
+              result.fallback_kind || "") >= 0) return false;
+        if (W122_NOT_SOLVED_OPS.indexOf(result.op || "") >= 0) {
+          return false;
+        }
+        return true;
+      }
+      function w122FlavourOf(result, question) {
+        var text = (question || "") + " "
+          + ((result && result.steps) || []).join(" ") + " "
+          + ((result && result.answer) || "");
+        if (/[ऀ-ॿ]/.test(text)) return "dev";
+        if (UI_CODE === "hi") return "roman";
+        return "en";
+      }
+      function clearFollowupChips() {
+        if (!log) return;
+        var olds = log.querySelectorAll(".followup-chips");
+        for (var i = 0; i < olds.length; i++) {
+          olds[i].remove();
+        }
+      }
+      /* The reveal state of the one live card, if any. Any
+         tap / click / scroll finishes it instantly; Copy,
+         Listen, the bulb and ••• all read the answer from the
+         payload (never from the visible lines), so they act
+         on the FULL answer whatever the reveal has reached. */
+      var w122Reveal = null;
+      function w122MaybeReveal(ol, graph, figure, ans, typeset) {
+        var items = [];
+        if (ol) {
+          for (var i = 0; i < ol.children.length; i++) {
+            items.push(ol.children[i]);
+          }
+        }
+        if (graph) items.push(graph);
+        if (figure) items.push(figure);
+        if (ans && ans.textContent) items.push(ans);
+        if (items.length < 2) return;
+        if (window.matchMedia && window.matchMedia(
+              "(prefers-reduced-motion: reduce)").matches) {
+          return;  // reduced motion: the answer lands whole
+        }
+        if (w122Reveal) w122Reveal.finish();
+        items.forEach(function (el) {
+          el.classList.add("w122-wait");
+        });
+        var state = { done: false, timer: null };
+        function finish() {
+          if (state.done) return;
+          state.done = true;
+          if (state.timer) window.clearTimeout(state.timer);
+          items.forEach(function (el) {
+            el.classList.remove("w122-wait");
+            el.classList.add("w122-in");
+          });
+          if (scroller) {
+            ["pointerdown", "wheel", "touchstart"].forEach(
+              function (evt) {
+                scroller.removeEventListener(evt, finish);
+              });
+          }
+          document.removeEventListener("click", finish);
+          if (w122Reveal === state) w122Reveal = null;
+        }
+        state.finish = finish;
+        w122Reveal = state;
+        if (scroller) {
+          ["pointerdown", "wheel", "touchstart"].forEach(
+            function (evt) {
+              scroller.addEventListener(evt, finish,
+                                        { passive: true });
+            });
+        }
+        document.addEventListener("click", finish);
+        var idx = 0;
+        function step() {
+          if (state.done) return;
+          if (idx < items.length) {
+            var el = items[idx];
+            idx += 1;
+            el.classList.remove("w122-wait");
+            el.classList.add("w122-in");
+            scrollLog();
+            state.timer = window.setTimeout(step, 150);
+          } else {
+            finish();
+          }
+        }
+        /* MathJax safety: the reveal starts only once the
+           card's typeset has settled (the same promise the
+           Wave-118 aligner waits on), so raw TeX is never
+           shown mid-reveal; a 700ms cap means a stuck CDN
+           falls back to revealing the whole answer at once
+           instead of holding it hostage. */
+        var started = false;
+        function start() {
+          if (started || state.done) return;
+          started = true;
+          step();
+        }
+        if (typeset && typeof typeset.then === "function") {
+          typeset.then(start, start);
+          window.setTimeout(start, 700);
+        } else {
+          window.setTimeout(start, 0);
+        }
+      }
+      /* A chip tap: the label becomes the student's visible
+         message; the kind + the original question ride as
+         hidden context fields, and the server answers from
+         the last solution (followups.py). The flow mirrors
+         the composer's submit handler — typing bubble, the
+         same render dispatch, the same thread recording. */
+      function sendFollowup(kind, label, contextQuestion) {
+        if (solving || !window.fetch) return;
+        if (w122Reveal) w122Reveal.finish();
+        clearFollowupChips();
+        solving = true;
+        hideEmpty();
+        stickBottom = true;
+        liveAnswerPending = true;  // this turn aligns + reveals
+        liveScrollAway = false;
+        liveTurnMaxTop = scroller ? scroller.scrollTop : 0;
+        addBubble("user", label);
+        recordTurn({ role: "user", text: label });
+        var typing = addTyping();
+        fetch("/api/solve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            question: label, followup: kind,
+            context_question: contextQuestion || "",
+            chat_id: chatId
+          })
+        }).then(function (resp) {
+          return resp.json();
+        }).then(function (data) {
+          typing.remove();
+          solving = false;
+          if (data && data.language_switched) {
+            applyLanguage(data);
+          }
+          if (data) data._q = label;
+          if (data && data.ok) {
+            addAnswerBubble(label, data);
+          } else if (data && data.unsolvable) {
+            addErrorBubble(label, data.error);
+          } else if (data && data.message) {
+            addBubble("bot", data.message);
+          } else {
+            addErrorBubble(label, null);
+            data = null;
+          }
+          if (data) recordTurn({ role: "bot", data: data });
+          box.focus();
+        }).catch(function () {
+          typing.remove();
+          solving = false;
+          addBubble("bot", CHAT.offlineNote
+            || "Internet is not available right now — "
+               + "please check your connection and try again.");
+          box.focus();
+        });
+      }
+
       function addAnswerBubble(question, data) {
         // Wave 11: the solver result payload is rendered from a
         // stable shape — seed the classic "full solution" form
@@ -1173,6 +1403,13 @@
           question = data.question || data._q || "";
         }
         var result = data.result || {};
+        /* Wave 122: this render's freshness (the Wave-118
+           arming flag, still unconsumed at this point) decides
+           the live-only features — the chips and the reveal.
+           A new answer also retires every older answer's
+           chips: only the LATEST answer ever carries them. */
+        var w122LiveTurn = liveAnswerPending;
+        clearFollowupChips();
         /* Merge-5 (Waves 67 + 68, Suraj, 15 Nov 2026): PLAIN
            replies — greetings, vague asks, the maths-only
            guard, science guidance and the one-line not-found —
@@ -1199,6 +1436,7 @@
               plain.appendChild(p);
             });
           log.appendChild(plain);
+          w124AppendNext(data);
           /* Wave 118: same live-turn landing as the card. */
           if (!liveAnswerPending) scrollLog();
           alignLiveAnswer(plain, null);
@@ -1238,6 +1476,14 @@
           boardSteps = boardSteps.slice(1);
         } else {
           introText = "";
+        }
+        /* Wave 122: a follow-up answer (example / test /
+           simpler) opens with the server's framing line
+           ("One more example:" …) in the intro's place — it
+           is never a solving step, so it is applied only
+           after the lift above has had its chance. */
+        if (!introText && data.followup_note) {
+          introText = String(data.followup_note);
         }
         var div = document.createElement("div");
         div.className = "bubble bot";
@@ -1292,6 +1538,15 @@
            `ans` stays a plain bold line, appended as the
            last line of the solve inside the card. Teach
            still drives it (teach-wait / teach-now). */
+        /* Wave 122 (Suraj, 17 Nov 2026 — this rule is
+           superseded BY HIS APPROVAL, under one condition):
+           a SOLVED maths answer's final line now wears the
+           warm highlighted box (w122Solved). Every other
+           card — not-found, concept, history, advice, error —
+           keeps the plain bold line exactly as above. */
+        if (result.answer && w122Solved(result)) {
+          ans.classList.add("w122-answer-box");
+        }
 
         /* Wave 68: the old explanation paragraph is GONE
            from the card — it only restated the final answer
@@ -1881,6 +2136,45 @@
           figureEl = fig;
         }
 
+        /* Wave 122: per-step labels — ONLY when the card
+           shows 2+ solving lines, and never on the meta
+           cards (history / advice lines are facts, not
+           steps), the step-check feedback, the doubt
+           explanation or this wave's own test card (its
+           lines are questions, already carrying Q1./Q2.).
+           The intro line, when present, was lifted out of
+           boardSteps above, so numbering counts exactly the
+           displayed solving lines. For multipart / proof
+           answers the card shows ONE continuous list, so
+           the numbering runs continuously across it — the
+           part headings inside the step text are untouched.
+           Teacher's Advice is not part of this list and
+           stays unnumbered behind its bulb. */
+        /* Wave 123 (Suraj's revision): labels are ON-DEMAND
+           — the server payload's w122.labels is true only
+           when the student asked for steps in the chat or
+           the question is a proof / derivation. Default is
+           OFF: a plain question renders plain lines, exactly
+           as before Wave 122. Records without the flag
+           (offline answers, chats saved before this wave)
+           stay plain too. */
+        var w122NumberSteps = boardSteps.length >= 2
+          && data.w122 && data.w122.labels === true
+          && result.fallback_kind !== "history"
+          && result.fallback_kind !== "advice"
+          && result.fallback_kind !== "followup_test"
+          && result.fallback_kind !== "step_check"
+          /* Wave 124: the chat-test worked-steps fallback
+             card (op "chat_test_solve") shows plain lines —
+             test turns never carry step labels. (A REAL
+             solver card served by the solve command keeps
+             the solver's own treatment.) */
+          && result.op !== "chat_test_solve"
+          && result.op !== "explain_step"
+          && result.op !== "check_steps";
+        var w122StepWord = (data.w122 && data.w122.step_label)
+          || (w122FlavourOf(result, question) === "dev"
+              ? "चरण" : "Step");
         if (boardSteps.length) {
           var ol = document.createElement("ol");
           stepsOl = ol;
@@ -1904,9 +2198,20 @@
              Suraj banned outright, so they are now
              impossible even with no stylesheet at all. */
           ol.style.listStyleType = "none";
-          boardSteps.forEach(function (step) {
+          boardSteps.forEach(function (step, w122Idx) {
             var li = document.createElement("li");
             li.textContent = step;
+            /* Wave 122: the "Step N" label rides in a data
+               attribute (CSS ::before renders it) — the
+               line's own text is never touched, so copy,
+               narration and saved chats stay byte-identical
+               to before. The list keeps list-style:none and
+               its inline pin above; this is a label, not a
+               list marker. */
+            if (w122NumberSteps) {
+              li.setAttribute("data-w122-step",
+                w122StepWord + " " + (w122Idx + 1));
+            }
             /* Wave 68: a verification line the solver itself
                computed ("Check: …") gets a quiet ✓ styling —
                presentation only, the text is untouched. */
@@ -1941,6 +2246,31 @@
           stepsSection = det;
         }
 
+        /* Wave 122: the follow-up chips — built only when
+           EVERY condition holds: a live turn (the latest
+           answer), a solved maths answer, a server payload
+           that carries chips for THIS answer (labels in the
+           answer's language), and not an offline-evaluator
+           answer (there is no server to follow up with).
+           They sit in the wrap directly under the icon row. */
+        var chipsEl = null;
+        if (w122LiveTurn && !data.offline && data.w122
+            && data.w122.chips && data.w122.chips.length
+            && w122Solved(result)) {
+          chipsEl = document.createElement("div");
+          chipsEl.className = "followup-chips";
+          data.w122.chips.slice(0, 3).forEach(function (chip) {
+            var chipBtn = document.createElement("button");
+            chipBtn.type = "button";
+            chipBtn.className = "followup-chip";
+            chipBtn.textContent = chip.label;
+            chipBtn.addEventListener("click", function () {
+              sendFollowup(chip.kind, chip.label, question);
+            });
+            chipsEl.appendChild(chipBtn);
+          });
+        }
+
         /* Wave 24: THE reading sequence — the only place the
            pieces enter the DOM, in exactly this order. The
            CARD (the bubble) holds ONLY the solve: badge →
@@ -1962,6 +2292,7 @@
         wrap.className = "answer-wrap";
         wrap.appendChild(div);
         if (actions.children.length) wrap.appendChild(actions);
+        if (chipsEl) wrap.appendChild(chipsEl);
         if (adviceEl) wrap.appendChild(adviceEl);
         if (methodsPanel) wrap.appendChild(methodsPanel);
 
@@ -1978,6 +2309,16 @@
             .catch(function () {});
         }
         if (w118Live) alignLiveAnswer(wrap, w118Typeset);
+        /* Wave 122: the streaming reveal — live turns only
+           (replays and restored chats land whole, above). */
+        if (w122LiveTurn) {
+          w122MaybeReveal(stepsOl, graphImg, figureEl, ans,
+                          w118Typeset);
+        }
+        /* Wave 124: a chat-test solve card's trailing plain
+           lines (next question / result), live and restored
+           alike. */
+        w124AppendNext(data);
       }
 
       function addErrorBubble(question, err, replay) {
@@ -2160,6 +2501,12 @@
         liveAnswerPending = true;  // Wave 118: this turn aligns
         liveScrollAway = false;
         liveTurnMaxTop = scroller ? scroller.scrollTop : 0;
+        /* Wave 122: a new question retires the previous
+           answer's follow-up chips (only the LATEST answer
+           carries them) and completes any reveal still
+           running on it. */
+        if (w122Reveal) w122Reveal.finish();
+        clearFollowupChips();
         addBubble("user", question);
         // Wave 11: the user turn joins the account thread now;
         // the bot turn is appended when the answer lands.
@@ -2188,7 +2535,8 @@
         var fetchOpts = {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: question })
+          body: JSON.stringify({ question: question,
+                                 chat_id: chatId })
         };
         if (window.AbortController) {
           solveCtl = new AbortController();
