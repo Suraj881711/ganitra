@@ -78,7 +78,10 @@
           rel="noopener">{{ t.print_copy_link }}</a>
       </div>
       <ol class="steps notebook handwriting-on" id="steps-list">
-        {% for step in result.steps %}<li>{{ step }}</li>{% endfor %}
+        {# Wave 138: the typeset variant of each step when the
+           server provided one (MathJax, loaded by base.html,
+           typesets it on page load); the plain step otherwise. #}
+        {% for step in result.steps %}<li>{{ result.steps_tex[loop.index0] if result.steps_tex else step }}</li>{% endfor %}
       </ol>
       <script>
         (function () {
@@ -126,7 +129,7 @@
     <h2>{{ t.answer_heading }} <span class="badge">{{ result.type }}{% if result.op %} · {{ result.op }}{% endif %}</span></h2>
     <div class="final-answer">
       <p class="answer-big">
-        {% if result.latex %}\[ {{ result.latex }} \]{% else %}{{ result.answer }}{% endif %}
+        {% if result.latex %}\[ {{ result.latex }} \]{% elif result.answer_tex %}{{ result.answer_tex }}{% else %}{{ result.answer }}{% endif %}
       </p>
       {% if result.latex and result.answer %}<p class="muted">{{ result.answer }}</p>{% endif %}
     </div>

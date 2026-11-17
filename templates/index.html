@@ -295,6 +295,11 @@
       var VOICE_BTN = {{ voice_label | tojson }};
       var SPEECH_LANG = {{ speech_lang | tojson }};
       var UI_CODE = {{ lang | tojson }};
+      /* Wave 131: true only when the server runs with
+         GANITRA_AI_STREAM=1 — the chat then tries the
+         streamed solve first and falls back to the classic
+         one on any problem. Default (flag off): false. */
+      var AI_STREAM = {{ ai_stream_enabled|default(false)|tojson }};
       var CHAT = {
         solving: {{ t.chat_thinking | tojson }},
         fullSolution: {{ t.chat_full_solution | tojson }},
@@ -356,6 +361,15 @@
         scroller.addEventListener("scroll", updateStick,
                                   { passive: true });
       }
+      /* Wave 138: typeset variants (steps_tex / answer_tex)
+         are shown ONLY when MathJax is really loaded and its
+         typeset entry point exists — a blocked or offline CDN
+         falls back to the plain solver text, so an answer can
+         never arrive blank or covered in raw delimiters. */
+      function w138TexOk() {
+        return !!(window.MathJax && window.MathJax.typesetPromise);
+      }
+
       function scrollLog(force) {
         // Wave 7: the thread area (.chat-scroll) is the scroller now;
         // land on the newest message so the answer is never
@@ -1103,12 +1117,19 @@
            style.css is the primary styling) — step numbers
            must never reappear through a stale stylesheet. */
         ol.style.listStyleType = "none";
-        (method.steps || []).forEach(function (step) {
+        (method.steps || []).forEach(function (step, stepIdx) {
           var li = document.createElement("li");
-          li.textContent = step;
+          /* Wave 138: typeset variant for display when ready
+             (narration below keeps the plain steps). */
+          li.textContent = (method.steps_tex && w138TexOk())
+            ? method.steps_tex[stepIdx] : step;
           ol.appendChild(li);
         });
         host.appendChild(ol);
+        if (window.MathJax && window.MathJax.typesetPromise) {
+          window.MathJax.typesetPromise([host])
+            .catch(function () {});
+        }
         if ("speechSynthesis" in window) {
           /* Wave 22: a method's steps are also read out by
              the teacher narration, not verbatim robot-style. */
@@ -1453,12 +1474,25 @@
            the end of the card carries it. The payload itself
            (and saved chats) keep the solver's own steps. */
         var displaySteps = (result.steps || []).slice();
+        /* Wave 138: the typeset variants (steps_tex) ride in a
+           parallel array and mirror every index operation the
+           plain array gets below (pop / intro lift). They are
+           used for DISPLAY only — copy and narration keep the
+           plain steps — and only when MathJax is really ready
+           (w138TexOk), so a blocked CDN can never leave raw
+           \(...\) text on a card. */
+        var displayTex = null;
+        if (result.steps_tex
+            && result.steps_tex.length === displaySteps.length) {
+          displayTex = result.steps_tex.slice();
+        }
         if (displaySteps.length && result.answer) {
           var _lastStep = displaySteps[displaySteps.length - 1]
             .replace(/^\s*(solution|answer)\s*:\s*/i, "").trim();
           if (_lastStep
               && _lastStep === String(result.answer).trim()) {
             displaySteps.pop();
+            if (displayTex) displayTex.pop();
           }
         }
         /* Wave 68: the opening framing line. The server
@@ -1471,9 +1505,16 @@
         var introText = (!result.fallback && data.intro)
           ? String(data.intro) : "";
         var boardSteps = displaySteps.slice();
+        var boardTex = displayTex ? displayTex.slice() : null;
+        /* Wave 138: when the first step is lifted into the
+           intro line, its typeset twin is lifted with it, so
+           the intro typesets exactly like the step it was. */
+        var introTex = null;
         if (introText && boardSteps.length > 1
             && boardSteps[0] === introText) {
+          if (boardTex) introTex = boardTex[0];
           boardSteps = boardSteps.slice(1);
+          if (boardTex) boardTex = boardTex.slice(1);
         } else {
           introText = "";
         }
@@ -1527,8 +1568,12 @@
            line at all. The latex form survives only as a
            last resort for a payload with no answer text. */
         if (result.answer) {
+          /* Wave 138: the typeset form of the answer value
+             when MathJax is ready; the "Answer:" label and the
+             plain fallback are unchanged. */
           ans.textContent = (CHAT.answerHeading || "Answer")
-            + ": " + result.answer;
+            + ": " + ((result.answer_tex && w138TexOk())
+                      ? result.answer_tex : result.answer);
         } else if (result.latex) {
           ans.textContent = "\\(" + result.latex + "\\)";
         }
@@ -1557,7 +1602,10 @@
         if (introText) {
           var intro = document.createElement("p");
           intro.className = "answer-intro";
-          intro.textContent = introText;
+          /* Wave 138: typeset intro when its step had a
+             typeset twin and MathJax is ready. */
+          intro.textContent = (introTex && w138TexOk())
+            ? introTex : introText;
           introEl = intro;
         }
 
@@ -2201,6 +2249,12 @@
           boardSteps.forEach(function (step, w122Idx) {
             var li = document.createElement("li");
             li.textContent = step;
+            /* Wave 138: display the typeset variant when it
+               exists and MathJax is ready; the plain step is
+               what copy / narration / checks keep using. */
+            if (boardTex && w138TexOk()) {
+              li.textContent = boardTex[w122Idx];
+            }
             /* Wave 122: the "Step N" label rides in a data
                attribute (CSS ::before renders it) — the
                line's own text is never touched, so copy,
@@ -2373,8 +2427,9 @@
          When the server says this chat message switched the site
          language, re-skin the visible chat UI from the string map
          in the response (no reload), persist via /set-lang in the
-         background (the session is already set server-side), and
-         show the one-line localised notice in the thread. The
+         background (the session is already set server-side) —
+         silently: Wave 139 removed the one-line notice bubble
+         that used to announce the switch in the thread. The
          empty state (greeting) is already gone by now — it was
          removed when the message was sent — so on the next load
          the server renders it in the new language. Wave 20: the
@@ -2484,9 +2539,8 @@
           wakingText = ui.chat_waking_note;
           if (wakingEl) wakingEl.textContent = ui.chat_waking_note;
         }
-        if (data.lang_notice) {
-          addBubble("bot lang-note", data.lang_notice);
-        }
+        /* Wave 139: the switch is SILENT — no notice bubble is
+           rendered here any more (Suraj's order). */
       }
 
       var solving = false;
@@ -2545,15 +2599,18 @@
             try { solveCtl.abort(); } catch (e) {}
           }, 45000);
         }
-        fetch("/api/solve", fetchOpts).then(function (resp) {
-          return resp.json();
-        }).then(function (data) {
+        /* Wave 131: ONE data handler for both solve paths —
+           the classic /api/solve JSON and the streamed
+           /api/solve/stream final event carry the same
+           payload and are rendered identically. */
+        function handleSolveData(data) {
           if (wakeTimer) window.clearTimeout(wakeTimer);
           if (solveTimer) window.clearTimeout(solveTimer);
           typing.remove();
           solving = false;
           // Wave 9: the server may have auto-switched the site
-          // language for this message — re-skin + toast first.
+          // language for this message — re-skin first (silently,
+          // Wave 139: no announcement).
           if (data && data.language_switched) applyLanguage(data);
           // Wave 11: persist this turn to the account chat (the
           // stored bot record carries its question so a reopened
@@ -2571,7 +2628,11 @@
           }
           if (data) recordTurn({ role: "bot", data: data });
           box.focus();
-        }).catch(function () {
+        }
+        function solveClassic() {
+          fetch("/api/solve", fetchOpts).then(function (resp) {
+            return resp.json();
+          }).then(handleSolveData).catch(function () {
           // Network/API trouble (or the Wave-98 timeout):
           // the server could not answer, so the browser's
           // own basic evaluator gets ONE chance — basic sums
@@ -2608,7 +2669,122 @@
             return;
           }
           box.focus();
-        });
+          });
+        }
+        /* Wave 131: the streamed solve — attempted only when
+           the server flag is on (AI_STREAM is rendered into
+           the page from GANITRA_AI_STREAM) and the browser
+           can read fetch streams. The AI leg's pieces appear
+           live in a plain bubble as the provider produces
+           them; a "reset" event clears that bubble (the leg
+           on screen failed or was cut — its partial text is
+           never left standing as the answer); the "final"
+           event is handed to handleSolveData exactly like a
+           classic payload, and when the result was finished
+           inside the stream the session writes ride the
+           stream-commit call. ANY problem — the endpoint is
+           off, the stream breaks, it ends without a final
+           event — falls back to solveClassic() untouched, so
+           this path can never do worse than the classic one. */
+        function solveStream() {
+          var live = null, liveText = null, gotFinal = false;
+          var buffer = "";
+          var streamCtl = null, streamTimer = null;
+          var streamOpts = {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: question })
+          };
+          if (window.AbortController) {
+            streamCtl = new AbortController();
+            streamOpts.signal = streamCtl.signal;
+            streamTimer = window.setTimeout(function () {
+              try { streamCtl.abort(); } catch (e) {}
+            }, 45000);
+          }
+          function dropLive() {
+            if (live) {
+              live.remove();
+              live = null;
+              liveText = null;
+            }
+          }
+          function fail() {
+            if (streamTimer) window.clearTimeout(streamTimer);
+            if (gotFinal) return;
+            dropLive();
+            solveClassic();
+          }
+          function onEvent(ev) {
+            if (ev.type === "delta") {
+              if (!live) {
+                typing.remove();
+                live = document.createElement("div");
+                live.className = "bubble bot stream-live";
+                liveText = document.createElement("p");
+                liveText.className = "stream-text";
+                live.appendChild(liveText);
+                log.appendChild(live);
+              }
+              liveText.textContent += ev.text;
+              if (stickBottom) scrollLog();
+            } else if (ev.type === "reset") {
+              if (liveText) liveText.textContent = "";
+            } else if (ev.type === "final") {
+              gotFinal = true;
+              if (streamTimer) window.clearTimeout(streamTimer);
+              dropLive();
+              var data = ev.payload;
+              handleSolveData(data);
+              if (ev.commit_required && data && data.ok) {
+                fetch("/api/solve/stream-commit", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    question: question, result: data.result })
+                }).catch(function () {});
+              }
+            }
+          }
+          fetch("/api/solve/stream", streamOpts).then(
+              function (resp) {
+            if (!resp.ok || !resp.body
+                || !resp.body.getReader) {
+              fail();
+              return;
+            }
+            var reader = resp.body.getReader();
+            var decoder = new TextDecoder();
+            (function pump() {
+              reader.read().then(function (chunk) {
+                if (chunk.done) {
+                  fail();
+                  return;
+                }
+                buffer += decoder.decode(chunk.value,
+                                         { stream: true });
+                var frames = buffer.split("\n\n");
+                buffer = frames.pop();
+                frames.forEach(function (frame) {
+                  frame.split("\n").forEach(function (line) {
+                    if (line.indexOf("data:") !== 0) return;
+                    var ev = null;
+                    try {
+                      ev = JSON.parse(line.slice(5));
+                    } catch (e) { ev = null; }
+                    if (ev) onEvent(ev);
+                  });
+                });
+                if (!gotFinal) pump();
+              }).catch(function () { fail(); });
+            })();
+          }).catch(function () { fail(); });
+        }
+        if (AI_STREAM && window.ReadableStream) {
+          solveStream();
+        } else {
+          solveClassic();
+        }
       });
 
       /* Enter sends, Shift+Enter makes a new line; box auto-grows. */
@@ -2877,12 +3053,283 @@
         say(L.js_photo_sending);
         photoForm.submit();
       }
+      /* ---------- Wave 126: stronger browser OCR ----------
+         Three upgrades to the browser read, all client-side
+         (free hosting has no server OCR):
+         (1) PREPROCESSING on a canvas before the engine sees
+             the photo — EXIF auto-rotate, grayscale, a gentle
+             percentile contrast stretch, upscale of small
+             photos, and a white border (Tesseract reads text
+             touching a frame edge badly). Any failure falls
+             back to the untouched photo, so this can only
+             help, never block.
+         (2) A CONFIDENCE GATE: Tesseract reports how sure it
+             is. A read below OCR_LOW_CONFIDENCE (the same 60
+             the server backend uses) first earns ONE retry on
+             a binarized copy, keeping whichever read scored
+             better — and a read that is STILL weak, or that
+             carries no maths signal at all, is never solved
+             blind: it lands EDITABLE in the composer (the
+             js_photo_check path the server already used), so
+             the student fixes a character and presses Solve.
+             Nothing is ever made up.
+         (3) Tuning, measured not guessed (Wave-126 Chromium
+             runs): the engine's default page-seg mode is
+             already SINGLE_BLOCK (6), the mode a question
+             block wants, and the static recognize() call the
+             Wave-36 pins protect cannot take tessedit
+             parameters at all — while a char whitelist run
+             through createWorker scored WORSE on every test
+             photo (it eats word-problem letters and all of
+             Devanagari). So the pinned calls stay exactly as
+             they were; the wins here are (1) and (2). */
+      var OCR_LOW_CONFIDENCE = 60;
+      function ocrMeanConfidence(res) {
+        var d = res && res.data;
+        if (!d) return null;
+        if (typeof d.confidence === "number" &&
+            isFinite(d.confidence)) return d.confidence;
+        var words = d.words || [], sum = 0, n = 0, i;
+        for (i = 0; i < words.length; i++) {
+          if (typeof words[i].confidence === "number") {
+            sum += words[i].confidence; n++;
+          }
+        }
+        return n ? sum / n : null;
+      }
+      function ocrLooksLikeMaths(text) {
+        if (!text) return false;
+        if (/\d/.test(text)) return true;
+        if (/[=+*\/^%<>]/.test(text)) return true;
+        if (/[\u0900-\u097F]/.test(text)) return true;
+        return /\b(what|find|solve|prove|define|how|why|if|the|is|are)\b/i
+          .test(text);
+      }
+      function ocrFillComposer(text) {
+        var q = document.getElementById("q");
+        if (!q) return false;
+        q.value = text;
+        try {
+          q.dispatchEvent(new Event("input", { bubbles: true }));
+        } catch (e) { /* older browser: value alone is fine */ }
+        q.focus();
+        return true;
+      }
+      function ocrShowForCheck(text) {
+        if (!ocrFillComposer(text)) return false;
+        say(L.js_photo_check);
+        return true;
+      }
+      /* Wave 137: show a REBUILT question (from the
+         partial-read analysis) in the composer instead of the
+         raw garble; the photo-check message then carries the
+         one short confirmation line when the server sent one
+         ("Speed 60 hai ya 80?"). */
+      function ocrShowReconstruction(prefill, confirm) {
+        if (!ocrFillComposer(prefill)) return false;
+        say(confirm ? (L.js_photo_check + " " + confirm)
+                    : L.js_photo_check);
+        return true;
+      }
+      /* Wave 137: a weak read first earns the partial-read
+         analysis (POST /photo-fix): the surviving words may
+         identify the question family, and then the composer
+         gets the rebuilt question, not the garble. ANY
+         failure — no fetch, no match, a bad reply — lands
+         the raw text in the composer exactly as Wave 126
+         did. The rebuilt question is NEVER submitted from
+         here: the student reads it, fixes or confirms it,
+         and presses Solve himself. */
+      function ocrFixAndShow(text) {
+        if (!window.fetch) { ocrShowForCheck(text); return; }
+        window.fetch("/photo-fix", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ text: text })
+        }).then(function (r) { return r.json(); })
+          .then(function (d) {
+            if (d && d.reconstructed && d.question &&
+                ocrShowReconstruction(d.question, d.confirm)) {
+              return;
+            }
+            ocrShowForCheck(text);
+          })
+          .catch(function () { ocrShowForCheck(text); });
+      }
+      /* Deliver one finished read: confident maths-looking
+         text goes straight to the solver (the long-standing
+         behaviour); anything else is shown for a check first.
+         Returns false only when there is no text at all. */
+      function ocrDeliverRead(text, confidence, source) {
+        text = (text || "").trim();
+        if (!text) return false;
+        if ((confidence !== null &&
+             confidence < OCR_LOW_CONFIDENCE) ||
+            !ocrLooksLikeMaths(text)) {
+          if (!document.getElementById("q")) {
+            sendQuestionText(text, source || "photo");
+            return true;
+          }
+          ocrFixAndShow(text);
+          return true;
+        }
+        sendQuestionText(text, source || "photo");
+        return true;
+      }
+      function ocrProcessPixels(canvas, binarize) {
+        var ctx = canvas.getContext("2d");
+        var w = canvas.width, h = canvas.height, n = w * h, i, v;
+        var img;
+        try { img = ctx.getImageData(0, 0, w, h); }
+        catch (e) { return; }
+        var d = img.data;
+        var hist = [];
+        for (i = 0; i < 256; i++) hist.push(0);
+        for (i = 0; i < n; i++) {
+          v = (d[4 * i] * 299 + d[4 * i + 1] * 587 +
+               d[4 * i + 2] * 114) / 1000;
+          v = v < 0 ? 0 : (v > 255 ? 255 : Math.round(v));
+          d[4 * i] = d[4 * i + 1] = d[4 * i + 2] = v;
+          hist[v]++;
+        }
+        /* Percentile bounds (1%..99%): a grey classroom photo
+           gets its faint ink pulled toward black and its paper
+           toward white without clipping real content. */
+        var lo = 0, hi = 255, acc = 0, target = n * 0.01;
+        for (i = 0; i < 256; i++) {
+          acc += hist[i];
+          if (acc >= target) { lo = i; break; }
+        }
+        acc = 0;
+        for (i = 255; i >= 0; i--) {
+          acc += hist[i];
+          if (acc >= target) { hi = i; break; }
+        }
+        var otsu = 128;
+        if (binarize) {
+          var sum = 0, sumB = 0, wB = 0, best = -1;
+          for (i = 0; i < 256; i++) sum += i * hist[i];
+          for (i = 0; i < 256; i++) {
+            wB += hist[i];
+            if (!wB || n - wB === 0) continue;
+            sumB += i * hist[i];
+            var mB = sumB / wB, mF = (sum - sumB) / (n - wB);
+            var between = wB * (n - wB) * (mB - mF) * (mB - mF);
+            if (between > best) { best = between; otsu = i; }
+          }
+        }
+        var range = hi - lo;
+        for (i = 0; i < n; i++) {
+          v = d[4 * i];
+          if (range > 12) v = (v - lo) * 255 / range;
+          v = v < 0 ? 0 : (v > 255 ? 255 : Math.round(v));
+          if (binarize) v = v > otsu ? 255 : 0;
+          d[4 * i] = d[4 * i + 1] = d[4 * i + 2] = v;
+        }
+        ctx.putImageData(img, 0, 0);
+      }
+      /* Clean a photo on a canvas; resolves with the cleaned
+         PNG blob, or with the ORIGINAL blob on any failure —
+         preprocessing must never become a new way to fail. */
+      function ocrPreprocess(blob, binarize) {
+        return new Promise(function (resolve) {
+          var settled = false;
+          function done(b) {
+            if (!settled) { settled = true; resolve(b || blob); }
+          }
+          function paint(src, sw, sh) {
+            try {
+              var longEdge = Math.max(sw, sh), scale = 1;
+              if (longEdge < 1600) {
+                /* Gentle upscale only (max 2x, to ~1600px):
+                   the Wave-126 Chromium runs showed a hard
+                   2.2x canvas upscale can blur a thin digit
+                   stroke away entirely (a rotated photo lost
+                   its "7"), while the contrast stretch is
+                   what earns the real gains. */
+                scale = Math.min(2, 1600 / longEdge);
+              } else if (longEdge > 3000) {
+                scale = 3000 / longEdge;
+              }
+              var w = Math.max(1, Math.round(sw * scale));
+              var h = Math.max(1, Math.round(sh * scale));
+              var pad = 48;
+              var canvas = document.createElement("canvas");
+              canvas.width = w + pad * 2;
+              canvas.height = h + pad * 2;
+              var ctx = canvas.getContext("2d");
+              ctx.fillStyle = "#ffffff";
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              ctx.drawImage(src, pad, pad, w, h);
+              ocrProcessPixels(canvas, binarize);
+              if (canvas.toBlob) {
+                canvas.toBlob(function (b) { done(b); },
+                              "image/png");
+              } else { done(blob); }
+            } catch (e) { done(blob); }
+          }
+          function fromImg() {
+            var url = URL.createObjectURL(blob);
+            var img = new Image();
+            img.onload = function () {
+              paint(img, img.naturalWidth, img.naturalHeight);
+              URL.revokeObjectURL(url);
+            };
+            img.onerror = function () {
+              URL.revokeObjectURL(url);
+              done(blob);
+            };
+            img.src = url;
+          }
+          if (window.createImageBitmap) {
+            var attempt = null;
+            try {
+              attempt = window.createImageBitmap(
+                blob, { imageOrientation: "from-image" });
+            } catch (e) { attempt = null; }
+            if (attempt && attempt.then) {
+              attempt.then(function (bmp) {
+                paint(bmp, bmp.width, bmp.height);
+              }).catch(function () {
+                window.createImageBitmap(blob)
+                  .then(function (bmp) {
+                    paint(bmp, bmp.width, bmp.height);
+                  })
+                  .catch(fromImg);
+              });
+              return;
+            }
+          }
+          fromImg();
+        });
+      }
+      /* A weak first read earns one retry on a hard
+         black-and-white copy; the better-scoring read wins.
+         Either way the winner still passes the confidence
+         gate in ocrDeliverRead. */
+      function ocrBinarizedRetry(srcBlob, text, conf, source) {
+        ocrPreprocess(srcBlob, true).then(function (hard) {
+          return window.Tesseract.recognize(hard, "eng+hin");
+        }).then(function (res2) {
+          var text2 = (res2 && res2.data && res2.data.text) || "";
+          var conf2 = ocrMeanConfidence(res2);
+          if (text2.trim() &&
+              (conf2 === null || conf === null || conf2 >= conf)) {
+            ocrDeliverRead(text2, conf2, source);
+          } else {
+            ocrDeliverRead(text, conf, source);
+          }
+        }).catch(function () {
+          ocrDeliverRead(text, conf, source);
+        });
+      }
       function ocrBlobEngOnly(blob, source) {
         window.Tesseract.recognize(blob, "eng")
           .then(function (res) {
-            sendQuestionText(
+            var delivered = ocrDeliverRead(
               (res && res.data && res.data.text) || "",
-              source || "photo");
+              ocrMeanConfidence(res), source);
+            if (!delivered) say(L.js_photo_not_found);
           })
           .catch(function () { say(L.js_photo_error); });
       }
@@ -2910,9 +3357,15 @@
               if (d.low_confidence) {
                 var q = document.getElementById("q");
                 if (q) {
-                  q.value = d.text;
+                  /* Wave 137: a weak server read may carry a
+                     rebuilt question (prefill) plus one
+                     confirmation line — show those instead of
+                     the raw garble when present. */
+                  q.value = d.prefill || d.text;
                   q.focus();
-                  say(L.js_photo_check);
+                  say(d.confirm ?
+                    (L.js_photo_check + " " + d.confirm) :
+                    L.js_photo_check);
                   return;
                 }
               }
@@ -2938,17 +3391,30 @@
            promise rejects — caught here and retried English-only,
            so the photo flow never dead-ends on the extra
            language. An empty bilingual read (data loaded but
-           nothing recognised) also falls back to English-only. */
-        window.Tesseract.recognize(blob, "eng+hin")
-          .then(function (res) {
-            var text = (res && res.data && res.data.text) || "";
-            if (text.trim()) {
-              sendQuestionText(text, source || "photo");
-            } else {
-              ocrBlobEngOnly(blob, source);
-            }
-          })
-          .catch(function () { ocrBlobEngOnly(blob, source); });
+           nothing recognised) also falls back to English-only.
+           Wave 126: the engine now reads the canvas-cleaned
+           copy (ocrPreprocess), and its answer passes the
+           confidence gate (ocrDeliverRead) instead of being
+           solved blind; a weak read first earns the binarized
+           retry (ocrBinarizedRetry). */
+        ocrPreprocess(blob, false).then(function (clean) {
+          blob = clean;
+          window.Tesseract.recognize(blob, "eng+hin")
+            .then(function (res) {
+              var text = (res && res.data && res.data.text) || "";
+              if (!text.trim()) {
+                ocrBlobEngOnly(blob, source);
+                return;
+              }
+              var conf = ocrMeanConfidence(res);
+              if (conf !== null && conf < OCR_LOW_CONFIDENCE) {
+                ocrBinarizedRetry(blob, text, conf, source);
+              } else {
+                ocrDeliverRead(text, conf, source);
+              }
+            })
+            .catch(function () { ocrBlobEngOnly(blob, source); });
+        });
       }
       function extractFileOnServer(file) {
         if (!window.fetch || !window.FormData) {

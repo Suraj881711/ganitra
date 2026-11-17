@@ -77,7 +77,7 @@
 
     <h2>{{ t.answer_heading }}</h2>
     <p class="answer">
-      {% if result.latex %}\[ {{ result.latex }} \]{% else %}{{ result.answer }}{% endif %}
+      {% if result.latex %}\[ {{ result.latex }} \]{% elif result.answer_tex %}{{ result.answer_tex }}{% else %}{{ result.answer }}{% endif %}
     </p>
 
     {% if explanation %}
@@ -89,7 +89,7 @@
       {# Wave 120: no "Step-by-step solution" heading — the
          solving lines stand on their own, no label. #}
       <ol class="steps{% if handwriting_style %} notebook handwriting-on{% endif %}">
-        {% for step in result.steps %}<li>{{ step }}</li>{% endfor %}
+        {% for step in result.steps %}<li>{{ result.steps_tex[loop.index0] if result.steps_tex else step }}</li>{% endfor %}
       </ol>
     {% endif %}
 
