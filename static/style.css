@@ -2512,3 +2512,77 @@ body.chat-page .answer-actions { gap: 4px; }
    ~40px to a full 44px. The visible signs stay 36px. */
 body.chat-page .chat-bar .composer-btn::after,
 body.chat-page .chat-bar .send-btn::after { inset: -4px; }
+
+/* ================= Wave 122: conditional answer features ====
+   Suraj (17 Nov 2026) approved the four Wave-118 decision
+   items, each ONLY under its condition (see followups.py and
+   the Wave-122 block in templates/index.html). This block is
+   appended in house pattern; nothing above is edited. All
+   rules are scoped to the chat page — the classic /solve page
+   and print never see the box, the labels or the chips. */
+
+/* (2) The final answer box: a warm cream/gold tint in the
+   app's own palette (--gold #c9a24b family; the ::selection
+   cream #f3e2ac is the same family). Only a solved answer's
+   line carries .w122-answer-box; every other card keeps the
+   plain bold line. */
+body.chat-page .bubble.bot .answer-big.w122-answer-box {
+  background: #fdf6e0;
+  border: 1px solid #ecd28f;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+/* (4) The per-step label: rendered from the li's
+   data-w122-step attribute, above the line it numbers. The
+   step text itself is untouched. (A "Check:" line keeps its
+   .step-verify colour; when numbering is on, its ✓ gives
+   way to the step label — one ::before per line.) */
+body.chat-page .bubble ol.steps li[data-w122-step]::before {
+  content: attr(data-w122-step);
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--gold);
+  margin-bottom: 1px;
+}
+
+/* (3) The follow-up chips: quiet pills under the icon row,
+   in the same cream/gold family as the answer box. */
+body.chat-page .answer-wrap .followup-chips {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
+}
+body.chat-page .answer-wrap .followup-chip {
+  font: inherit; font-size: 13px; line-height: 1.3;
+  color: var(--ink); background: #fdf6e0;
+  border: 1px solid #e3cd8d; border-radius: 999px;
+  padding: 8px 14px; min-height: 36px; cursor: pointer;
+}
+body.chat-page .answer-wrap .followup-chip:active {
+  transform: scale(.97);
+}
+
+/* (1) The streaming reveal: waiting lines are invisible but
+   keep their layout space (no reflow as they land); a
+   revealed line rises gently into place. */
+.w122-wait { opacity: 0; visibility: hidden; }
+.w122-in { animation: w122rise .18s ease-out; }
+@keyframes w122rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .w122-wait { opacity: 1; visibility: visible; }
+  .w122-in { animation: none; }
+}
+
+/* Print keeps the answer plain (no tint) and never shows
+   the live-only chips — belt and braces: the print views
+   are separate templates that never carry these classes. */
+@media print {
+  .answer-big.w122-answer-box {
+    background: none; border: none; padding: 0;
+  }
+  .followup-chips { display: none; }
+}
