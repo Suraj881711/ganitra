@@ -43,6 +43,17 @@ sprite URLs ?v=29 — all pins move together, as always.
 cache v8 — while the sprite URLs stayed at ?v=29: no
 sprite file changed. The pin assertions below track the
 CURRENT pins, as in every wave before this one.)
+
+Wave 120 update (Suraj, 17 Nov 2026): the Teach (play)
+sign was REMOVED from the answer row on Suraj's order
+(the speaker and the play sign "do the same job" — only
+Listen stays). The boot smoke in section 4 now pins the
+sign's ABSENCE on both card paths (fresh submit +
+restored chat), plus the surviving Advice control, the
+Listen sign, and zero window errors. The speech-API
+isolation (item 2) stays source-pinned above: the
+playback machinery remains in the page, dormant and
+unreachable, exactly like the parked 3D scene.
 """
 import json
 import os
@@ -120,18 +131,18 @@ def test_photo_solve_aria_names_the_photo_for_photos(client):
 # --- 3. Delivery versions -------------------------------------
 
 def test_delivery_versions_wave29():
-    assert "v='41'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v18"' in SW
+    assert "v='43'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v20"' in SW
     for old in ("ganitra-static-v5", "ganitra-static-v4",
                 "ganitra-static-v3", "ganitra-static-v2",
                 "ganitra-static-v1"):
         # Wave 60: match the FULL quoted cache name —
-        # "ganitra-static-v18" contains "ganitra-static-v1"
+        # "ganitra-static-v20" contains "ganitra-static-v1"
         # as a bare substring, which is not the old cache.
         assert f'"{old}"' not in SW
 
 
-# --- 4. THE TEACH REGRESSION (boot smoke, jsdom) --------------
+# --- 4. THE CARD BOOT SMOKE (jsdom; Wave 120: no teach sign) --
 
 TEACH_DRIVER_JS = r"""
 const fs = require("fs");
@@ -222,27 +233,6 @@ function makeDom(mode) {
   return { dom, errors };
 }
 
-function state(doc) {
-  const btn = doc.querySelector('[data-action="teach"]');
-  const ol = doc.querySelector("ol.steps");
-  const ans = doc.querySelector(".answer-big");
-  const lis = doc.querySelectorAll("ol.steps li");
-  let blanked = 0, revealed = 0;
-  lis.forEach((li) => {
-    if (li.classList.contains("teach-wait")) blanked += 1;
-    if (li.classList.contains("teach-now")
-        || li.classList.contains("teach-done")) revealed += 1;
-  });
-  return {
-    teaching: !!btn && btn.classList.contains("teaching"),
-    stopIcon: !!btn && btn.innerHTML.indexOf("<rect") >= 0,
-    playing: !!ol && ol.classList.contains("teach-playing"),
-    blanked: blanked, revealed: revealed,
-    ansHeld: !!ans && (ans.classList.contains("teach-wait")
-                       || ans.classList.contains("teach-now"))
-  };
-}
-
 async function scenario(mode) {
   const { dom, errors } = makeDom(mode);
   const doc = dom.window.document;
@@ -254,14 +244,17 @@ async function scenario(mode) {
     q.closest("form").dispatchEvent(new dom.window.Event(
       "submit", { bubbles: true, cancelable: true }));
   }
-  let teach = null;
+  /* Wave 120: the Teach (play) sign is REMOVED from the
+     row — the card is awaited via its answer line, and
+     the sign must never appear. */
+  let card = null;
   for (let i = 0; i < 50; i++) {
-    teach = doc.querySelector('[data-action="teach"]');
-    if (teach) break;
+    card = doc.querySelector(".bubble.bot .answer-big");
+    if (card) break;
     await sleep(100);
   }
-  out.cardAppeared = !!teach;
-  if (teach) {
+  out.cardAppeared = !!card;
+  if (card) {
     // Control: the Advice toggle on the same card must work.
     const advBtn = doc.querySelector('[data-action="advice"]');
     const advCard = doc.querySelector(".advice-card");
@@ -271,21 +264,11 @@ async function scenario(mode) {
       out.adviceToggled = before === true && advCard.hidden === false;
       advBtn.click();
     }
-    // THE CLICK: the teaching UI must open synchronously...
-    teach.click();
-    out.sync = state(doc);
-    // ...and a step must actually reveal as it plays.
-    out.revealed = false;
-    for (let i = 0; i < 60; i++) {
-      if (state(doc).revealed >= 1) { out.revealed = true; break; }
-      await sleep(100);
-    }
-    // A second tap stops and restores the plain answer view.
-    teach.click();
-    await sleep(150);
-    const after = state(doc);
-    out.stopped = !after.teaching && !after.playing
-                  && after.blanked === 0;
+    // A beat for any late render, then the Wave 120 pins:
+    // no teach sign anywhere; the speaker sign present.
+    await sleep(300);
+    out.teachAbsent = !doc.querySelector('[data-action="teach"]');
+    out.listenPresent = !!doc.querySelector('[data-action="listen"]');
   }
   out.errors = errors;
   dom.window.close();
@@ -334,28 +317,20 @@ def _run_teach_driver(client, tmp_path):
     return out
 
 
-def test_teach_opens_on_a_dynamically_added_card(client, tmp_path):
+def test_no_teach_sign_on_a_dynamically_added_card(client,
+                                                   tmp_path):
     out = _run_teach_driver(client, tmp_path)
     assert "fatal" not in out, out
     for mode in ("fresh", "restored"):
         s = out[mode]
-        # ANY window error during boot, submit or the Teach
-        # click fails the smoke test.
+        # ANY window error during boot or submit fails the
+        # smoke test.
         assert s["errors"] == [], f"{mode}: {s['errors']}"
         # The answer card really arrived via the app's own flow.
         assert s["cardAppeared"] is True, f"{mode}: {s}"
         # The control on the same card works.
         assert s["adviceToggled"] is True, f"{mode}: {s}"
-        # The Teach click opens the teaching UI synchronously:
-        # stop state on the button, the board in play mode,
-        # steps blanked for their reveal, the answer held back.
-        sync = s["sync"]
-        assert sync["teaching"] is True, f"{mode}: {sync}"
-        assert sync["stopIcon"] is True, f"{mode}: {sync}"
-        assert sync["playing"] is True, f"{mode}: {sync}"
-        assert sync["blanked"] >= 1, f"{mode}: {sync}"
-        assert sync["ansHeld"] is True, f"{mode}: {sync}"
-        # ...and playback actually reveals a step.
-        assert s["revealed"] is True, f"{mode}: {s}"
-        # A second tap stops cleanly and restores the view.
-        assert s["stopped"] is True, f"{mode}: {s}"
+        # Wave 120: the play/teach sign never appears; the
+        # speaker (Listen) is the row's only voice sign.
+        assert s["teachAbsent"] is True, f"{mode}: {s}"
+        assert s["listenPresent"] is True, f"{mode}: {s}"

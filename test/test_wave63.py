@@ -13,7 +13,7 @@ marks, OR dividers for internal choices, [Figure] markers
 where the printed paper's figure is not in the data; the
 stored-paper print view (?paper=<id>) renders the same sheet;
 the generated-paper flow is untouched; delivery pins
-?v=35 / cache ganitra-static-v18.
+?v=35 / cache ganitra-static-v20.
 """
 import re
 from pathlib import Path
@@ -62,6 +62,26 @@ FIGURE_COUNTS = {
     # quadrilateral and Q24's OR figure).
     "gseb-10-2025": 1,
     "ubse-10-2025": 3, "ubse-10-2025-hindi": 3,
+    # Wave 113: CBSE archive expansion — census counted from
+    # the rendered sheets (see ganitra-wave113-notes.md). The
+    # Class 12 papers carry no figure-marker phrases.
+    "cbse-10-2017": 3, "cbse-10-2018": 3, "cbse-10-2019": 5,
+    "cbse-10-2022-term1-basic": 2, "cbse-10-sample-2026": 1,
+    "cbse-12-2017": 0, "cbse-12-2018": 0, "cbse-12-2019": 0,
+    "cbse-12-2020": 0, "cbse-12-2022-term1": 0,
+    "cbse-12-sample-2026": 0,
+    # Wave 114: state-board batch — census counted from the
+    # rendered sheets (see ganitra-wave114-notes.md).
+    "msbshse-10-2024-algebra": 1,
+    "msbshse-10-2024jul-algebra": 0,
+    "msbshse-10-2024-geometry": 1,
+    "msbshse-10-2024jul-geometry": 3,
+    "msbshse-10-2025-geometry": 4,
+    "msbshse-12-2024": 0, "msbshse-12-2024jul": 0,
+    "msbshse-12-2025": 0, "msbshse-12-2025jul": 0,
+    "kseab-10-2024": 7, "kseab-10-2025": 5,
+    "kerala-10-2024": 0, "kerala-12-2025": 0,
+    "tn-10-2022": 1, "jac-10-2026-model": 1,
 }
 
 
@@ -166,10 +186,30 @@ def test_header_maximum_marks_are_the_real_totals(client):
         "mpbse-12-2025-hindi", "bseb-10-2025",
         "bseb-10-2025-hindi", "bseb-12-2025",
         "bseb-12-2025-hindi", "msbshse-10-2025-algebra",
+        # Wave 114: the state-board batch likewise carries its
+        # own printed totals (Maharashtra SSC 40, TN 100, the
+        # attempt-any papers via max_marks).
+        "msbshse-10-2024-algebra", "msbshse-10-2024jul-algebra",
+        "msbshse-10-2024-geometry", "msbshse-10-2024jul-geometry",
+        "msbshse-10-2025-geometry", "msbshse-12-2024",
+        "msbshse-12-2024jul", "msbshse-12-2025",
+        "msbshse-12-2025jul", "kseab-10-2024", "kseab-10-2025",
+        "kerala-10-2024", "kerala-12-2025", "tn-10-2022",
+        "jac-10-2026-model",
+    }
+    # Wave 113: the CBSE archive papers print their own era
+    # totals (2017 Class 10 = 90, pre-2020 Class 12 = 100,
+    # Term-1 = 40) via the max_marks override — same rule.
+    wave113_ids = {
+        "cbse-10-2017", "cbse-10-2018", "cbse-10-2019",
+        "cbse-10-2022-term1-basic", "cbse-10-sample-2026",
+        "cbse-12-2017", "cbse-12-2018", "cbse-12-2019",
+        "cbse-12-2020", "cbse-12-2022-term1",
+        "cbse-12-sample-2026",
     }
     for p in papers_data.PAPERS:
         body = _paper_page(client, p["id"])
-        if p["id"] in wave66_ids:
+        if p["id"] in wave66_ids or p["id"] in wave113_ids:
             want = p.get("max_marks",
                          papers_data.paper_total_marks(p))
         else:
@@ -206,7 +246,9 @@ def test_figure_markers_match_census(client):
         n = body.count("[Figure]")
         assert n == FIGURE_COUNTS[p["id"]], p["id"]
         total += n
-    assert total == 71
+    # Deploy-25 merge: 71 (pre-113/114) + 14 (Wave 113) + 23
+    # (Wave 114) figure markers across the 68-paper library.
+    assert total == 108
 
 
 def test_section_order_and_subjects(client):
@@ -246,8 +288,8 @@ def test_generated_print_flow_unchanged(client):
 def test_pins_bumped():
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()
-    assert "v='41'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v18"' in sw
+    assert "v='43'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v20"' in sw
 
 
 def test_sheet_css_present():

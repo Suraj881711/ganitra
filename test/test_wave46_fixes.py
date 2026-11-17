@@ -101,7 +101,10 @@ def test_expand_bomb_via_api_is_graceful_and_fast(client):
     # A graceful fallback/guide result, not a hang and not the
     # raw expansion.
     assert result.get("fallback_kind") in (
-        "guide", "similar", "concept", "salvage")
+        "guide", "similar", "concept", "salvage",
+        # Wave 67: the graceful outcome is now the one-line
+        # not-found answer.
+        "not_found")
     assert "^60" not in str(result.get("answer", ""))
 
 
@@ -360,7 +363,10 @@ def test_download_and_print_still_use_the_full_last_result(client):
     assert r.status_code == 200
     text = r.get_data(as_text=True)
     assert "Answer: x = 2" in text
-    assert "Step-by-step solution:" in text  # steps: needs full dict
+    # Wave 120: the "Step-by-step solution:" label is GONE
+    # (Suraj's order) — the full steps still ship, numbered.
+    assert "Step-by-step solution:" not in text
+    assert "\n1. " in text  # steps: needs full dict
     r = client.get("/solution/print")
     assert r.status_code == 200
     assert "x = 2" in r.get_data(as_text=True)

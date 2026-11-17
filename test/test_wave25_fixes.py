@@ -26,6 +26,14 @@ earlier suite had passed. Root causes pinned here:
    ~1s minimum on-board beat per part (advTimed). The jsdom
    test stubs speech with a SYNCHRONOUS onend (worst case)
    and samples the board mid-playback.
+
+Wave 120 update (Suraj, 17 Nov 2026): the Teach (play)
+sign was REMOVED from the answer row on Suraj's order —
+the speaker (Listen) is the row's only voice sign now.
+Bug 4's playback probe below is therefore replaced by an
+absence pin; the beat floor itself stays source-pinned
+(test_teach_minimum_beat_floor) because the playback
+machinery remains in the page, dormant and unreachable.
 """
 import json
 import os
@@ -76,7 +84,7 @@ def test_real_payload_shape():
 # --- Bug 3's root: the service worker ------------------------
 
 def test_service_worker_never_freezes_code_again():
-    assert 'GANITRA_CACHE = "ganitra-static-v18"' in SW
+    assert 'GANITRA_CACHE = "ganitra-static-v20"' in SW
     assert '"ganitra-static-v4"' not in SW
     assert '"ganitra-static-v3"' not in SW
     assert '"ganitra-static-v2"' not in SW
@@ -232,30 +240,15 @@ const sleep = function (ms) {
     out.explainBorderLeft = ecs.borderLeftStyle;
   }
   const wrap = b.parentElement;
-  const teachBtn = wrap.querySelector('[data-action="teach"]');
-  const det = b.querySelector("details.steps-section");
-  if (teachBtn && ol && det) {
-    teachBtn.dispatchEvent(new window.MouseEvent("click",
-      { bubbles: true }));
-    await sleep(250);
-    out.teachStartAllWaiting = [...ol.children].every(
-      function (li) { return li.classList.contains("teach-wait"); });
-    const boy = det.querySelector(".boy-writer");
-    out.boySize = boy ? window.getComputedStyle(boy).width : null;
-    out.boyAttr = boy ? boy.getAttribute("width") : null;
-    await sleep(2350);
-    const lis = [...ol.children];
-    out.teachMidFirstRevealed = lis.length > 0
-      && !lis[0].classList.contains("teach-wait");
-    out.teachMidLastWaiting = lis.length > 0
-      && lis[lis.length - 1].classList.contains("teach-wait");
-    teachBtn.dispatchEvent(new window.MouseEvent("click",
-      { bubbles: true }));
-    await sleep(200);
-    out.teachStoppedClean = !ol.classList.contains("teach-playing")
-      && [...ol.children].every(function (li) {
-           return !li.classList.contains("teach-wait"); });
-  }
+  /* Wave 120: the Teach (play) sign is REMOVED from the
+     row on Suraj's order — pin its absence (the playback
+     machinery stays in the page, dormant and
+     unreachable). The speaker (Listen) sign is the row's
+     only voice sign now. */
+  out.teachBtnPresent = !!wrap.querySelector(
+    '[data-action="teach"]');
+  out.listenBtnPresent = !!wrap.querySelector(
+    '[data-action="listen"]');
   window.close();
   console.log(JSON.stringify(out));
   process.exit(0);
@@ -318,10 +311,7 @@ def test_jsdom_wave25_fixes(client, tmp_path):
     # The gold strip is gone from the chat card.
     assert out["explainBg"] == "rgba(0, 0, 0, 0)"
     assert out["explainBorderLeft"] == "none"
-    # Bug 4: even with an instant speech engine, Teach blanks
-    # everything first, then reveals step by step.
-    assert out["teachStartAllWaiting"] is True
-    assert out["boySize"] == "82px" and out["boyAttr"] == "82"
-    assert out["teachMidFirstRevealed"] is True
-    assert out["teachMidLastWaiting"] is True
-    assert out["teachStoppedClean"] is True
+    # Wave 120 (was Bug 4's playback probe): the play/teach
+    # sign no longer exists in the row; the speaker stays.
+    assert out["teachBtnPresent"] is False
+    assert out["listenBtnPresent"] is True

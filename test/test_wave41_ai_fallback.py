@@ -245,7 +245,10 @@ def test_groq_payload_and_shaping(monkeypatch):
     assert seen["url"] == groq_fallback.API_URL
     assert seen["payload"]["model"] == "openai/gpt-oss-120b"
     assert seen["payload"]["temperature"] == 0.2
-    assert seen["payload"]["max_tokens"] == 1024
+    # Wave 119: the cap was raised 1024 -> 8192 (a reasoning
+    # model's thinking counts toward it; 1024 truncated
+    # worked answers mid-line).
+    assert seen["payload"]["max_tokens"] == groq_fallback.MAX_TOKENS
     sent = seen["payload"]["messages"][0]["content"]
     assert "solve 2x + 3 = 7" in sent and "NOT_MATHS" in sent
     assert seen["timeout"] == groq_fallback.TIMEOUT_SECONDS
@@ -282,8 +285,10 @@ def test_both_no_keys_pure_noop(monkeypatch):
     assert gemini_fallback.try_gemini_answer(AGES_Q) is None
     assert groq_fallback.try_groq_answer(AGES_Q) is None
     result = _solve_friendly(AGES_Q)
+    # Wave 67: an unsolved question's honest non-AI outcome
+    # is now the one-line not-found answer.
     assert result.get("fallback_kind") in ("similar", "concept",
-                                           "guide")
+                                           "guide", "not_found")
     assert calls == []
 
 

@@ -69,9 +69,12 @@ def test_library_totals():
     # Wave 94: + GSEB Class 10 2025 (54 questions) and the
     # UBSE Class 10 2025 paper in English and Hindi (34 stored
     # questions each; the Hindi entry is the 16th Hindi paper).
-    assert len(papers_data.PAPERS) == 42
+    # Wave 113: + 11 CBSE papers, 381 questions (53 / 1,989).
+    # Deploy-25 merge: Wave 114 adds 15 papers / 375 questions
+    # — combined library 68 papers / 2,364 questions.
+    assert len(papers_data.PAPERS) == 68
     assert sum(len(p["questions"])
-               for p in papers_data.PAPERS) == 1608
+               for p in papers_data.PAPERS) == 2364
     assert sum(1 for p in papers_data.PAPERS
                if p.get("medium") == "hindi") == 16
 
@@ -114,8 +117,10 @@ def test_hbse12_english_corrections():
 def test_list_labels_boards_and_mediums(client):
     body = client.get("/papers").get_data(as_text=True)
     # Wave 94: 42 papers — 16 Hindi-medium, 26 English-medium.
+    # Deploy-25 merge: 68 papers — 16 Hindi-medium, 52
+    # English-medium (Wave 113 → 37, Wave 114 → 52).
     assert body.count("हिंदी माध्यम · Hindi Medium</span>") == 16
-    assert body.count("English Medium</span>") == 26
+    assert body.count("English Medium</span>") == 52
     for p in papers_data.PAPERS:
         assert p["board"] in body
         assert p["source_url"] not in body

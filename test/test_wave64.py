@@ -12,7 +12,7 @@ paper's medium; a Hindi sheet renders in the paper's own
 language (गणित subject line, सामान्य निर्देश, खण्ड headings,
 अधिकतम अंक, अथवा dividers, lowercase (a)–(d) options split
 onto their own lines). [Figure] census for the Hindi texts:
-2 + 3 + 4 + 3 = 12. Pins ?v=41 / cache ganitra-static-v18.
+2 + 3 + 4 + 3 = 12. Pins ?v=43 / cache ganitra-static-v20.
 """
 import html as _html
 import re
@@ -72,7 +72,10 @@ def test_hindi_papers_complete_and_real():
             assert " OR " not in q["text"]
     assert total == 128
     # Wave 66: library grew from 17 to 39 papers (all boards).
-    assert len(papers_data.PAPERS) == 42
+    # Wave 113: 53 papers (11 more CBSE English papers; the
+    # Hindi count is unchanged at 16). Deploy-25 merge: Wave
+    # 114 adds 15 more state-board papers — 68 in total.
+    assert len(papers_data.PAPERS) == 68
 
 
 def test_hindi_papers_restore_questions_the_english_entries_omit():
@@ -96,9 +99,11 @@ def test_list_labels_every_medium(client):
     # 24 English-medium) across 9 boards. Wave 94: 42 papers
     # (16 Hindi-medium, 26 English-medium). Counted via the
     # chip markup: two Wave-66 entry notes also contain the
-    # words "English Medium" as plain text.
+    # words "English Medium" as plain text. Deploy-25 merge:
+    # 68 papers (16 Hindi-medium, 52 English-medium — Wave 113
+    # took English to 37, Wave 114's 15 are all English).
     assert body.count("हिंदी माध्यम · Hindi Medium</span>") == 16
-    assert body.count("English Medium</span>") == 26
+    assert body.count("English Medium</span>") == 52
     for p in papers_data.PAPERS:
         assert p["source_url"] not in body
 
@@ -177,7 +182,7 @@ def test_pins_bumped_for_wave64():
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()
     css = (ROOT / "static" / "style.css").read_text()
-    assert "v='41'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v18"' in sw
+    assert "v='43'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v20"' in sw
     assert ".paper-medium" in css
     assert "Noto Serif Devanagari" in css

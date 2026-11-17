@@ -18,8 +18,8 @@ What this wave changed:
   the <=560px pin that held .nav-menu at the far LEFT is
   mirrored to the far RIGHT (right: 7px, the bar reserves
   padding-right instead of padding-left).
-- Pins bumped for the CSS change: stylesheet ?v=41,
-  service-worker cache ganitra-static-v18.
+- Pins bumped for the CSS change: stylesheet ?v=43,
+  service-worker cache ganitra-static-v20.
 The full-page menu panel, the item list and its order are
 untouched.
 """
@@ -153,6 +153,6 @@ def test_menu_items_and_order_untouched():
 
 
 def test_pins_bumped_for_this_css_change():
-    assert "filename='style.css', v='41'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v18"' in SW
-    assert '"/static/style.css?v=41"' in SW
+    assert "filename='style.css', v='43'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v20"' in SW
+    assert '"/static/style.css?v=43"' in SW

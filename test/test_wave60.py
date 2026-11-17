@@ -136,12 +136,15 @@ def test_board_test_bar_chapter_fallback_and_always_asks(client):
 
 
 def test_print_views_have_back_links(client):
+    # Wave 121: the print views' way back is the BARE ARROW
+    # (class print-back), not the boxed print-btn link Wave 60
+    # shipped — Suraj's spec: no box, no "Back" word, anywhere.
     client.post("/solve", data={"question": "2 + 2"})
     body = client.get("/solution/print").get_data(as_text=True)
-    assert 'class="print-btn" href="/"' in body
+    assert 'class="print-back" href="/"' in body
     client.post("/papers/generate", data={"class_num": "10"})
     body = client.get("/papers/print").get_data(as_text=True)
-    assert 'class="print-btn" href="/papers"' in body
+    assert 'class="print-back" href="/papers"' in body
 
 
 def test_chat_survives_inner_page_visits(client):
@@ -167,7 +170,7 @@ def test_delivery_pins_bumped_for_new_css():
         encoding="utf-8")
     sw = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
     css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
-    assert "v='41'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v18"' in sw
+    assert "v='43'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v20"' in sw
     assert ".backnav-btn" in css
     assert "min-height: 44px" in css

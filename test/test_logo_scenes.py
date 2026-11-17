@@ -254,8 +254,14 @@ def test_boy_writer_hooks():
     # No steps board -> no boy.
     assert "if (boyBroken || !stepsDet) return;" in INDEX
     # Teach start/stop wiring.
+    # Wave 120 flip: the window's old end marker was the
+    # Teach-button creation block ("if (displaySteps.length
+    # || result.answer) { teachBtn = ...") — Suraj removed
+    # the play SIGN, so that block is gone; the window now
+    # ends at the next section (the ••• panel build). The
+    # hooks themselves survive, dormant, as pinned here.
     t0 = INDEX.index("function startTeachPlayback")
-    t1 = INDEX.index("if (displaySteps.length", t0)
+    t1 = INDEX.index("/* -- 5. More", t0)
     assert "showBoyWriter();" in INDEX[t0:t1]
     stop = INDEX[INDEX.index("function stopTeachPlayback"):t0]
     assert "scheduleBoyWriterHide();" in stop

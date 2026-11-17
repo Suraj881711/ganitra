@@ -43,6 +43,21 @@ chat body/steps 14px, handwriting steps 15px, question/
 composer 14px, final answer 15.5px, section headings 13px
 (wave 27: 13 / 14 / 13.5 / 14.5 / 12),
 line-height ~1.65.
+WAVE 120 (Suraj, 17 Nov 2026): three card changes on his
+orders — (1) the "STEP-BY-STEP SOLUTION" heading over the
+steps is REMOVED (the <summary> element survives, empty
+and display:none, because a <details> needs one and the
+board hosts measure it; the 12px font pin below still
+applies to it); (2) the Teach (play) sign is REMOVED from
+the icon row — speaker (Listen) only; the playback
+machinery stays in the page, dormant and unreachable, so
+test_teach_and_boy_hooks_survive still pins its hooks;
+(3) the standalone "Full solution page →" link under the
+card is GONE — the same POST /solve form is now the FIRST
+item inside the ••• panel, and the ••• sign + panel ride
+on EVERY answer card (a plain answer's row is now
+copy / listen / methods, and its wrap order gains the
+panel at the end).
 """
 import json
 import os
@@ -84,8 +99,7 @@ def test_chat_assembly_single_ordered_block():
            "wrap.appendChild(div);",
            "if (actions.children.length) wrap.appendChild(actions);",
            "if (adviceEl) wrap.appendChild(adviceEl);",
-           "if (methodsPanel) wrap.appendChild(methodsPanel);",
-           "wrap.appendChild(full);"]
+           "if (methodsPanel) wrap.appendChild(methodsPanel);"]
     pos = [asm.find(s) for s in seq]
     assert all(p >= 0 for p in pos)
     assert pos == sorted(pos)
@@ -96,7 +110,10 @@ def test_chat_no_early_appends():
     # assembly); the old immediate appends are gone.
     assert INDEX.count("div.appendChild(badge);") == 1
     assert INDEX.count("div.appendChild(ans);") == 1
-    assert INDEX.count("wrap.appendChild(full);") == 1
+    # Wave 120: the Full Solution form no longer hangs
+    # under the card — it rides inside the ••• panel.
+    assert "wrap.appendChild(full);" not in INDEX
+    assert INDEX.count("methodsPanel.appendChild(full);") == 1
     for gone in ("div.appendChild(expl);",
                  "div.appendChild(card);", "div.appendChild(det);",
                  "div.appendChild(img);"):
@@ -317,7 +334,8 @@ async function scenario(payload) {
       }
       /* Speech stub: jsdom has no speechSynthesis, which
          would hide the Listen sign — the row must render all
-         FIVE signs here exactly as in a real browser. */
+         FOUR signs here exactly as in a real browser
+         (Wave 120: the play/teach sign is gone). */
       if (!("speechSynthesis" in window)) {
         window.SpeechSynthesisUtterance = function (text) {
           this.text = text || ""; this.lang = "";
@@ -427,6 +445,30 @@ async function scenario(payload) {
       ? window.getComputedStyle(sumEl).fontSize : null,
     composer: window.getComputedStyle(box).fontSize
   };
+  /* Wave 120 probes: the steps heading renders NOTHING
+     (empty, display:none summary); the Teach (play) sign
+     is out of the row and the speaker stays; the Full
+     Solution form rides inside the ••• panel — no form
+     hangs anywhere else in the wrap. */
+  out.summaryText = sumEl ? sumEl.textContent : null;
+  out.summaryDisplay = sumEl
+    ? window.getComputedStyle(sumEl).display : null;
+  out.teachBtnPresent = !!wrap.querySelector(
+    '[data-action="teach"]');
+  out.listenBtnPresent = !!wrap.querySelector(
+    '[data-action="listen"]');
+  const fullForm = panel
+    ? panel.querySelector('form[action="/solve"]') : null;
+  out.fullFormInPanel = !!fullForm;
+  out.fullBtnText = fullForm
+    ? fullForm.querySelector("button").textContent : null;
+  const fullHidden = fullForm
+    ? fullForm.querySelector('input[name="question"]') : null;
+  out.fullHiddenQ = fullHidden ? fullHidden.value : null;
+  out.formsOutsidePanel = panel
+    ? [...wrap.querySelectorAll("form")].filter(
+        function (f) { return !panel.contains(f); }).length
+    : null;
   /* Design change: the advice card exists but starts
      HIDDEN; the bulb sign toggles it below the row. Also
      probe the tight cluster + the unnumbered steps list. */
@@ -451,18 +493,6 @@ async function scenario(payload) {
   }
   out.listStyle = ol
     ? window.getComputedStyle(ol).listStyleType : null;
-  const teachBtn = wrap.querySelector('[data-action="teach"]');
-  if (teachBtn && ol && det) {
-    teachBtn.dispatchEvent(new window.MouseEvent("click",
-      { bubbles: true }));
-    await new Promise(function (r) { setTimeout(r, 150); });
-    out.teachPlaying = ol.classList.contains("teach-playing");
-    out.boyAtBoard = !!det.querySelector(".boy-writer");
-    teachBtn.dispatchEvent(new window.MouseEvent("click",
-      { bubbles: true }));
-    await new Promise(function (r) { setTimeout(r, 80); });
-    out.teachStopped = !ol.classList.contains("teach-playing");
-  }
   window.close();
   return out;
 }
@@ -583,17 +613,19 @@ def test_jsdom_answer_sequence(client, tmp_path):
     assert s1["boxInBubble"] is False
     assert s1["answerStyle"]["bg"] == "rgba(0, 0, 0, 0)"
     assert s1["answerStyle"]["border"] == "none"
-    # Five signs in order; methods panel hidden; the advice
-    # card hidden by default and toggled by the bulb sign.
+    # Four signs in order (Wave 120: the play/teach sign
+    # is gone — speaker only); methods panel hidden; the
+    # advice card hidden by default and toggled by the
+    # bulb sign.
     assert s1["panelHidden"] is True
-    assert s1["actions"] == ["copy", "listen", "teach",
-                             "advice", "methods"]
+    assert s1["actions"] == ["copy", "listen", "advice",
+                             "methods"]
     assert s1["advicePresent"] is True
     assert s1["adviceHiddenDefault"] is True
     assert s1["adviceOpensOnTap"] is True
     assert s1["adviceClosesOnTap"] is True
     # Borderless row, equal tap padding, tight cluster.
-    assert len(s1["btnStyles"]) == 5
+    assert len(s1["btnStyles"]) == 4
     for b in s1["btnStyles"]:
         assert b["pad"] == "10px 2px"
         assert b["bg"] == "rgba(0, 0, 0, 0)"
@@ -612,16 +644,32 @@ def test_jsdom_answer_sequence(client, tmp_path):
     assert s1["fonts"]["answer"] == "14.5px"
     assert s1["fonts"]["summary"] == "12px"
     assert s1["fonts"]["composer"] == "13.5px"
-    # Teach playback + the boy writer ride the reordered board.
-    assert s1["teachPlaying"] is True
-    assert s1["boyAtBoard"] is True
-    assert s1["teachStopped"] is True
+    # Wave 120 pins: no steps heading (empty, hidden
+    # summary), no play sign, speaker present, and the
+    # Full Solution form inside the ••• panel, pointing
+    # at /solve with this card's question.
+    assert s1["summaryText"] == ""
+    assert s1["summaryDisplay"] == "none"
+    assert s1["teachBtnPresent"] is False
+    assert s1["listenBtnPresent"] is True
+    assert s1["fullFormInPanel"] is True
+    assert "Full solution page" in s1["fullBtnText"]
+    assert s1["fullHiddenQ"] == PAYLOADS["s1"]["question"]
+    assert s1["formsOutsidePanel"] == 0
 
     s2 = out["s2"]
-    assert s2["order"] == ["steps", "answer", "actions"]
+    # Wave 120: even a plain answer (no advice, no extra
+    # methods) carries the ••• panel — it holds the Full
+    # Solution item now.
+    assert s2["order"] == ["steps", "answer", "actions",
+                           "methods"]
     assert s2["cardOrder"] == ["steps", "answer"]
     assert s2["rowInBubble"] is False
-    assert s2["actions"] == ["copy", "listen", "teach"]
+    assert s2["actions"] == ["copy", "listen", "methods"]
     assert s2["advicePresent"] is False
+    assert s2["panelHidden"] is True
+    assert s2["teachBtnPresent"] is False
+    assert s2["fullFormInPanel"] is True
+    assert s2["formsOutsidePanel"] == 0
     assert all(b["pad"] == "10px 2px" and b["border"] == "none"
                for b in s2["btnStyles"])

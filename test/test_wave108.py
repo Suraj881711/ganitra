@@ -143,7 +143,11 @@ def test_openrouter_payload_and_shaping(monkeypatch):
     assert seen["payload"]["model"] == "openrouter/free"
     assert openrouter_fallback.MODEL == "openrouter/free"
     assert seen["payload"]["temperature"] == 0.2
-    assert seen["payload"]["max_tokens"] == 1024
+    # Wave 119: the cap was raised 1024 -> 8192 (a reasoning
+    # model's thinking counts toward it; 1024 truncated
+    # worked answers mid-line).
+    assert seen["payload"]["max_tokens"] == \
+        openrouter_fallback.MAX_TOKENS
     sent = seen["payload"]["messages"][0]["content"]
     assert "solve 2x + 3 = 7" in sent and "NOT_MATHS" in sent
     # The stall guard: a strict timeout, no longer than the
