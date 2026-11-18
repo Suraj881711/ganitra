@@ -730,6 +730,43 @@ body.chat-page .chat-log {
   padding-top: 10px; flex: none;
 }
 body.chat-active .empty-robot-top { display: none; }
+/* Wave 170 (Suraj, 19 Nov 2026 — "Aisa design karana hai
+   background kaa" about a Muse-app screenshot, then
+   "Dono karo" on the two options):
+   (1) the top robot gets an avatar-style CARD — a soft
+   rounded panel in Ganitra's own cream/teal family with
+   the name "Ganitra" under the robot, like a character
+   card at the top of the screen. The robot SVG, its
+   palette and every animation are untouched; the card
+   is only a container, and it hides together with
+   .empty-robot-top the moment a chat starts (rule
+   above), when the header buddy takes over.
+   (2) the home/empty-state backdrop goes soft and calm
+   — a warm cream wash with a whisper of Ganitra teal at
+   the top — scoped to body.chat-page WITHOUT
+   chat-active, so the active chat view, every other
+   page, and all bubbles/cards/menus keep exactly the
+   backdrop they already had. Ganitra colours only —
+   no Muse branding, no Muse palette. */
+.robot-card {
+  display: flex; flex-direction: column; align-items: center;
+  background: linear-gradient(180deg, #fffef9, #fdf6e1);
+  border: 1px solid var(--line); border-radius: 26px;
+  padding: 16px 40px 13px;
+  box-shadow: 0 12px 30px rgba(101, 84, 40, .10);
+}
+.robot-card-name {
+  margin-top: 7px;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 18px; font-weight: 600; letter-spacing: .02em;
+  color: #074335;
+}
+body.chat-page:not(.chat-active) {
+  background:
+    radial-gradient(760px 360px at 14% -6%, rgba(43, 217, 169, .12), transparent 60%),
+    radial-gradient(900px 420px at 86% -5%, rgba(231, 200, 119, .15), transparent 60%),
+    linear-gradient(180deg, #fffdf6 0%, #fbf4e6 58%, #f8efdc 100%);
+}
 .robot {
   width: 80px; height: 80px; flex: none; overflow: visible;
   animation: robot-bob 3.4s ease-in-out infinite;

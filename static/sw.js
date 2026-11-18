@@ -96,7 +96,7 @@
    rules themselves are unchanged: code network-first with
    revalidation, media stale-while-revalidate, navigations
    network-first with the cached shell as the fallback. */
-var GANITRA_CACHE = "ganitra-static-v30";
+var GANITRA_CACHE = "ganitra-static-v31";
 
 /* Wave 98: the chat shell, precached on install. Each URL
    is added on its own so one failure (e.g. a sprite the
@@ -107,7 +107,7 @@ var GANITRA_CACHE = "ganitra-static-v30";
    (which keys on the full URL) hits it offline. */
 var GANITRA_SHELL = [
   "/",
-  "/static/style.css?v=53",
+  "/static/style.css?v=54",
   "/static/offline.js",
   "/static/logo-mark-t.png",
   "/static/logo-full-t.png",
