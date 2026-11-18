@@ -225,17 +225,23 @@ def test_frustrated_table_request_served_end_to_end(client):
 # ------------------------------------------------------------------ #
 
 @pytest.mark.parametrize("question,line,answer", [
-    # b < 0 in standard form: ADD to both sides.
-    ("Solve: 3x + 7 = 22", "Add 15 to both sides: 3·x = 15",
+    # Wave 149 superseded the standard-form narration for
+    # the simple a·x ± b = c shape: the steps now narrate
+    # the move on the equation AS ASKED (subtract/add the
+    # constant that is actually there). Wave 148's intent —
+    # the narrated move must be the actual move, with the
+    # verb's own preposition — is preserved and pinned
+    # below; _linear_steps itself (the fallback for other
+    # shapes) is still pinned by test_linear_steps_unit.
+    ("Solve: 3x + 7 = 22", "Subtract 7 from both sides: 3·x = 15",
      "x = 5"),
-    ("Solve: 3x - 7 = 8", "Add 15 to both sides: 3·x = 15",
+    ("Solve: 3x - 7 = 8", "Add 7 to both sides: 3·x = 15",
      "x = 5"),
-    ("Solve: 2x + 5 = 9", "Add 4 to both sides: 2·x = 4",
+    ("Solve: 2x + 5 = 9", "Subtract 5 from both sides: 2·x = 4",
      "x = 2"),
-    # b > 0 in standard form: SUBTRACT from both sides.
-    ("Solve: x + 5 = 3", "Subtract 2 from both sides: 1·x = -2",
+    ("Solve: x + 5 = 3", "Subtract 5 from both sides: x = -2",
      "x = -2"),
-    ("Solve: 4x + 9 = 5", "Subtract 4 from both sides: 4·x = -4",
+    ("Solve: 4x + 9 = 5", "Subtract 9 from both sides: 4·x = -4",
      "x = -1"),
 ])
 def test_linear_steps_narrate_the_actual_move(question, line,

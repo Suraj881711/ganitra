@@ -29,10 +29,15 @@ from doubt import (build_doubt_response, eligible_result,
 
 BASE_Q = "solve 3x + 5 = 20"
 # The solver's own steps for BASE_Q (verified against the live
-# solver): the 4th line merely restates the answer, so the
-# working steps a student counts are the first three.
-STEP2_BODY = "3·x = 15"
-STEP3_BODY = "x = 5"
+# solver): the last line merely restates the answer, so the
+# working steps a student counts are the first two.
+# Wave 149: BASE_Q is the simple a·x + b = c shape, whose
+# primary steps are now school-style — move the constant,
+# then divide — so the divide step is step 2 (it was step 3
+# under the old standard-form narration, whose extra first
+# line "Bring all terms to one side: 3·x + -15 = 0" is gone).
+STEP1_BODY = "3·x = 15"
+STEP2_BODY = "x = 5"
 
 SIGNUP = {"name": "W96 User", "class": "8", "board": "CBSE",
           "goal": "Doctor", "hobby": "Cricket",
@@ -78,8 +83,8 @@ def assert_explains(data, body, step_number=None):
 
 def test_ordinal_step_followup(client):
     solve_base(client)
-    data = solve(client, "dusra step samjhao")
-    result = assert_explains(data, STEP2_BODY, step_number=2)
+    data = solve(client, "pehla step samjhao")
+    result = assert_explains(data, STEP1_BODY, step_number=1)
     # The explanation offers the next step in one line.
     assert "agla step samjhao" in " ".join(result["steps"])
 
@@ -93,7 +98,7 @@ def test_numbered_step_confusion_followup(client):
 def test_why_did_you_divide_finds_the_divide_step(client):
     solve_base(client)
     data = solve(client, "why did you divide by 3")
-    result = assert_explains(data, STEP3_BODY, step_number=3)
+    result = assert_explains(data, STEP2_BODY, step_number=2)
     joined = " ".join(result["steps"]).lower()
     assert "divide" in joined or "bhaag" in joined
 
@@ -101,26 +106,26 @@ def test_why_did_you_divide_finds_the_divide_step(client):
 def test_unspecified_followup_explains_last_step(client):
     solve_base(client)
     data = solve(client, "ye step samajh nahi aaya")
-    assert_explains(data, STEP3_BODY, step_number=3)
+    assert_explains(data, STEP2_BODY, step_number=2)
 
 
 def test_again_followup_explains_last_step(client):
     solve_base(client)
     data = solve(client, "ye wala step phir se samjhao")
-    assert_explains(data, STEP3_BODY, step_number=3)
+    assert_explains(data, STEP2_BODY, step_number=2)
 
 
 def test_bare_samjhao_with_context_explains_last_step(client):
     solve_base(client)
     data = solve(client, "samjhao")
-    assert_explains(data, STEP3_BODY, step_number=3)
+    assert_explains(data, STEP2_BODY, step_number=2)
 
 
 def test_explain_this_step_english(client):
     solve_base(client)
     data = solve(client, "explain this step")
-    result = assert_explains(data, STEP3_BODY, step_number=3)
-    assert result["steps"][0].startswith("Step 3:")
+    result = assert_explains(data, STEP2_BODY, step_number=2)
+    assert result["steps"][0].startswith("Step 2:")
 
 
 def test_hindi_followup_gets_hindi_explanation(client):
@@ -132,22 +137,22 @@ def test_hindi_followup_gets_hindi_explanation(client):
 
 def test_next_step_chaining(client):
     solve_base(client)
-    assert_explains(solve(client, "dusra step samjhao"),
-                    STEP2_BODY, step_number=2)
+    assert_explains(solve(client, "pehla step samjhao"),
+                    STEP1_BODY, step_number=1)
     # "agla step" continues from the step just explained, and
     # still points at the ORIGINAL answer's steps.
     assert_explains(solve(client, "agla step samjhao"),
-                    STEP3_BODY, step_number=3)
+                    STEP2_BODY, step_number=2)
 
 
 def test_followup_does_not_replace_the_answer(client):
     solve_base(client)
     assert_explains(solve(client, "step 1 samjhao"),
-                    "3·x + -15 = 0", step_number=1)
+                    STEP1_BODY, step_number=1)
     # A second, different follow-up still refers to the same
     # original solution (the doubt turn is not a new "answer").
-    assert_explains(solve(client, "step 3 samjhao"),
-                    STEP3_BODY, step_number=3)
+    assert_explains(solve(client, "step 2 samjhao"),
+                    STEP2_BODY, step_number=2)
 
 
 # --- 2. No context / impossible reference -> no invented step --
@@ -218,8 +223,8 @@ def test_new_question_after_followup_solves_normally(client):
     data = solve(client, "solve 2x + 3 = 7")
     assert data["ok"] is True
     assert data["result"]["answer"] == "x = 2"
-    # ...and follow-ups now point at the NEW answer (2 steps:
-    # one working step + the restated-answer line).
+    # ...and follow-ups now point at the NEW answer (2 working
+    # steps + the restated-answer line).
     data = solve(client, "pehla step samjhao")
     assert (data.get("result") or {}).get("op") == "explain_step"
 
@@ -257,7 +262,7 @@ def test_steps_recoverable_from_saved_chat_payload(client):
     # and the Wave 96 recovery works on it unchanged.
     assert eligible_result(stored_result)
     steps = working_steps(stored_result)
-    assert len(steps) == 3
+    assert len(steps) == 2
     assert STEP2_BODY in steps[1]
     built = build_doubt_response(
         "dusra step samjhao", parse_followup("dusra step samjhao"),
