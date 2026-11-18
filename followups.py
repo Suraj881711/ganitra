@@ -70,6 +70,10 @@ _NOT_SOLVED_KINDS = {
     "not_found", "concept", "history", "advice", "greeting",
     "nonmaths", "science", "vague", "gibberish", "guide",
     "similar", "step_check", "followup_test",
+    # Wave 154: the guidance card and the small-talk line
+    # are real content, not solves — no answer box, no
+    # follow-up chips, exactly like history/advice.
+    "guidance", "baat",
 }
 _NOT_SOLVED_OPS = {"error", "explain_step", "check_steps",
                    "not_found"}

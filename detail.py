@@ -296,6 +296,26 @@ def _practice_block(result, flavour):
     return lines
 
 
+def _guidance_block(result, flavour):
+    """Wave 154: the DETAIL lines of the guidance card's
+    own entry, in the card's flavour — or [] when the
+    result carries no guidance id or the entry has no
+    detail lines. guidance.py owns the content; this is
+    only the lookup."""
+    gid = result.get("guidance_id")
+    if not gid:
+        return []
+    # The card's own stamped flavour wins: a bare "detail
+    # me batao" follow-up carries no language of its own,
+    # and the expansion must speak the card's language.
+    flavour = result.get("guidance_flavour") or flavour
+    try:
+        from guidance import guidance_detail_steps
+        return guidance_detail_steps(gid, flavour)
+    except Exception:
+        return []
+
+
 # ------------------------------------------------------------------
 # The entry point api.py calls (only when a detail request
 # was detected — with no request this function is never
@@ -319,6 +339,21 @@ def expand_detail(question, result, lang=None,
     flavour = _flavour_for(question, lang, lang_request)
     if kind == "concept":
         block = _practice_block(result, flavour)
+        if not block:
+            return result
+        expanded = dict(result)
+        expanded["steps"] = [str(s) for s in
+                             (result.get("steps") or [])] \
+            + block
+        return expanded
+    if kind == "guidance":
+        # Wave 154: a guidance card expands with its own
+        # authored DETAIL lines (guidance.py owns the
+        # content; the short card is the default and the
+        # detail lines exist only for this ask — the
+        # Wave 136 rule). No detail lines -> the card
+        # itself, unchanged.
+        block = _guidance_block(result, flavour)
         if not block:
             return result
         expanded = dict(result)

@@ -2922,6 +2922,31 @@ def _with_fallback_chain(question, result, lang=None,
     if meta is not None:
         return meta
 
+    # Wave 154: the normal-baat + maths GUIDANCE layer
+    # (guidance.py) — small talk beyond the greeting
+    # layer's exact matches ("bore ho raha hai", "tum
+    # kya kar sakte ho") and authored guidance for the
+    # future-of-maths asks (scope/careers, after 12th,
+    # subject choice, entrance exams, improve, exam
+    # preparation, motivation). It sits right after the
+    # Wave 111 meta layer, whose territory stays its own,
+    # and before every solving/concept layer for the same
+    # reason meta does: these asks are not computations.
+    # Its own global vetoes (fresh problem, operator,
+    # MCQ, digit+ask payload, concept-ask shape) plus
+    # per-entry gates keep every real problem and every
+    # concept ask out — it returns None for all of them,
+    # and the flow below is then exactly the pre-Wave-154
+    # one.
+    try:
+        from guidance import wave154_result
+        w154 = wave154_result(question,
+                              req_flavour or _flavour(question))
+    except Exception:
+        w154 = None
+    if w154 is not None:
+        return w154
+
     if _is_real(question, result):
         # Wave 100: a multi-part bundle (mega-MCQ set, case
         # study) is not one question — a whole-text "solve" of

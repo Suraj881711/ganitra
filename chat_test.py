@@ -907,11 +907,17 @@ def _result_lines(state, stopped=False):
     return lines
 
 
-def _plain_payload(lines):
+def _plain_payload(lines, verdict=None):
     """A plain chat result (answer = first line, steps = the
     rest) — the chat JS renders plain results as one simple
     bubble: no card, no answer box, no step labels, no
-    chips, no streaming reveal."""
+    chips, no streaming reveal.
+
+    Wave 160: ``verdict="correct"`` is passed ONLY by the
+    answer-attempt branch when the student's answer was
+    right, so the chat JS can add the little laughing robot
+    to that one happy feedback bubble (Suraj's activity
+    order). Every other payload stays byte-identical."""
     result = {
         "type": "Chat Test",
         "op": "chat_test",
@@ -921,6 +927,8 @@ def _plain_payload(lines):
         "plain_reply": True,
         "fallback_kind": "chat_test",
     }
+    if verdict is not None:
+        result["test_verdict"] = verdict
     return {"ok": True, "result": result, "intro": None,
             "followup_note": None}
 
@@ -1093,7 +1101,8 @@ def handle_message(session, user_id, chat_id, text, lang="en",
             lines = [ln["wrong"].format(a=item["answer"])]
         lines += _advance_lines(state)
         _finish_or_save(session, user_id, chat_id, state)
-        return _plain_payload(lines)
+        return _plain_payload(
+            lines, verdict="correct" if correct else None)
     req = parse_test_request(text)
     if req is None:
         return None

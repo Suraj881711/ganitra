@@ -790,7 +790,19 @@ def api_solve():
     if _view is not None:
         _prev_r = session.get("last_result")
         _prev_q = session.get("last_question")
-        if is_solved_result(_prev_r) \
+        # Wave 154: a bare DETAIL ask after a GUIDANCE card
+        # re-serves that card too — expanded by detail.py's
+        # guidance branch — although a guidance card is
+        # not a solved answer. The detail view only: a
+        # steps ask after a guidance card keeps the normal
+        # path, and w122_payload still gates itself (no
+        # chips on a guidance card).
+        _w154_guidance_prev = (
+            _view == "detail"
+            and isinstance(_prev_r, dict)
+            and _prev_r.get("fallback_kind") == "guidance")
+        if (is_solved_result(_prev_r)
+                or _w154_guidance_prev) \
                 and (_prev_r.get("steps") or []):
             if _view == "detail":
                 result = expand_detail(
@@ -1099,7 +1111,14 @@ def api_solve_stream():
     if _view is not None:
         _prev_r = session.get("last_result")
         _prev_q = session.get("last_question")
-        if _is_solved_148(_prev_r) \
+        # Wave 154: the guidance-card detail re-serve,
+        # mirrored from api_solve (see there).
+        _w154_guidance_prev = (
+            _view == "detail"
+            and isinstance(_prev_r, dict)
+            and _prev_r.get("fallback_kind") == "guidance")
+        if (_is_solved_148(_prev_r)
+                or _w154_guidance_prev) \
                 and (_prev_r.get("steps") or []):
             if _view == "detail":
                 result = expand_detail(

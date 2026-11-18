@@ -8529,6 +8529,639 @@ _MH12_2025JUL_ENTRY = {
         "questions": _MH12_2025JUL_EN,
     }
 
+# ---------------------------------------------------------------------------
+# Wave 152 (Suraj's order, 18 Nov 2026: exam papers for ALL classes) —
+# first papers for Classes 6, 7, 8, 9 and 11. Every paper below is an
+# OFFICIAL board paper (JCERT/JAC model papers; Samagra Shiksha Kerala
+# evaluation papers), typed in full from the official paper as mirrored
+# by AglaSem Docs (the read source named in each entry). No answer keys
+# are stored (Wave 88) — the printed keys were used only to cross-check
+# the transcription. Questions whose options or data could not be read
+# faithfully from the official copy are OMITTED and listed in each
+# entry's note; full_count / full_marks keep the printed paper whole.
+# ---------------------------------------------------------------------------
+
+_JAC9_2024_QUESTIONS = [
+    _q(1, "A", 1, "number-systems",
+       "Which of the following numbers is irrational? "
+       "(a) √9 (b) π (c) 0.333… (d) √225"),
+    _q(3, "A", 1, "number-systems",
+       "(√7 − √5)(√7 + √5) = ? "
+       "(a) 2√5 (b) 2√7 (c) 24 (d) 2"),
+    _q(4, "A", 1, "number-systems",
+       "(125)^(2/3) is equal to: "
+       "(a) 5 (b) 15 (c) 25 (d) 125"),
+    _q(5, "A", 1, "polynomials",
+       "Which of the following is not a polynomial? "
+       "(a) x² + 6x + 7 (b) x + √5 y + 4 (c) x + 5/y + 105 "
+       "(d) x − 2y + √5"),
+    _q(6, "A", 1, "polynomials",
+       "The zero of the polynomial 5x + 3 is: "
+       "(a) −3 (b) −3/5 (c) −5/3 (d) −5"),
+    _q(7, "A", 1, "polynomials",
+       "If p(x) = x³ + x² + x + 1, then the value of p(−1) will be: "
+       "(a) 4 (b) 0 (c) 7 (d) −1"),
+    _q(8, "A", 1, "polynomials",
+       "Factorisation of the polynomial x² + 5x + 6 is: "
+       "(a) (x + 2)(x + 5) (b) (x + 3)(x + 6) (c) (x + 2)(x + 3) "
+       "(d) (x + 5)(x + 6)"),
+    _q(9, "A", 1, "coordinate-geometry",
+       "Which of the following is the coordinate of a point on the "
+       "Y-axis? (a) (0, 0) (b) (0, y) (c) (x, 0) (d) (a, b)"),
+    _q(10, "A", 1, "coordinate-geometry",
+       "The ordinate of the point (3, 7) is: "
+       "(a) 3 (b) −3 (c) 7 (d) −7"),
+    _q(11, "A", 1, "linear-equations-in-two-variables",
+       "Comparing the equation 3x − 2y = 5 with ax + by + c = 0, the "
+       "values of a, b and c will be: (a) a = 3, b = −2, c = 5 "
+       "(b) a = −3, b = −2, c = −5 (c) a = 3, b = −2, c = −5 "
+       "(d) a = −3, b = 2, c = −5"),
+    _q(12, "A", 1, "linear-equations-in-two-variables",
+       "If x = 2 and y = 3 is a solution of the linear equation "
+       "2x + 3y = k, then the value of k is: "
+       "(a) 23 (b) 13 (c) 12 (d) 15"),
+    _q(13, "A", 1, "linear-equations-in-two-variables",
+       "A solution of the equation 3x − 2y = 0 is: "
+       "(a) x = 3, y = 2 (b) x = 3, y = −2 (c) x = 2, y = 3 "
+       "(d) x = 3, y = 0"),
+    _q(14, "A", 1, "introduction-to-euclids-geometry",
+       "A statement which can be proved is known as: "
+       "(a) Definition (b) Axiom (c) Theorem (d) Postulate"),
+    _q(15, "A", 1, "introduction-to-euclids-geometry",
+       "How many lines can be drawn through two distinct points? "
+       "(a) 1 (b) 2 (c) Infinitely many (d) 0"),
+    _q(19, "A", 1, "triangles",
+       "Which of the following is not a criterion for the congruence "
+       "of triangles? (a) ASA (b) SSS (c) AAA (d) SAS"),
+    _q(20, "A", 1, "triangles",
+       "In △ABC, if AB = AC and ∠B = 70°, then the value of ∠A will "
+       "be: (a) 40° (b) 110° (c) 70° (d) 20°"),
+    _q(21, "A", 1, "quadrilaterals",
+       "The angles of a quadrilateral are in the ratio 2 : 3 : 5 : 8. "
+       "The value of the largest angle of the quadrilateral is: "
+       "(a) 360° (b) 180° (c) 160° (d) 90°"),
+    _q(22, "A", 1, "quadrilaterals",
+       "In which of the following quadrilaterals do the diagonals "
+       "bisect each other at right angles? "
+       "(a) Rhombus (b) Parallelogram (c) Rectangle (d) Trapezium"),
+    _q(23, "A", 1, "quadrilaterals",
+       "The quadrilateral formed by joining the midpoints of the "
+       "sides of a rectangle will be: "
+       "(a) Rhombus (b) Parallelogram (c) Square (d) Rectangle"),
+    _q(24, "A", 1, "areas-of-parallelograms-and-triangles",
+       "In the figure, ABCD is a parallelogram in which BC = 12 cm "
+       "and AE = 6 cm, where AE is perpendicular to BC. The area of "
+       "the parallelogram is: "
+       "(a) 36 cm² (b) 18 cm² (c) 72 cm² (d) 144 cm²"),
+    _q(25, "A", 1, "areas-of-parallelograms-and-triangles",
+       "A parallelogram and a triangle lie on the same base and "
+       "between the same parallel lines. If the area of the triangle "
+       "is 12 cm², then the area of the parallelogram will be: "
+       "(a) 12 cm² (b) 6 cm² (c) 24 cm² (d) 18 cm²"),
+    _q(26, "A", 1, "circles",
+       "The longest chord of a circle is: "
+       "(a) Radius (b) Diameter (c) Arc (d) None of the above"),
+    _q(27, "A", 1, "circles",
+       "A chord of a circle is equal to the radius of the circle. "
+       "The angle subtended by the chord at the centre of the circle "
+       "will be: (a) 50° (b) 120° (c) 60° (d) 100°"),
+    _q(29, "A", 1, "constructions",
+       "In a triangle ABC, AB = 6 cm and ∠A = 90°. The construction "
+       "of this triangle is not possible if the sum of BC and AC is: "
+       "(a) 8 cm (b) 10 cm (c) 6 cm (d) 12 cm"),
+    _q(30, "A", 1, "herons-formula",
+       "If the sides of a triangle are 5 cm, 12 cm and 13 cm, its "
+       "area will be: (a) 30 cm² (b) 40 cm² (c) 78 cm² (d) 65 cm²"),
+    _q(31, "A", 1, "herons-formula",
+       "The area of an equilateral triangle with side 2√2 cm is: "
+       "(a) 8√3 cm² (b) 8√2 cm² (c) 2√3 cm² (d) 6√3 cm²"),
+    _q(32, "A", 1, "surface-areas-and-volumes",
+       "The diameter of the base of a cone is 10.5 cm and its slant "
+       "height is 10 cm. The curved surface area of the cone is: "
+       "(a) 164 cm² (b) 235 cm² (c) 165 cm² (d) 263 cm²"),
+    _q(33, "A", 1, "surface-areas-and-volumes",
+       "If the radius of a cylinder is 4 cm and its height is 10 cm, "
+       "then the total surface area of the cylinder is: "
+       "(a) 440 cm² (b) 352 cm² (c) 400 cm² (d) 412 cm²"),
+    _q(34, "A", 1, "surface-areas-and-volumes",
+       "If the volume and the total surface area of a cube are "
+       "numerically equal, then the side of this cube will be: "
+       "(a) 1 unit (b) 2 units (c) 4 units (d) 6 units"),
+    _q(35, "A", 1, "surface-areas-and-volumes",
+       "The surface area of a sphere of radius 3.5 cm is: "
+       "(a) 77 cm² (b) 154 cm² (c) 308 cm² (d) 77/2 cm²"),
+    _q(36, "A", 1, "statistics",
+       "The mean of the first 3 even numbers is: "
+       "(a) 2 (b) 6 (c) 4 (d) 12"),
+    _q(37, "A", 1, "statistics",
+       "In a cricket match, a player scored 12, 18, 13, 5, 4, 11, 5, "
+       "5, 6, 12 in the first 10 innings. The mode of the runs scored "
+       "by the player is: (a) 18 (b) 12 (c) 5 (d) 13"),
+    _q(38, "A", 1, "statistics",
+       "The median of the data 2, 7, 9, 5, 11, 13, 8 is: "
+       "(a) 5 (b) 7 (c) 8 (d) 11"),
+    _q(39, "A", 1, "probability",
+       "A coin is tossed 1000 times and heads are obtained 600 "
+       "times. The probability of getting a tail is: "
+       "(a) 3/5 (b) 2/5 (c) 4/5 (d) 6/5"),
+    _q(40, "A", 1, "probability",
+       "The probability of a sure event is: "
+       "(a) 0 (b) 1/2 (c) 1 (d) 2/3"),
+]
+
+_W152_JAC9_ENTRY = {
+    "id": "jac-9-2024-model",
+    "class_num": 9,
+    "board": "Jharkhand Academic Council (JAC)",
+    "year": 2024,
+    "set_label": "Model Question Paper · Annual Examination 2023-24",
+    "source_name": "Jharkhand Council of Educational Research and Training (JCERT), Ranchi — Model Question Paper, Annual Examination 2023-24, Class 9 Mathematics (bilingual Hindi/English; English version stored) — as mirrored by AglaSem (docs.aglasem.com)",
+    "source_url": "https://docs.aglasem.com/view/4ea4f770-c805-11ee-922b-0a5e36bc6706",
+    "note": "Real printed structure: 40 multiple-choice questions of 1 mark each, Full Marks 40, Time 1 hour 30 minutes, all questions compulsory, no negative marking. Five printed questions are not stored: Q2 and Q16 (two options are illegible in the official copy), Q17 and Q18 (the question is defined only by its figure) and Q28 (the answer is read wholly from a figure). Q24 is stored with the figure's one extra fact stated in words (AE is the altitude to BC); every other stored question is complete in its printed text. Stored questions keep their printed numbers, so the numbering runs 1-40 with those five gaps. Chapter tags follow the NCERT Class 9 book the paper is set from, including its Areas of Parallelograms and Triangles, Constructions and Probability chapters.",
+    "section_titles": {
+        "A": "Multiple Choice Questions — choose the correct option (1 mark each)",
+    },
+    "duration_seconds": 5400,
+    "max_marks": 40,
+    "max_questions": 40,
+    "full_count": {"A": 40},
+    "full_marks": {"A": 40},
+    "questions": _JAC9_2024_QUESTIONS,
+}
+
+_JAC8_2025_QUESTIONS = [
+    _q(3, "A", 1, "squares-and-square-roots",
+       "Which of the following is not a square number? "
+       "(a) 12 (b) 121 (c) 12321 (d) 1234321"),
+    _q(4, "A", 1, "squares-and-square-roots",
+       "How many perfect square numbers are there between 441 and "
+       "484? (a) 0 (b) 1 (c) 2 (d) 3"),
+    _q(5, "A", 1, "mensuration",
+       "A square floor has one side of 5 m. The area of the floor "
+       "will be: (a) 5 m (b) 25 m (c) 25 square metres "
+       "(d) 25 square units"),
+    _q(6, "A", 1, "exponents-and-powers",
+       "What will be the value of (−7)³? "
+       "(a) −243 (b) 343 (c) 143 (d) −343"),
+    _q(7, "A", 1, "cubes-and-cube-roots",
+       "What will be the cube root of 2 × 2 × 2 × 3 × 3 × 3 × 4 × 4 "
+       "× 4? (a) 2 (b) 3 (c) 4 (d) 24"),
+    _q(8, "A", 1, "exponents-and-powers",
+       "For an integer a, in a^m, m is called the: "
+       "(a) base (b) constant (c) variable (d) exponent"),
+    _q(9, "A", 1, "rational-numbers",
+       "The multiplicative inverse of 2/3 is: "
+       "(a) −2/3 (b) 2/3 (c) 3/2 (d) −3/2"),
+    _q(10, "A", 1, "exponents-and-powers",
+       "a^m × b^m will be equal to: "
+       "(a) (a + b)^m (b) (a + b)^(2m) (c) (ab)^(2m) (d) (ab)^m"),
+    _q(11, "A", 1, "playing-with-numbers",
+       "If 4A + B3 = 55, then the values of A and B are respectively: "
+       "(a) A = 2, B = 3 (b) A = 2, B = 1 (c) A = 1, B = 2 "
+       "(d) A = 3, B = 2"),
+    _q(12, "A", 1, "playing-with-numbers",
+       "If the number 234x is divisible by 6, then the value of x "
+       "will be: (a) 3 (b) 6 (c) 9 (d) 5"),
+    _q(13, "A", 1, "algebraic-expressions-and-identities",
+       "The numerical coefficient of (4/7)x² is: "
+       "(a) 4 (b) 7 (c) 4/7 (d) 4x²"),
+    _q(14, "A", 1, "algebraic-expressions-and-identities",
+       "The value of (a + b)(a + b) will be: "
+       "(a) a² − b² (b) a² + b² (c) (a + b)² (d) (a − b)²"),
+    _q(15, "A", 1, "algebraic-expressions-and-identities",
+       "The expansion of (a + 2)² is: "
+       "(a) a² + 4 (b) a² − 4 (c) a² + 2ab + 4 (d) a² + 4a + 4"),
+    _q(16, "A", 1, "factorisation",
+       "All the factors of 5a²b are: "
+       "(a) 5 × a² × b (b) 5 × a × a × b (c) 5 × a × b² "
+       "(d) 5 × a × a × a"),
+    _q(17, "A", 1, "factorisation",
+       "(x + a)(x + b) is the factorised form of: "
+       "(a) x² + (a + b)x + ab (b) x² − (a − b)(x − ab) "
+       "(c) x² − (a + b)x + ab (d) x² + (a − b)x + ab"),
+    _q(18, "A", 1, "linear-equations-in-one-variable",
+       "How many solutions can a linear equation in one variable "
+       "have? (a) 1 (b) 2 (c) 0 (d) 3"),
+    _q(19, "A", 1, "linear-equations-in-one-variable",
+       "What is the solution of the equation 5x + 7 = 2x + 8? "
+       "(a) x = 1/3 (b) x = −1/3 (c) x = 3 (d) x = 1"),
+    _q(20, "A", 1, "comparing-quantities",
+       "In a group of 50 mangoes, 40% of the mangoes are ripe. The "
+       "number of ripe mangoes will be: "
+       "(a) 40 (b) 50 (c) 30 (d) 20"),
+    _q(21, "A", 1, "comparing-quantities",
+       "Discount percentage is always calculated on the ........ of "
+       "the item. (a) selling price (b) cost price (c) marked price "
+       "(d) additional expenditure"),
+    _q(22, "A", 1, "direct-and-inverse-proportions",
+       "In x/y = k, k is called the: "
+       "(a) coefficient (b) quotient (c) constant (d) none of these"),
+    _q(23, "A", 1, "direct-and-inverse-proportions",
+       "If x and y are in inverse proportion, then: "
+       "(a) x = ky (b) x = k/y (c) xy = k (d) x/y = k"),
+    _q(24, "A", 1, "understanding-quadrilaterals",
+       "If each of the three angles of a quadrilateral is equal to "
+       "90°, then the fourth angle is: "
+       "(a) 180° (b) 135° (c) 45° (d) 90°"),
+    _q(25, "A", 1, "understanding-quadrilaterals",
+       "For which of the following quadrilaterals are the diagonals "
+       "equal? (a) Trapezium (b) Rhombus (c) Parallelogram "
+       "(d) Rectangle"),
+    _q(26, "A", 1, "understanding-quadrilaterals",
+       "What is the sum of the angles of a hexagon? "
+       "(a) 180° (b) 360° (c) 540° (d) 720°"),
+    _q(27, "A", 1, "visualising-solid-shapes",
+       "Which of the following will not form a polyhedron? "
+       "(a) 3 triangles (b) 2 triangles and 3 parallelograms "
+       "(c) 8 triangles (d) 1 pentagon and 5 triangles"),
+    _q(28, "A", 1, "visualising-solid-shapes",
+       "Which three-dimensional shape does not have a vertex? "
+       "(a) Pyramid (b) Prism (c) Cone (d) Sphere"),
+    _q(29, "A", 1, "mensuration",
+       "Area of a rectangle = ? "
+       "(a) 4 × side (b) 1/2 × base × height (c) length × width "
+       "(d) 2 × (length + breadth)"),
+    _q(30, "A", 1, "mensuration",
+       "If the length of one side of a square is 25 cm, then what "
+       "will be its perimeter? "
+       "(a) 625 sq cm (b) 100 sq cm (c) 5 cm (d) 100 cm"),
+    _q(31, "A", 1, "visualising-solid-shapes",
+       "A shape which has three dimensions is called a: "
+       "(a) two-dimensional shape (b) three-dimensional shape "
+       "(c) both of the above (d) none of these"),
+    _q(33, "A", 1, "data-handling",
+       "The range of the data 9, 8, 4, 3, 2, 1, 6, 4, 8, 10, 12, 15, "
+       "4, 3 is: (a) 15 (b) 14 (c) 12 (d) 10"),
+    _q(34, "A", 1, "introduction-to-graphs",
+       "The coordinates of the point located at a distance of 3 "
+       "units from the x-axis and 6 units from the y-axis are: "
+       "(a) (0, 3) (b) (6, 0) (c) (3, 6) (d) (6, 3)"),
+    _q(35, "A", 1, "squares-and-square-roots",
+       "Find the square root of 0.0081. "
+       "(a) 9.0 (b) 0.9 (c) 0.09 (d) All of these"),
+    _q(36, "A", 1, "squares-and-square-roots",
+       "How many perfect square numbers are there between two "
+       "consecutive square numbers? "
+       "(a) 0 (b) 1 (c) 2 (d) Infinitely many"),
+    _q(37, "A", 1, "rational-numbers",
+       "In which option are 2/3, 11/15, 5/12 placed in descending "
+       "order? (a) 2/3, 5/12, 11/15 (b) 5/12, 2/3, 11/15 "
+       "(c) 11/15, 2/3, 5/12 (d) 11/15, 5/12, 2/3"),
+    _q(38, "A", 1, "rational-numbers",
+       "What will be the value of 5/9 + (−8/9)? "
+       "(a) 13/9 (b) −1/3 (c) 1/3 (d) 3/9"),
+    _q(39, "A", 1, "exponents-and-powers",
+       "If a = −1 and b = 2, then what will be the value of "
+       "a^b × b^a? (a) 1/2 (b) 2 (c) −3/2 (d) −1/2"),
+    _q(40, "A", 1, "understanding-quadrilaterals",
+       "An angle of 120° is called: "
+       "(a) an acute angle (b) a right angle (c) an obtuse angle "
+       "(d) a complementary angle"),
+    _q(42, "A", 1, "playing-with-numbers",
+       "Which is correct for the three-digit number abc? "
+       "(a) a + b + c (b) a + 10b + 100c (c) a × b × c "
+       "(d) 100a + 10b + c"),
+    _q(43, "A", 1, "algebraic-expressions-and-identities",
+       "Which of the following is a binomial algebraic expression? "
+       "(a) x² − 1 (b) 2xy (c) xy (d) 2x²y"),
+    _q(44, "A", 1, "mensuration",
+       "The formula for the total surface area of a cube is: "
+       "(a) 2πrh (b) 2πr(h + r) (c) 4l² (d) 6l²"),
+    _q(46, "A", 1, "cubes-and-cube-roots",
+       "What will be the cube root of 32.768? "
+       "(a) 3.2 (b) 3.3 (c) 3.5 (d) 3.6"),
+    _q(48, "A", 1, "squares-and-square-roots",
+       "The square root of 0.25 will be: "
+       "(a) 5 (b) 5.0 (c) 0.5 (d) 0.25"),
+    _q(50, "A", 1, "visualising-solid-shapes",
+       "Which of the following is an example of a 3D figure? "
+       "(a) Sphere (b) Square (c) Rectangle (d) Triangle"),
+]
+
+_W152_JAC8_ENTRY = {
+    "id": "jac-8-2025-model",
+    "class_num": 8,
+    "board": "Jharkhand Academic Council (JAC)",
+    "year": 2025,
+    "set_label": "Model Question Paper 2024-25 · MCQ Based Questions",
+    "source_name": "Jharkhand Council of Educational Research and Training (JCERT), Ranchi — Model Question Paper (2024-25), Class 8 Mathematics, MCQ Based Questions (bilingual Hindi/English; English version stored) — as mirrored by AglaSem (docs.aglasem.com)",
+    "source_url": "https://docs.aglasem.com/view/6e347e9c-fbff-11ef-a4b3-0a5e36bc6706",
+    "note": "Real printed structure: 50 multiple-choice questions of 1 mark each, Full Marks 50, Time 1 hour, all questions compulsory, no negative marking. Seven printed questions are not stored: Q1, Q2, Q45 and Q47 (fraction options or the stem number are scrambled/illegible in the official copy), Q32 (option (d) is illegible in the copy), Q49 (the stem as printed, 2x+3 = 2, is inconsistent with its own options and key) and Q41 ('Who is Ramanuja?' — a general-knowledge question, not mathematics). In Q35, Q46 and Q48 the copy's hyphens are broken decimal points; the decimals are stored as printed in the paper (e.g. square root of 0.0081). Two source misprints are corrected in the stored text and recorded here: Q21's English option (c) prints 'face value' for the Hindi marked price (अंकित मूल्य), and Q50's English option (b) prints 'class' for the Hindi square (वर्ग). Stored questions keep their printed numbers, so the numbering runs 1-50 with those seven gaps. Chapter tags follow the NCERT Class 8 book, including its Playing with Numbers and Visualising Solid Shapes chapters; Q40 (naming a 120° angle) is tagged to Understanding Quadrilaterals, the Class 8 geometry chapter.",
+    "section_titles": {
+        "A": "MCQ Based Questions — choose the correct option (1 mark each)",
+    },
+    "duration_seconds": 3600,
+    "max_marks": 50,
+    "max_questions": 50,
+    "full_count": {"A": 50},
+    "full_marks": {"A": 50},
+    "questions": _JAC8_2025_QUESTIONS,
+}
+
+_JAC11_2024_QUESTIONS = [
+    _q(1, "A", 1, "sets",
+       "The number of proper subsets of the set of vowels of the "
+       "English alphabet is: (a) 32 (b) 25 (c) 30 (d) 31"),
+    _q(2, "A", 1, "sets",
+       "Which of the following is incorrect? "
+       "(a) (A ∪ B)' ≠ A' ∪ B' (b) (A ∩ B)' ≠ A' ∩ B' "
+       "(c) A ∩ A' = φ (d) A ∩ B ≠ B ∩ A"),
+    _q(3, "A", 1, "sets",
+       "In the given Venn diagram, U = {2, 3, 4, 5, 6, 7, 8}, "
+       "A = {2, 3, 4, 7, 8} and B = {2, 5, 6, 8}. Then "
+       "(A − B) ∪ (B − A) equals: (a) {3, 4, 7} "
+       "(b) {3, 4, 5, 6, 7} (c) {2, 3, 4, 5, 6, 7, 8} "
+       "(d) {2, 3, 4, 7, 8}"),
+    _q(4, "A", 1, "sets",
+       "The set-builder form of the interval [−2, 7] is: "
+       "(a) {x : x ∈ R, −2 ≤ x ≤ 7} (b) {x : x ∈ R, −2 < x < 7} "
+       "(c) {x : x ∈ R, −2 ≤ x < 7} (d) {x : x ∈ R, −2 < x ≤ 7}"),
+    _q(5, "A", 1, "relations-and-functions",
+       "If (x + 3, 5) = (6, 2x + y), then x and y are respectively: "
+       "(a) −3, 11 (b) 3, 1 (c) 3, −1 (d) 2, 1"),
+    _q(6, "A", 1, "relations-and-functions",
+       "The domain of the function f(x) = 1/√(9 − x²) is: "
+       "(a) −3 ≤ x ≤ 3 (b) −3 < x < 3 (c) −9 ≤ x ≤ 9 (d) −9 < x < 9"),
+    _q(7, "A", 1, "relations-and-functions",
+       "The range of the greatest integer function f(x) = [x] is: "
+       "(a) R (b) Z (c) N (d) {−1, 0, 1}"),
+    _q(8, "A", 1, "trigonometric-functions",
+       "The radian measure of 40°30′ is: "
+       "(a) 9π/40 (b) π/40 (c) 2π/9 (d) π"),
+    _q(9, "A", 1, "trigonometric-functions",
+       "cos(−15π/4) is equal to: "
+       "(a) 1/2 (b) −1/√2 (c) 1/√2 (d) √3/2"),
+    _q(10, "A", 1, "trigonometric-functions",
+       "2 sin 15° cos 75° is equal to: "
+       "(a) (2 + √3)/2 (b) 1 (c) √3/2 (d) (2 − √3)/2"),
+    _q(11, "A", 1, "trigonometric-functions",
+       "√((1 − cos 2A)/(1 + cos 2A)) is equal to: "
+       "(a) tan A (b) cot A (c) tan(A/2) (d) cot(A/2)"),
+    _q(12, "A", 1, "complex-numbers-and-quadratic-equations",
+       "(−5i)(i/8) is equal to: "
+       "(a) 0 + i (b) 1/8 + 0i (c) 0 + 2i (d) 5/8 + 0i"),
+    _q(13, "A", 1, "complex-numbers-and-quadratic-equations",
+       "The argument of z = 1 + i is: "
+       "(a) −π/4 (b) π/2 (c) π (d) π/4"),
+    _q(14, "A", 1, "linear-inequalities",
+       "The solution set of −12 < 3x − 5 is: "
+       "(a) (−∞, −7/3) (b) (−∞, 7/3) (c) (7/3, ∞) (d) (−7/3, ∞)"),
+    _q(15, "A", 1, "linear-inequalities",
+       "If x is real and |x| < 3, then: "
+       "(a) x ≥ 3 (b) −3 < x < 3 (c) x ≤ −3 (d) −3 ≤ x ≤ 3"),
+    _q(16, "A", 1, "permutations-and-combinations",
+       "The value of ⁴C₃ is: (a) 12 (b) 6 (c) 4 (d) 1"),
+    _q(17, "A", 1, "permutations-and-combinations",
+       "How many 2-digit numbers can be formed from the digits 1, "
+       "2, 3, 4, if repetition of digits is not allowed? "
+       "(a) 12 (b) 6 (c) 4 (d) 1"),
+    _q(18, "A", 1, "permutations-and-combinations",
+       "If ¹⁶Cᵣ = ¹⁶Cᵣ₊₂, then r is equal to: "
+       "(a) 8 (b) 6 (c) 0 (d) 7"),
+    _q(19, "A", 1, "binomial-theorem",
+       "The number of terms in the expansion of {(1 + x)⁴}⁵ is: "
+       "(a) 25 (b) 20 (c) 21 (d) 24"),
+    _q(20, "A", 1, "binomial-theorem",
+       "The value of Σ (r = 0 to 10) of 2^r · ¹⁰Cᵣ is: "
+       "(a) 2¹⁰ (b) 3¹⁰ (c) 3 × 10! (d) 0"),
+    _q(21, "A", 1, "sequences-and-series",
+       "If a₁ = 3 and aₙ = 3aₙ₋₁ + 2 for all n > 1, then a₃ is: "
+       "(a) 33 (b) 27 (c) 33 (d) 35"),
+    _q(22, "A", 1, "sequences-and-series",
+       "In a G.P., the 3rd term is 24 and the 6th term is 192. The "
+       "1st term of the G.P. is: (a) 2 (b) 8 (c) 6 (d) 0"),
+    _q(23, "A", 1, "sequences-and-series",
+       "The A.M. of two numbers 3 and x (x > 0) is 15. Their G.M. "
+       "is: (a) 27 (b) 9 (c) 81 (d) 45"),
+    _q(24, "A", 1, "straight-lines",
+       "The slope of the line through the points (−3, 2) and (1, 4) "
+       "is: (a) 1/2 (b) 2 (c) −1/2 (d) −2"),
+    _q(25, "A", 1, "straight-lines",
+       "The angle between the lines 2x − y + 3 = 0 and "
+       "x + 2y + 3 = 0 is: (a) 90° (b) 60° (c) 45° (d) 30°"),
+    _q(26, "A", 1, "straight-lines",
+       "The midpoint of the portion of a line intercepted between "
+       "the coordinate axes is (3, 2). The equation of the line is: "
+       "(a) 2x + 3y = 12 (b) 3x + 2y = 12 (c) 4x − 3y = 6 "
+       "(d) 5x − 2y = 10"),
+    _q(27, "A", 1, "straight-lines",
+       "The distance of the point (3, −5) from the line "
+       "3x − 4y − 26 = 0 is: (a) 3 (b) 3/25 (c) 3/5 (d) 4/5"),
+    _q(28, "A", 1, "conic-sections",
+       "The radius of the circle x² + y² + 8x + 10y − 8 = 0 is: "
+       "(a) 49 (b) √33 (c) 7 (d) none of these"),
+    _q(29, "A", 1, "conic-sections",
+       "For the parabola y² = −8x, the focus and the length of the "
+       "latus rectum are respectively: (a) (2, 0) and 8 "
+       "(b) (−2, 0) and 2 (c) (−2, 0) and 8 (d) (0, −2) and 8"),
+    _q(30, "A", 1, "conic-sections",
+       "The vertices of an ellipse are (±5, 0) and its foci are "
+       "(±4, 0). The equation of the ellipse is: "
+       "(a) x²/25 + y²/9 = 1 (b) x²/9 + y²/25 = 1 "
+       "(c) x²/25 + y²/16 = 1 (d) x²/16 + y²/25 = 1"),
+    _q(31, "A", 1, "conic-sections",
+       "The eccentricity of the hyperbola x²/9 − y²/16 = 1 is: "
+       "(a) 4/3 (b) 3/4 (c) 5 (d) 5/3"),
+    _q(32, "A", 1, "introduction-to-three-dimensional-geometry",
+       "The point (−1, −2, −3) lies in the: "
+       "(a) First Octant (b) Second Octant (c) Seventh Octant "
+       "(d) Eighth Octant"),
+    _q(33, "A", 1, "introduction-to-three-dimensional-geometry",
+       "The extremities of the diagonal of a square are (1, −2, 3) "
+       "and (2, −3, 5). The length of the side of the square is: "
+       "(a) √6 (b) √3 (c) √5 (d) √7"),
+    _q(34, "A", 1, "limits-and-derivatives",
+       "If f(x) = sin 2x, then f'(π/6) is equal to: "
+       "(a) 0 (b) 1 (c) 1/2 (d) √3/2"),
+    _q(35, "A", 1, "limits-and-derivatives",
+       "The value of the limit, as x → 1, of (x¹⁵ − 1)/(x − 1) is: "
+       "(a) 0 (b) 15 (c) 14 (d) 1"),
+    _q(36, "A", 1, "limits-and-derivatives",
+       "The derivative of cos x/(1 + sin x) with respect to x is: "
+       "(a) −(1 + sin x)² (b) 1/(1 + sin x) (c) −1/(1 + sin x) "
+       "(d) none of these"),
+    _q(37, "A", 1, "statistics",
+       "If the variance of a given data is 144, then the standard "
+       "deviation of that data will be: "
+       "(a) 20736 (b) 12 (c) 0 (d) none of these"),
+    _q(38, "A", 1, "probability",
+       "In a leap year, the probability of having 53 Sundays or 53 "
+       "Mondays is: (a) 3/7 (b) 2/7 (c) 4/7 (d) 5/7"),
+    _q(39, "A", 1, "probability",
+       "The probability of getting exactly two tails in tossing a "
+       "coin thrice is: (a) 3/8 (b) 3/4 (c) 1/8 (d) 3/2"),
+    _q(40, "A", 1, "probability",
+       "The probability of getting a total of 10 in a single throw "
+       "of two dice is: (a) 1/9 (b) 1/6 (c) 1/12 (d) 5/36"),
+]
+
+_W152_JAC11_ENTRY = {
+    "id": "jac-11-2024-model",
+    "class_num": 11,
+    "board": "Jharkhand Academic Council (JAC)",
+    "year": 2024,
+    "set_label": "Model Question Paper · Annual Examination 2023-24",
+    "source_name": "Jharkhand Council of Educational Research and Training (JCERT), Ranchi — Model Question Paper, Annual Examination 2023-24, Class 11 Mathematics (bilingual Hindi/English; English version stored) — as mirrored by AglaSem (docs.aglasem.com)",
+    "source_url": "https://docs.aglasem.com/view/5b5b86aa-c805-11ee-8d6b-0a5e36bc6706",
+    "note": "Real printed structure: 40 multiple-choice questions of 1 mark each, Full Marks 40, Time 1 hour, all questions compulsory. The complete paper is stored. Q3 refers to a Venn diagram; the diagram's sets are stated in words in the stored text (U, A and B exactly as drawn), so the question is complete without the picture. Q21's options (a) and (c) both print 33 in the paper itself; they are stored as printed. The paper's own printed answer key was used only to cross-check this transcription (Wave 88: no answer key is stored).",
+    "section_titles": {
+        "A": "Multiple Choice Questions — choose the correct option (1 mark each)",
+    },
+    "duration_seconds": 3600,
+    "max_marks": 40,
+    "max_questions": 40,
+    "full_count": {"A": 40},
+    "full_marks": {"A": 40},
+    "questions": _JAC11_2024_QUESTIONS,
+}
+
+_KER7_2025_QUESTIONS = [
+    _q(1, "A", 5, "comparing-quantities",
+       "Activity 1: (a) In the table below, the height, width and "
+       "their ratio of some rectangles are given, but only two of "
+       "each. Complete the table by calculating the third: "
+       "Row 1 — Height 5 cm, Width 10 cm, Ratio ?; Row 2 — Height "
+       "6 cm, Width ?, Ratio 3 : 2; Row 3 — Height ?, Width 4 cm, "
+       "Ratio 1 : 2. (b) In a ward of a panchayat, the women and men "
+       "are in the ratio 11 : 10. There are 1793 women in the ward. "
+       "How many men are there in the ward? What is the total number "
+       "of women and men?"),
+    _q(2, "A", 5, "algebraic-expressions",
+       "Activity 2: (a) Write the following in the language of "
+       "algebra: (i) Zero added to any number gives the same number. "
+       "(ii) Twice a number subtracted from thrice the number gives "
+       "the number. (iii) A number added to a number, and then the "
+       "added number subtracted, gives the original number. "
+       "(b) Calculate the following using the simplest method: "
+       "(19 − 6.5) + 2.5."),
+    _q(3, "A", 5, "exponents-and-powers",
+       "Activity 3: (a) Consider the product of the numbers from 1 "
+       "to 25. (i) What is the highest power of 5 which divides this "
+       "product without remainder? (ii) And the highest power of 10 "
+       "dividing this product without remainder? (iii) How many "
+       "zeros does this product end with? (b) Using 15³ = 3375, "
+       "calculate the powers below: (i) (1.5)³ (ii) (0.015)³."),
+    _q(4, "A", 5, "integers",
+       "Activity 4: (a) Find the number of factors of each number "
+       "below: (i) 40 (ii) 54. (b) Find the largest common factor "
+       "and all the other common factors of 225 and 275."),
+    _q(5, "A", 5, "the-triangle-and-its-properties",
+       "Activity 5: How many different triangles can be drawn with "
+       "two sides 8 centimetres and 6 centimetres and area 12 square "
+       "centimetres?"),
+    _q(6, "A", 5, "perimeter-and-area",
+       "Activity 6: (a) Draw a rectangle of perimeter 30 centimetres "
+       "with sides of length in the ratio 1 : 2. (b) With the same "
+       "perimeter, draw another rectangle with sides in the ratio "
+       "2 : 3. (c) Calculate the areas of the two rectangles. Which "
+       "rectangle has the greatest area?"),
+    _q(7, "A", 5, "exponents-and-powers",
+       "Activity 7: (a) Calculate 512 ÷ 64 as a power of 2. "
+       "(b) Write half of 2¹⁰ as a power of 2."),
+    _q(8, "A", 5, "integers",
+       "Activity 8: (a) (i) What is the largest common factor of two "
+       "different prime numbers? (ii) Can the largest common factor "
+       "of two composite numbers be 1? (iii) If two numbers are "
+       "divided by their largest common factor, what would be the "
+       "largest common factor of the quotients? (b) How many factors "
+       "does 35 have?"),
+]
+
+_W152_KER7_ENTRY = {
+    "id": "kerala-7-2025-second-term",
+    "class_num": 7,
+    "board": "Kerala Board (Pareeksha Bhavan)",
+    "year": 2025,
+    "set_label": "Second Term Sample Practice Paper · Samagra Plus",
+    "source_name": "Samagra Shiksha Kerala (Samagra Plus) — Second Term Sample Practice Paper, Class 7 Mathematics, English version (the same official document also carries the Malayalam version and the scoring key) — as mirrored by AglaSem (docs.aglasem.com)",
+    "source_url": "https://docs.aglasem.com/view/b50cc17c-07d4-11f0-90a1-0a5e36bc6706",
+    "note": "Real printed structure: 8 activities of 5 scores each, Score 30, Time 2 hours (plus 15 minutes cool-off time); the candidate attempts any six of the eight activities, so the stored activities total 40 scores against the paper's Score of 30. The paper prints no year; it is dated by its official publication on 23 March 2025. Four sub-parts are not stored because their content is missing or figure-only in the official copy: Activity 2(b)(i) (the fraction parts of the expression are lost in both the English and Malayalam versions), Activity 5(a) (the two triangles are shown only as figures), Activity 7(c) (the expression itself is missing in the source) and Activity 8(b)(i) (the power expression is missing in the source). Activities 4 and 8 (factors and common factors) are tagged to the Integers chapter as the closest Class 7 chapter. The paper's printed scoring key was used only to cross-check this transcription (Wave 88: no key is stored).",
+    "section_titles": {
+        "A": "Activities — attempt any six of the eight activities (5 scores each)",
+    },
+    "duration_seconds": 7200,
+    "max_marks": 30,
+    "max_questions": 8,
+    "full_count": {"A": 8},
+    "full_marks": {"A": 40},
+    "questions": _KER7_2025_QUESTIONS,
+}
+
+_KER6_2025_QUESTIONS = [
+    _q(1, "A", 5, "lines-and-angles",
+       "Activity 1: In the figure, AEB is a straight line and the "
+       "rays ED and EC stand on it at E, in that order, and "
+       "∠DEC = 30°. (A) Write the name of the angle in the figure "
+       "that measures 30°. (B) Write the angle that is the linear "
+       "pair of ∠DEB. (C) If ∠AED is twice ∠BEC, write the measures "
+       "of ∠BEC and ∠AED. (D) If the measure of one angle in a "
+       "linear pair is x°, what will be the measure of the other "
+       "angle? (a) x° (b) 2x° (c) 180° − x° (d) 180° + x°"),
+    _q(2, "A", 5, "fractions",
+       "Activity 2: The monthly salary of Sheena is 45000 rupees. "
+       "She spends 9000 rupees on food. (A) What percentage of the "
+       "total income is spent on food? (B) She saves 20% of the "
+       "remaining amount. How much does she save each month? "
+       "(C) Which is equal to 30% of 80? (a) 15% of 40 "
+       "(b) 50% of 40 (c) 60% of 40 (d) 60% of 20"),
+    _q(3, "A", 5, "perimeter-and-area",
+       "Activity 3: A rectangle is 2 1/2 metres long and 3/4 metre "
+       "wide. (A) What is the perimeter of the rectangle? (B) What "
+       "is the area of the rectangle? (C) Which is not equal to "
+       "2 1/2? (a) 10/4 (b) 5/2 (c) 2 2/4 (d) 13/6"),
+    _q(4, "A", 5, "mensuration",
+       "Activity 4: The inner length of a water tank is 5 metres, "
+       "its width is 4 metres and its height is 3 metres. (A) What "
+       "is the volume of the water tank? (B) After one day's use, "
+       "the water level decreased by 50 centimetres. If so, how "
+       "many litres of water was used on that day?"),
+    _q(6, "A", 5, "perimeter-and-area",
+       "Activity 6: A rectangular board is 2 metres 5 centimetres "
+       "long and 1 metre 75 centimetres wide. (A) Which of the "
+       "following is the length of the board? (a) 2.50 metres "
+       "(b) 2.05 metres (c) 2.005 metres (d) 2.5 metres (B) Write "
+       "the fractional form of the width of the rectangle. (C) Find "
+       "the perimeter of the rectangle."),
+    _q(7, "A", 5, "fractions",
+       "Activity 7: Complete the table by choosing the correct ones "
+       "from the circle. The circle contains: 0.3, 1/8, 1/4, 1/5, "
+       "0.5, 3/100, 2/5. Write the decimal form / fractional form "
+       "of each percentage: 25% (done for you: 1/4), 20%, 50%, 40%, "
+       "12.5%, 30%."),
+    _q(8, "A", 5, "algebra",
+       "Activity 8: (A) Complete the table. Neenu has 3 notes of 10 "
+       "rupees, 2 notes of 20 rupees and 1 note of 50 rupees: total "
+       "calculation (3×10) + (2×20) + (1×50), total 120. Reghu has "
+       "2, 5 and 2 such notes: (2×10) + (5×20) + (2×50), total 220. "
+       "Abu has 1 note of 10 rupees, 3 notes of 20 rupees and 2 "
+       "notes of 50 rupees: write Abu's total calculation and his "
+       "total. (B) Consider the number of 10-rupee notes is 'a', "
+       "the number of 20-rupee notes is 'n', the number of 50-rupee "
+       "notes is 'c' and the total amount is 't'. How can you write "
+       "the total amount in algebraic form?"),
+]
+
+_W152_KER6_ENTRY = {
+    "id": "kerala-6-2025-annual",
+    "class_num": 6,
+    "board": "Kerala Board (Pareeksha Bhavan)",
+    "year": 2025,
+    "set_label": "Annual Evaluation 2024-2025 · Set A (E-603)",
+    "source_name": "Samagra Shiksha Kerala — Annual Evaluation 2024-2025, Class 6 (Standard VI) Mathematics, Set A, paper code E-603, English version (the same official document also carries the Malayalam version) — as mirrored by AglaSem (docs.aglasem.com)",
+    "source_url": "https://docs.aglasem.com/view/6d01fd6e-ec96-11f0-bff6-0a5e36bc6706",
+    "note": "Real printed structure: 8 activities, Time 2 hours (plus 15 minutes cool-off time); the candidate attempts any six of the eight activities. The printed paper states no per-activity score; each activity is stored at 5 scores and the paper's maximum at 30, following the Samagra Shiksha activity-paper pattern printed on the companion Class 7 paper in this library. Activity 5 is not stored: its table has to be completed from a bar graph whose bar values cannot be read with certainty from the official copy. Activity 1's figure is described in words in the stored text (the straight line AEB, the rays ED and EC and the marked 30° angle), and Activity 7's circle of choices is listed in the text, so both are complete without pictures. One source misprint is corrected in the stored text and recorded here: Activity 2(B)'s English version prints 'earns' where the Malayalam version of the same paper reads 'saves' (സമ്പാദിക്കുന്നു); the stored text uses 'saves'. Stored activities keep their printed numbers, so the numbering runs 1-8 with Activity 5 missing. Chapter tags: the percentage activities (2 and 7) sit in the Fractions chapter, the closest Class 6 chapter in the app; Activity 4 (volume) carries the Mensuration tag and Activity 8 the Algebra tag, the measures and algebra families these Samagra activities belong to.",
+    "section_titles": {
+        "A": "Activities — attempt any six activities from the eight activities given",
+    },
+    "duration_seconds": 7200,
+    "max_marks": 30,
+    "max_questions": 8,
+    "full_count": {"A": 8},
+    "full_marks": {"A": 40},
+    "questions": _KER6_2025_QUESTIONS,
+}
+
+
 PAPERS = [
     {
         "id": "cbse-12-2024",
@@ -9623,6 +10256,11 @@ PAPERS = [
     _TN10_2022_ENTRY,
     _JAC10_2026MODEL_ENTRY,
     _MH12_2025JUL_ENTRY,
+    _W152_JAC9_ENTRY,
+    _W152_JAC8_ENTRY,
+    _W152_JAC11_ENTRY,
+    _W152_KER7_ENTRY,
+    _W152_KER6_ENTRY,
 
 ]
 

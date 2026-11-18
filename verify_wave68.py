@@ -23,7 +23,7 @@ Checks:
     present only for word problems, answer never duplicated.
  4. Template/CSS pins — plain + intro hooks, no explanation
     paragraph, no notebook panel in the chat flow, NO example
-    chips (Wave-69 removal on Suraj's order), pins ?v=49 / v26 (Wave 155).
+    chips (Wave-69 removal on Suraj's order), pins ?v=50 / v27 (Wave 160).
  5. Mini-battery — 24 known-value questions across topics
     and languages stay EXACT (the full 515 + 984 batteries
     were diffed per-item during the wave: 0 verdict flips,
@@ -168,8 +168,8 @@ check("no notebook panel in chat",
       '"steps notebook"' not in INDEX and "makeHwToggle" not in INDEX)
 check("no example chips (Wave 69)", INDEX.count('class="example-chip"') == 0
       and 'id="example-chips"' not in INDEX)
-check("pins ?v=49 / v26 (Wave 155)", "v='49'" in BASE
-      and 'GANITRA_CACHE = "ganitra-static-v26"' in SW)
+check("pins ?v=50 / v27 (Wave 160)", "v='50'" in BASE
+      and 'GANITRA_CACHE = "ganitra-static-v27"' in SW)
 check("wave68 CSS present", ".example-chip" not in CSS
       and ".plain-reply" in CSS and ".answer-intro" in CSS)
 
