@@ -642,47 +642,374 @@ body.chat-page .chat-log {
   color: var(--muted); font-size: 16.5px; line-height: 1.6;
   max-width: 560px; margin: 0 auto;
 }
-/* Wave 155: short greeting row + mascot + thought line. The
-   mascot is an original SVG teddy drawn inline in
-   templates/index.html (no image file; nothing to do with the
-   logo or the parked 3D scene). It waves a paw, blinks and
-   bobs gently beside the short greeting, and the day's
-   rotating thought sits below as a small muted line. */
+/* Wave 155: short greeting row + thought line (the day's
+   rotating thought sits below the greeting as a small muted
+   line). Wave 160 (Suraj, 18 Nov 2026 — the teddy was
+   rejected; character locked by him, "Yahi done karo"): the
+   mascot is a small chubby CREAM ROBOT with Ganitra
+   teal-green parts — ear caps, hands, feet, chest button,
+   belly patch — glowing teal eyes and TWO antenna LIGHTS,
+   hand-drawn inline SVG in templates/index.html (no image
+   file; NOT the logo, NOT the parked 3D scene, no letter
+   G). Both hands always show. Behaviour, all CSS:
+   - on page open: a flying kiss, then hearts float up like
+     bubbles (one-shot), then the idle cycle takes over;
+   - idle: gentle bob, blink, wave-then-rest, antenna lights
+     softly pulsing, plus occasional beats — a laugh (happy
+     arc eyes, wide mouth, tiny bounce, lights twinkle), an
+     antenna grab (the right arm stretches FULLY up and
+     wraps the right light ball — the grab hand is drawn
+     centred exactly on that ball — eyes looking up
+     happily), and monkey play (hops with kicking legs, one
+     hand scratching its head, cheeky grin, lights
+     twinkling);
+   - while Ganitra solves, the typing bubble carries a mini
+     robot duo (templates/index.html JS): a HUMAN thinking
+     pose (one hand on its head, the other on its waist,
+     eyes up) alternating with the WRITING pose (notebook +
+     green pencil, squiggles appearing), its lights blinking
+     alternately left-right, brighter; the writing robot
+     also grabs its light ball now and then;
+   - a correct chat-test answer gets the laughing mini
+     robot with a quick light twinkle.
+   FEELINGS pass (Suraj, 18 Nov 2026 — "real feelings honi
+   chahiye"; benchmark: Muse's own character, whose face
+   makes the VIEWER feel something — an original character
+   here, built to the same emotional readability): every
+   state has its own facial expression group (smile / laugh
+   / kiss / look-up / cheeky monkey grin / thinking gaze /
+   focused writing gaze), the eyes mostly meet the student's
+   with soft blinks, a gentle "noticing you" head tilt leans
+   in now and then, beats land after a breath of stillness
+   (the laugh bounce even dips in anticipation first), and
+   the decorative loops run at slightly irregular, unaligned
+   lengths with overshoot-and-settle easing — calm and warm,
+   never a stiff metronome.
+   Reduced motion: everything stills — plain smile pose,
+   writing pose only in the bubble, static soft light glow. */
 .empty-hello {
   display: flex; align-items: center; justify-content: center;
   gap: 12px;
 }
 .empty-thought { font-size: 15px; }
-.mascot {
-  width: 80px; height: 80px; flex: none;
-  animation: mascot-bob 3.4s ease-in-out infinite;
+.robot {
+  width: 80px; height: 80px; flex: none; overflow: visible;
+  animation: robot-bob 3.4s ease-in-out infinite;
 }
-.mascot-eyes {
+.robot-eyes {
   transform-box: fill-box; transform-origin: center;
-  animation: mascot-blink 4.8s ease-in-out infinite;
+  animation: robot-blink 5.3s ease-in-out infinite;
 }
-.mascot-paw {
-  transform-box: fill-box; transform-origin: 12% 88%;
-  animation: mascot-wave 2.8s ease-in-out infinite;
+.robot-arm {
+  transform-box: fill-box; transform-origin: 8% 92%;
+  animation: robot-wave 3.1s ease-in-out infinite,
+    robot-grab-hide 19.2s linear 2.2s infinite;
 }
-@keyframes mascot-bob {
+.robot-tilt {
+  transform-box: fill-box; transform-origin: 50% 100%;
+  animation: robot-notice-tilt 14.4s ease-in-out 2.2s infinite;
+}
+.robot-inner {
+  animation: robot-laugh-bounce 9.6s ease-in-out 2.2s infinite;
+}
+.robot-face-smile {
+  animation: robot-smile-intro 2.2s linear 1 both,
+    robot-face-smile-cycle 9.6s linear 2.2s infinite;
+}
+.robot-face-laugh {
+  opacity: 0;
+  animation: robot-face-laugh-cycle 9.6s linear 2.2s infinite;
+}
+.robot-face-kiss {
+  opacity: 0;
+  animation: robot-kiss-face 2.2s linear 1 both;
+}
+.robot-kiss-hand {
+  opacity: 0;
+  animation: robot-kiss-hand 2.2s ease-in-out 1 both;
+}
+.robot-heart {
+  opacity: 0;
+  animation: robot-heart-rise 1.6s ease-out 1 both;
+  animation-delay: calc(1.15s + var(--d, 0s));
+}
+.robot-face-lookup, .robot-grab-arm {
+  opacity: 0;
+  animation: robot-grab-show 19.2s linear 2.2s infinite;
+}
+.robot-hop {
+  animation: robot-monkey-hop 28.8s linear 2.2s infinite;
+}
+.robot-arm-rest {
+  animation: robot-monkey-hide 28.8s linear 2.2s infinite;
+}
+.robot-monkey-face {
+  opacity: 0;
+  animation: robot-monkey-show 28.8s linear 2.2s infinite;
+}
+.robot-monkey-scratch {
+  opacity: 0;
+  transform-box: fill-box; transform-origin: 85% 90%;
+  animation: robot-monkey-show 28.8s linear 2.2s infinite,
+    robot-scratch-wiggle 28.8s linear 2.2s infinite;
+}
+.robot-foot-l, .robot-foot-r {
+  transform-box: fill-box; transform-origin: 50% 0%;
+}
+.robot-foot-l {
+  animation: robot-kick-l 28.8s linear 2.2s infinite;
+}
+.robot-foot-r {
+  animation: robot-kick-r 28.8s linear 2.2s infinite;
+}
+.robot-light-halo {
+  transform-box: fill-box; transform-origin: center;
+  animation: robot-glow-soft 3.7s ease-in-out infinite;
+}
+.robot-light-flare {
+  transform-box: fill-box; transform-origin: center;
+  opacity: 0;
+  animation: robot-twinkle 9.6s linear 2.2s infinite;
+}
+.robot-light-flare2 {
+  transform-box: fill-box; transform-origin: center;
+  opacity: 0;
+  animation: robot-twinkle-monkey 28.8s linear 2.2s infinite;
+}
+.robot-duo {
+  position: relative; display: inline-block; flex: none;
+  width: 47px; height: 47px; pointer-events: none;
+}
+.robot-duo svg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block;
+}
+.robot-pose-think {
+  transform: rotate(-2deg); transform-origin: 50% 90%;
+  animation: robot-pose-think 4.8s ease-in-out infinite;
+}
+.robot-pose-write {
+  animation: robot-pose-write 4.8s ease-in-out infinite;
+}
+.bubble.typing.robot-host {
+  display: flex; align-items: center; gap: 9px;
+}
+.robot-duo .robot-light-halo {
+  animation: robot-blink-alt 1.6s ease-in-out infinite;
+}
+.robot-duo .robot-light-halo-r {
+  animation-delay: -0.8s;
+}
+.robot-mini-face {
+  animation: robot-grab-hide 9.6s linear infinite;
+}
+.robot-mini-lookup, .robot-mini-grab {
+  opacity: 0;
+  animation: robot-grab-show 9.6s linear infinite;
+}
+.robot-pencil {
+  transform-box: fill-box; transform-origin: 30% 90%;
+  animation: robot-write 1.15s ease-in-out infinite,
+    robot-grab-hide 9.6s linear infinite;
+}
+.robot-squiggle {
+  stroke-dasharray: 100; stroke-dashoffset: 100;
+  animation: robot-squiggle 2.7s linear infinite;
+}
+.robot-squiggle.sq2 { animation-delay: 0.9s; }
+.robot-squiggle.sq3 { animation-delay: 1.8s; }
+.robot-laugh-mini {
+  float: left; width: 44px; height: 44px;
+  margin: 1px 9px 3px 0; pointer-events: none;
+}
+.robot-laugh-mini svg { width: 100%; height: 100%; display: block; }
+.robot-laugh-mini .robot-light-flare {
+  animation: robot-twinkle-once 1.4s ease-out 0.15s 1 both;
+}
+@keyframes robot-bob {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
+  45% { transform: translateY(-3px); }
+  58% { transform: translateY(-2.3px); }
 }
-@keyframes mascot-blink {
+@keyframes robot-notice-tilt {
+  0%, 56% { transform: rotate(0deg); }
+  63% { transform: rotate(-1.7deg); }
+  68% { transform: rotate(-1.2deg); }
+  74%, 100% { transform: rotate(0deg); }
+}
+@keyframes robot-blink {
   0%, 91%, 100% { transform: scaleY(1); }
   94% { transform: scaleY(0.08); }
   97% { transform: scaleY(1); }
 }
-@keyframes mascot-wave {
+@keyframes robot-wave {
   0%, 58%, 100% { transform: rotate(0deg); }
   10% { transform: rotate(-16deg); }
   22% { transform: rotate(9deg); }
   34% { transform: rotate(-12deg); }
   46% { transform: rotate(5deg); }
 }
+@keyframes robot-laugh-bounce {
+  0%, 78% { transform: translateY(0); }
+  79.5% { transform: translateY(0.9px); }
+  82% { transform: translateY(-2.6px); }
+  86% { transform: translateY(0); }
+  90% { transform: translateY(-1.6px); }
+  94%, 100% { transform: translateY(0); }
+}
+@keyframes robot-smile-intro {
+  0% { opacity: 1; }
+  12% { opacity: 0; }
+  58% { opacity: 0; }
+  78% { opacity: 1; }
+  100% { opacity: 1; }
+}
+@keyframes robot-face-smile-cycle {
+  0%, 76% { opacity: 1; }
+  82%, 88% { opacity: 0; }
+  94%, 100% { opacity: 1; }
+}
+@keyframes robot-face-laugh-cycle {
+  0%, 76% { opacity: 0; }
+  82%, 88% { opacity: 1; }
+  94%, 100% { opacity: 0; }
+}
+@keyframes robot-kiss-face {
+  0%, 8% { opacity: 0; }
+  16%, 58% { opacity: 1; }
+  78%, 100% { opacity: 0; }
+}
+@keyframes robot-kiss-hand {
+  0%, 8% { opacity: 0; transform: translate(3px, 3px); }
+  16%, 58% { opacity: 1; transform: translate(0, 0); }
+  78%, 100% { opacity: 0; transform: translate(2px, 2px); }
+}
+@keyframes robot-heart-rise {
+  0% { opacity: 0; transform: translateY(7px) scale(0.7); }
+  25% { opacity: 1; }
+  70% { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(-17px) scale(1.08); }
+}
+@keyframes robot-grab-show {
+  0%, 86% { opacity: 0; }
+  89.5%, 94.5% { opacity: 1; }
+  97.5%, 100% { opacity: 0; }
+}
+@keyframes robot-grab-hide {
+  0%, 86% { opacity: 1; }
+  89.5%, 94.5% { opacity: 0; }
+  97.5%, 100% { opacity: 1; }
+}
+@keyframes robot-monkey-show {
+  0%, 79% { opacity: 0; }
+  82%, 88% { opacity: 1; }
+  91%, 100% { opacity: 0; }
+}
+@keyframes robot-monkey-hide {
+  0%, 79% { opacity: 1; }
+  82%, 88% { opacity: 0; }
+  91%, 100% { opacity: 1; }
+}
+@keyframes robot-monkey-hop {
+  0%, 80% { transform: translateY(0); }
+  82.5% { transform: translateY(-7px); }
+  85% { transform: translateY(0); }
+  87.5% { transform: translateY(-5px); }
+  90%, 100% { transform: translateY(0); }
+}
+@keyframes robot-scratch-wiggle {
+  0%, 80% { transform: rotate(0deg); }
+  82% { transform: rotate(-7deg); }
+  84% { transform: rotate(6deg); }
+  86% { transform: rotate(-6deg); }
+  88% { transform: rotate(4deg); }
+  90%, 100% { transform: rotate(0deg); }
+}
+@keyframes robot-kick-l {
+  0%, 80% { transform: translate(0, 0) rotate(0deg); }
+  82.5% { transform: translate(-2.5px, -2px) rotate(-14deg); }
+  85%, 100% { transform: translate(0, 0) rotate(0deg); }
+}
+@keyframes robot-kick-r {
+  0%, 85% { transform: translate(0, 0) rotate(0deg); }
+  87.5% { transform: translate(2.5px, -2px) rotate(14deg); }
+  90%, 100% { transform: translate(0, 0) rotate(0deg); }
+}
+@keyframes robot-glow-soft {
+  0%, 100% { opacity: 0.28; transform: scale(0.92); }
+  50% { opacity: 0.52; transform: scale(1.08); }
+}
+@keyframes robot-twinkle {
+  0%, 78% { opacity: 0; transform: scale(0.7); }
+  82% { opacity: 0.75; transform: scale(1.15); }
+  86% { opacity: 0.2; transform: scale(0.95); }
+  90% { opacity: 0.6; transform: scale(1.08); }
+  94%, 100% { opacity: 0; transform: scale(0.8); }
+}
+@keyframes robot-twinkle-monkey {
+  0%, 79% { opacity: 0; transform: scale(0.7); }
+  82% { opacity: 0.8; transform: scale(1.18); }
+  85% { opacity: 0.25; transform: scale(0.95); }
+  88% { opacity: 0.65; transform: scale(1.1); }
+  91%, 100% { opacity: 0; transform: scale(0.8); }
+}
+@keyframes robot-twinkle-once {
+  0% { opacity: 0; transform: scale(0.7); }
+  30% { opacity: 0.8; transform: scale(1.15); }
+  55% { opacity: 0.25; transform: scale(0.95); }
+  75% { opacity: 0.55; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(0.85); }
+}
+@keyframes robot-blink-alt {
+  0%, 100% { opacity: 0.18; transform: scale(0.9); }
+  50% { opacity: 0.9; transform: scale(1.14); }
+}
+@keyframes robot-pose-think {
+  0%, 42% { opacity: 1; }
+  50%, 92% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes robot-pose-write {
+  0%, 42% { opacity: 0; }
+  50%, 92% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes robot-write {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(-2px, 0.8px) rotate(-3deg); }
+  50% { transform: translate(-4px, 0) rotate(1.5deg); }
+  75% { transform: translate(-2px, -0.8px) rotate(-1.5deg); }
+}
+@keyframes robot-squiggle {
+  0% { stroke-dashoffset: 100; opacity: 1; }
+  50% { stroke-dashoffset: 0; }
+  80% { stroke-dashoffset: 0; opacity: 1; }
+  92% { stroke-dashoffset: 0; opacity: 0.2; }
+  100% { stroke-dashoffset: 0; opacity: 0.2; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .mascot, .mascot-eyes, .mascot-paw { animation: none; }
+  .robot, .robot-eyes, .robot-arm { animation: none; }
+  .robot-inner, .robot-hop, .robot-tilt, .robot-face-smile,
+  .robot-face-laugh,
+  .robot-face-kiss, .robot-kiss-hand, .robot-heart,
+  .robot-face-lookup, .robot-grab-arm, .robot-arm-rest,
+  .robot-monkey-face, .robot-monkey-scratch, .robot-foot-l,
+  .robot-foot-r, .robot-light-halo, .robot-light-flare,
+  .robot-light-flare2, .robot-duo .robot-light-halo,
+  .robot-pose-think, .robot-pose-write, .robot-mini-face,
+  .robot-mini-lookup, .robot-mini-grab, .robot-pencil,
+  .robot-squiggle,
+  .robot-laugh-mini .robot-light-flare { animation: none; }
+  .robot-face-laugh, .robot-face-kiss, .robot-kiss-hand,
+  .robot-heart, .robot-face-lookup, .robot-grab-arm,
+  .robot-monkey-face, .robot-monkey-scratch, .robot-mini-lookup,
+  .robot-mini-grab, .robot-light-flare, .robot-light-flare2 {
+    opacity: 0;
+  }
+  .robot-pose-think { opacity: 0; }
+  .robot-pose-write { opacity: 1; }
+  .robot-light-halo { opacity: 0.35; }
+  .robot-squiggle { stroke-dashoffset: 0; }
 }
 body.chat-page .saathi-card {
   max-width: 560px; margin: 24px auto 4px; padding: 18px 20px;
