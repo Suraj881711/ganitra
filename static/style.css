@@ -713,6 +713,23 @@ body.chat-page .chat-log {
   justify-content: center; gap: 4px;
 }
 .empty-thought { font-size: 15px; }
+/* Wave 168 (Suraj, 18 Nov 2026, late night — "Robot ko
+   upar rakho bilkul", refined: "Jo menu wali line hai
+   naa, uske neeche rakhana hai" + "Muse hai jaise"):
+   the home robot no longer rides inside the vertically
+   centred empty-state block — it stands at the VERY TOP
+   of the content area, centred, immediately below the
+   header/menu line, like Muse's character. The logo,
+   greeting and thought stay in the centred block below,
+   untouched. Same character, same animations; the moment
+   a chat starts (body.chat-active, set by hideEmpty())
+   the top robot hides and the header buddy takes over —
+   the two never show together. */
+.empty-robot-top {
+  display: flex; justify-content: center;
+  padding-top: 10px; flex: none;
+}
+body.chat-active .empty-robot-top { display: none; }
 .robot {
   width: 80px; height: 80px; flex: none; overflow: visible;
   animation: robot-bob 3.4s ease-in-out infinite;
