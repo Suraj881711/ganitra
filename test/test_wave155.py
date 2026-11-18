@@ -5,11 +5,14 @@ Suraj's first thought was "greeting ki jagah thought"; he then
 refined it the same morning: the greeting line stays SHORT —
 "Hello <name>" — with a smile element beside it, and the
 thought goes BELOW the greeting as a small muted line. Plus a
-custom cute mascot of his own: an original SVG teddy (drawn in
-code, no stock/copyright character, no external image, NOT
-the logo) doing small normal activities — paw wave, blink,
-smile, gentle bob — so a student smiles back and the empty
-state stays positive.
+custom cute mascot of his own (drawn in code, no
+stock/copyright character, no external image, NOT the logo)
+doing small normal activities — wave, blink, smile, gentle
+bob — so a student smiles back and the empty state stays
+positive. (Wave 160 replaced the original teddy with Suraj's
+locked robot character; the mascot-specific assertions below
+were updated to the robot reality — the thoughts, greeting,
+slot and language pins are unchanged.)
 
 Pins:
   * thought bank — >= 50 thoughts, each with all 3 variants
@@ -29,8 +32,8 @@ Pins:
     prefers-reduced-motion rule stills them;
   * Wave 69 stands — no example-question chips anywhere;
   * the 3D scene stays parked (SCENE_ENABLED untouched);
-  * CSS changed, so the pins moved WITH it: ?v=49 /
-    ganitra-static-v26 everywhere.
+  * CSS changed, so the pins moved WITH it: ?v=50 /
+    ganitra-static-v27 everywhere.
 """
 import re
 from datetime import date, datetime, time, timedelta, timezone
@@ -170,7 +173,7 @@ def test_template_greeting_row_structure():
         in INDEX
     # …inside the greeting row, after the mascot…
     assert '<div class="empty-hello">' in INDEX
-    assert INDEX.index('class="mascot"') < \
+    assert INDEX.index('class="robot"') < \
         INDEX.index("{{ saathi_greeting_short }}")
     # …and the thought line BELOW the greeting.
     assert '<p class="empty-sub empty-thought">{{ daily_thought }}</p>' \
@@ -182,35 +185,35 @@ def test_template_greeting_row_structure():
         not in INDEX
 
 
-def test_mascot_svg_is_inline_original_and_logo_free():
-    assert '<svg class="mascot" viewBox="0 0 100 100"' in INDEX
-    assert 'class="mascot-paw"' in INDEX
-    assert 'class="mascot-eyes"' in INDEX
+def test_robot_svg_is_inline_original_and_logo_free():
+    assert '<svg class="robot" viewBox="0 0 100 100"' in INDEX
+    assert 'class="robot-arm"' in INDEX
+    assert 'class="robot-eyes"' in INDEX
     # The mascot lives in the signed-in empty-state branch only.
-    assert INDEX.index('class="mascot"') < \
+    assert INDEX.index('class="robot"') < \
         INDEX.index('id="signin-card-style"')
     # No external image for the mascot, and the logo is untouched.
-    mascot_block = INDEX[INDEX.index('<svg class="mascot"'):
-                         INDEX.index("</svg>", INDEX.index(
-                             '<svg class="mascot"'))]
-    assert "http" not in mascot_block
-    assert "url_for" not in mascot_block
+    robot_block = INDEX[INDEX.index('<svg class="robot"'):
+                        INDEX.index("</svg>", INDEX.index(
+                            '<svg class="robot"'))]
+    assert "http" not in robot_block
+    assert "url_for" not in robot_block
 
 
-def test_mascot_animation_css_and_reduced_motion():
-    assert ".mascot {" in CSS
-    assert "animation: mascot-bob" in CSS
-    assert "animation: mascot-blink" in CSS
-    assert "animation: mascot-wave" in CSS
-    assert "@keyframes mascot-bob" in CSS
-    assert "@keyframes mascot-blink" in CSS
-    assert "@keyframes mascot-wave" in CSS
+def test_robot_animation_css_and_reduced_motion():
+    assert ".robot {" in CSS
+    assert "animation: robot-bob" in CSS
+    assert "animation: robot-blink" in CSS
+    assert "animation: robot-wave" in CSS
+    assert "@keyframes robot-bob" in CSS
+    assert "@keyframes robot-blink" in CSS
+    assert "@keyframes robot-wave" in CSS
     assert ".empty-hello {" in CSS
     assert ".empty-thought {" in CSS
     reduced = re.search(
         r"@media \(prefers-reduced-motion: reduce\) \{\s*"
-        r"\.mascot, \.mascot-eyes, \.mascot-paw "
-        r"\{ animation: none; \}\s*\}", CSS)
+        r"\.robot, \.robot-eyes, \.robot-arm "
+        r"\{ animation: none; \}", CSS)
     assert reduced is not None
 
 
@@ -246,9 +249,9 @@ def test_scene_flag_untouched():
 
 
 def test_pins_moved_with_the_css():
-    assert "v='49'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v26"' in SW
-    assert '"/static/style.css?v=49"' in SW
+    assert "v='50'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v27"' in SW
+    assert '"/static/style.css?v=50"' in SW
 
 
 # --- The page itself -------------------------------------------------------
@@ -267,14 +270,14 @@ def _signed_in_client(tmp_path, monkeypatch, name="W155 Tester"):
     return client
 
 
-def test_home_shows_mascot_short_greeting_and_thought(
+def test_home_shows_robot_short_greeting_and_thought(
         tmp_path, monkeypatch):
     client = _signed_in_client(tmp_path, monkeypatch)
     page = client.get("/").get_data(as_text=True)
     # Mascot renders on the empty state.
-    assert '<svg class="mascot"' in page
-    assert 'class="mascot-paw"' in page
-    assert 'class="mascot-eyes"' in page
+    assert '<svg class="robot"' in page
+    assert 'class="robot-arm"' in page
+    assert 'class="robot-eyes"' in page
     # Short greeting — "Hello <name>", and NOT the long old line.
     assert 'class="empty-greeting">Hello W155 Tester</h2>' in page
     assert "What shall we solve today?" not in page

@@ -12,7 +12,7 @@ paper's medium; a Hindi sheet renders in the paper's own
 language (गणित subject line, सामान्य निर्देश, खण्ड headings,
 अधिकतम अंक, अथवा dividers, lowercase (a)–(d) options split
 onto their own lines). [Figure] census for the Hindi texts:
-2 + 3 + 4 + 3 = 12. Pins ?v=43 / cache ganitra-static-v25.
+2 + 3 + 4 + 3 = 12. Pins ?v=43 / cache ganitra-static-v27.
 """
 import html as _html
 import re
@@ -75,7 +75,8 @@ def test_hindi_papers_complete_and_real():
     # Wave 113: 53 papers (11 more CBSE English papers; the
     # Hindi count is unchanged at 16). Deploy-25 merge: Wave
     # 114 adds 15 more state-board papers — 68 in total.
-    assert len(papers_data.PAPERS) == 68
+    # Wave 152 adds 5 more (Classes 6, 7, 8, 9, 11) — 73.
+    assert len(papers_data.PAPERS) == 73
 
 
 def test_hindi_papers_restore_questions_the_english_entries_omit():
@@ -102,8 +103,9 @@ def test_list_labels_every_medium(client):
     # words "English Medium" as plain text. Deploy-25 merge:
     # 68 papers (16 Hindi-medium, 52 English-medium — Wave 113
     # took English to 37, Wave 114's 15 are all English).
+    # Wave 152: 73 papers (16 Hindi-medium, 57 English-medium).
     assert body.count("हिंदी माध्यम · Hindi Medium</span>") == 16
-    assert body.count("English Medium</span>") == 52
+    assert body.count("English Medium</span>") == 57
     for p in papers_data.PAPERS:
         assert p["source_url"] not in body
 
@@ -182,7 +184,7 @@ def test_pins_bumped_for_wave64():
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()
     css = (ROOT / "static" / "style.css").read_text()
-    assert "v='48'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v25"' in sw
+    assert "v='50'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v27"' in sw
     assert ".paper-medium" in css
     assert "Noto Serif Devanagari" in css

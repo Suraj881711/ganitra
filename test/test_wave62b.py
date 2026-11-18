@@ -128,8 +128,9 @@ def test_served_page_wave62b(client):
     # Wave 70 (Suraj, 16 Nov 2026): the scene is PARKED — the
     # stage and 3D layer are NOT served at all.
     assert 'id="scene-3d"' not in page and 'id="scene-stage"' not in page
-    # Merge-4: pins reconciled to ?v=43 / ganitra-static-v25.
-    assert "style.css?v=48" in page
+    # Merge-4: pins reconciled to ?v=43 / ganitra-static-v25
+    # (historical note; the live pin asserted below is current).
+    assert "style.css?v=50" in page
     r = client.get("/static/logo-g-t.png")
     assert r.status_code == 200
     # the parked files are still served (they exist) — the

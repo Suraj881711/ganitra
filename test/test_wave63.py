@@ -13,7 +13,7 @@ marks, OR dividers for internal choices, [Figure] markers
 where the printed paper's figure is not in the data; the
 stored-paper print view (?paper=<id>) renders the same sheet;
 the generated-paper flow is untouched; delivery pins
-?v=35 / cache ganitra-static-v25.
+?v=35 / cache ganitra-static-v27.
 """
 import re
 from pathlib import Path
@@ -82,6 +82,13 @@ FIGURE_COUNTS = {
     "kseab-10-2024": 7, "kseab-10-2025": 5,
     "kerala-10-2024": 0, "kerala-12-2025": 0,
     "tn-10-2022": 1, "jac-10-2026-model": 1,
+    # Wave 152: first papers for Classes 6, 7, 8, 9, 11 —
+    # census counted from the rendered sheets (see
+    # ganitra-wave152-notes.md). JAC 9's Q24 and Kerala 6's
+    # Activity 1 carry the one figure-reference phrase each.
+    "jac-9-2024-model": 1, "jac-8-2025-model": 0,
+    "jac-11-2024-model": 0, "kerala-6-2025-annual": 1,
+    "kerala-7-2025-second-term": 0,
 }
 
 
@@ -207,9 +214,18 @@ def test_header_maximum_marks_are_the_real_totals(client):
         "cbse-12-2020", "cbse-12-2022-term1",
         "cbse-12-sample-2026",
     }
+    # Wave 152: the Classes 6-11 papers likewise carry their
+    # own printed totals via the max_marks override (JAC model
+    # papers 40/50/40; the Samagra attempt-any-six papers 30).
+    wave152_ids = {
+        "jac-9-2024-model", "jac-8-2025-model",
+        "jac-11-2024-model", "kerala-6-2025-annual",
+        "kerala-7-2025-second-term",
+    }
     for p in papers_data.PAPERS:
         body = _paper_page(client, p["id"])
-        if p["id"] in wave66_ids or p["id"] in wave113_ids:
+        if (p["id"] in wave66_ids or p["id"] in wave113_ids
+                or p["id"] in wave152_ids):
             want = p.get("max_marks",
                          papers_data.paper_total_marks(p))
         else:
@@ -248,7 +264,8 @@ def test_figure_markers_match_census(client):
         total += n
     # Deploy-25 merge: 71 (pre-113/114) + 14 (Wave 113) + 23
     # (Wave 114) figure markers across the 68-paper library.
-    assert total == 108
+    # Wave 152: + 2 across the 5 new papers — 110 in total.
+    assert total == 110
 
 
 def test_section_order_and_subjects(client):
@@ -288,8 +305,8 @@ def test_generated_print_flow_unchanged(client):
 def test_pins_bumped():
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()
-    assert "v='48'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v25"' in sw
+    assert "v='50'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v27"' in sw
 
 
 def test_sheet_css_present():
