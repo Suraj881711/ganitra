@@ -151,7 +151,64 @@
             {% endif %}
           </div>
           {% if saathi_name %}
-            <h2 class="empty-greeting">{{ saathi_greeting }}</h2>
+            {# Wave 155 (Suraj, 18 Nov 2026 — refined spec): the
+               greeting line stays SHORT — "Hello <name>" — with
+               an original cute teddy mascot smiling beside it
+               (pure inline SVG + CSS animation: paw wave, blink,
+               gentle bob; NOT the logo, NOT the parked scene),
+               and the current time slot's rotating thought (10
+               a day, time-divided — thoughts.py) rides BELOW
+               the greeting as a small muted line. Logo and
+               composer untouched. #}
+            <div class="empty-hello">
+              <svg class="mascot" viewBox="0 0 100 100" width="80"
+                height="80" aria-hidden="true" focusable="false">
+                <circle cx="27" cy="24" r="10.5" fill="#a06a38" />
+                <circle cx="73" cy="24" r="10.5" fill="#a06a38" />
+                <circle cx="27" cy="24" r="5" fill="#ecc9a0" />
+                <circle cx="73" cy="24" r="5" fill="#ecc9a0" />
+                <ellipse cx="33" cy="93" rx="9" ry="5"
+                  fill="#a06a38" />
+                <ellipse cx="67" cy="93" rx="9" ry="5"
+                  fill="#a06a38" />
+                <ellipse cx="50" cy="80" rx="23" ry="16"
+                  fill="#b57e4a" />
+                <ellipse cx="50" cy="82" rx="12.5" ry="9.5"
+                  fill="#f2dfc0" />
+                <ellipse cx="28" cy="72" rx="6.5" ry="10"
+                  fill="#a06a38" transform="rotate(20 28 72)" />
+                <g class="mascot-paw">
+                  <ellipse cx="75" cy="55" rx="7" ry="12"
+                    fill="#a06a38" transform="rotate(-28 75 55)" />
+                  <circle cx="80" cy="44" r="6.2" fill="#b57e4a" />
+                  <ellipse cx="80" cy="44" rx="3.2" ry="2.4"
+                    fill="#f2dfc0" />
+                </g>
+                <circle cx="50" cy="42" r="26" fill="#b57e4a" />
+                <ellipse cx="50" cy="51" rx="12.5" ry="8.5"
+                  fill="#f2dfc0" />
+                <ellipse cx="50" cy="47.5" rx="4.4" ry="3.2"
+                  fill="#66452a" />
+                <path d="M50 50.5 V53.5 M50 53.5 Q46 57.5 42 54.8
+                         M50 53.5 Q54 57.5 58 54.8" fill="none"
+                  stroke="#66452a" stroke-width="1.8"
+                  stroke-linecap="round" />
+                <g class="mascot-eyes">
+                  <circle cx="39.5" cy="38" r="3.1" fill="#38271a" />
+                  <circle cx="60.5" cy="38" r="3.1" fill="#38271a" />
+                  <circle cx="40.5" cy="37" r="1" fill="#ffffff"
+                    opacity="0.85" />
+                  <circle cx="61.5" cy="37" r="1" fill="#ffffff"
+                    opacity="0.85" />
+                </g>
+                <ellipse cx="32.5" cy="48" rx="4.6" ry="2.7"
+                  fill="#e79f83" opacity="0.6" />
+                <ellipse cx="67.5" cy="48" rx="4.6" ry="2.7"
+                  fill="#e79f83" opacity="0.6" />
+              </svg>
+              <h2 class="empty-greeting">{{ saathi_greeting_short }}</h2>
+            </div>
+            <p class="empty-sub empty-thought">{{ daily_thought }}</p>
             {# Wave 11: Suraj removed the "Type it, speak it..."
                sub-line — the empty state is logo + greeting only. #}
           {% else %}
