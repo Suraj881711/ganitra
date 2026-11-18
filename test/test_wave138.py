@@ -382,6 +382,6 @@ def test_wave138_template_hooks():
 
 def test_wave138_css_and_pins():
     assert "mjx-container" in CSS
-    assert "v='52'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v29"' in SW
-    assert '"/static/style.css?v=52"' in SW
+    assert "v='53'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v30"' in SW
+    assert '"/static/style.css?v=53"' in SW

@@ -493,6 +493,6 @@ def test_menu_row_in_panel_js():
 
 
 def test_pins_bumped():
-    assert "v='52'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v29"' in SW
-    assert '"/static/style.css?v=52"' in SW
+    assert "v='53'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v30"' in SW
+    assert '"/static/style.css?v=53"' in SW

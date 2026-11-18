@@ -394,7 +394,7 @@ def test_flag_on_page_arms_streaming(tmp_path, monkeypatch):
     client = _client(tmp_path, monkeypatch, stream_on=True)
     page = client.get("/").get_data(as_text=True)
     assert "var AI_STREAM = true" in page
-    assert "style.css?v=52" in page
+    assert "style.css?v=53" in page
 
 
 def test_solver_question_streams_as_single_final(

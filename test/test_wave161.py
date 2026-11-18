@@ -38,7 +38,7 @@ robot, all ordered by him the same afternoon.
      is fixed, pointer-events: none and aria-hidden — it
      covers no message, takes no tap, shifts no layout.
 
-Pins moved with the CSS: ?v=52 / ganitra-static-v29.
+Pins moved with the CSS: ?v=52 / ganitra-static-v30.
 """
 import re
 from pathlib import Path
@@ -231,6 +231,6 @@ def test_wave160_behaviours_survive():
 
 
 def test_pins_moved_to_v51_v28():
-    assert "v='52'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v29"' in SW
-    assert '"/static/style.css?v=52"' in SW
+    assert "v='53'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v30"' in SW
+    assert '"/static/style.css?v=53"' in SW

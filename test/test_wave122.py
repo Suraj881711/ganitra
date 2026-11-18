@@ -364,9 +364,9 @@ def test_not_found_path_never_reaches_the_features():
 
 
 def test_pins_bumped_for_wave122():
-    assert "filename='style.css', v='52'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v29"' in SW
-    assert '"/static/style.css?v=52"' in SW
+    assert "filename='style.css', v='53'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v30"' in SW
+    assert '"/static/style.css?v=53"' in SW
 
 
 # --- jsdom: the real page, conditions in the DOM --------------

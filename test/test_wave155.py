@@ -36,7 +36,7 @@ Pins:
   * Wave 69 stands — no example-question chips anywhere;
   * the 3D scene stays parked (SCENE_ENABLED untouched);
   * CSS changed, so the pins moved WITH it: ?v=52 /
-    ganitra-static-v29 everywhere.
+    ganitra-static-v30 everywhere.
 """
 import re
 from datetime import date, datetime, time, timedelta, timezone
@@ -261,9 +261,9 @@ def test_scene_flag_untouched():
 
 
 def test_pins_moved_with_the_css():
-    assert "v='52'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v29"' in SW
-    assert '"/static/style.css?v=52"' in SW
+    assert "v='53'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v30"' in SW
+    assert '"/static/style.css?v=53"' in SW
 
 
 # --- The page itself -------------------------------------------------------
