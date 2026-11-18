@@ -231,6 +231,18 @@
        the header buddy takes over — the two never show
        together. #}
     <div class="empty-robot-top" aria-hidden="true">
+      {# Wave 170 (Suraj, 19 Nov 2026 — "Aisa design karana
+         hai background kaa" about a Muse-app screenshot,
+         then "Dono karo"): the top robot now sits inside a
+         soft avatar-style CARD with the name "Ganitra"
+         under it, and the empty-state backdrop goes soft
+         and calm (see the Wave 170 block in style.css) —
+         both adapted in Ganitra's OWN cream/teal palette,
+         never Muse's branding or colours. The SVG below
+         is byte-identical to the Wave 160/161/168 artwork
+         (pinned by hash in test_wave170.py); only the
+         presentation around it changed. #}
+      <div class="robot-card">
       <svg class="robot" viewBox="0 0 100 100" width="80"
         height="80" aria-hidden="true" focusable="false">
         <g class="robot-hop">
@@ -457,6 +469,8 @@
           </g>
         </g>
       </svg>
+        <div class="robot-card-name">Ganitra</div>
+      </div>
     </div>
     {% endif %}
     <div class="chat-scroll" id="chat-scroll">
