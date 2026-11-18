@@ -74,6 +74,10 @@ _NOT_SOLVED_KINDS = {
     # are real content, not solves — no answer box, no
     # follow-up chips, exactly like history/advice.
     "guidance", "baat",
+    # Wave 163: a guided-solve step turn is a plain teaching
+    # bubble, never a solved card (its escape / completion
+    # serve carries the real result and counts normally).
+    "guided",
 }
 _NOT_SOLVED_OPS = {"error", "explain_step", "check_steps",
                    "not_found"}

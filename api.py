@@ -266,6 +266,7 @@ _UI_EXTRA_KEYS = {
     "explanation_heading", "advice_heading",
     "listen_btn", "listen_stop_btn", "handwriting_btn",
     "print_copy_link", "question_placeholder", "enter_question",
+    "chat_guided",
     "solve_btn", "voice_btn", "photo_btn", "lang_label", "menu_label",
     "chat_waking_note",
     "flash_too_long", "chat_empty_sub", "chat_welcome",
@@ -585,6 +586,126 @@ def api_solve():
             "methods": [],
             "teach": teach_for(ct_result, lang),
             "w122": ct_w122,
+            **fields,
+        })
+
+    # Wave 163: hint-first guided solve ("Seekh ke solve
+    # karo", guided.py). Entry is the student's own learn
+    # ask in the message ("hint do", "seekh ke solve karo",
+    # "khud try karna hai"), a bare learn ask about the
+    # last question, or a •••-menu tap (followup="guided"
+    # with the card's question riding as context, exactly
+    # like a Wave-122 chip tap). While a guided flow is
+    # active in THIS chat, its messages belong to the flow
+    # (an attempt, "agla step", or the "jawab bata do"
+    # escape) until the flow completes or exits. This runs
+    # AFTER the Wave-124 chat test (a test in progress owns
+    # its messages) and BEFORE the Wave-129 galti block (a
+    # guided attempt is never a step doubt). handle_message
+    # returns None for everything else, so a plain question
+    # keeps the normal path byte-for-byte.
+    import guided as _guided_mod
+    _g_start_q = None
+    if followup_kind == "guided":
+        _g_start_q = _json_str(data, "context_question") or ""
+    g_payload = _guided_mod.handle_message(
+        session, session.get("user_id"), chat_id, question,
+        lang=lang, lang_request=lang_request,
+        start_question=_g_start_q,
+        solve_fn=lambda q: _solve_friendly(
+            q, lang=lang,
+            student_class=session.get("saathi_class"),
+            lang_request=lang_request))
+    if g_payload is not None:
+        g_result = g_payload["result"]
+        g_full = bool(g_payload.pop("w163_full", False))
+        if g_payload.pop("w163_set_last", False):
+            session["last_question"] = g_payload.pop(
+                "w163_question", question)
+            session["last_result"] = g_result
+            session.pop("doubt_step", None)
+        else:
+            g_payload.pop("w163_question", None)
+        history = session.get("history", [])
+        history.insert(0, trimmed_history_entry(question,
+                                                g_result))
+        session["history"] = history[:_HISTORY_LIMIT]
+        if g_full:
+            # The escape / completion serve: the stored full
+            # answer, served exactly as a normal solve serves
+            # it (Wave-138 annotation on a copy, methods,
+            # teach, w122 reading the student's own message
+            # as the ask).
+            return jsonify({
+                "ok": True,
+                "result": annotate_result(dict(g_result)),
+                "intro": g_payload.get("intro"),
+                "explanation": explanation_for(g_result, lang),
+                "advice": advice_for(g_result, lang),
+                "methods": _methods_localised(
+                    session.get("last_question") or question,
+                    g_result, lang_request),
+                "teach": teach_for(g_result, lang),
+                "w122": w122_payload(
+                    g_result, lang=lang,
+                    lang_request=lang_request,
+                    question=session.get("last_question")
+                    or question,
+                    ask_text=question),
+                **fields,
+            })
+        # A guided step turn: plain, like a chat-test turn —
+        # no chips ever (stripped here as well as by kind).
+        g_w122 = w122_payload(g_result, lang=lang,
+                              lang_request=lang_request,
+                              question=question)
+        g_w122["chips"] = []
+        return jsonify({
+            **g_payload,
+            "explanation": explanation_for(g_result, lang),
+            "advice": None,
+            "methods": [],
+            "teach": teach_for(g_result, lang),
+            "w122": g_w122,
+            **fields,
+        })
+
+    # Wave 165: "ek aur aisa hi sawal" — the in-chat practice
+    # loop (practice_loop.py). Runs AFTER the chat-test block
+    # (while a test is active in this chat, every message
+    # belongs to the test — the loop never competes) and
+    # BEFORE the Wave-129 galti block. The loop claims only
+    # its own messages: a practice trigger right after a
+    # solved answer, an answer attempt on its open question,
+    # and its in-loop commands. A fresh question asked
+    # mid-loop makes handle_message return None (the loop
+    # closes), so the normal path below answers it exactly
+    # as if the loop never existed. Loop turns are plain and
+    # never carry follow-up chips, like test turns.
+    import practice_loop
+    pl_payload = practice_loop.handle_message(
+        session, session.get("user_id"), chat_id, question,
+        lang=lang, lang_request=lang_request,
+        student_class=session.get("saathi_class"),
+        last_question=session.get("last_question"),
+        last_result=session.get("last_result"))
+    if pl_payload is not None:
+        pl_result = pl_payload["result"]
+        history = session.get("history", [])
+        history.insert(0, trimmed_history_entry(question,
+                                                pl_result))
+        session["history"] = history[:_HISTORY_LIMIT]
+        pl_w122 = w122_payload(pl_result, lang=lang,
+                               lang_request=lang_request,
+                               question=question)
+        pl_w122["chips"] = []
+        return jsonify({
+            **pl_payload,
+            "explanation": explanation_for(pl_result, lang),
+            "advice": None,
+            "methods": [],
+            "teach": teach_for(pl_result, lang),
+            "w122": pl_w122,
             **fields,
         })
 
