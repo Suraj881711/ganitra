@@ -23,7 +23,7 @@ What these tests pin:
 3. THE CHAT TEMPLATE: no explanation paragraph, no
    notebook/copy-style panel in the answer flow, NO example
    chips on the empty state (Wave-68 chips removed in Wave
-   69 on Suraj's order), pins ?v=43 / ganitra-static-v30.
+   69 on Suraj's order), pins ?v=43 / ganitra-static-v31.
 """
 from pathlib import Path
 
@@ -284,8 +284,8 @@ def test_sample_questions_all_solve():
 
 
 def test_wave68_pins_and_css():
-    assert "v='53'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v30"' in SW
+    assert "v='54'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v31"' in SW
     assert ".example-chip" not in CSS
     assert ".plain-reply" in CSS
     assert ".answer-intro" in CSS

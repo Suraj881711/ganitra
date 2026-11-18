@@ -130,7 +130,7 @@ def test_served_page_wave62b(client):
     assert 'id="scene-3d"' not in page and 'id="scene-stage"' not in page
     # Merge-4: pins reconciled to ?v=43 / ganitra-static-v25
     # (historical note; the live pin asserted below is current).
-    assert "style.css?v=53" in page
+    assert "style.css?v=54" in page
     r = client.get("/static/logo-g-t.png")
     assert r.status_code == 200
     # the parked files are still served (they exist) — the

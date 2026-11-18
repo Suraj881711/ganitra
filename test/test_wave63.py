@@ -13,7 +13,7 @@ marks, OR dividers for internal choices, [Figure] markers
 where the printed paper's figure is not in the data; the
 stored-paper print view (?paper=<id>) renders the same sheet;
 the generated-paper flow is untouched; delivery pins
-?v=35 / cache ganitra-static-v30.
+?v=35 / cache ganitra-static-v31.
 """
 import re
 from pathlib import Path
@@ -305,8 +305,8 @@ def test_generated_print_flow_unchanged(client):
 def test_pins_bumped():
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()
-    assert "v='53'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v30"' in sw
+    assert "v='54'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v31"' in sw
 
 
 def test_sheet_css_present():

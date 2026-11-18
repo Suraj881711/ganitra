@@ -20,7 +20,7 @@ Wave 161 header buddy takes over — the two never show
 together. Pure placement: no artwork, colour, animation,
 greeting, thought or composer change.
 
-Pins moved with the CSS: ?v=53 / ganitra-static-v30.
+Pins moved with the CSS: ?v=54 / ganitra-static-v31.
 """
 from pathlib import Path
 
