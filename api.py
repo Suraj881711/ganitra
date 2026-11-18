@@ -954,6 +954,59 @@ def api_solve():
                 **fields,
             })
 
+    # Wave 166: a BARE simpler request ("aur asaan batao",
+    # "samajh nahi aaya, easy me batao", "simpler please",
+    # "आसान भाषा में बताओ") sent ALONE right after an
+    # answer is a request ABOUT that answer — re-serve the
+    # stored answer in simpler words (simpler.py: the same
+    # verified answer re-presented, every value locked by
+    # the Wave-132 invariant), or the stored answer itself
+    # when no value-locked simplification exists. Nothing
+    # is re-solved and nothing is invented. The detector's
+    # discipline keeps every neighbour's path intact: a
+    # bare "samajh nahi aaya" carries no simpler phrase and
+    # stays with the Wave-96 doubt block below; a step ask
+    # stays with Wave 148 / doubt; "detail me batao" stays
+    # Wave 136/148; a question+request in one message is
+    # not bare and keeps its normal path. The stored last
+    # solution is NOT overwritten, exactly like the
+    # Wave-148 block above.
+    from followups import is_solved_result as \
+        _is_solved_166
+    from simpler import parse_bare_simple_request, \
+        simplify_result
+    if parse_bare_simple_request(question):
+        _prev_r = session.get("last_result")
+        _prev_q = session.get("last_question")
+        if _is_solved_166(_prev_r) \
+                and (_prev_r.get("steps") or []):
+            result = simplify_result(
+                _prev_r, _prev_q or "",
+                lang=lang, lang_request=lang_request) \
+                or _prev_r
+            history = session.get("history", [])
+            history.insert(0, trimmed_history_entry(question,
+                                                    result))
+            session["history"] = history[:_HISTORY_LIMIT]
+            return jsonify({
+                "ok": True,
+                # Wave 138 annotation on a copy, like every
+                # re-serve boundary (the session's stored
+                # dict stays pristine).
+                "result": annotate_result(dict(result)),
+                "intro": None,
+                "explanation": explanation_for(result, lang),
+                "advice": advice_for(_prev_r, lang),
+                "methods": [],
+                "teach": teach_for(_prev_r, lang),
+                "w122": w122_payload(
+                    result, lang=lang,
+                    lang_request=lang_request,
+                    question=_prev_q or question,
+                    ask_text=question),
+                **fields,
+            })
+
     # Wave 96: doubt follow-up ("ye step samjhao") — answered
     # from the session's last solution (its steps are also what
     # the client stores inside the saved chat thread), never by
@@ -1041,6 +1094,44 @@ def _commit_solve_session(question, result, chat_key=None):
     session["history"] = history[:_HISTORY_LIMIT]
 
 
+# --- Wave 167: board-aware chapter grounding --------------------
+# Adoption #5 of the Wave-162 comparison: a finished solve's
+# payload may carry ONE extra field, "grounding" — the short
+# line naming the chapter this answer belongs to in the
+# STUDENT'S OWN board book ("RBSE · Class 8 · Mensuration",
+# board_context.py). It is computed here, at the one payload
+# boundary every fresh solve passes through (the classic
+# /api/solve, the stream's final event and the stream-commit),
+# and nowhere else: follow-up re-serves, doubt cards, galti
+# verdicts and chat-test turns build their own payloads and
+# never carry it. The gate is followups.is_solved_result —
+# the same predicate behind the Wave-122 answer box — so
+# plain replies (small talk, guidance, the maths-only guard,
+# the not-found line) and every fallback outcome stay
+# byte-identical to before this wave. The student's board is
+# the account's free-typed board_text (the login slug is only
+# board_context's fallback); every failure is silent and the
+# result dict itself is never touched.
+def _grounding_for(result):
+    try:
+        from followups import is_solved_result
+        if not is_solved_result(result):
+            return None
+        board_text = None
+        user_id = session.get("user_id")
+        if user_id:
+            from accounts import get_user_by_id
+            row = get_user_by_id(user_id)
+            if row is not None:
+                board_text = row["board_text"]
+        from board_context import grounding_line
+        return grounding_line(
+            board_text, session.get("saathi_class"), result,
+            slug=session.get("board"))
+    except Exception:
+        return None
+
+
 def _solve_response_payload(question, solve_text, result, lang,
                             strings, fields, lang_request=None):
     """The JSON payload of a finished chat solve: the Wave-5b
@@ -1081,7 +1172,7 @@ def _solve_response_payload(question, solve_text, result, lang,
             },
             **fields,
         }
-    return {
+    payload = {
         "ok": True,
         # Wave 138: display-only typeset variants on a copy
         # (see the doubt path above).
@@ -1120,6 +1211,14 @@ def _solve_response_payload(question, solve_text, result, lang,
                              ask_text=question),
         **fields,
     }
+    # Wave 167: the board grounding line rides as its own
+    # payload field (see _grounding_for above) — attached
+    # after construction so a payload without it is
+    # byte-identical to the pre-Wave-167 one.
+    _grounding = _grounding_for(result)
+    if _grounding:
+        payload["grounding"] = _grounding
+    return payload
 
 
 def _sse_response(body):
