@@ -236,6 +236,8 @@ def _is_real(question, result):
         return False
     if _w150_veto(question, result):
         return False
+    if _w151_veto(question, result):
+        return False
     return True
 
 
@@ -1199,6 +1201,473 @@ def _w150_veto_inner(question, result):
                     r"that)\b|\s*$)",
                     ql):
                 return True
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Wave 151: wrong-serve vetoes, round 2 (from Board 8's
+# post-Wave-150 calibration: Boards 5/6's 591 book questions
+# re-run against the gated solver — serves fell 109 -> 64,
+# but 33 of the 64 were still wrong, in families the first
+# gate could not see: a wrong LATER part inside an otherwise
+# plausible multipart card, print-furniture numbers (the
+# "2024.25" year marker, page numbers) harvested as data,
+# evaluator identity carves, right-triangle verdicts served
+# for area/find-side asks, a probability computed for the
+# wrong event, and Kruti-glyph soup the Latin rules missed).
+# Same discipline as Waves 146/150: a rule fires only when
+# the question's ASK and the result's FORM provably
+# disagree, or the result contradicts ITSELF or the
+# question's stated facts; a vetoed result falls through
+# to the honest chain — a replacement answer is never
+# invented here. Every rule is pinned by test_wave151.py,
+# with Board 8's genuine + partial serves as controls.
+# ---------------------------------------------------------------------------
+
+_W151_LATIN_LABEL = re.compile(
+    r"(?<![a-zA-Z])\((i{1,3}|iv|v|vi{0,3}|ix|x)\)")
+_W151_KRUTI_LABEL = re.compile(
+    r"(?<![a-zA-Z])\(([\u0900-\u097F]{1,3})\)")
+_W151_ROMAN = {"i": 1, "ii": 2, "iii": 3, "iv": 4, "v": 5,
+               "vi": 6, "vii": 7, "viii": 8, "ix": 9, "x": 10}
+
+
+def _w151_part_markers(q):
+    """Distinct part markers in a question: Latin (i)/(ii)
+    labels plus Kruti-rendered Devanagari labels (ं)/(इ)/(ब)."""
+    labels = set(_W151_LATIN_LABEL.findall(q))
+    labels |= {"kruti:" + m for m in _W151_KRUTI_LABEL.findall(q)}
+    return labels
+
+
+def _w151_segments(q):
+    """Ordered [(label, segment_text)] split at part markers
+    (Latin or Kruti). Empty when the question has no markers."""
+    marks = []
+    for m in _W151_LATIN_LABEL.finditer(q):
+        marks.append((m.start(), m.end(), m.group(1)))
+    for m in _W151_KRUTI_LABEL.finditer(q):
+        marks.append((m.start(), m.end(), "kruti:" + m.group(1)))
+    marks.sort()
+    out = []
+    for i, (s, e, lab) in enumerate(marks):
+        end = marks[i + 1][0] if i + 1 < len(marks) else len(q)
+        out.append((lab, q[e:end]))
+    return out
+
+
+def _w151_form_ask(q, ql):
+    """The question asks for a FORM (exponential / standard /
+    as-a-power), so a bare evaluated number is the wrong
+    FORM of answer, however correct its value."""
+    return bool(
+        re.search(r"घातांकीय\s*रूप|मानक\s*रूप|"
+                  r"घात[^।]{0,30}रूप\s*में\s*लिखिए", q)
+        or re.search(r"exponential\s+form|standard\s+form|"
+                     r"scientific\s+form|as\s+a\s+power\s+of",
+                     ql))
+
+
+def _w151_expr_op_ask(q, ql):
+    """The question asks to subtract/divide/add/multiply
+    ALGEBRAIC expressions (operands carry variables, and no
+    variable values are assigned), so the answer must be an
+    expression, not a bare number."""
+    if not (re.search(r"घटाइए|भाग\s+दीजिए|जोड़िए", q)
+            or re.search(r"\b(?:subtract|divide|add|multiply)\b",
+                         ql)):
+        return False
+    if re.search(r"यदि[^।]{0,30}=|\bif\s+[a-z]\s*=", ql + " " + q):
+        return False
+    # Algebraic-operand evidence must be strong: an
+    # exponent pattern (x^2), or 2+ letter-carrying-digit
+    # tokens (ग2, ल2, ...). A single stray token is OCR
+    # noise ("Multiply 95 and 99 ... D4 ..." is plain
+    # arithmetic — its 9405 serve is a Wave 150 control).
+    _toks = re.findall(
+        r"[a-zA-Z]\s*(?:\^|\*\*)\s*\d|[a-zA-Z]\d(?!\d)"
+        r"|[\u0900-\u097F]\d", q)
+    return len(_toks) >= 2 or any(
+        "^" in t or "**" in t for t in _toks)
+
+
+def _w151_has_ask(q, ql):
+    """Any interrogative/imperative ask marker at all. A
+    textbook STATEMENT page (no ask) served as a bare
+    evaluate identity is a carve, not an answer."""
+    return bool(re.search(
+        r"ज्ञात|बताइए|बताओ|लिखिए|निकाल|कीजिए|हल\s+करो|"
+        r"find|solve|calculate|compute|evaluate|express|"
+        r"prove|show|determine|verify|check|what|how|\?",
+        ql + " " + q))
+
+
+_W151_COLOURS = (
+    ("red", r"लाल|\bred\b"), ("yellow", r"पीली|पीला|\byellow\b"),
+    ("green", r"हरी|हरा|\bgreen\b"), ("blue", r"नीली|नीला|\bblue\b"),
+    ("black", r"काली|काला|\bblack\b"),
+    ("white", r"सफ़ेद|सफेद|\bwhite\b"), ("pink", r"गुलाबी|\bpink\b"),
+    ("brown", r"भूरी|भूरा|\bbrown\b"),
+    ("orange", r"नारंगी|\borange\b"), ("purple", r"बैंगनी|\bpurple\b"),
+)
+
+
+def _w151_colour(text):
+    """The earliest-mentioned colour in a text fragment."""
+    best = None
+    for name, pat in _W151_COLOURS:
+        m = re.search(pat, text.lower() + " " + text)
+        if m and (best is None or m.start() < best[0]):
+            best = (m.start(), name)
+    return best[1] if best else None
+
+
+def _w151_veto(question, result):
+    try:
+        return _w151_veto_inner(question, result)
+    except Exception:
+        return False
+
+
+def _w151_veto_inner(question, result):
+    if not isinstance(result, dict):
+        return False
+    q = str(question or "")
+    ql = q.lower()
+    ans = _answer_text(result)
+    steps = [str(s) for s in (result.get("steps") or [])]
+    blob = (ans + " " + str(result.get("expression") or "")
+            + " " + " ".join(steps))
+    op = str(result.get("op") or "")
+    num = _w150_bare_number(ans)
+    markers = _w151_part_markers(q)
+
+    # W26 — print-furniture contamination: a statistics
+    # harvest ("Add all values:" / "Arrange in order:")
+    # whose data includes a number that appears in the
+    # question ONLY inside the trailing print furniture
+    # (from the "2024.25" year marker on: year, chapter
+    # title, page number). The furniture is not data.
+    # (Board 8 idx 62: mean over the runs PLUS 2024.25 and
+    # the page number 51 -> 248.025; idx 144: median of
+    # [2, 111, 2024.25]; idx 292 likewise.)
+    _mfur = re.search(r"2024\.25", q)
+    if _mfur:
+        _pre = q[:_mfur.start()]
+        for _line in steps:
+            if "Add all values:" in _line \
+                    or "Arrange in order:" in _line:
+                _seg = _line.split(":", 1)[1]
+                for _tok in re.findall(r"\d+(?:\.\d+)?", _seg):
+                    if not re.search(
+                            r"(?<![\d.])" + re.escape(_tok)
+                            + r"(?![\d.])", _pre):
+                        return True
+
+    # W27 — a multipart card whose parts are individually
+    # checkable against their own part-asks: a COUNT part
+    # (कितने/कितनी/how many, of countable things) served a
+    # non-integer (Board 8 idx 66 part (iii): "how many
+    # days" served the mean 5.9; idx 67 part (v): "how
+    # many girls" served the mean 141.4), or a WHY part
+    # served a bare number (idx 63 part (ii): "divide by
+    # 3 or 4? why?" served 6.88235). One provably wrong
+    # part poisons the card; the whole serve declines.
+    _parts = re.findall(r"\(([a-z]{1,3})\)\s*([^;]+)", ans)
+    if _parts and (result.get("multipart") or len(_parts) >= 2):
+        _segs = _w151_segments(q)
+        _seg_by_label = {lab: seg for lab, seg in _segs}
+        _kruti_mode = bool(_segs) and all(
+            lab.startswith("kruti:") for lab, _ in _segs)
+        _ordered = sorted(
+            _parts, key=lambda p: _W151_ROMAN.get(p[0], 99))
+        for _pos, (_lab, _val) in enumerate(_ordered):
+            _seg = _seg_by_label.get(_lab)
+            if _seg is None and _kruti_mode and _pos < len(_segs):
+                _seg = _segs[_pos][1]
+            if _seg is None:
+                continue
+            if (re.search(r"कितने|कितनी", _seg)
+                    or re.search(r"\bhow\s+many\b", _seg.lower())) \
+                    and not re.search(
+                        r"लीटर|किलो|ग्राम|मीटर|सेमी|रुपए|रुपये|"
+                        r"litres?|kilos?|grams?|metres?|meters?|"
+                        r"rupees?", _seg.lower() + " " + _seg):
+                _v = _w150_bare_number(_val)
+                if _v is not None and (
+                        _v < 0 or abs(_v - round(_v)) > 1e-9):
+                    return True
+            if (re.search(r"क्यों|कारण\s+बताइए|कारण\s+दीजिए",
+                          _seg)
+                    or re.search(r"\bwhy\b", _seg.lower())) \
+                    and _w150_bare_number(_val) is not None:
+                return True
+
+    # W28 — a unit-rate ask ("distance covered in 1 hour")
+    # answered by a MEAN of every number in sight, the
+    # target "1" included. (Board 8 idx 49: 89.1 km in
+    # 2.2 h served (2.2 + 89.1 + 1)/3 = 30.7667.)
+    if op == "mean" and re.search(
+            r"1\s*घंटे\s*में|एक\s*घंटे\s*में|प्रति\s*घंट|"
+            r"\bper\s+hour\b|\bin\s+1\s+hour\b|"
+            r"\bin\s+one\s+hour\b|\beach\s+hour\b", q,
+            re.IGNORECASE):
+        return True
+
+    # W29 — the evaluator identity carve under a FORM ask,
+    # a MULTI-PART ask, an expression-operation ask, or a
+    # long ask-less textbook page: the serve's only step
+    # is "Evaluate: N = N" (Board 8 idx 26/96/280/290/
+    # 491/555). A clean single value-ask keeps its serve
+    # (idx 564: m = 2 via "Evaluate: 2 = 2" is genuine),
+    # a bare-expression question keeps its computed serve
+    # ("5 + (3 × 7)" -> "Evaluate: 26 = 26" is genuine —
+    # the no-ask arm requires a long prose page), and a
+    # root serve is judged by W39 instead (idx 427 stays).
+    if op == "evaluate":
+        _ident = False
+        for _line in steps:
+            _m = re.fullmatch(
+                r"Evaluate:\s*(.+?)\s*=\s*(.+?)",
+                _line.strip())
+            if _m and _m.group(1).strip() == _m.group(2).strip() \
+                    and _m.group(1).strip() == ans.strip():
+                _ident = True
+        if _ident and (_w151_form_ask(q, ql)
+                       or len(markers) >= 2
+                       or _w151_expr_op_ask(q, ql)
+                       or (not _w151_has_ask(q, ql)
+                           and len(q.strip()) > 120)):
+            return True
+
+    # W30 — a single-problem word-equation schema served
+    # for a question carrying 3+ separate sub-problems:
+    # the serve is a mashup of fragments across parts
+    # (Board 8 idx 109: "double" from parts (a)/(c) plus
+    # the 180° angle-sum from part (b) -> 120).
+    if op == "hindi_word_equation" and not result.get("multipart") \
+            and len(markers) >= 3:
+        return True
+
+    # W31+W43 — a right-triangle VERDICT serve where the
+    # question never asks for a verdict (it STATES the
+    # triangle is right-angled and asks for an area or a
+    # side: Board 8 idx 216/448), or where the question
+    # carries 2+ labelled side-triples and the check
+    # covers only one (idx 153: parts (ii)/(iii) never
+    # checked, one verdict served for all three).
+    if op == "pythagoras_check":
+        _triples = 0
+        for _lab, _seg in _w151_segments(q):
+            if len(re.findall(r"\d+(?:\.\d+)?",
+                              _seg.replace(",", ""))) >= 3:
+                _triples += 1
+        if _triples >= 2:
+            return True
+        if not re.search(
+                r"क्या[^।?]{0,60}समकोण|समकोण[^।?]{0,40}बना\s+सकते"
+                r"|बना\s+सकते\s+हैं|निर्धरित\s+कीजिए\s+कि\s+क्या"
+                r"|is\s+(?:it|this)\s+a\s+right"
+                r"|right[-\s]angled\s+triangle\s*\?"
+                r"|whether[^.]{0,60}right"
+                r"|determine\s+(?:if|whether)"
+                r"|check\s+(?:if|whether)", ql + " " + q):
+            return True
+
+    # W32 — Kruti-glyph soup in the SERVE: the broken "="
+    # glyph (त्र) rendered as a factor product "त*र*्", or
+    # the half-letter र् multiplied like a variable. Real
+    # symbolic answers use Latin symbols; Hindi prose never
+    # multiplies र्. (Board 8 idx 339/342/347/353 — every
+    # Class 8 Ch 2 equation serve.)
+    if "त*र*्" in blob or re.search(
+            r"[*·]\s*र्(?![\u0900-\u097F])|र्\s*[*·]", blob):
+        return True
+
+    # W33 — a figure-only ask (the question references the
+    # attached figure and states NO numeric given at all)
+    # served a specific number: the number is invented.
+    # (Board 8 idx 380: HOPE parallelogram angles served
+    # the quadrilateral angle-sum 360°.)
+    if re.search(r"संलग्न\s+(?:आकृति|आवृफति)|आवृफति|"
+                 r"adjoining\s+figure|in\s+the\s+(?:given\s+)?"
+                 r"figure|आकृति\s+में", q) \
+            and not re.search(r"[0-9\u0966-\u096F]", q) \
+            and re.fullmatch(r"-?\d+(?:\.\d+)?\s*(?:°|degrees?)?",
+                             ans.strip()):
+        return True
+
+    # W34 — a pie-chart serve that contradicts the stated
+    # total (steps total != the question's stated total),
+    # or serves the TOTAL row itself as a slice. (Board 8
+    # idx 395: stated total 720, steps use 880 and slice
+    # "वुफल = 720".)
+    if op == "graph" or str(result.get("type") or "") == "plot":
+        _stated = re.search(r"(?:कुल|वुफल|total)\s*[:：]\s*"
+                            r"(\d+(?:\.\d+)?)", q)
+        _steps_total = re.search(r"कुल\s*=\s*(\d+(?:\.\d+)?)",
+                                 " ".join(steps))
+        if _stated and _steps_total and float(
+                _stated.group(1)) != float(_steps_total.group(1)):
+            return True
+        if "," in ans and re.search(
+                r"(?:कुल|वुफल|total)\s*=\s*\d+", ans):
+            return True
+
+    # W35 — a probability serve whose OWN steps name a
+    # different favourable event than the question's first
+    # probability ask. (Board 8 idx 401: red asked, steps
+    # say "Favourable (yellow) = 2" -> 1/3, P(yellow).)
+    if "probab" in op:
+        _fav = None
+        for _line in steps:
+            _m = re.search(r"favou?rable\s*\((\w+)\)",
+                           _line.lower())
+            if _m:
+                _fav = _m.group(1)
+        if _fav:
+            _asked = None
+            for _cl in re.split(r"[।?]", q):
+                if "प्रायिकता" in _cl or "probability" in _cl.lower():
+                    _asked = _w151_colour(_cl)
+                    if _asked:
+                        break
+            if _asked and _fav != _asked:
+                return True
+
+    # W36 — a LIST-the-outcomes ask served a bare number
+    # or a probability: the count/fraction is not the
+    # list. (Board 8 idx 402: outcomes of spinner + two
+    # coins served "4"; idx 403: dice outcomes served
+    # 1/6.) A "how many outcomes" ask is exempt — there
+    # the count IS the answer.
+    if (("परिणाम" in q and "लिखिए" in q)
+            or re.search(r"list\s+the\s+outcomes|"
+                         r"write\s+(?:down\s+)?the\s+outcomes",
+                         ql)) \
+            and not re.search(r"कितने\s+परिणाम|"
+                              r"how\s+many\s+outcomes",
+                              ql + " " + q) \
+            and num is not None:
+        return True
+
+    # W37 — the fabricated zero-subtraction carve: steps
+    # "0 - k = -k" for a serve whose question never poses
+    # 0 - k (the evaluator carved "- k" out of glyph
+    # text). (Board 8 idx 489/553/629.) The step shape
+    # ALONE proves nothing — the evaluate layer presents
+    # every genuinely computed bare negative result this
+    # way ("What is -12 + 7?" -> -5; the polynomial-value
+    # starter at x = 2 -> -3) — so the veto additionally
+    # requires the ask to be one a single bare value
+    # cannot answer: a MULTI-PART ask, an expression-
+    # operation ask, or a form ask; and it never fires
+    # when the question assigns a variable a value.
+    if (op == "evaluate" and not re.search(
+            r"\b[a-zA-Z]\s*=\s*-?\d", q)
+            and (len(markers) >= 2
+                 or _w151_expr_op_ask(q, ql)
+                 or _w151_form_ask(q, ql))):
+        for _line in steps:
+            _m = re.fullmatch(
+                r"0\s*-\s*(\d+(?:\.\d+)?)\s*=\s*-\1",
+                _line.strip())
+            if _m and not re.search(
+                    r"0\s*-\s*" + re.escape(_m.group(1)) + r"\b",
+                    q):
+                return True
+
+    # W38 — a Hindi cost-at-a-rate ask answered with a
+    # bare money-less number: the serve is a per-unit
+    # intermediate (Board 8 idx 529: painting 24 pillars
+    # at ₹8/m² served 704, one pillar's CSA in raw cm —
+    # the count, the rate and the unit conversion all
+    # skipped). The Hindi twin of W22.
+    if re.search(r"व्यय|लागत|खर्च", q) \
+            and re.search(r"दर\s*से|प्रति\s+वर्ग", q) \
+            and "₹" not in ans and "रुपए" not in ans \
+            and "रुपये" not in ans and num is not None:
+        return True
+
+    # W39 — root self-verification (the W24 idiom): for a
+    # square/cube-root ask with parseable radicand(s), a
+    # numeric serve must actually root one of them.
+    # (Board 8 idx 460: ∛8000 served 0 — the parse had
+    # eaten the 8, leaving cbrt(000).) Verdict serves
+    # ("not a perfect square") are not numeric and pass;
+    # a serve matching ANY radicand is verified (idx 427:
+    # √100 & √169 served 13 — partial but correct).
+    _power = None
+    if "घनमूल" in q or re.search(r"cube\s+root", ql):
+        _power = 3
+    elif "वर्गमूल" in q or re.search(r"square\s+root", ql):
+        _power = 2
+    if _power and num is not None:
+        _rads = set()
+        _skip = False
+        for _cl in re.split(r"[।?]|\.\s", q):
+            if "वर्गमूल" in _cl or "घनमूल" in _cl \
+                    or "root" in _cl.lower():
+                if "+" in _cl or "योग" in _cl:
+                    _skip = True
+                    break
+                _norm = re.sub(r"(\d)ए(\d{3})", r"\1\2",
+                               _cl).replace(",", "")
+                for _t in re.findall(r"\d+(?:\.\d+)?", _norm):
+                    _rads.add(float(_t))
+        _sym = "∛" if _power == 3 else "√"
+        for _t in re.findall(re.escape(_sym)
+                             + r"\s*(\d+(?:\.\d+)?)", q):
+            _rads.add(float(_t))
+        if _rads and not _skip:
+            if not any(abs(num ** _power - _r)
+                       <= max(1e-6, 1e-6 * _r) for _r in _rads):
+                return True
+
+    # W44 — a "find the SMALLEST square/cube number ..."
+    # ask served a perfect-square/cube VERDICT about one
+    # of the givens: the verdict answers a question nobody
+    # posed. (Board 8 idx 434: smallest square divisible
+    # by 8, 15 and 20 served "8 is not a perfect square".)
+    # A question that DOES pose the verdict ask ("क्या
+    # 2352 एक पूर्ण वर्ग है? यदि नहीं तो सबसे छोटा गुणज
+    # ...") is exempt — there the verdict is the asked
+    # first part (idx 422/452–455 stay).
+    if re.search(r"सबसे\s+छोटी[^।]{0,40}(?:वर्ग|घन)\s+संख्या|"
+                 r"smallest[^.]{0,50}(?:square|cube)\s+number",
+                 ql + " " + q) \
+            and re.search(r"पूर्ण\s+(?:वर्ग|घन)\s+नहीं|"
+                          r"not\s+a\s+perfect\s+(?:square|cube)",
+                          ans) \
+            and not re.search(
+                r"क्या\s*\d+[^।]{0,20}पूर्ण\s+(?:वर्ग|घन)|"
+                r"\bis\s+\d+\s+a\s+perfect", ql + " " + q):
+        return True
+
+    # W40 — a comparison ask served a bare number with no
+    # comparison in it (Board 8 idx 276: "compare 2.7×10¹²
+    # and 1.5×10⁸" served the carved product 13662/5).
+    if op == "evaluate" and num is not None and re.search(
+            r"तुलना|compare|which\s+is\s+(?:greater|larger|"
+            r"bigger|smaller)", ql + " " + q) \
+            and not re.search(r"[<>≥≤]|greater|smaller|"
+                              r"larger|बड़|छोट", ans):
+        return True
+
+    # W41 — a FORM ask (exponential / standard form)
+    # served a bare evaluated number, any op (Board 8
+    # idx 280: 8⁴ "in base 2" served 4096; idx 555 likewise;
+    # idx 292's standard-form mean also dies here).
+    if num is not None and _w151_form_ask(q, ql):
+        return True
+
+    # W42 — an algebraic-expression operation ask served
+    # a bare number (Board 8 idx 489: subtract-the-
+    # polynomials served -2; idx 629: polynomial division
+    # served -1). The answer must carry the variables.
+    if num is not None and _w151_expr_op_ask(q, ql):
+        return True
+
     return False
 
 
@@ -2468,7 +2937,8 @@ def _with_fallback_chain(question, result, lang=None,
         except Exception:
             mp_preferred = None
         if mp_preferred is not None \
-                and not _w150_veto(question, mp_preferred):
+                and not _w150_veto(question, mp_preferred) \
+                and not _w151_veto(question, mp_preferred):
             return _with_figure(question, mp_preferred)
         # Wave 95: for a proof ask, a SymPy-verified identity
         # derivation (proofs.py) upgrades the solver's bare
@@ -2769,7 +3239,8 @@ def _with_fallback_chain(question, result, lang=None,
         multi = multipart_result(question)
     except Exception:
         multi = None
-    if multi is not None and not _w150_veto(question, multi):
+    if multi is not None and not _w150_veto(question, multi) \
+            and not _w151_veto(question, multi):
         return multi
 
     # Wave 95: the proof layer (proofs.py). "Prove that ..."
@@ -2811,7 +3282,7 @@ def _with_fallback_chain(question, result, lang=None,
         formatted = formats_result(question)
     except Exception:
         formatted = None
-    if formatted is not None:
+    if formatted is not None and not _w151_veto(question, formatted):
         return formatted
 
     # Wave 143: the graph-METHOD layer (graphsolve.py).
@@ -2866,7 +3337,7 @@ def _with_fallback_chain(question, result, lang=None,
         graphed = graph_result(question, hindi)
     except Exception:
         graphed = None
-    if graphed is not None:
+    if graphed is not None and not _w151_veto(question, graphed):
         return graphed
 
     # The solver did not really answer. Work the layers.
