@@ -214,6 +214,251 @@
      at the bottom, no marketing sections anywhere on this page.
      The topic list moved to /topics. #}
   <div class="chat-shell">
+    {% if saathi_name %}
+    {# Wave 168 (Suraj, 18 Nov 2026, late night — "Robot ko
+       upar rakho bilkul", refined: "Jo menu wali line hai
+       naa, uske neeche rakhana hai" + "Muse hai jaise"):
+       the home robot no longer rides inside the vertically
+       centred empty-state block. It stands at the VERY TOP
+       of the content area, centred, immediately below the
+       header/menu line — like Muse's character. The logo,
+       greeting and thought stay in the centred block below
+       (.chat-empty), untouched and in their order. Same
+       character, same SVG, same animations (the block below
+       is the Wave 160/161 robot, moved verbatim); it still
+       renders only for a named student, and CSS hides it
+       the moment a chat starts (body.chat-active), when
+       the header buddy takes over — the two never show
+       together. #}
+    <div class="empty-robot-top" aria-hidden="true">
+      <svg class="robot" viewBox="0 0 100 100" width="80"
+        height="80" aria-hidden="true" focusable="false">
+        <g class="robot-hop">
+        <g class="robot-tilt">
+        <g class="robot-inner">
+          <ellipse class="robot-foot-l" cx="41" cy="93"
+            rx="6" ry="4.4" fill="#0a7a64" />
+          <ellipse class="robot-foot-r" cx="59" cy="93"
+            rx="6" ry="4.4" fill="#0a7a64" />
+          <rect x="28" y="52" width="44" height="36"
+            rx="13" fill="#f0d3a0" />
+          <path d="M31 82 Q50 87.5 69 82" fill="none"
+            stroke="#dbb87e" stroke-width="1.6" />
+          <rect x="41" y="68" width="18" height="12"
+            rx="5" fill="#0a7a64" />
+          <circle cx="50" cy="61" r="4.6"
+            fill="#0a7a64" />
+          <circle cx="50" cy="61" r="2.2"
+            fill="#46f2c3" />
+          <ellipse cx="30.5" cy="75" rx="2.6" ry="5"
+            fill="#0a7a64" transform="rotate(14 30.5 75)" />
+          <ellipse cx="69.5" cy="75" rx="2.6" ry="5"
+            fill="#0a7a64"
+            transform="rotate(-14 69.5 75)" />
+          <g class="robot-arm-rest">
+            <path d="M30 58 Q22 66 23 76" fill="none"
+              stroke="#f0d3a0" stroke-width="7"
+              stroke-linecap="round" />
+            <path d="M29.5 55 Q24 57.5 23.2 62.5"
+              fill="none" stroke="#0a7a64"
+              stroke-width="7.2" stroke-linecap="round" />
+            <circle cx="23.5" cy="80" r="5"
+              fill="#0a7a64" />
+            <circle cx="27.6" cy="77.2" r="2.2"
+              fill="#0a7a64" />
+          </g>
+          <g class="robot-arm">
+            <path d="M70 57 Q80 52 84 44" fill="none"
+              stroke="#f0d3a0" stroke-width="7"
+              stroke-linecap="round" />
+            <path d="M70.5 56.5 Q76 53.5 79.5 49.5"
+              fill="none" stroke="#0a7a64"
+              stroke-width="7.2" stroke-linecap="round" />
+            <circle cx="86" cy="38" r="5.5"
+              fill="#0a7a64" />
+            <circle cx="80.8" cy="40.5" r="2.3"
+              fill="#0a7a64" />
+            <circle cx="88.2" cy="32.8" r="2.2"
+              fill="#0a7a64" />
+          </g>
+          <rect x="24" y="16" width="52" height="40"
+            rx="17" fill="#f0d3a0" />
+          <circle cx="41" cy="17.5" r="3"
+            fill="#074335" />
+          <circle cx="59" cy="17.5" r="3"
+            fill="#074335" />
+          <path d="M40 16 L37.5 8.5" fill="none"
+            stroke="#074335" stroke-width="2.4"
+            stroke-linecap="round" />
+          <path d="M60 16 L62.5 8.5" fill="none"
+            stroke="#074335" stroke-width="2.4"
+            stroke-linecap="round" />
+          <rect x="20.5" y="30" width="7" height="18"
+            rx="3.5" fill="#0a7a64" />
+          <rect x="72.5" y="30" width="7" height="18"
+            rx="3.5" fill="#0a7a64" />
+          <circle class="robot-light-flare" cx="37"
+            cy="6" r="12" fill="#7df5d2" opacity="0" />
+          <circle class="robot-light-flare2" cx="37"
+            cy="6" r="12" fill="#7df5d2" opacity="0" />
+          <circle class="robot-light-halo" cx="37"
+            cy="6" r="8.5" fill="#2bd9a9"
+            opacity="0.35" />
+          <circle class="robot-ball" cx="37" cy="6"
+            r="4.3" fill="#2fe8b8" />
+          <circle cx="35.8" cy="4.8" r="1.1"
+            fill="#ffffff" opacity="0.95" />
+          <circle class="robot-light-flare" cx="63"
+            cy="6" r="12" fill="#7df5d2" opacity="0" />
+          <circle class="robot-light-flare2" cx="63"
+            cy="6" r="12" fill="#7df5d2" opacity="0" />
+          <circle class="robot-light-halo" cx="63"
+            cy="6" r="8.5" fill="#2bd9a9"
+            opacity="0.35" />
+          <circle class="robot-ball" cx="63" cy="6"
+            r="4.3" fill="#2fe8b8" />
+          <circle cx="61.8" cy="4.8" r="1.1"
+            fill="#ffffff" opacity="0.95" />
+          <g class="robot-face-smile">
+            <g class="robot-eyes">
+              <circle cx="41.5" cy="37" r="4.6"
+                fill="#2bd9a9" opacity="0.4" />
+              <circle cx="58.5" cy="37" r="4.6"
+                fill="#2bd9a9" opacity="0.4" />
+              <circle cx="41.5" cy="37" r="2.6"
+                fill="#46f2c3" />
+              <circle cx="58.5" cy="37" r="2.6"
+                fill="#46f2c3" />
+              <circle cx="40.7" cy="36.2" r="0.9"
+                fill="#ffffff" opacity="0.9" />
+              <circle cx="57.7" cy="36.2" r="0.9"
+                fill="#ffffff" opacity="0.9" />
+            </g>
+            <path d="M45.5 44.5 Q50 48.5 54.5 44.5"
+              fill="none" stroke="#076e59"
+              stroke-width="2.1" stroke-linecap="round" />
+          </g>
+          <g class="robot-face-laugh">
+            <path d="M37.5 38.5 Q41.5 34.5 45.5 38.5"
+              fill="none" stroke="#074335"
+              stroke-width="2.2" stroke-linecap="round" />
+            <path d="M54.5 38.5 Q58.5 34.5 62.5 38.5"
+              fill="none" stroke="#074335"
+              stroke-width="2.2" stroke-linecap="round" />
+            <path d="M44 44.5 a6 5 0 0 0 12 0 z"
+              fill="#074335" />
+          </g>
+          <g class="robot-face-kiss">
+            <path d="M37.5 38.5 Q41.5 34.5 45.5 38.5"
+              fill="none" stroke="#074335"
+              stroke-width="2.2" stroke-linecap="round" />
+            <path d="M54.5 38.5 Q58.5 34.5 62.5 38.5"
+              fill="none" stroke="#074335"
+              stroke-width="2.2" stroke-linecap="round" />
+            <circle cx="50" cy="46.5" r="1.6" fill="none"
+              stroke="#076e59" stroke-width="1.6" />
+          </g>
+          <g class="robot-kiss-hand">
+            <path d="M67 57 Q63 52 59 49.5" fill="none"
+              stroke="#f0d3a0" stroke-width="6.5"
+              stroke-linecap="round" />
+            <circle cx="56.5" cy="47.5" r="5"
+              fill="#0a7a64" />
+            <circle cx="53.2" cy="43.2" r="2.1"
+              fill="#0a7a64" />
+            <circle cx="57.8" cy="42.6" r="2.1"
+              fill="#0a7a64" />
+          </g>
+          <g class="robot-face-lookup">
+            <rect x="33" y="29" width="34" height="24"
+              rx="9" fill="#f0d3a0" />
+            <circle cx="41.5" cy="34.5" r="4.6"
+              fill="#2bd9a9" opacity="0.4" />
+            <circle cx="58.5" cy="34.5" r="4.6"
+              fill="#2bd9a9" opacity="0.4" />
+            <circle cx="41.5" cy="34.5" r="2.6"
+              fill="#46f2c3" />
+            <circle cx="58.5" cy="34.5" r="2.6"
+              fill="#46f2c3" />
+            <path d="M45 43 Q50 47 55 43" fill="none"
+              stroke="#076e59" stroke-width="2.1"
+              stroke-linecap="round" />
+          </g>
+          <g class="robot-grab-arm">
+            <path d="M71 56 Q86 46 85 30 Q84 12 67 6.3"
+              fill="none" stroke="#f0d3a0"
+              stroke-width="7" stroke-linecap="round" />
+            <path d="M71.5 55.5 Q79 50 82 44"
+              fill="none" stroke="#0a7a64"
+              stroke-width="7.2" stroke-linecap="round" />
+            <circle class="robot-grab-hand" cx="63"
+              cy="6" r="5.5" fill="#0a7a64" />
+            <circle cx="59.6" cy="1.8" r="2.1"
+              fill="#0a7a64" />
+            <circle cx="64.2" cy="1.1" r="2.1"
+              fill="#0a7a64" />
+          </g>
+          <g class="robot-monkey-face">
+            <rect x="33" y="29" width="34" height="24"
+              rx="9" fill="#f0d3a0" />
+            <path d="M37.5 38.5 Q41.5 34.5 45.5 38.5"
+              fill="none" stroke="#074335"
+              stroke-width="2.2" stroke-linecap="round" />
+            <path d="M54.5 38.5 Q58.5 34.5 62.5 38.5"
+              fill="none" stroke="#074335"
+              stroke-width="2.2" stroke-linecap="round" />
+            <path d="M42.5 43.5 a7.5 6.2 0 0 0 15 0 z"
+              fill="#074335" />
+            <path d="M46.5 48.4 a3.5 2.4 0 0 0 7 0 z"
+              fill="#f2789b" />
+          </g>
+          <g class="robot-monkey-scratch">
+            <path d="M28 55 Q17 42 19.5 28" fill="none"
+              stroke="#f0d3a0" stroke-width="6.5"
+              stroke-linecap="round" />
+            <circle cx="20.5" cy="23.5" r="5.2"
+              fill="#0a7a64" />
+            <circle cx="17.3" cy="19.6" r="2.1"
+              fill="#0a7a64" />
+            <circle cx="21.8" cy="18.8" r="2.1"
+              fill="#0a7a64" />
+          </g>
+        </g>
+        </g>
+        </g>
+        <g class="robot-hearts">
+          <g transform="translate(6 30) scale(1.15)">
+            <path class="robot-heart" style="--d:.05s"
+              fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
+          </g>
+          <g transform="translate(85 26) scale(1.3)">
+            <path class="robot-heart" style="--d:.18s"
+              fill="#ef4f63" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
+          </g>
+          <g transform="translate(14 12) scale(0.8)">
+            <path class="robot-heart" style="--d:.3s"
+              fill="#ef4f63" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
+          </g>
+          <g transform="translate(76 8) scale(0.9)">
+            <path class="robot-heart" style="--d:.42s"
+              fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
+          </g>
+          <g transform="translate(2 48) scale(0.7)">
+            <path class="robot-heart" style="--d:.24s"
+              fill="#ef4f63" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
+          </g>
+          <g transform="translate(90 46) scale(0.75)">
+            <path class="robot-heart" style="--d:.36s"
+              fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
+          </g>
+          <g transform="translate(60 1) scale(0.6)">
+            <path class="robot-heart" style="--d:.5s"
+              fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
+          </g>
+        </g>
+      </svg>
+    </div>
+    {% endif %}
     <div class="chat-scroll" id="chat-scroll">
       <div class="chat-log" id="chat-log" aria-live="polite">
         <div class="chat-empty" id="chat-empty">
@@ -317,235 +562,18 @@
                .empty-hello is a centred column: robot, then
                "Hello <name>", then the thought below —
                instead of sitting left of the greeting. Same
-               character, same shapes, same animations. #}
+               character, same shapes, same animations.
+               Wave 168 (Suraj, 18 Nov 2026, late night —
+               "Robot ko upar rakho bilkul... menu wali line
+               ke neeche rakhana hai"): the robot SVG moved
+               OUT of this container to the very top of the
+               page (see .empty-robot-top at the top of
+               .chat-shell, immediately below the header/menu
+               line). This container now holds only the
+               greeting; the logo above it and the thought
+               below it are unchanged. #}
             <div class="empty-hello">
-              <svg class="robot" viewBox="0 0 100 100" width="80"
-                height="80" aria-hidden="true" focusable="false">
-                <g class="robot-hop">
-                <g class="robot-tilt">
-                <g class="robot-inner">
-                  <ellipse class="robot-foot-l" cx="41" cy="93"
-                    rx="6" ry="4.4" fill="#0a7a64" />
-                  <ellipse class="robot-foot-r" cx="59" cy="93"
-                    rx="6" ry="4.4" fill="#0a7a64" />
-                  <rect x="28" y="52" width="44" height="36"
-                    rx="13" fill="#f0d3a0" />
-                  <path d="M31 82 Q50 87.5 69 82" fill="none"
-                    stroke="#dbb87e" stroke-width="1.6" />
-                  <rect x="41" y="68" width="18" height="12"
-                    rx="5" fill="#0a7a64" />
-                  <circle cx="50" cy="61" r="4.6"
-                    fill="#0a7a64" />
-                  <circle cx="50" cy="61" r="2.2"
-                    fill="#46f2c3" />
-                  <ellipse cx="30.5" cy="75" rx="2.6" ry="5"
-                    fill="#0a7a64" transform="rotate(14 30.5 75)" />
-                  <ellipse cx="69.5" cy="75" rx="2.6" ry="5"
-                    fill="#0a7a64"
-                    transform="rotate(-14 69.5 75)" />
-                  <g class="robot-arm-rest">
-                    <path d="M30 58 Q22 66 23 76" fill="none"
-                      stroke="#f0d3a0" stroke-width="7"
-                      stroke-linecap="round" />
-                    <path d="M29.5 55 Q24 57.5 23.2 62.5"
-                      fill="none" stroke="#0a7a64"
-                      stroke-width="7.2" stroke-linecap="round" />
-                    <circle cx="23.5" cy="80" r="5"
-                      fill="#0a7a64" />
-                    <circle cx="27.6" cy="77.2" r="2.2"
-                      fill="#0a7a64" />
-                  </g>
-                  <g class="robot-arm">
-                    <path d="M70 57 Q80 52 84 44" fill="none"
-                      stroke="#f0d3a0" stroke-width="7"
-                      stroke-linecap="round" />
-                    <path d="M70.5 56.5 Q76 53.5 79.5 49.5"
-                      fill="none" stroke="#0a7a64"
-                      stroke-width="7.2" stroke-linecap="round" />
-                    <circle cx="86" cy="38" r="5.5"
-                      fill="#0a7a64" />
-                    <circle cx="80.8" cy="40.5" r="2.3"
-                      fill="#0a7a64" />
-                    <circle cx="88.2" cy="32.8" r="2.2"
-                      fill="#0a7a64" />
-                  </g>
-                  <rect x="24" y="16" width="52" height="40"
-                    rx="17" fill="#f0d3a0" />
-                  <circle cx="41" cy="17.5" r="3"
-                    fill="#074335" />
-                  <circle cx="59" cy="17.5" r="3"
-                    fill="#074335" />
-                  <path d="M40 16 L37.5 8.5" fill="none"
-                    stroke="#074335" stroke-width="2.4"
-                    stroke-linecap="round" />
-                  <path d="M60 16 L62.5 8.5" fill="none"
-                    stroke="#074335" stroke-width="2.4"
-                    stroke-linecap="round" />
-                  <rect x="20.5" y="30" width="7" height="18"
-                    rx="3.5" fill="#0a7a64" />
-                  <rect x="72.5" y="30" width="7" height="18"
-                    rx="3.5" fill="#0a7a64" />
-                  <circle class="robot-light-flare" cx="37"
-                    cy="6" r="12" fill="#7df5d2" opacity="0" />
-                  <circle class="robot-light-flare2" cx="37"
-                    cy="6" r="12" fill="#7df5d2" opacity="0" />
-                  <circle class="robot-light-halo" cx="37"
-                    cy="6" r="8.5" fill="#2bd9a9"
-                    opacity="0.35" />
-                  <circle class="robot-ball" cx="37" cy="6"
-                    r="4.3" fill="#2fe8b8" />
-                  <circle cx="35.8" cy="4.8" r="1.1"
-                    fill="#ffffff" opacity="0.95" />
-                  <circle class="robot-light-flare" cx="63"
-                    cy="6" r="12" fill="#7df5d2" opacity="0" />
-                  <circle class="robot-light-flare2" cx="63"
-                    cy="6" r="12" fill="#7df5d2" opacity="0" />
-                  <circle class="robot-light-halo" cx="63"
-                    cy="6" r="8.5" fill="#2bd9a9"
-                    opacity="0.35" />
-                  <circle class="robot-ball" cx="63" cy="6"
-                    r="4.3" fill="#2fe8b8" />
-                  <circle cx="61.8" cy="4.8" r="1.1"
-                    fill="#ffffff" opacity="0.95" />
-                  <g class="robot-face-smile">
-                    <g class="robot-eyes">
-                      <circle cx="41.5" cy="37" r="4.6"
-                        fill="#2bd9a9" opacity="0.4" />
-                      <circle cx="58.5" cy="37" r="4.6"
-                        fill="#2bd9a9" opacity="0.4" />
-                      <circle cx="41.5" cy="37" r="2.6"
-                        fill="#46f2c3" />
-                      <circle cx="58.5" cy="37" r="2.6"
-                        fill="#46f2c3" />
-                      <circle cx="40.7" cy="36.2" r="0.9"
-                        fill="#ffffff" opacity="0.9" />
-                      <circle cx="57.7" cy="36.2" r="0.9"
-                        fill="#ffffff" opacity="0.9" />
-                    </g>
-                    <path d="M45.5 44.5 Q50 48.5 54.5 44.5"
-                      fill="none" stroke="#076e59"
-                      stroke-width="2.1" stroke-linecap="round" />
-                  </g>
-                  <g class="robot-face-laugh">
-                    <path d="M37.5 38.5 Q41.5 34.5 45.5 38.5"
-                      fill="none" stroke="#074335"
-                      stroke-width="2.2" stroke-linecap="round" />
-                    <path d="M54.5 38.5 Q58.5 34.5 62.5 38.5"
-                      fill="none" stroke="#074335"
-                      stroke-width="2.2" stroke-linecap="round" />
-                    <path d="M44 44.5 a6 5 0 0 0 12 0 z"
-                      fill="#074335" />
-                  </g>
-                  <g class="robot-face-kiss">
-                    <path d="M37.5 38.5 Q41.5 34.5 45.5 38.5"
-                      fill="none" stroke="#074335"
-                      stroke-width="2.2" stroke-linecap="round" />
-                    <path d="M54.5 38.5 Q58.5 34.5 62.5 38.5"
-                      fill="none" stroke="#074335"
-                      stroke-width="2.2" stroke-linecap="round" />
-                    <circle cx="50" cy="46.5" r="1.6" fill="none"
-                      stroke="#076e59" stroke-width="1.6" />
-                  </g>
-                  <g class="robot-kiss-hand">
-                    <path d="M67 57 Q63 52 59 49.5" fill="none"
-                      stroke="#f0d3a0" stroke-width="6.5"
-                      stroke-linecap="round" />
-                    <circle cx="56.5" cy="47.5" r="5"
-                      fill="#0a7a64" />
-                    <circle cx="53.2" cy="43.2" r="2.1"
-                      fill="#0a7a64" />
-                    <circle cx="57.8" cy="42.6" r="2.1"
-                      fill="#0a7a64" />
-                  </g>
-                  <g class="robot-face-lookup">
-                    <rect x="33" y="29" width="34" height="24"
-                      rx="9" fill="#f0d3a0" />
-                    <circle cx="41.5" cy="34.5" r="4.6"
-                      fill="#2bd9a9" opacity="0.4" />
-                    <circle cx="58.5" cy="34.5" r="4.6"
-                      fill="#2bd9a9" opacity="0.4" />
-                    <circle cx="41.5" cy="34.5" r="2.6"
-                      fill="#46f2c3" />
-                    <circle cx="58.5" cy="34.5" r="2.6"
-                      fill="#46f2c3" />
-                    <path d="M45 43 Q50 47 55 43" fill="none"
-                      stroke="#076e59" stroke-width="2.1"
-                      stroke-linecap="round" />
-                  </g>
-                  <g class="robot-grab-arm">
-                    <path d="M71 56 Q86 46 85 30 Q84 12 67 6.3"
-                      fill="none" stroke="#f0d3a0"
-                      stroke-width="7" stroke-linecap="round" />
-                    <path d="M71.5 55.5 Q79 50 82 44"
-                      fill="none" stroke="#0a7a64"
-                      stroke-width="7.2" stroke-linecap="round" />
-                    <circle class="robot-grab-hand" cx="63"
-                      cy="6" r="5.5" fill="#0a7a64" />
-                    <circle cx="59.6" cy="1.8" r="2.1"
-                      fill="#0a7a64" />
-                    <circle cx="64.2" cy="1.1" r="2.1"
-                      fill="#0a7a64" />
-                  </g>
-                  <g class="robot-monkey-face">
-                    <rect x="33" y="29" width="34" height="24"
-                      rx="9" fill="#f0d3a0" />
-                    <path d="M37.5 38.5 Q41.5 34.5 45.5 38.5"
-                      fill="none" stroke="#074335"
-                      stroke-width="2.2" stroke-linecap="round" />
-                    <path d="M54.5 38.5 Q58.5 34.5 62.5 38.5"
-                      fill="none" stroke="#074335"
-                      stroke-width="2.2" stroke-linecap="round" />
-                    <path d="M42.5 43.5 a7.5 6.2 0 0 0 15 0 z"
-                      fill="#074335" />
-                    <path d="M46.5 48.4 a3.5 2.4 0 0 0 7 0 z"
-                      fill="#f2789b" />
-                  </g>
-                  <g class="robot-monkey-scratch">
-                    <path d="M28 55 Q17 42 19.5 28" fill="none"
-                      stroke="#f0d3a0" stroke-width="6.5"
-                      stroke-linecap="round" />
-                    <circle cx="20.5" cy="23.5" r="5.2"
-                      fill="#0a7a64" />
-                    <circle cx="17.3" cy="19.6" r="2.1"
-                      fill="#0a7a64" />
-                    <circle cx="21.8" cy="18.8" r="2.1"
-                      fill="#0a7a64" />
-                  </g>
-                </g>
-                </g>
-                </g>
-                <g class="robot-hearts">
-                  <g transform="translate(6 30) scale(1.15)">
-                    <path class="robot-heart" style="--d:.05s"
-                      fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-                  </g>
-                  <g transform="translate(85 26) scale(1.3)">
-                    <path class="robot-heart" style="--d:.18s"
-                      fill="#ef4f63" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-                  </g>
-                  <g transform="translate(14 12) scale(0.8)">
-                    <path class="robot-heart" style="--d:.3s"
-                      fill="#ef4f63" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-                  </g>
-                  <g transform="translate(76 8) scale(0.9)">
-                    <path class="robot-heart" style="--d:.42s"
-                      fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-                  </g>
-                  <g transform="translate(2 48) scale(0.7)">
-                    <path class="robot-heart" style="--d:.24s"
-                      fill="#ef4f63" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-                  </g>
-                  <g transform="translate(90 46) scale(0.75)">
-                    <path class="robot-heart" style="--d:.36s"
-                      fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-                  </g>
-                  <g transform="translate(60 1) scale(0.6)">
-                    <path class="robot-heart" style="--d:.5s"
-                      fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-                  </g>
-                </g>
-              </svg>
-                            <h2 class="empty-greeting">{{ saathi_greeting_short }}</h2>
+              <h2 class="empty-greeting">{{ saathi_greeting_short }}</h2>
             </div>
             <p class="empty-sub empty-thought">{{ daily_thought }}</p>
             {# Wave 11: Suraj removed the "Type it, speak it..."
