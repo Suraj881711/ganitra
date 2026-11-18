@@ -50,6 +50,7 @@ import weak_practice
 import full_paper
 import progress as progress_mod
 import chats
+import thoughts
 
 _HISTORY_LIMIT = 30
 _MISTAKE_LIMIT = 50
@@ -111,6 +112,21 @@ def _personal_line(strings, name_key, plain_key, name):
         except (IndexError, KeyError, ValueError):
             return template
     return template
+
+
+def _short_greeting(strings, name):
+    """Wave 155 (Suraj, 18 Nov 2026): the chat home's greeting
+    line stays SHORT — just "Hello <name>", the first clause of
+    the personalised welcome line in the student's own UI
+    language ("नमस्ते <name>" in Hindi, and so on). The day's
+    rotating thought rides BELOW it as a small muted line
+    (thoughts.py); the long welcome text no longer renders on
+    the chat home."""
+    line = _personal_line(strings, "saathi_welcome_name",
+                          "chat_welcome", name)
+    if name and "!" in line:
+        return line.split("!", 1)[0].strip()
+    return line
 
 
 def _ask_again(question):
@@ -624,6 +640,16 @@ def create_app():
             "saathi_greeting": _personal_line(
                 strings, "saathi_welcome_name", "chat_welcome",
                 saathi_name),
+            # Wave 155 (Suraj, 18 Nov 2026): the chat home's
+            # greeting stays SHORT ("Hello <name>") and the
+            # current time slot's rotating thought — 10 a day,
+            # time-divided (thoughts.py) — rides below it as a
+            # small muted line. The thought's variant follows
+            # the session language, the same machinery the
+            # greeting itself used.
+            "saathi_greeting_short": _short_greeting(
+                strings, saathi_name),
+            "daily_thought": thoughts.thought_text(lang=lang),
             "saathi_encouragement": _personal_line(
                 strings, "saathi_wrong_name", "saathi_wrong",
                 saathi_name),
