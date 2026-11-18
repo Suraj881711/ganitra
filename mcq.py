@@ -264,6 +264,16 @@ def _stem_is_real(stem, result):
         return False
     if _looks_junk(ans):
         return False
+    # Wave 150: the book-style wrong-serve vetoes also gate
+    # part-level solves (multipart parts and MCQ stems are
+    # solved through this bar): a part whose form provably
+    # disagrees with its ask is not real either.
+    try:
+        from fallback import _w150_veto
+        if _w150_veto(stem, result):
+            return False
+    except Exception:
+        pass
     return True
 
 

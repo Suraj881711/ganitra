@@ -234,6 +234,8 @@ def _is_real(question, result):
         return False
     if _w146_veto(question, result):
         return False
+    if _w150_veto(question, result):
+        return False
     return True
 
 
@@ -566,6 +568,637 @@ def _w146_veto(question, result):
                 r"marginal|derivative|dy\s*/\s*dx|"
                 r"rate\s+of|differentiat|gradient", ql):
         return True
+    return False
+
+
+# ---------------------------------------------------------------------------
+# Wave 150: book-style wrong-serve vetoes (from the Wave 135
+# books programme's hand-checked calibrations: CISCE ~50 of
+# 76 raw "SOLVED" serves verifiably wrong, UP 25 of 40, Bihar
+# 41 of 60 — wrong-schema serves, asked-quantity mismatches,
+# given echoes and evaluator carves on raw book text). Like
+# Wave 146's veto, each rule fires only when the question's
+# ASK and the result's FORM provably disagree; a vetoed
+# result falls through to the honest chain (bank, MCQ stem
+# solve, formats, verified AI, not-found) — a replacement
+# answer is never invented here. Every rule is pinned by
+# test_wave150.py, including its false-positive battery.
+# ---------------------------------------------------------------------------
+
+def _w150_bare_number(ans):
+    """_w146_bare_number plus the square/cube unit suffixes
+    mensuration answers carry (cm², cm³, m², m³)."""
+    s = str(ans or "").strip()
+    s = re.sub(r"(?:cm|m|mm|km)(?:²|³|\^2|\^3)\s*$", "", s)
+    s = re.sub(r"(?:²|³)\s*$", "", s)
+    return _w146_bare_number(s)
+
+
+_W150_PART_LABEL = r"\((i|ii|iii|iv|v|vi|a|b|c|d|e)\)"
+
+
+def _w150_part_labels(text):
+    return set(re.findall(_W150_PART_LABEL,
+                          str(text or "").lower()))
+
+
+def _w150_factorised_numbers(steps):
+    """Reconstruct the integers a steps block factorises:
+    lines like "Prime factorisation: 4052 = 2^2 × 1013" or
+    "4052 = 2^2 × 1013" whose stated factors multiply back
+    to the stated number. Returns the list of validated
+    integers (parse failures are skipped, never guessed)."""
+    out = []
+    for line in (steps or []):
+        m = re.search(r"(\d+)\s*=\s*"
+                      r"((?:\d+(?:\^\d+)?\s*(?:×|\*|x)\s*)*"
+                      r"\d+(?:\^\d+)?)\s*$", str(line).strip())
+        if not m:
+            continue
+        n = int(m.group(1))
+        try:
+            val = 1
+            for tok in re.split(r"\s*(?:×|\*|x)\s*",
+                                m.group(2)):
+                if "^" in tok:
+                    p, e = tok.split("^")
+                    val *= int(p) ** int(e)
+                else:
+                    val *= int(tok)
+        except Exception:
+            continue
+        if val == n and n not in out:
+            out.append(n)
+    return out
+
+
+def _w150_veto(question, result):
+    try:
+        return _w150_veto_inner(question, result)
+    except Exception:
+        return False
+
+
+def _w150_veto_inner(question, result):
+    if not isinstance(result, dict):
+        return False
+    q = str(question or "")
+    ql = q.lower()
+    ans = _answer_text(result)
+    al = ans.lower()
+    blob = (ans + " " + " ".join(
+        str(s) for s in (result.get("steps") or []))).lower()
+    op = str(result.get("op") or "")
+    num = _w150_bare_number(ans)
+    qints = [int(v) for v in re.findall(r"\d+", q.replace(",", ""))]
+
+    # W1 — dimension clash: a LENGTH quantity is the find
+    # target (diameter / radius / circumference / perimeter,
+    # incl. Hindi) but the answer carries AREA units; or a
+    # VOLUME target answered in area units / an AREA target
+    # answered in volume units. (UP idx 4149: diameter asked,
+    # "20.25·pi ≈ 63.6173 cm²" served.)
+    _len_target = re.search(
+        r"(?:find|calculate|determine|measure\s+of|what\s+is)"
+        r"[^.]{0,40}?\b(diameter|radius|circumference|"
+        r"perimeter)\b", ql) or re.search(
+            r"(व्यास|त्रिज्या|परिधि|परिमाप)\s*(?:ज्ञात|निकाल|बताओ)", q)
+    _area_target = re.search(
+        r"(?:find|calculate|determine|what\s+is)[^.]{0,40}?"
+        r"\barea\b", ql) or "क्षेत्रफल" in q
+    _vol_target = re.search(
+        r"(?:find|calculate|determine|what\s+is)[^.]{0,40}?"
+        r"\bvolume\b", ql) or "आयतन" in q
+    if re.search(r"(?:cm|m|mm|km)²|sq\.?\s*(?:cm|m|units?)|"
+                 r"square\s+units?", ans):
+        if _len_target and not _area_target:
+            return True
+        if _vol_target and not _area_target:
+            return True
+    if re.search(r"(?:cm|m|mm|km)³", ans) and _area_target \
+            and not _vol_target:
+        return True
+
+    # W2 — a PRICE is the find target but the answer is a
+    # bare percentage. (UP idx 4047/4064: "selling price"
+    # answered "80.7692%" / "99.76%".) A percent ask in the
+    # question disarms the rule.
+    if re.search(r"(?:selling|sale)\s+price|cost\s+price|"
+                 r"what\s+price|at\s+what\s+price|"
+                 r"विक्रय\s*मूल्य|क्रय\s*मूल्य", ql + q) \
+            and not re.search(r"percent|प्रतिशत", ql + q):
+        if re.fullmatch(r"-?\d+(?:\.\d+)?\s*%", ans.strip()):
+            return True
+
+    # W3 — a SUM is asked but the answer is the unsummed
+    # list of addends. (CBSE idx 1695: sum of odd numbers
+    # 0–50 served as the 25-number list.)
+    if re.search(r"\bsum\s+of\b", ql) or "योग ज्ञात" in q \
+            or "योग निकाल" in q:
+        if re.fullmatch(
+                r"-?\d+(?:\.\d+)?(?:\s*,\s*-?\d+(?:\.\d+)?){4,}",
+                ans.strip()):
+            return True
+
+    # W4 — primality-verdict serves: a bare "N is (not)
+    # prime" verdict is only an answer to a primality ask.
+    # Factorisation asks (fixed at the solver seam too) and
+    # "which of the following are prime" list asks (where a
+    # one-number verdict is at best partial) decline.
+    if re.fullmatch(r"\s*\d+\s+is\s+(?:not\s+)?prime\s*\.?\s*",
+                    al):
+        if re.search(r"which\s+of\s+the\s+following[^.]*"
+                     r"\bare\s+prime\b", ql):
+            return True
+        if not re.search(r"\bis\s+\d+\s+prime\b|"
+                         r"\bis\s+\d+\s+a\s+prime\b|"
+                         r"\b\d+\s+is\s+(?:a\s+)?prime\b|"
+                         r"\bare\s+prime\b|"
+                         r"prime\s+or\s+composite|"
+                         r"अभाज्य\s+है", ql + q):
+            return True
+
+    # W5 — symbol soup in the ANSWER: an em/en dash used as
+    # an algebraic factor (OCR minus signs parsed as
+    # symbols: "x = 11/(9·—)"), the degree sign used as a
+    # multiplied/divided operand ("B = 72·°/Z"), the
+    # "I/<letter>" factor (the word "If" parsed as I·f),
+    # and differential-equation asks answered by assigning
+    # the letter d or by a LambertW expression.
+    if re.search(r"[·*×]\s*[—–]|[—–]\s*[·*×]|[—–]\s*/|"
+                 r"/\s*[—–]|\(\s*[—–]|[—–]\s*\)", ans):
+        return True
+    if re.search(r"·\s*°|°\s*/|/\s*°|(?<!\d)°\s*=|=\s*°",
+                 ans):
+        return True
+    if re.search(r"\bI\s*/\s*[a-z]\b", ans):
+        return True
+    # Guillemets as algebraic factors ("64800*»**2") are
+    # OCR quote debris parsed as symbols — never a result.
+    if re.search(r"[»«]", ans) and ("*" in ans or "·" in ans):
+        return True
+    if (re.search(r"\bdy\b", ql) and re.search(r"\bdx\b", ql)) \
+            or "dy/dx" in ql:
+        if re.match(r"\s*d\s*=", ans) \
+                or "lambertw" in al:
+            return True
+
+    # W6 — the solver's own refusal served as an answer:
+    # "The equation has no variable to solve for." (alone,
+    # or repeated per part in a multipart card) is a
+    # non-answer, never a result. EXEMPTION: when the
+    # question genuinely poses an equation in a variable
+    # (a digit-glued term like "2x", or a standalone
+    # variable next to an operator), the same string is
+    # the solver's designed no-solution serve — Wave 77
+    # pins it byte-for-byte ("bhai 2x + 3 = 2x + 5 solve
+    # karo"). The adjudicated rows are variable-free
+    # statements ("5 + 2 + 3 = 10", "3 x 9 = 27" — the
+    # x there is a multiplication sign between digits).
+    _w6 = re.sub(_W150_PART_LABEL, " ", al)
+    _w6 = _w6.replace(
+        "the equation has no variable to solve for", " ")
+    if not re.sub(r"[\s.;:,()]+", "", _w6):
+        if not re.search(r"\d[a-z](?![a-z])|"
+                         r"(?<![a-z\d])[a-z](?![a-z])"
+                         r"\s*(?:[+\-*/=]|$)", ql):
+            return True
+
+    # W6b — fill-in-the-blanks pages carry several blanks;
+    # one bare number cannot answer them (a stray carved
+    # statistic was served for a Hindi fill-in page).
+    if ("रिक्त स्थान" in q or "fill in the blank" in ql) \
+            and _w150_bare_number(ans):
+        return True
+
+    # W7 — a multi-part ask (3+ part markers) answered with
+    # ONE bare value and no part labels: at most one part
+    # was answered. (UP percent multipart rows 4008/4021/
+    # 4009, cube volumes 4187, Bihar products 4802.)
+    _part_hits = len(re.findall(
+        r"\((?:i|ii|iii|iv|v|vi)\)", ql))
+    if _part_hits >= 3 and num is not None \
+            and not _w150_part_labels(ans):
+        return True
+    # W7b — a labelled serve covering only SOME of the
+    # question's parts (the multipart card for UP idx 3717
+    # served "(ii) 10" with part (i) unanswered inside a
+    # "solved" card). Scope: genuine multipart cards
+    # (Waves 100/141) serve the parts they can solve BY
+    # DESIGN — partial coverage alone is not a wrong
+    # serve there; the veto fires for non-card serves
+    # covering a subset, and for any serve (card or not)
+    # covering exactly ONE part of a multi-part ask.
+    _qlabels = _w150_part_labels(q)
+    _alabels = _w150_part_labels(ans)
+    _is_card = str(op).startswith("multipart") \
+        or isinstance(result.get("multipart"), dict)
+    if len(_qlabels) >= 2 and _alabels \
+            and _alabels < _qlabels \
+            and (not _is_card or len(_alabels) == 1):
+        return True
+    # W7c — a many-part ask (4+ markers) answered with one
+    # short unlabelled phrase (UP idx 6107: six quadrant
+    # parts answered with only the first quadrant).
+    if _part_hits >= 4 and not _alabels \
+            and len(ans.strip()) <= 60 \
+            and num is None:
+        return True
+
+    # W8 — HCF *and* LCM are both asked (EN / Hindi /
+    # abbreviations) but the answer is a single bare
+    # number: one of the two is missing. (Bihar idx 6864
+    # served only the HCF; idx 7559 served a bare 2 for an
+    # LCM-given-HCF-and-product ask.)
+    if re.search(r"\bhcf\b[^.।]{0,30}?\blcm\b|"
+                 r"\blcm\b[^.।]{0,30}?\bhcf\b|"
+                 r"म\.स\.[^.।]{0,40}?ल\.स\.|"
+                 r"ल\.स\.[^.।]{0,40}?म\.स\.|"
+                 r"महत्तम\s+समापवर्तक[^.।]{0,40}?"
+                 r"लघुत्तम", ql + q) and num is not None:
+        return True
+
+    # W9 — given echoes: the answer restates a given
+    # instead of computing the asked quantity.
+    # (a) distribute/divide/share in a ratio, answered with
+    # the ratio itself (UP idx 3973: "3 : 2").
+    _ratio = re.search(r"(\d+)\s*:\s*(\d+)", q)
+    if _ratio and re.search(r"\bdistribute\b|\bdivide\b|"
+                            r"\bshare\b", ql) \
+            and "ratio" in ql:
+        if ans.replace(" ", "") == \
+                f"{_ratio.group(1)}:{_ratio.group(2)}":
+            return True
+    # (b) "find two numbers whose HCF is H and LCM is L"
+    # answered by restating "HCF = H, LCM = L" (CBSE 822).
+    _fn = re.search(r"find\s+(?:two|the)\s+numbers?\s+whose"
+                    r"\s+hcf\s+is\s+(\d+)\s+and\s+(?:their\s+)?"
+                    r"lcm\s+is\s+(\d+)", ql)
+    if _fn:
+        _fa = re.fullmatch(r"\s*HCF\s*=\s*(\d+)\s*,\s*LCM"
+                           r"\s*=\s*(\d+)\s*", ans)
+        if _fa and _fa.groups() == _fn.groups():
+            return True
+    # (c) the LCM slot filled with the given PRODUCT
+    # (UP idx 3877: HCF 16, product 6400 -> "LCM = 6400";
+    # the true LCM is 6400 / 16 = 400).
+    _ph = re.search(r"\bhcf\s+is\s+(\d+)", ql)
+    _pp = re.search(r"\bproduct\s+is\s+(\d+)", ql)
+    if _ph and _pp and int(_ph.group(1)) > 1:
+        _la = re.search(r"LCM\s*=\s*(\d+)", ans)
+        if _la and int(_la.group(1)) == int(_pp.group(1)):
+            return True
+    # (d) "write N equations whose solution is x = v"
+    # answered by restating "x = v" (CBSE idx 943).
+    if re.search(r"write\s+\d+\s+equations?\s+whose\s+"
+                 r"solution\s+is", ql):
+        _sa = re.fullmatch(r"\s*([a-z])\s*=\s*(-?[\d.]+)"
+                           r"\s*", ans)
+        if _sa and re.search(
+                r"solution\s+is\s+" + _sa.group(1) +
+                r"\s*=\s*[–—-]?\s*" +
+                re.escape(_sa.group(2).lstrip("-")), ql):
+            return True
+    # (e) "how many times" asks: a bare answer equal to
+    # the question's FIRST given number is the echo of
+    # that given (Hindi twin idx 4474 served 95), and the
+    # ingredients form "HCF = a, LCM = b" is not the
+    # quotient asked for (UP idx 3880).
+    if "how many times" in ql or "कितनी बार" in q:
+        # Occurrence-count asks — "how many times does
+        # the digit 3 occur in 1333?" / "does 3 occur in
+        # the data ..." — are Wave 103's counting layer;
+        # their small counts legitimately coincide with
+        # a number in the question, so the first-given
+        # echo test does not apply to them.
+        if not re.search(r"does\b[^?]*\boccur", ql):
+            if num is not None and qints \
+                    and abs(num - qints[0]) < 1e-9:
+                return True
+        if "HCF =" in ans and "LCM =" in ans:
+            return True
+    # (f) a sum ask whose bare answer is the question's
+    # first number — the evaluator carved the range start
+    # (Bihar idx 7071: sum of odds 0–50 served "0").
+    if (re.search(r"\bsum\s+of\b", ql) or "योग" in q) \
+            and num is not None and len(qints) >= 2 \
+            and abs(num - qints[0]) < 1e-9:
+        return True
+
+    # W10 — a factorisation ask answered with a bare
+    # number (Bihar factorise rows served -6, -20, -15,
+    # -2, -3; UP factorise idx 5734 served 11). A
+    # factorise-AND-root ask is exempt: the bare number
+    # is the asked root, served by the purpose-built
+    # repeated-root layer (Wave 65: "factorise x^2 -
+    # 12x + 36 and give the repeated root" -> 6).
+    if re.search(r"\bfactoriz?e\b|\bfactorise\b|"
+                 r"गुणनखंड", ql + q) and num is not None \
+            and not re.search(r"\broots?\b", ql):
+        return True
+
+    # W11 — proof / show / verify / give-reasons asks
+    # (incl. Hindi दर्शाइए / दिखाइए / सिद्ध / सत्यापित)
+    # answered without any proof working: a bare number,
+    # an evaluator result, or a short verdict. Genuine
+    # proof results carry LHS/RHS working or a proved
+    # verdict and pass (Wave 146 V1's marker list).
+    _proof_ask = re.search(
+        r"\bprove\b|\bshow\s+that\b|दर्शाइए|दिखाइए|सिद्ध|"
+        r"सत्यापित|\bverify\s+(?:that|whether)\b", ql + q)
+    # The purpose-built verdict layers — verify_zeroes
+    # (Wave 32) and isprime — CHECK each candidate and
+    # their verdicts, including negative ones ("Not
+    # all ..."), are computed from their own working;
+    # they are not carves or bare verdicts, so W11
+    # does not gate them. (The adjudicated verify row,
+    # Bihar idx 6248, was served by the evaluator
+    # carve, op "evaluate"; the isprime hijack rows
+    # were factor asks, fixed at the solver seam and
+    # by W4 — "prove that N is prime" IS a primality
+    # ask, Wave 95's pin.)
+    if _proof_ask and op not in ("verify_zeroes",
+                                 "isprime") and not any(
+            mk in blob for mk in _W146_PROOF_MARKERS):
+        # An affirmative verdict WITH working ("Yes, the
+        # points are collinear" + the area computation) is
+        # the designed serve of the show-that layers
+        # (Wave 115's collinearity guard) — not a
+        # non-answer. A "No" verdict gets no exemption: a
+        # textbook show-that proposition is true, so a
+        # denial means the layer misread the question
+        # (Bihar idx 7142 denied the question's own given
+        # right angle).
+        # A genuine computation schema (NOT the evaluator
+        # carve) whose steps DERIVE the claimed number
+        # answers a concrete-instance claim by computing
+        # it — Wave 55's PMI topic serve ("prove ... the
+        # sum of the first 8 odd numbers is 64" -> the
+        # n^2 computation whose last step ends "= 64").
+        # The carve (op "evaluate", "Evaluate: 0 = 0")
+        # and verdict serves (num is None) stay vetoed.
+        _derived150 = False
+        if num is not None and op != "evaluate":
+            for _s150 in (result.get("steps") or []):
+                if str(_s150).rsplit("=", 1)[-1].strip() \
+                        == ans.strip():
+                    _derived150 = True
+                    break
+        if not _derived150:
+            if num is not None or op == "evaluate" \
+                    or len(ans.strip()) < 80:
+                if not re.match(r"\s*yes\b", al):
+                    return True
+    if re.search(r"give\s+reasons?\b|कारण\s+(?:दीजिए|बताइए)",
+                 ql + q) and num is None:
+        if not any(w in blob for w in (
+                "because", "since", "divides", "cannot",
+                "not possible", "कारण")):
+            if re.search(r"HCF\s*=|LCM\s*=", ans):
+                return True
+
+    # W12 — draw / construct / plot asks (incl. Hindi
+    # रचना) with no computation verb, answered with a
+    # number or a bare assignment. Extends Wave 146 V3's
+    # "construct" to "draw" / "plot a graph" (UP idx 4098
+    # "Draw a triangle" -> "A = 6/B"; idx 6114 plot ->
+    # "8"; Bihar idx 6648 construction heading -> "180°").
+    if re.search(r"\bdraw\b|\bconstruct\b|"
+                 r"\bplot\s+a\s+graph\b|रचना", ql + q) \
+            and not re.search(
+                r"\bfind\b|\bcalculate\b|\bdetermine\b|"
+                r"\bmeasure\b|\bwhat\s+is\b|\bvalue\s+of\b",
+                ql):
+        if re.match(r"\s*-?\d", ans) \
+                or re.fullmatch(r"\s*[A-Za-z]\s*=\s*"
+                                r"[^\n]{1,30}", ans):
+            return True
+
+    # W13 — derivative asks answered by solving for the
+    # variable instead: an assignment to x, or a y = ...
+    # solution with no dy/dx anywhere. (CBSE idx 2484:
+    # derivative of 99x -> "x = 0"; idx 2779: dy/dx ask
+    # -> "y = -10, y = 10".)
+    if re.search(r"dy\s*/\s*dx", ql) \
+            or (re.search(r"\bdy\b", ql)
+                and re.search(r"\bdx\b", ql)) \
+            or re.search(r"\bderivative\b|\bdifferentiat",
+                         ql):
+        if re.match(r"\s*x\s*=", ans):
+            return True
+        if re.match(r"\s*y\s*=", ans) \
+                and "dy/dx" not in blob:
+            return True
+
+    # W14 — a SECTOR area ask whose working is the full
+    # circle formula pi·r^2 with the stated radius: the
+    # sector's fencing/arc datum was ignored. (ICSE idx
+    # 3370, flagged already by Wave 146 as a schema gap;
+    # the gate declines it until the schema exists.)
+    if "sector" in ql and re.search(
+            r"area\s*=\s*pi\s*[·*×]\s*r\^2\s*=\s*pi", blob):
+        return True
+
+    # W15 — an arrange-in-order ask answered by a
+    # statistics RANGE result (UP idx 3593).
+    if re.search(r"\barrange\b|ascending|descending|"
+                 r"आरोही|अवरोही", ql + q) and op == "range":
+        return True
+
+    # W16 — a comparison ask ("which subject ... good
+    # marks") answered with one side's bare percentage
+    # and no verdict (UP idx 4031).
+    if re.search(r"\bwhich\b", ql) and re.search(
+            r"\bbetter\b|\bgood\s+marks\b|\bmore\b|"
+            r"\bgreater\b|\bhigher\b", ql):
+        if re.fullmatch(r"-?[\d.,]+\s*%?", ans.strip()):
+            return True
+
+    # W17 — a naming ask ("write down the names of ...")
+    # answered with a bare number (UP idx 5900).
+    if re.search(r"write\s+down\s+the\s+names|"
+                 r"name\s+the\s+following|नाम\s+लिखिए",
+                 ql + q) and num is not None:
+        return True
+
+    # W18 — a stated angle-sum fact contradicted by the
+    # serve: the question STATES "योग <N> होता है" and the
+    # answer is a different bare degree value. (Bihar idx
+    # 6615: cyclic-quadrilateral statement says 180, the
+    # generic quadrilateral schema served 360°. The OCR
+    # degree glyph often lands as a trailing 0 — 1800 for
+    # 180° — so both readings of the stated value pass.)
+    _st = re.search(r"योग\s+(\d+)\s*°?\s*होता\s+है", q)
+    if _st:
+        _sv = int(_st.group(1))
+        _readings = {_sv}
+        if _sv >= 1000 and _sv % 10 == 0:
+            _readings.add(_sv // 10)
+        _da = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*°\s*",
+                           ans)
+        if _da and float(_da.group(1)) not in _readings:
+            return True
+
+    # W20 — the ratio itself is the ask (अनुपात के रूप में
+    # / "as a ratio") but an AREA result was served
+    # (UP idx 4512: ratio of length to breadth -> 725).
+    if ("अनुपात के रूप में" in q
+            or re.search(r"\bas\s+a\s+ratio\b", ql)) \
+            and op == "area":
+        return True
+
+    # W21 — combinatorial notation read as algebra: the
+    # question uses nC<n> notation and the answer assigns
+    # a value to the letter C. (CBSE idx 2202: "If
+    # nC8 = nC2, find nC2" -> "C = 0"; idx 2203 likewise.)
+    if re.search(r"\bn\s*C\s*\d+|\bnC\d+", q) \
+            and re.search(r"\bC\s*=", ans):
+        return True
+
+    # W22 — a cost-at-a-rate ask answered with a bare
+    # area value and no money anywhere (ICSE/UP road
+    # case, UP idx 6168: cost of repairing the road
+    # served as the park's own area).
+    if "cost" in ql and re.search(r"per\s+sq|rate\s+of",
+                                  ql):
+        if "₹" not in ans and "rs" not in al:
+            return True
+
+    # W23 — a speed ask answered by a DISTANCE result
+    # (UP idx 5059: speed for the same distance in 8 h
+    # served 384, the 48 × 8 product).
+    if re.search(r"what\s+will\s+be\s+(?:the\s+)?speed|"
+                 r"find\s+(?:the\s+)?speed", ql) \
+            and op == "distance":
+        return True
+
+    # W24 — HCF/LCM verification against the result's OWN
+    # factorisation steps: when the steps factorise two
+    # numbers a and b, the served GCD/LCM must equal
+    # gcd/lcm(a, b). The audits' poisoned serves folded
+    # stray integers from the book text (page numbers,
+    # the printed division working) into the fold — Bihar
+    # idx 6852 served GCD 2 for (4052, 12576) whose own
+    # steps factorise to gcd 4; UP idx 3853 served 2 for
+    # (306, 630), gcd 18. Skipped when the question lists
+    # 3+ numbers comma-wise (a genuine multi-number ask
+    # whose fold legitimately differs from the pair gcd).
+    if op in ("gcd", "lcm", "hcf_lcm"):
+        _fac = _w150_factorised_numbers(
+            result.get("steps") or [])
+        # The pair is the FULL operand set only when the
+        # ask segment itself (the sentence carrying the
+        # HCF/LCM phrase) names exactly those two numbers:
+        # a genuine 3-number ask ("HCF of 2052, 3996 and
+        # 7380") names three in its segment and its fold
+        # legitimately differs from the pair gcd.
+        _seg = None
+        for _s in re.split(r"[।.?\n]", q):
+            if re.search(r"hcf|lcm|gcd|म\.स\.|ल\.स\.|"
+                         r"महत्तम|लघुत्तम", _s.lower()):
+                _seg = _s
+                break
+        _seg_ints = set()
+        if _seg is not None:
+            _seg_ints = {int(v) for v in re.findall(
+                r"\d+", _seg.replace(",", ""))}
+        if len(_fac) >= 2 and len(_seg_ints) == 2 \
+                and set(_fac[:2]) == _seg_ints:
+            import math as _m
+            _a, _b = _fac[0], _fac[1]
+            _g = _m.gcd(_a, _b)
+            _l = _a * _b // _g
+            if op == "gcd" and num is not None \
+                    and abs(num - _g) > 1e-9:
+                return True
+            if op == "lcm" and num is not None \
+                    and abs(num - _l) > 1e-9:
+                return True
+            if op == "hcf_lcm":
+                _pair = re.search(
+                    r"HCF\s*=\s*(\d+)\s*,\s*LCM\s*=\s*(\d+)",
+                    ans)
+                if _pair and (int(_pair.group(1)) != _g
+                              or int(_pair.group(2)) != _l):
+                    return True
+
+    # W8b — the asked one of HCF/LCM is not the computed
+    # one: the question asks for the LCM (ल.स. not followed
+    # by its given value / "find the lcm") with no HCF ask,
+    # but the result's own steps label the computation
+    # "HCF of ..." — the Hindi handler folded the GIVEN
+    # pair (Bihar idx 7559: LCM asked from HCF 46 and
+    # product 6400, served "HCF of 46 and 6400 = 2").
+    # Mirror image for an HCF ask with "LCM of ..." steps.
+    _steps_txt = " ".join(
+        str(s) for s in (result.get("steps") or []))
+    _lcm_ask150 = re.search(r"ल\.स\.(?!\s*\d)", q) \
+        or re.search(r"\bfind\s+(?:the\s+)?lcm\b", ql)
+    _hcf_ask150 = re.search(r"म\.स\.(?!\s*\d)", q) \
+        or re.search(r"\bfind\s+(?:the\s+)?(?:hcf|gcd)\b",
+                     ql)
+    if _lcm_ask150 and not _hcf_ask150 \
+            and re.search(r"\bHCF\s+of\b", _steps_txt):
+        return True
+    if _hcf_ask150 and not _lcm_ask150 \
+            and re.search(r"\bLCM\s+of\b", _steps_txt):
+        return True
+
+    # W10b — a SIMPLIFY ask over variable expressions
+    # (letters mixed into digit-bearing tokens, 3+
+    # distinct) answered with a bare number: the number
+    # was carved out of one part (UP idx 3717).
+    if "simplify" in ql and num is not None:
+        _mixed = [t for t in re.findall(r"[a-z0-9]+", ql)
+                  if any(c.isalpha() for c in t)
+                  and any(c.isdigit() for c in t)]
+        _letters = {c for t in _mixed for c in t
+                    if c.isalpha()}
+        if len(_letters) >= 3:
+            return True
+
+    # W19 — "rational numbers between A and B" answered
+    # with a single number OUTSIDE (A, B): it cannot be
+    # one of the asked numbers (UP idx 4711 served 3 for
+    # "between 1 and 2").
+    _rb = re.search(
+        r"rational\s+numbers?\s+(?:in\s+)?between\s+"
+        r"(?:the\s+(?:numbers?\s+)?)?(-?\d+(?:\.\d+)?)"
+        r"\s+and\s+(-?\d+(?:\.\d+)?)", ql)
+    if _rb and num is not None:
+        _lo, _hi = float(_rb.group(1)), float(_rb.group(2))
+        if not (_lo < num < _hi):
+            return True
+
+    # W25 — "find the value of <expr> and <expr>" answered
+    # with the intermediate variable alone (CBSE idx 958:
+    # values of 14p − 19 and 28p − 38 answered "p = 67/14").
+    if re.search(r"find\s+the\s+value\s+of\s+[^.]{1,60}?"
+                 r"\band\b", ql) \
+            and not re.search(
+                r"find\s+the\s+value\s+of\s+[a-z]\s*(?:and|,|$)",
+                ql):
+        _m25 = re.fullmatch(r"\s*([a-z])\s*=\s*-?[\d./]+"
+                            r"\s*", ans)
+        if _m25:
+            # The served variable IS the direct ask
+            # ("find the value of k for which the points
+            # ... are collinear" -> "k = 6", Wave 55's
+            # collinearity serve; "find the value of p:
+            # x: 10, 20, ..." -> "p = 5", Wave 33's mean
+            # serve) — the asked unknown, not an
+            # intermediate. The variable must stand
+            # alone right after "value of" (a colon,
+            # comma, end, or a for/when/if/such/that
+            # clause): a compound target ("value of
+            # 14p - 19 and ...") does not exempt.
+            if not re.search(
+                    r"find\s+the\s+value\s+of\s+"
+                    + _m25.group(1)
+                    + r"(?:\s*[:,]|\s+(?:for|when|if|such|"
+                    r"that)\b|\s*$)",
+                    ql):
+                return True
     return False
 
 
@@ -1834,7 +2467,8 @@ def _with_fallback_chain(question, result, lang=None,
             mp_preferred = multipart_preferred(question, result)
         except Exception:
             mp_preferred = None
-        if mp_preferred is not None:
+        if mp_preferred is not None \
+                and not _w150_veto(question, mp_preferred):
             return _with_figure(question, mp_preferred)
         # Wave 95: for a proof ask, a SymPy-verified identity
         # derivation (proofs.py) upgrades the solver's bare
@@ -2135,7 +2769,7 @@ def _with_fallback_chain(question, result, lang=None,
         multi = multipart_result(question)
     except Exception:
         multi = None
-    if multi is not None:
+    if multi is not None and not _w150_veto(question, multi):
         return multi
 
     # Wave 95: the proof layer (proofs.py). "Prove that ..."
