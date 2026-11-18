@@ -686,15 +686,39 @@ body.chat-page .chat-log {
    lengths with overshoot-and-settle easing — calm and warm,
    never a stiff metronome.
    Reduced motion: everything stills — plain smile pose,
-   writing pose only in the bubble, static soft light glow. */
+   writing pose only in the bubble, static soft light glow.
+   Wave 161 (Suraj, 18 Nov 2026, after seeing the LIVE
+   Deploy-34 screenshot — "Robot achhe se nhi dikh rha"):
+   (1) the palette is DARKENED everywhere the robot appears
+   — body cream #fdf0dd → #f0d3a0, teal #0d9b83 → #0a7a64,
+   deep #0b5a4a → #074335, smile #0b8a72 → #076e59, seam
+   #e8d9c4 → #dbb87e, pencil #f3e3c2 → #e8cc97, notebook
+   paper #fffaf0 → #f7ead2 (all in templates/index.html;
+   the antenna LIGHTS stay bright mint #2fe8b8 / #46f2c3
+   so they glow against the darker body) — plus a soft
+   drop shadow under each robot for separation;
+   (2) the home robot moved from the greeting's left to a
+   CENTRED line ABOVE the greeting (.empty-hello is now a
+   centred column), Muse-style;
+   (3) a small BUDDY copy of the robot (see the .robot-buddy
+   block below) stays present through an active chat and
+   mirrors the work state, Muse-style. Same character,
+   same shapes, same animations throughout. */
 .empty-hello {
-  display: flex; align-items: center; justify-content: center;
-  gap: 12px;
+  /* Wave 161: a centred STACK, not a row — the robot stands
+     on its own line ABOVE the greeting, Muse-style, both
+     centred (the thought line already sits below, outside
+     this container). */
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 4px;
 }
 .empty-thought { font-size: 15px; }
 .robot {
   width: 80px; height: 80px; flex: none; overflow: visible;
   animation: robot-bob 3.4s ease-in-out infinite;
+  /* Wave 161: a soft shadow lifts the darkened robot off
+     the cream page. */
+  filter: drop-shadow(0 4px 5px rgba(7, 67, 53, .30));
 }
 .robot-eyes {
   transform-box: fill-box; transform-origin: center;
@@ -783,6 +807,7 @@ body.chat-page .chat-log {
 .robot-duo svg {
   position: absolute; inset: 0; width: 100%; height: 100%;
   display: block;
+  filter: drop-shadow(0 2px 3px rgba(7, 67, 53, .25));
 }
 .robot-pose-think {
   transform: rotate(-2deg); transform-origin: 50% 90%;
@@ -822,9 +847,78 @@ body.chat-page .chat-log {
   float: left; width: 44px; height: 44px;
   margin: 1px 9px 3px 0; pointer-events: none;
 }
-.robot-laugh-mini svg { width: 100%; height: 100%; display: block; }
+.robot-laugh-mini svg {
+  width: 100%; height: 100%; display: block;
+  filter: drop-shadow(0 2px 3px rgba(7, 67, 53, .25));
+}
 .robot-laugh-mini .robot-light-flare {
   animation: robot-twinkle-once 1.4s ease-out 0.15s 1 both;
+}
+/* Wave 161: the chat BUDDY (templates/index.html, in the
+   header block) — Suraj: "Agar chat bhi kar rahe hai jab
+   bhi rahana chahiye Robot" + "Jaise Muse kaam karta hai
+   naa waise". A compact copy of the same robot rides the
+   top bar for the whole conversation, mirroring the work:
+   calm attentive idle (blink via .robot-eyes, bob, wave,
+   soft light pulse), a thinking face + tilted head +
+   brighter alternating lights while Ganitra solves, and
+   a brief laugh on a correct chat-test answer. It is
+   revealed by body.chat-active — the class hideEmpty()
+   sets when the empty state goes away — so the big home
+   robot and the buddy never show at the same time. The
+   busy state is pure CSS on the typing bubble's presence
+   (body:has(.bubble.typing)): both typing paths put that
+   bubble in the DOM and remove it when the answer lands,
+   so the buddy's feeling can never drift out of sync.
+   Fixed in the header band, dead centre: no message is
+   covered, no tap is taken (pointer-events: none), no
+   layout ever shifts. */
+.robot-buddy {
+  display: none;
+  position: fixed; top: 7px; left: 50%;
+  transform: translateX(-50%);
+  width: 42px; height: 42px;
+  pointer-events: none; z-index: 4;
+  transition: transform .3s ease;
+}
+body.chat-active .robot-buddy { display: block; }
+.robot-buddy-svg {
+  width: 100%; height: 100%; display: block; overflow: visible;
+  animation: robot-bob 3.4s ease-in-out infinite;
+  filter: drop-shadow(0 3px 4px rgba(7, 67, 53, .30));
+}
+.robot-buddy-arm {
+  transform-box: fill-box; transform-origin: 8% 92%;
+  animation: robot-wave 3.1s ease-in-out infinite;
+}
+.robot-buddy-face { transition: opacity .25s ease; }
+.robot-buddy-face-busy, .robot-buddy-face-laugh { opacity: 0; }
+body:has(.bubble.typing) .robot-buddy {
+  transform: translateX(-50%) rotate(-2.5deg);
+}
+body:has(.bubble.typing) .robot-buddy-face-calm { opacity: 0; }
+body:has(.bubble.typing) .robot-buddy-face-busy { opacity: 1; }
+body:has(.bubble.typing) .robot-buddy .robot-light-halo {
+  animation: robot-blink-alt 1.6s ease-in-out infinite;
+}
+body:has(.bubble.typing) .robot-buddy .robot-light-halo-r {
+  animation-delay: -0.8s;
+}
+body.robot-buddy-cheer .robot-buddy {
+  transform: translateX(-50%) translateY(-2px);
+}
+body.robot-buddy-cheer .robot-buddy-face-calm { opacity: 0; }
+body.robot-buddy-cheer .robot-buddy-face-laugh { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .robot-buddy-svg, .robot-buddy-arm { animation: none; }
+  body:has(.bubble.typing) .robot-buddy-face-busy,
+  body.robot-buddy-cheer .robot-buddy-face-laugh { opacity: 0; }
+  body:has(.bubble.typing) .robot-buddy-face-calm,
+  body.robot-buddy-cheer .robot-buddy-face-calm { opacity: 1; }
+  body:has(.bubble.typing) .robot-buddy,
+  body.robot-buddy-cheer .robot-buddy {
+    transform: translateX(-50%);
+  }
 }
 @keyframes robot-bob {
   0%, 100% { transform: translateY(0); }
