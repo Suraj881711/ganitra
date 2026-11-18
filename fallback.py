@@ -271,6 +271,8 @@ def _is_real(question, result):
         return False
     if _w159_subexpr_echo(question, result):
         return False
+    if _w151c_veto(question, result):
+        return False
     return True
 
 
@@ -1329,7 +1331,7 @@ def _w151_has_ask(q, ql):
     textbook STATEMENT page (no ask) served as a bare
     evaluate identity is a carve, not an answer."""
     return bool(re.search(
-        r"ज्ञात|बताइए|बताओ|लिखिए|निकाल|कीजिए|हल\s+करो|"
+        r"ज्ञात|बताइए|बताओ|लिखिए|निकाल|कीजिए|हल\s+करो|कितन|"
         r"find|solve|calculate|compute|evaluate|express|"
         r"prove|show|determine|verify|check|what|how|\?",
         ql + " " + q))
@@ -2788,6 +2790,493 @@ def _w159_problem_bearing(question):
 
 
 # ---------------------------------------------------------------------------
+# Wave 151c: wrong-serve families from the fresh 624-row
+# book sweep (13 boards, rows the 591 calibration never
+# touched; 227 serves hand/SymPy adjudicated: 48 correct,
+# 18 partial, 7 unverifiable, 154 wrong). Each rule below
+# is shape-based and narrow, in the _w146/_w150/_w151
+# tradition: it fires only when the question's ASK and the
+# result's FORM provably disagree. Pinned by
+# test/test_wave151_cont.py, including a false-positive
+# battery built from the sweep's correct serves.
+# ---------------------------------------------------------------------------
+
+def _w151c_veto(question, result):
+    try:
+        return _w151c_veto_inner(question, result)
+    except Exception:
+        return False
+
+
+def _w151c_part_value(text):
+    """Tolerant numeric value of a multipart part's answer
+    text: a leading fraction (\"3/8 ≈ 0.3750\") or the
+    first number in it."""
+    m = re.search(r"(-?\d+)\s*/\s*(\d+)", str(text or ""))
+    if m and int(m.group(2)):
+        return int(m.group(1)) / int(m.group(2))
+    m = re.search(r"-?\d+(?:\.\d+)?", str(text or ""))
+    return float(m.group(0)) if m else None
+
+
+_W151C_STATS_OPS = ("mean", "median", "mode", "variance", "std",
+                    "hinglish_average", "average")
+
+
+def _w151c_harvest_tokens(steps):
+    """Number tokens in the statistics harvest lines
+    (\"Add all values: ...\" / \"Arrange in order: ...\")."""
+    toks = []
+    for line in steps:
+        if "Add all values:" in line or "Arrange in order:" in line:
+            seg = line.split(":", 1)[1]
+            seg = seg.split("=")[0]
+            toks.extend(re.findall(r"-?\d+(?:\.\d+)?", seg))
+    return toks
+
+
+def _w151c_veto_inner(question, result):
+    if not isinstance(result, dict):
+        return False
+    q = str(question or "")
+    ql = q.lower()
+    ans = _answer_text(result)
+    steps = [str(s) for s in (result.get("steps") or [])]
+    blob = ans + " " + " ".join(steps)
+    op = str(result.get("op") or "")
+    num = _w150_bare_number(ans)
+
+    # W45 — log-letter soup: the letters of "log" parsed as
+    # algebraic factors (g·l·o, g^2·l^2·o^2, 66·g·l·o). A
+    # genuine answer never multiplies the letters g, l, o
+    # together. (Sweep 003/026/140/545: log-simplify asks
+    # served "825·g·l·o" and similar nonsense.)
+    if re.search(r"g\s*[·*]\s*l\s*[·*]\s*o", blob) \
+            or re.search(r"g\^2\s*[·*]\s*l\^2\s*[·*]\s*o\^2",
+                         blob):
+        return True
+
+    # W46 — word-letter / glyph product soup: the answer
+    # multiplies six or more DISTINCT single letters (the
+    # letters of an instruction word like "Factorise" or
+    # "Examine" parsed as variables), multiplies the MCQ
+    # option labels a*b*c, or carries the OCR division
+    # glyph ¸ as a factor. None of these is a real answer.
+    # (Sweep 190/372 word letters, 105/253 option labels,
+    # 044/390 the ¸ glyph in polynomial division.)
+    _factors = re.findall(r"(?<![A-Za-z])([A-Za-z])\s*[·*]",
+                          ans)
+    if len(set(_factors)) >= 6:
+        return True
+    if re.search(r"\d\s*[·*]\s*a\s*[·*]\s*b\s*[·*]\s*c\b",
+                 ans):
+        return True
+    if "¸" in ans and ("*" in ans or "·" in ans):
+        return True
+
+    # W47 — diagonals count served without a diagonals
+    # ask (companion to the geometry.py route fix: serves
+    # can also reach this op through other stages).
+    if op == "polygon_diagonals" and not (
+            "how many diagonals" in ql
+            or "number of diagonals" in ql
+            or "diagonals are there" in ql
+            or "diagonals does" in ql
+            or "diagonals in a" in ql
+            or "find the diagonals" in ql
+            or "विकर्णों की संख्या" in q
+            or "कितने विकर्ण" in q):
+        return True
+
+    # W48 — ratio echo: the serve is the question's own
+    # stated ratio in simplest form, while the question
+    # asks for something DERIVED from it — amounts from a
+    # total, a new ratio after adding, a ratio of volumes
+    # or areas. (Sweep 055: Rs 4000 in 3:2 served "3 : 2";
+    # 400: paint amounts + new ratio served "3 : 5"; 479:
+    # volumes ratio served the radii ratio "3 : 4".)
+    if op == "ratio":
+        _m = re.fullmatch(r"\s*(\d+)\s*:\s*(\d+)\s*", ans)
+        if _m:
+            _a, _b = int(_m.group(1)), int(_m.group(2))
+            import math as _math
+            _g = _math.gcd(_a, _b) or 1
+            _stated = re.findall(r"(\d+)\s*:\s*(\d+)", q)
+            _echo = any(
+                int(x) // (_math.gcd(int(x), int(y)) or 1)
+                == _a // _g
+                and int(y) // (_math.gcd(int(x), int(y)) or 1)
+                == _b // _g for x, y in _stated)
+            _derived = (
+                "₹" in q or "rs" in ql or "rupees" in ql
+                or "how much" in ql or "amount" in ql
+                or "new ratio" in ql or "added" in ql
+                or "ratio of their volumes" in ql
+                or "ratio of their areas" in ql
+                or "needed" in ql)
+            # W48b: no ask at all — a definitional
+            # statement ("a ratio may be treated as a
+            # fraction, thus the ratio 10 : 3 ...") served
+            # its own stated ratio back. (Sweep 269.)
+            _no_ask = "?" not in q and not any(
+                w in ql for w in ("find", "express",
+                                  "write", "simplify",
+                                  "ज्ञात", "बताइए",
+                                  "लिखिए", "लिखो"))
+            if _echo and (_derived or _no_ask):
+                return True
+
+    # W49–W51 — statistics harvests that provably did not
+    # read the question's data.
+    if op in _W151C_STATS_OPS:
+        _toks = _w151c_harvest_tokens(steps)
+        # W49: the data list in the question contains a
+        # non-numeric token (an unknown written as a
+        # letter / Kruti glyph among the numbers) which
+        # the harvest silently dropped. (Sweep 024 median
+        # with unknown ग; 463 mean with unknown ि whose
+        # value the question's stated mean determines.)
+        _segs = [s.strip() for s in q.split(",")]
+        _single = [s for s in _segs
+                   if len(s) == 1 and not s.isdigit()]
+        _numeric_segs = sum(
+            1 for s in _segs
+            if re.fullmatch(r"-?\d+(?:\.\d+)?", s or " "))
+        if _single and _numeric_segs >= 3:
+            return True
+        # W50a: a thousands comma (2,825) was split into
+        # two data values (2 and 825). (Sweep 530.)
+        for _full in re.finditer(r"(\d+),(\d{3})\b", q):
+            if _full.group(2) in _toks:
+                return True
+        # W50b: a decimal comma (1019,2) was split into
+        # two data values (1019 and 2). (Sweep 170.)
+        for _dc in re.finditer(r"(\d+),(\d)(?!\d)", q):
+            if _dc.group(1) in _toks and _dc.group(2) in _toks:
+                return True
+        # W50c: mis-OCR'd decimal points (243ण्50 for
+        # 243.50) were split into integer pairs — with
+        # three or more such decimals the harvest cannot
+        # be the question's data. (Sweep 226.)
+        if len(re.findall(r"\d\s*ण्\s*\d", q)) >= 3:
+            return True
+        # W51: the harvest swallowed the YEAR column of a
+        # table (three or more year tokens among the
+        # "data"). (Sweep 201: Olympic years 1960..2004
+        # averaged into a median of heights.)
+        if sum(1 for t in _toks
+               if 1900 <= float(t) <= 2099) >= 3:
+            return True
+        # W49b: the question STATES the mean/median value
+        # and asks for the unknown observation; the serve
+        # reports a DIFFERENT mean/median computed from
+        # the partial data — provably not the ask.
+        # (Sweep 024: stated median 63, served 50; 463:
+        # stated mean 36, served 33.)
+        _stated = re.search(
+            r"(?:माध्यक|माध्यिका|माध्य|औसत|median|mean)"
+            r"[^0-9]{0,12}?(\d+(?:\.\d+)?)", q, re.I)
+        if _stated and num is not None \
+                and abs(num - float(_stated.group(1))) > 1e-9 \
+                and ("अज्ञात" in q or "का मान" in q
+                     or "missing" in ql
+                     or re.search(r"\bfind\s+x\b", ql)):
+            return True
+
+    # W52 — probability serves that ignore the experiment:
+    # (a) a multipart card whose NOT-part serves the same
+    # value as its positive twin (Sweep 425: "not red"
+    # served the red probability 3/8); (b) a multi-toss
+    # ask served by the single-toss 1/2 template (Sweep
+    # 421: 4 tosses, "3 heads", served 1/2).
+    _parts = re.findall(r"\(([a-z]{1,3})\)\s*([^;]+)", ans)
+    if _parts and (result.get("multipart") or len(_parts) >= 2):
+        _segs = _w151_segments(q)
+        _seg_by_label = {lab: seg for lab, seg in _segs}
+        _vals = {}
+        for _lab, _val in _parts:
+            _v = _w151c_part_value(_val)
+            if _v is not None:
+                _vals.setdefault(round(_v, 9), []).append(
+                    (_lab, _seg_by_label.get(_lab, "")))
+        for _v, _lst in _vals.items():
+            _neg = [s for _, s in _lst
+                    if "नहीं" in s or re.search(r"\bnot\b",
+                                                s.lower())]
+            _pos = [s for _, s in _lst
+                    if "नहीं" not in s
+                    and not re.search(r"\bnot\b", s.lower())]
+            if _neg and _pos:
+                return True
+    _mt = re.search(r"(?:toss|thrown|flip)\w*\s+"
+                    r"(\d+)\s+times", ql)
+    if _mt and int(_mt.group(1)) >= 2 \
+            and "fair coin has 2" in blob:
+        if op == "probability" and num is not None \
+                and abs(num - 0.5) < 1e-9:
+            return True
+        if _parts and all(
+                (_w151c_part_value(v) is not None
+                 and abs(_w151c_part_value(v) - 0.5) < 1e-9)
+                for _, v in _parts):
+            return True
+    # W52d: a multipart card whose parts ask for
+    # DIFFERENT outcome sets but serve the IDENTICAL
+    # set — the whole sample space pasted under each
+    # event. (Sweep 362: prime / not-prime both served
+    # {1, 2, 3, 4, 5, 6}.)
+    if _parts and len(_parts) >= 2:
+        _set_parts = [v.strip() for _, v in _parts
+                      if v.strip().startswith("{")]
+        if len(_set_parts) >= 2 \
+                and len(set(_set_parts)) == 1:
+            return True
+
+    # W52e: the bare sample-space serve on an EVENT ask
+    # — the question asks for the outcomes of a specific
+    # event (a prime number, greater than 5, ...) and
+    # the serve is the whole sample space. (Sweep 362's
+    # fall-through after W52d vetoed its card.)
+    if op == "w103_sample_space" and (
+            "prime" in ql or "greater than" in ql
+            or "less than" in ql or "even" in ql
+            or "odd" in ql or "event" in ql):
+        return True
+
+    # W52c: a two-part probability question whose later
+    # part asks the NEGATION (लाल नहीं / not red) served
+    # as ONE bare probability — the positive part alone,
+    # dressed as the whole answer. (Sweep 425 after its
+    # card was vetoed by W52a.)
+    if op == "probability" and not result.get("multipart") \
+            and "(i)" in q and "(ii)" in q \
+            and ("नहीं" in q or re.search(r"\bnot\b", ql)):
+        # Only a LONE value is the defect: a compound
+        # serve that computes every part ("P(not A) =
+        # 0.58; P(not B) = 0.52; P(A or B) = 0.74",
+        # Wave 156's book_052 pin) is a correct answer,
+        # not the positive part dressed as the whole.
+        _vals = set()
+        for _tok in re.findall(
+                r"\d+\s*/\s*\d+|\d+(?:\.\d+)?",
+                str(result.get("answer") or "")):
+            try:
+                if "/" in _tok:
+                    _a, _b = _tok.split("/")
+                    _vals.add(round(float(_a) / float(_b), 6))
+                else:
+                    _vals.add(round(float(_tok), 6))
+            except (ValueError, ZeroDivisionError):
+                pass
+        if len(_vals) <= 1:
+            return True
+
+    # W53 — angle-sum factoid served where no angle is
+    # asked: a theorem STATEMENT (no ask at all) or a
+    # mensuration ask (surface area of a prism). (Sweep
+    # 107/271/397 statements served 180°/360°; 220 a
+    # surface-area ask served 180°.)
+    if "angle_sum" in op:
+        # Use the shared ask-marker helper: the app path
+        # strips a trailing "?" before the veto sees the
+        # question, so interrogatives like "what is the
+        # sum of angles..." must count as asks on their
+        # own (Wave 107 regression caught in-suite).
+        if not _w151_has_ask(q, ql):
+            # Wave 150 control standard: a statement that
+            # itself STATES the served value ("The sum of
+            # all three interior angles of a triangle is
+            # 180°.") is a designed factoid serve — keep
+            # it. Veto only when the value is injected
+            # from nowhere: an exterior-angle theorem
+            # statement (no number in the text) served
+            # the triangle sum. (Sweep 107/397 vetoed;
+            # test_wave150 controls 4142/6419/6503 kept.
+            # The x10 arm covers the OCR degree artifact
+            # "180°" -> "1800" in Hindi texts.)
+            _m = re.search(r"\d+(?:\.\d+)?",
+                           str(result.get("answer") or ""))
+            _stated = False
+            if _m:
+                _v = float(_m.group(0))
+                _stated = any(
+                    abs(float(t) - _v) < 1e-9
+                    or abs(float(t) - _v * 10) < 1e-9
+                    for t in re.findall(
+                        r"\d+(?:\.\d+)?", q))
+            if not _stated:
+                return True
+        if ("क्षेत्रफल" in q or "surface area" in ql) \
+                and "कोण" not in q \
+                and not re.search(r"\bangles?\b", ql):
+            return True
+
+    # W54 — MCQ non-answers: the serve literally reports
+    # there is nothing to solve, or an options question
+    # ("which of the following ... represented as ...")
+    # is answered by solving each option as an equation.
+    # (Sweep 459 non-answer x4; 471/110 options solved.)
+    if "no variable to solve for" in blob:
+        # The bare string IS the designed serve for a
+        # genuine (contradictory) equation — Wave 77's
+        # byte-for-byte pin, re-pinned by test_wave150's
+        # designed-serves test ("2x + 3 = 2x + 5 solve
+        # karo"). Veto it only where no genuine equation
+        # is being solved: a multipart card of
+        # non-answers, an options/MCQ question, or a
+        # question with no equation at all. (Sweep 459.)
+        _has_options = bool(re.search(
+            r"\(1\)[\s\S]{0,200}\(3\)|\(a\)[\s\S]{0,200}"
+            r"\(c\)", q))
+        if result.get("multipart") or _has_options \
+                or "=" not in q:
+            return True
+    if ("(a)" in ql and "(c)" in ql) or ("(1)" in q
+                                         and "(3)" in q):
+        if "which of the following" in ql \
+                or "represented as" in ql \
+                or "choose the correct" in ql:
+            _eq_parts = [p for p in _parts
+                         if re.search(r"[a-zA-Z]\s*=", p[1])]
+            if len(_eq_parts) >= 2:
+                return True
+
+    # W55 — identity-only evaluate serves ("Evaluate:
+    # N = N" as the whole working) on asks an identity
+    # cannot answer: a yes/no or justify ask, or a
+    # "subtracted from ..." operation on an expression.
+    # (Sweep 135 divisibility yes/no served 100999; 337
+    # "is it composite? justify" served 5; 111 "what
+    # should be subtracted from t^2 + t - 7" served 5.)
+    if op == "evaluate" and steps and num is not None:
+        _identity = all(
+            re.fullmatch(r"\s*Evaluate:\s*(.+?)\s*=\s*\1\s*",
+                         s)
+            or "Write the expression:" in s
+            or re.fullmatch(
+                r"\s*0 - -?[\d.]+\s*=\s*-?[\d.]+\s*", s)
+            for s in steps)
+        if _identity and (
+                re.match(r"\s*(is|are|do|does|can)\b", ql)
+                or "justify" in ql or "divisible" in ql
+                or "composite" in ql
+                or "subtracted from" in ql
+                # W55b: a trig evaluation ask served an
+                # identity number harvested from the
+                # angles themselves (sin60cos30 + ...
+                # served "900" from 60 + 30 -> 90 -> 900).
+                # (Sweep 033.)
+                or re.search(r"\b(sin|cos|tan|sec|cosec|"
+                             r"cot)\s*\d", ql)):
+            return True
+
+    # W56 — HCF/LCM given-value echoes: the question
+    # states the HCF and asks the LCM (or states both and
+    # asks the other number); the serve restates a given
+    # instead of computing the asked value. (Sweep 617:
+    # LCM ask served the given HCF 12; 246: "find other
+    # number" served "HCF = 13, LCM = 182".)
+    if op in ("hindi_hcf_lcm", "hcf_lcm"):
+        _mh = re.search(r"(?:म\.स\.|HCF)[^0-9]{0,14}?(\d+)",
+                        q, re.I)
+        if _mh and num is not None \
+                and ("ल. स." in q or "ल.स." in q
+                     or "lcm" in ql) \
+                and abs(num - float(_mh.group(1))) < 1e-9:
+            return True
+        if "other number" in ql and "HCF =" in ans \
+                and "LCM =" in ans:
+            return True
+
+    # W57 — mean deviation asked, the plain mean served.
+    # (Sweep 500: MD about the mean is 6; served mean 10.)
+    if op == "mean" and ("mean deviation" in ql
+                         or "माध्य विचलन" in q):
+        return True
+
+    # W58 — complementary-angle COMPARISON ask ("is the
+    # complement greater than 45 or less?") served the
+    # equal-angles value 45°. (Sweep 019.)
+    if op == "angles_equal_complement" \
+            and "greater than" in ql and "less than" in ql:
+        return True
+
+    # W59 — wrong-quantity motion serves: a speed served
+    # for a "how far" ask; a distance served for a time
+    # ask. (Sweep 229 truck: distance in 5 h asked, speed
+    # served; 582: time at 72 km/hr asked, 288 km served.)
+    if op == "speed" and ("how far" in ql or "कितनी दूर" in q):
+        return True
+    if op == "distance" and ("how much time" in ql
+                             or "time will" in ql
+                             or "कितना समय" in q):
+        return True
+
+    # W60 — sector area served for a CONE ask (radius /
+    # slant height / volume of the cone rolled from the
+    # sector). (Sweep 449, 605.)
+    if "sector" in op and "cone" in ql \
+            and ("volume" in ql or "slant" in ql
+                 or "radius of the base" in ql) \
+            and "area of the sector" not in ql:
+        return True
+
+    # W61 — sphere volume computed FORWARD when the
+    # volume is GIVEN and the radius is asked. (Sweep
+    # 346: V = 15.5 given; served (4/3)pi*3^3 with the 3
+    # harvested from the formula's own "4/3".)
+    if op == "volume" and "find the radius" in ql \
+            and re.search(r"volume\s*(?:v\s*)?=\s*\d", ql):
+        return True
+
+    # W63 — an equilateral-triangle PERIMETER serve on a
+    # question whose perimeter ask belongs to a RECTANGLE
+    # built from the triangles (the Wave 77 core pass can
+    # strip the ask's tail and re-serve the triangle's
+    # perimeter against the full question). (Sweep 577.)
+    if op == "equilateral_perimeter" and "rectangle" in ql \
+            and re.search(r"perimeter[^.]{0,40}rectangle",
+                          ql):
+        return True
+
+    # W64 — a three-sides-sum PERIMETER serve on a
+    # question that GIVES an equilateral triangle's
+    # perimeter and asks its SIDE: the "sides" it summed
+    # are the listed perimeters themselves. (Sweep 156
+    # after the geometry fix: 45 + 69 + 1 served as 115.)
+    if op == "perimeter" and "equilateral" in ql \
+            and ("find the side" in ql
+                 or "length of each side" in ql
+                 or "each side" in ql):
+        return True
+
+    # W62 — "remaining sheet" asks served the REMOVED
+    # part's area (or the full sheet's, or its
+    # circumference): the served value equals pi*r^2 or
+    # 2*pi*r for one of the radii stated in the question,
+    # with pi in {22/7, 3.14, pi}. (Sweep 123: remaining
+    # annular sheet served 16pi; 579: served the removed
+    # circle's 38.5; 256: served circumference 88.)
+    if "removed" in ql and "remaining" in ql \
+            and ("area" in op or "circumference" in op):
+        _ma = re.search(r"≈\s*(-?\d+(?:\.\d+)?)", ans)
+        _val = float(_ma.group(1)) if _ma \
+            else _result_value(result)
+        _radii = [float(x) for x in re.findall(
+            r"radius\s*(?:of\s*)?(?:is\s*)?(\d+(?:\.\d+)?)",
+            ql)]
+        if _val is not None and _radii:
+            for _r in _radii:
+                for _pi in (22 / 7, 3.14, 3.14159265):
+                    if abs(_val - _pi * _r * _r) <= \
+                            0.02 * _pi * _r * _r \
+                            or abs(_val - 2 * _pi * _r) <= \
+                            0.02 * 2 * _pi * _r:
+                        return True
+    return False
+
+
+# ---------------------------------------------------------------------------
 # Layer 1: salvage — strip the chatter, solve the maths inside
 # ---------------------------------------------------------------------------
 
@@ -3741,6 +4230,7 @@ def _with_fallback_chain(question, result, lang=None,
         if mp_preferred is not None \
                 and not _w150_veto(question, mp_preferred) \
                 and not _w151_veto(question, mp_preferred) \
+                and not _w151c_veto(question, mp_preferred) \
                 and not _w156_veto(question, mp_preferred):
             return _with_figure(question, mp_preferred)
         # Wave 95: for a proof ask, a SymPy-verified identity
@@ -4044,6 +4534,7 @@ def _with_fallback_chain(question, result, lang=None,
         multi = None
     if multi is not None and not _w150_veto(question, multi) \
             and not _w151_veto(question, multi) \
+            and not _w151c_veto(question, multi) \
             and not _w156_veto(question, multi):
         return multi
 
@@ -4087,6 +4578,7 @@ def _with_fallback_chain(question, result, lang=None,
     except Exception:
         formatted = None
     if formatted is not None and not _w151_veto(question, formatted) \
+            and not _w151c_veto(question, formatted) \
             and not _w156_veto(question, formatted):
         return formatted
 
@@ -4143,6 +4635,7 @@ def _with_fallback_chain(question, result, lang=None,
     except Exception:
         graphed = None
     if graphed is not None and not _w151_veto(question, graphed) \
+            and not _w151c_veto(question, graphed) \
             and not _w156_veto(question, graphed):
         return graphed
 
@@ -4182,6 +4675,14 @@ def _with_fallback_chain(question, result, lang=None,
     if not _w146_is_mcq_text and not _w146_is_proof_ask \
             and not _w146_vetoed:
         salvaged = _salvage(question, hindi)
+    # Wave 151c: salvage judges its result against the
+    # STRIPPED candidate; a serve shape the new veto
+    # condemns against the ORIGINAL question (the sphere
+    # whose volume was given and radius asked, salvaged
+    # from the formula text) must not slip back in here.
+    if salvaged is not None and _w151c_veto(question,
+                                            salvaged):
+        salvaged = None
     if salvaged is not None:
         return salvaged
 
@@ -4319,6 +4820,13 @@ def _with_fallback_chain(question, result, lang=None,
         # the question's stated literals on an expression-
         # evaluation ask is not a solve (see _w159_echo).
         if deep is not None and _w159_echo(question, deep):
+            deep = None
+        # Wave 151c: the deep stage re-solves reformulations
+        # through the same solver, so it can resurrect a
+        # serve the boundary just vetoed (the LCM ask whose
+        # given HCF came back as the deep answer). The new
+        # veto judges it against the original question too.
+        if deep is not None and _w151c_veto(question, deep):
             deep = None
         if deep is not None:
             return _with_figure(question, deep)
