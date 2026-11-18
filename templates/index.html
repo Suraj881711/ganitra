@@ -699,6 +699,7 @@
       var CHAT = {
         solving: {{ t.chat_thinking | tojson }},
         fullSolution: {{ t.chat_full_solution | tojson }},
+        guidedSolve: {{ t.chat_guided | tojson }},
         error: {{ t.chat_error | tojson }},
         explanation: {{ t.explanation_heading | tojson }},
         adviceHeading: {{ t.advice_heading | tojson }},
@@ -1747,7 +1748,7 @@
       var W122_NOT_SOLVED_KINDS = ["not_found", "concept",
         "history", "advice", "greeting", "nonmaths", "science",
         "vague", "gibberish", "guide", "similar", "step_check",
-        "followup_test"];
+        "followup_test", "guided"];
       var W122_NOT_SOLVED_OPS = ["error", "explain_step",
         "check_steps", "not_found"];
       /* Wave 124: a chat-test solve-command turn returns the
@@ -2661,6 +2662,36 @@
           full.appendChild(fullHidden);
           full.appendChild(fullBtn);
           methodsPanel.appendChild(full);
+          /* Wave 163: the "Seekh ke solve karo" row — on a
+             SOLVED maths answer only (the same w122Solved
+             gate as the answer box), right under Full
+             Solution. Tapping it rides the chip-tap flow
+             (followup="guided", the card's question as
+             hidden context); the server opens the
+             hint-first guided solve on that question. It is
+             a menu row inside the existing panel — never a
+             standalone button (Wave 120 discipline). */
+          if (w122Solved(result) && CHAT.guidedSolve) {
+            var guidedBtn = document.createElement("button");
+            guidedBtn.type = "button";
+            guidedBtn.className = "method-row-btn";
+            var guidedLbl = document.createElement("span");
+            guidedLbl.className = "method-name";
+            guidedLbl.textContent = CHAT.guidedSolve;
+            var guidedGo = document.createElement("span");
+            guidedGo.className = "method-go";
+            guidedGo.setAttribute("aria-hidden", "true");
+            guidedGo.textContent = "›";
+            guidedBtn.appendChild(guidedLbl);
+            guidedBtn.appendChild(guidedGo);
+            guidedBtn.addEventListener("click", function () {
+              methodsPanel.hidden = true;
+              chip.setAttribute("aria-expanded", "false");
+              sendFollowup("guided", CHAT.guidedSolve,
+                           question);
+            });
+            methodsPanel.appendChild(guidedBtn);
+          }
           if (methods.length) {
           var mh = document.createElement("p");
           mh.className = "methods-heading";
@@ -3012,6 +3043,9 @@
         }
         if (ui.chat_full_solution) {
           CHAT.fullSolution = ui.chat_full_solution;
+        }
+        if (ui.chat_guided) {
+          CHAT.guidedSolve = ui.chat_guided;
         }
         if (ui.chat_error) CHAT.error = ui.chat_error;
         if (ui.explanation_heading) {
