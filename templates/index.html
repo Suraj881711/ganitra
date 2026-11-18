@@ -2926,6 +2926,24 @@
         if (graphImg) div.appendChild(graphImg);
         if (figureEl) div.appendChild(figureEl);
         div.appendChild(ans);
+        /* Wave 167: the board grounding line — one small
+           muted line under the answer naming the chapter in
+           the student's own board book ("RBSE · Class 8 ·
+           Mensuration"), sent by the server as data.grounding
+           only when the placement is certain (see
+           board_context.py). Styled with the existing .muted
+           class plus inline size/margin, in the Wave-123
+           inline-pinning spirit, so no stylesheet change (and
+           no pin bump) rides along. Absent field = the card
+           is exactly as before. */
+        if (data.grounding) {
+          var groundingEl = document.createElement("p");
+          groundingEl.className = "muted";
+          groundingEl.style.cssText =
+            "font-size:12.5px;margin:6px 0 0;";
+          groundingEl.textContent = String(data.grounding);
+          div.appendChild(groundingEl);
+        }
         var wrap = document.createElement("div");
         wrap.className = "answer-wrap";
         wrap.appendChild(div);
