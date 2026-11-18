@@ -4318,6 +4318,37 @@ def _solve_question_uncached(question: str):
             out = None
         if out is not None and out.get("op") not in (
                 "unknown", "error"):
+            # Wave 172: ONE measured exception inside this
+            # pre-intent block.  A sector question carrying a
+            # radius + arc length ("area of the sector of a
+            # circle with radius 3.5 cm and length of arc
+            # 2.2 cm") is claimed here by the "sector of a/the
+            # circle" trigger, but solve_geometry answers it
+            # with the FULL circle's area (op "area", 38.5 cm²)
+            # — a wrong serve the tail gates can never repair,
+            # because this block returns first.  When the
+            # strict Wave 169 sector schema settles the same
+            # question, serve its answer instead.  Scoped
+            # three ways: the question must say "sector", the
+            # schema's op must be a w169_sector* op, and
+            # _w171_fragment_hijack must confirm a fragment op
+            # ("area") with a verifiably different answer — a
+            # correct geometry serve (the radius + angle form,
+            # a genuine circle area, anything else) is never
+            # displaced, and any doubt keeps the old behaviour.
+            if "sector" in working.lower():
+                try:
+                    from .tierA169 import solve_tierA169
+                    w172 = solve_tierA169(original)
+                    if w172 is None and working != original:
+                        w172 = solve_tierA169(working)
+                except Exception:
+                    w172 = None
+                if w172 is not None and str(
+                        w172.get("op", "")).startswith(
+                        "w169_sector") and \
+                        _w171_fragment_hijack(working, out, w172):
+                    out = w172
             if was_translated:
                 out["interpreted_as"] = translated
             return out
