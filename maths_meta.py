@@ -120,12 +120,76 @@ _FRESH_OF = re.compile(
     re.I)
 
 
+# Wave 159: the sweep's hijack family — real problems whose
+# numbers are separated by prose, not operators, slipped
+# past every shape above: a Hindi mean question (data list
+# + "माध्य ज्ञात कीजिए") was served the exam-advice card
+# because the statement mentions "परीक्षा", and a Hindi SI
+# question (9000, 6%, 4 years, "कितना होगा") reached the
+# concept layer. The Wave 148 principle, extended to all
+# three scripts: >= 2 numeric literals (Devanagari digits
+# folded) plus a computation ask or a problem-schema
+# keyword is a concrete solvable problem, never a meta
+# question. fallback.py's _w159_problem_bearing is the
+# mirror used at the chain's other card layers.
+_W159_DEV = str.maketrans("०१२३४५६७८९", "0123456789")
+
+_W159_ASK_WORDS = (
+    "ज्ञात कीजिए", "ज्ञात करो", "ज्ञात करें", "निकालिए",
+    "निकालो", "गणना कीजिए", "गणना करो", "हल कीजिए", "हल करो",
+    "बताइए", "क्या होगा", "क्या होगी", "क्या होंगे",
+    "क्या है", "क्या हैं", "कितना", "कितने", "कितनी",
+    "का मान", "मान ज्ञात",
+    "find", "calculate", "compute", "evaluate", "determine",
+    "how many", "how much", "what is", "value of",
+    "batao", "nikalo", "kitna", "kitne", "kitni", "gyat",
+)
+
+_W159_SCHEMA_WORDS = (
+    "ब्याज", "interest", "क्षेत्रफल", "area", "परिमाप",
+    "परिधि", "perimeter", "circumference", "आयतन", "volume",
+    "लघुत्तम", "महत्तम", "lcm", "hcf", "गति", "चाल", "speed",
+    "दूरी", "distance", "छूट", "discount", "लाभ", "profit",
+    "हानि", "loss", "प्रतिशत", "percent", "अनुपात", "ratio",
+    "त्रिज्या", "radius", "व्यास", "diameter", "माध्य",
+    "औसत", "mean", "average", "माध्यक", "median", "बहुलक",
+    "mode", "प्रायिकता", "probability", "ऊँचाई", "height",
+)
+
+
+def _w159_problem_shapes(q):
+    """Wave 159: >= 2 numeric literals plus a computation
+    ask or a problem-schema keyword (any script)."""
+    t = str(q or "").translate(_W159_DEV)
+    if len(re.findall(r"\d+(?:\.\d+)?", t)) < 2:
+        return False
+    if any(w in t for w in _W159_ASK_WORDS):
+        return True
+    return any(w in t for w in _W159_SCHEMA_WORDS)
+
+
 def _has_fresh_problem(q):
     """True when the text carries a real problem to solve
     (the _COMPUTATION veto's shapes plus Wave 148's)."""
-    return bool(_COMPUTATION.search(q)
-                or _TABLE_REQUEST.search(q)
-                or _FRESH_OF.search(q))
+    if _COMPUTATION.search(q) or _TABLE_REQUEST.search(q) \
+            or _FRESH_OF.search(q) \
+            or _w159_problem_shapes(q):
+        return True
+    # Wave 156: a stated data set — a colon list of >= 5
+    # numbers — together with a statistics ask is a
+    # problem to solve, not an advice question. "गणित की
+    # एक परीक्षा में, 15 विद्यार्थियों द्वारा प्राप्त अंक
+    # निम्नलिखित हैं: 19, 25, 23, ..." was served the
+    # exam-advice card because the word परीक्षा matched
+    # the advice trigger while the data list matched no
+    # veto shape (Wave 153 audit book-079).
+    if ":" in q and re.search(
+            r"माध्यक|बहुलक|माध्य|median|mode|mean|average",
+            q):
+        _tail = q.split(":", 1)[1]
+        if len(re.findall(r"\d+(?:\.\d+)?", _tail)) >= 5:
+            return True
+    return False
 
 
 def _trigger_hit(q, t):

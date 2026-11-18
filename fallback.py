@@ -79,6 +79,21 @@ hand-built audits. The log is purely observational: the hook
 below is guarded end to end, a logging failure is a silent
 no-op, and no answer changes in any way (proven byte-for-byte
 in test_wave90, logging on and off).
+
+Wave 158 (Suraj, 18 Nov 2026): "Aisa nhi bolna — nhi aa
+rha; ans kahi se bhi de, ans bs chahiye, chahe kisi AI se
+leke de" — with his quality bar: "ans 101% sahi hona
+chahiye." For a GENUINE maths question the chain no longer
+ends at the not-found line when an AI leg did answer:
+after Wave 133's verification and Wave 134's method
+transfer have both failed, the best rejected AI answer is
+served as the last resort (majority-agreed value first,
+then the first leg — see _last_resort_ai_answer), marked
+ai_verification="last_resort" so it stays a pending Live
+Bank row and is never promoted or store-served. The
+not-found line survives only where it was always honest:
+no leg produced any answer (pure gibberish / nonsense),
+and the maths-only guards are untouched.
 """
 import re
 from fractions import Fraction
@@ -168,6 +183,16 @@ def _is_junk(question, result):
     q = str(question or "").lower()
     if any(cmd in q for cmd in _SYMBOLIC_COMMANDS):
         return False
+    # Wave 156: the Mathematical Reasoning answers are
+    # prose with symbols by design ("∃x ∈ N such that
+    # x^2 + 3x - 10 = 0") — the letter-soup test below
+    # flags exactly that shape (a "^" mark plus 4+
+    # distinct single letters across the parts). The two
+    # reasoning ops are exempt; their schemas decline
+    # anything they cannot verify.
+    if str(result.get("op") or "") in (
+            "reasoning_quantifier", "reasoning_negation"):
+        return False
     ans = _answer_text(result)
     letters = set(re.findall(r"(?<![A-Za-z])[a-z](?![A-Za-z])", ans))
     factors = _single_letter_factors(ans)
@@ -237,6 +262,14 @@ def _is_real(question, result):
     if _w150_veto(question, result):
         return False
     if _w151_veto(question, result):
+        return False
+    if _w156_veto(question, result):
+        return False
+    if _w159_veto(question, result):
+        return False
+    if _w159_frac_echo(question, result):
+        return False
+    if _w159_subexpr_echo(question, result):
         return False
     return True
 
@@ -1671,6 +1704,208 @@ def _w151_veto_inner(question, result):
     return False
 
 
+def _w156_veto(question, result):
+    try:
+        return _w156_veto_inner(question, result)
+    except Exception:
+        return False
+
+
+def _w156_veto_inner(question, result):
+    """Wave 156 vetoes — from the Wave 153 AI cross-check
+    audit (150 questions solved by Ganitra first, then
+    checked by an independent AI; 22 serves adjudicated
+    wrong). Root fixes landed in the solver for most
+    families; these serve-time rules are the backstop for
+    the shapes whose only signature is ask-vs-answer
+    incoherence. Every rule is narrow: it fires only when
+    the served FORM provably cannot be the asked
+    computation."""
+    if not isinstance(result, dict):
+        return False
+    q = str(question or "")
+    ql = q.lower()
+    ans = _answer_text(result)
+    op = str(result.get("op") or "")
+    num = _w150_bare_number(ans)
+    expr = str(result.get("expression") or "")
+
+    # V1 — identity evaluate on garbled prose: the serve
+    # is a bare number equal to its own "expression" AND
+    # the question is long prose with NO recognisable ask
+    # (audit book-017: OCR-garbled circle text served "4").
+    # Narrow by design: a genuine evaluate result also
+    # stores its value in the expression field (the
+    # Hinglish "144 ko 12 se bhaag do" serve has
+    # expression "12"), so the identity shape alone proves
+    # nothing — the veto needs the garbled-prose context:
+    # > 12 words and no ask marker anywhere.
+    if op == "evaluate" and expr \
+            and _w150_bare_number(expr) is not None \
+            and str(ans).strip() == expr.strip() \
+            and len(q.split()) > 12 \
+            and not re.search(
+                r"\?|कितने|कितना|kitana|kitne|find|what|"
+                r"how many|evaluate|बताइए|बताओ|निकालो|"
+                r"निकालिए|खर्च|"
+                r"ज्ञात\s*(?:कीजिए|कीजिये|करें|करो)",
+                ql + " " + q):
+        return True
+
+    # V2 — bare-year serve: a year (or negative year) is
+    # never the answer to a maths question. The evaluate
+    # path computed it from date/session furniture in the
+    # text ("2019-20" -> 1999, "22-12-2025" -> -2015;
+    # audit book-028 / book-034). A question that IS one
+    # bare arithmetic expression is exempt — there the
+    # year-shaped result was genuinely computed.
+    if num is not None and op in (
+            "evaluate", "simplify", "arithmetic",
+            "expression"):
+        _yr = abs(num)
+        if 1900 <= _yr <= 2099 and not re.fullmatch(
+                r"[\d\s+\-*/().^%]+", q.strip()):
+            return True
+
+    # V3 — figure / construction prompts answered by a
+    # generic harvest op with a bare number (audit
+    # book-001: a "can you draw ... ?" construction prompt
+    # served the harvested average 161.5; book-010 likewise).
+    # Named schema ops (parallelogram area, area, ...) are
+    # NOT touched — a figure mention beside a real schema
+    # solve is legitimate.
+    if num is not None and op in (
+            "evaluate", "simplify", "average",
+            "hinglish_average", "mean", "median", "mode",
+            "arithmetic") and re.search(
+                r"\bfig\.|\bfigure\b|आकृति|in the following|"
+                r"marked below|can you draw|खींच सकते हैं|"
+                r"बना सकते हैं", ql + " " + q):
+        return True
+
+    # V4 — proof / verify prompts served a bare number
+    # (audit book-002: "Prove that the number of diagonals
+    # ..." served 0; book-022: a verify prompt served 1).
+    # A proof is never a bare number.
+    _proof_prompt = re.search(
+        r"\bprove\b|\bshow that\b|\bverify\b|"
+        r"\bv\s+erify\b|"
+        r"सिद्ध\s*(?:कीजिए|करो|करें)", ql + " " + q)
+    if num is not None and _proof_prompt:
+        # W11's exemption, mirrored: a genuine computation
+        # schema (not the evaluator carve) whose steps
+        # DERIVE the claimed number answers a concrete-
+        # instance prove ask by computing it ("Prove by
+        # mathematical induction that the sum of the
+        # first 8 odd numbers is 64" -> the n^2 serve
+        # whose last step ends "= 64"; pinned by
+        # test_wave150's continuation battery).
+        _derived156 = False
+        if op != "evaluate":
+            for _s156 in (result.get("steps") or []):
+                if str(_s156).rsplit("=", 1)[-1].strip() \
+                        == ans.strip():
+                    _derived156 = True
+                    break
+        # ...and the question must CLAIM that value as
+        # its result ("... is 64"). A general proof with
+        # no numeric claim (book-002's similarity proof,
+        # served a diagonals computation ending "= 0")
+        # gets no exemption: the derivation there is for
+        # a different quantity than the ask.
+        if _derived156 and not re.search(
+                r"(?:\bis|=)\s*" + re.escape(ans.strip())
+                + r"(?![\d.])", q):
+            _derived156 = False
+        if not _derived156:
+            return True
+    # V4b — a proof / verify prompt served a plain solve
+    # (audit book-022 after the degree upgrade was fixed:
+    # the two lines' system solve "x = 0, y = 0" — true,
+    # but not the verification that was asked). The proof
+    # layer returns its own results and is not gated by
+    # _is_real, so vetoing solve-op serves here costs no
+    # genuine proof.
+    if _proof_prompt and op in (
+            "system", "equation", "hindi_equation",
+            "solve", "evaluate", "simplify",
+            "w94_poly_degree"):
+        return True
+
+    # V5 — stem-echo fraction: an evaluate serve that is a
+    # single fraction copied verbatim out of the question
+    # while the question ALSO carries a parenthesised
+    # computation (audit bank-109: the prose mention "9/10"
+    # served instead of (9/10 * 20) + 11 = 29). Root-fixed
+    # in the candidate order; this is the backstop.
+    if op == "evaluate" and re.fullmatch(
+            r"-?\d+\s*/\s*\d+", ans.strip()) \
+            and ans.strip().replace(" ", "") in \
+            q.replace(" ", "") \
+            and re.search(r"\([^()]*[+\-*/][^()]*\)", q):
+        return True
+
+    # V6 — class-limits echo: the answer is a run of >= 5
+    # strictly increasing numbers, EVERY one copied
+    # verbatim from the question (audit book-033: the
+    # grouped-data class limits served as the "mode").
+    _lst = re.findall(r"-?\d+(?:\.\d+)?", ans)
+    if len(_lst) >= 5 and "," in ans:
+        _vals = [float(x) for x in _lst]
+        if all(_vals[i] < _vals[i + 1]
+               for i in range(len(_vals) - 1)) and all(
+                re.search(r"(?<![\d.])" + re.escape(t)
+                          + r"(?!\d)(?!\.\d)", q)
+                for t in _lst):
+            return True
+
+    # V7 — worked-example page: the question text carries
+    # a PRINTED solution (हलः / हल:) and an equation op
+    # served its answer (audit book-008: the example's own
+    # "x = 7" harvested). Solving a page that already
+    # prints its solution teaches nothing and the served
+    # value is the example's, not the exercise's.
+    # Exemption (Wave 150 control idx 4489): when the ASK
+    # portion itself — the text before the हलः marker —
+    # states a clean equation ("समीकरण 5 p = 5 को हल
+    # कीजिए। हलः ..."), solving THAT equation is the
+    # exercise, and its serve stands.
+    if ("हलः" in q or "हल:" in q) and "equation" in op:
+        _pre156 = re.split(r"हलः|हल:", q, maxsplit=1)[0]
+        if "=" not in _pre156:
+            return True
+
+    # V9 — figure-page blank harvest: the question is a
+    # printed figure page ("Fig. 5.30") whose fill-in
+    # blanks run into the next printed angle ("... g= h=
+    # i= 27° 97° ..."), and an equation op served the
+    # harvested "i = 27" (audit book-010). Signature: a
+    # Fig. reference, a chain of >= 2 blank assignments in
+    # the question, and a single-letter equation serve.
+    if re.search(r"\bfig\.", ql) and "equation" in op \
+            and re.search(r"([a-z]\s*=\s*){2,}", ql) \
+            and re.fullmatch(
+                r"[a-z]\s*=\s*-?\d+(?:\.\d+)?", ans.strip()):
+        return True
+
+    # V8 — evaluate with an invented operand: the served
+    # expression contains a number of 3+ digits that
+    # appears NOWHERE in the question (audit book-010:
+    # 22275 materialised from figure furniture). A real
+    # computation only uses the question's own numbers.
+    if op == "evaluate" and expr \
+            and re.search(r"[+\-*/^]", expr):
+        _qn = q.translate(str.maketrans(
+            "०१२३४५६७८९", "0123456789"))
+        for _tok in re.findall(r"\d+(?:\.\d+)?", expr):
+            if float(_tok) >= 100 and not re.search(
+                    r"(?<![\d.])" + re.escape(_tok)
+                    + r"(?![\d.])", _qn):
+                return True
+
+    return False
+
+
 def _with_figure(question, result):
     """Wave 86: attach the labelled diagram (figures.py) to a
     real mensuration solve — only when the shape and its
@@ -1818,6 +2053,15 @@ _NONMATHS_KEYWORDS = (
 
 def _is_nonmaths(question):
     q = str(question or "").lower()
+    # Wave 159: a message carrying a concrete solvable
+    # problem (>= 2 numbers + a computation ask / schema
+    # keyword, any script) is a maths question, whatever
+    # scene words it wears — the sweep's Hindi LCM problem
+    # (rows of 15 or 20 plants, minimum number that fills
+    # both) was refused as non-maths because it carries no
+    # operator characters and matched a keyword below.
+    if _w159_problem_bearing(question):
+        return False
     if any(ch.isdigit() for ch in q) and any(
             ch in q for ch in "+-*/^=%"):
         return False  # an actual calculation rides along; not ours
@@ -2161,6 +2405,389 @@ def _science_result(question, hindi, flavour=None):
 
 
 # ---------------------------------------------------------------------------
+# Wave 159: full-consumption guards (Wave 157 databank sweep).
+#
+# The sweep ran all 2,354 verified bank questions through the
+# solver: 325 serves disagreed with the verified answer, and
+# the three biggest families were (1) the arithmetic carve
+# layers serving a SUB-EXPRESSION — the first fraction echoed
+# verbatim, the first term of a stated expression served as
+# its value (208 of the 325, counting the salvage share);
+# (2) the salvage layer serving partial computations (40/40
+# wrong); (3) meta cards (advice / concept / non-maths)
+# hijacking real problems (29/29 wrong). The helpers below
+# are the serve-time rules; solver/router.py carries the
+# mirror pair (_w159_atoms / _w159_covers /
+# _w159_full_expression) for its Wave 77 core pass, because
+# the layers import the router, not the other way round.
+# ---------------------------------------------------------------------------
+
+_W159_DEV = str.maketrans("०१२३४५६७८९", "0123456789")
+
+_W159_LABEL = re.compile(
+    r"^\s*(?:question|q|प्रश्न|सवाल)\s*(?:no\.?)?\s*\d+"
+    r"\s*[:.)\]]?\s*", re.I)
+
+
+def _w159_atoms(text):
+    """The set of numeric atoms in a text: every integer /
+    decimal literal as an exact Fraction (a fraction literal
+    contributes numerator and denominator as separate atoms —
+    both sides of a comparison are read the same way).
+    Devanagari digits folded, thousands commas dropped.
+    Mirror of solver/router.py's _w159_atoms."""
+    from fractions import Fraction
+    t = str(text or "").translate(_W159_DEV).replace(",", "")
+    out = set()
+    for m in re.finditer(r"\d+(?:\.\d+)?", t):
+        try:
+            out.add(Fraction(m.group(0)))
+        except Exception:
+            pass
+    return out
+
+
+def _w159_covers(src, cand):
+    """True when every numeric atom of the source text (a
+    leading question-number label aside) appears in the
+    candidate — the candidate consumed the whole question,
+    not a fragment of it. Mirror of the router's."""
+    src_atoms = _w159_atoms(_W159_LABEL.sub("", str(src or ""),
+                                            count=1))
+    if not src_atoms:
+        return True
+    return src_atoms <= _w159_atoms(cand)
+
+
+def _w159_full_expression(text):
+    """The question's own explicit full expression, or None:
+    the longest run of consecutive mathy tokens carrying a
+    bracket pair and at least one operator (or at least two
+    operators), at least three numeric atoms, and no '=' (an
+    equation is the equation candidate's shape; a bracketed
+    group after '=' is a definition, not the ask). Mirror of
+    the router's, on this module's _mathy."""
+    t = str(text or "").replace("−", "-").replace("–", "-") \
+        .replace("×", "*").replace("÷", "/").replace("।", " ")
+    best = None
+    run = []
+
+    def _flush():
+        nonlocal best
+        if run:
+            cand = " ".join(run).strip(" .,?!;:")
+            if _w159_expr_qualifies(cand) and (
+                    best is None or len(cand) > len(best)):
+                best = cand
+        run.clear()
+
+    for tok in t.split():
+        if _mathy(tok):
+            run.append(tok)
+        else:
+            _flush()
+    _flush()
+    return best
+
+
+def _w159_expr_qualifies(cand):
+    # Mirror of solver/router.py's qualifier: purely
+    # numeric stated expressions only — any letter,
+    # superscript, root or pi sign disqualifies the run.
+    if re.search(r"[A-Za-z\u0900-\u0965\u0970-\u097f"
+                 r"\u00b2\u00b3\u221a\u03c0]", cand):
+        return False
+    if re.search(r",\s", cand):
+        return False
+    if "=" in cand or len(_w159_atoms(cand)) < 3:
+        return False
+    ops = sum(cand.count(ch) for ch in "+-*/")
+    if "(" in cand and ")" in cand:
+        return ops >= 1
+    return ops >= 2
+
+
+def _w159_veto(question, result):
+    """Wave 159 serve-time veto (joins _w146/_w150/_w151 in
+    _is_real): the question STATES its full expression —
+    a bracketed expression whose atoms are the question's
+    whole numeric content and which is not the right-hand
+    side of a definition — and the served value is NOT that
+    expression's value. The signature of a schema that
+    computed one leg/part of the stated computation (the
+    sweep's train whose total distance "(48 * 6) + (24 * 3)"
+    was served as its first leg, 288). On any doubt (no
+    expression, unparseable, no numeric serve value) the
+    veto stays silent."""
+    try:
+        expr = _w159_full_expression(question)
+        if not expr:
+            return False
+        if not _w159_atoms(expr) >= _w159_atoms(
+                _W159_LABEL.sub("", str(question or ""),
+                                count=1)):
+            # Second path: the expression is explicitly
+            # introduced as the thing to evaluate ("by
+            # evaluating: (7 * 80) + (4 * (80 - 18))",
+            # "expression: (5/8 * 16) + 7") — a redundant
+            # given elsewhere in the prose (the 11 coaches
+            # whose 7 + 4 the expression already encodes)
+            # must not disarm the veto.
+            qt = str(question or "").replace("−", "-") \
+                .replace("–", "-").replace("×", "*") \
+                .replace("÷", "/").replace("।", " ")
+            idx = qt.find(expr)
+            intro = qt[max(0, idx - 40):idx].lower() \
+                if idx >= 0 else ""
+            if not any(m in intro for m in (
+                    "evaluat", "expression", "व्यंजक")):
+                return False
+        from solver.expression_parser import parse_expression
+        import sympy as _sp
+        val = _sp.nsimplify(parse_expression(expr),
+                            rational=True)
+        got = _result_value(result)
+        if got is None:
+            return False
+        return abs(got - float(val)) > 0.01
+    except Exception:
+        return False
+
+
+def _w159_frac_echo(question, result):
+    """Wave 159 serve-time veto, fraction-echo path: the
+    served answer is a single genuine fraction (denominator
+    != 1) that appears VERBATIM as a literal in the
+    question, while the question states at least one
+    numeric atom beyond the fraction's own numerator and
+    denominator. The signature of the arithmetic evaluator
+    echoing the first fraction of a multi-number problem
+    (a train's total-time question answered "3/4" — its
+    first leg's duration; a circle's area answered "22/7"
+    — the stated pi value itself). A question whose only
+    numbers are the fraction itself can never fire this
+    (the atom set must strictly exceed the fraction's own
+    atoms), and integer serves are not covered — a stated
+    integer is a legitimate answer far more often, and the
+    integer first-leg serves belong to _w159_veto's
+    bracketed-expression paths."""
+    try:
+        ans = str((result or {}).get("answer") or "")
+        ans = ans.strip().replace(",", "").replace(" ", "")
+        if not ans or "/" not in ans:
+            return False
+        val = Fraction(ans)
+        if val.denominator == 1:
+            return False
+        t = str(question or "").translate(_W159_DEV)
+        t = t.replace(",", "")
+        found = False
+        for m in re.finditer(r"\d+\s*/\s*\d+", t):
+            try:
+                if Fraction(m.group(0).replace(" ", "")) == val:
+                    found = True
+                    break
+            except Exception:
+                pass
+        if not found:
+            return False
+        own = {Fraction(val.numerator),
+               Fraction(val.denominator)}
+        return not _w159_atoms(question) <= own
+    except Exception:
+        return False
+
+
+def _w159_all_expressions(text):
+    """Every qualifying stated-expression run in the text
+    (the same maximal mathy runs _w159_full_expression
+    picks the longest of), for the sub-expression echo
+    veto below. A leg can be a two-number bracket
+    ("(108 - 48)"), so the atom floor here is 2, not the
+    full-expression floor of 3 — the veto's own
+    conjunction (the serve must EQUAL the leg's value and
+    the leg must not cover the question) keeps that
+    safe."""
+    t = str(text or "").replace("−", "-").replace("–", "-") \
+        .replace("×", "*").replace("÷", "/").replace("।", " ")
+    out = []
+    run = []
+
+    def _flush():
+        if run:
+            cand = " ".join(run).strip(" .,?!;:")
+            if _w159_expr_qualifies(cand) or (
+                    len(_w159_atoms(cand)) == 2
+                    and "(" in cand and ")" in cand
+                    and not re.search(
+                        r"[A-Za-z\u0900-\u0965\u0970-\u097f"
+                        r"\u00b2\u00b3\u221a\u03c0]", cand)
+                    and "=" not in cand
+                    and not re.search(r",\s", cand)
+                    and sum(cand.count(ch)
+                            for ch in "+-*/") >= 1):
+                out.append(cand)
+            elif re.fullmatch(
+                    r"\d+(?:\.\d+)?\*\d+(?:\.\d+)?", cand):
+                # A stated product term written as one
+                # token ("6*11" — an age stated as a
+                # product to evaluate) is a leg too.
+                out.append(cand)
+        run.clear()
+
+    for tok in t.split():
+        if _mathy(tok):
+            run.append(tok)
+        else:
+            _flush()
+    _flush()
+    return out
+
+
+def _w159_subexpr_echo(question, result):
+    """Wave 159 serve-time veto, sub-expression path: the
+    served value equals the value of ONE stated
+    sub-expression of the question — a qualifying numeric
+    run that does NOT account for the question's whole
+    numeric content — while the question states more
+    beyond it. The signature of a schema that evaluated
+    one leg of a multi-leg computation and stopped:
+    "(108 - 48) divided by 10, plus 13 times (17 - 5)"
+    answered 60 (the first bracket); "(5/8 + 1/4) of 24
+    sacks, then gives away 9" answered 7/8 (the bracket);
+    "80 marks, -15, then 2/3 x 48 added, then -5"
+    answered 32 (the middle leg). A run covering every
+    atom is the whole computation — serving its value is
+    correct and is _w159_veto's territory, never this
+    one's."""
+    try:
+        got = _result_value(result)
+        if got is None:
+            return False
+        q_atoms = _w159_atoms(question)
+        from solver.expression_parser import parse_expression
+        import sympy as _sp
+        for expr in _w159_all_expressions(question):
+            if q_atoms <= _w159_atoms(expr):
+                continue
+            try:
+                val = _sp.nsimplify(
+                    parse_expression(expr), rational=True)
+            except Exception:
+                continue
+            if abs(got - float(val)) <= 0.01:
+                return True
+        return False
+    except Exception:
+        return False
+
+
+_W159_EXPR_ASK = re.compile(
+    r"व्यंजक|\bexpression|\bevaluat", re.I)
+
+
+def _w159_expr_ask(text):
+    """Mirror of solver/router.py's marker check: True
+    when the text explicitly asks for the VALUE OF AN
+    EXPRESSION (व्यंजक का मान / "using the expression..."
+    / "evaluate..."). A variable-value ask ("उ का मान
+    ज्ञात कीजिए जिसके लिए...") carries no such marker."""
+    return bool(_W159_EXPR_ASK.search(str(text or "")))
+
+
+def _w159_echo(question, result):
+    """Wave 159 echo guard for the deep-solve stage: on an
+    expression-evaluation ask stating at least three
+    numeric atoms, a serve whose whole answer is ONE of
+    the question's stated literals (the first fraction
+    "3/4" served verbatim for "(3/4 + 5/6) x 12 - 10"
+    stated in prose) is an echo of the question, not its
+    evaluation. The deep stage gates its reformulation
+    variants against the VARIANT, so a fragment-shaped
+    variant can pass its gate carrying exactly this echo;
+    the chain therefore re-checks the deep serve against
+    the original question here. A serve equal to the full
+    computation's value is untouched (that value is not a
+    stated literal, except in degenerate identity cases,
+    which then honestly decline instead)."""
+    try:
+        if not _w159_expr_ask(question):
+            return False
+        if len(_w159_atoms(question)) < 3:
+            return False
+        ans = str((result or {}).get("answer") or "")
+        ans = ans.strip().replace(",", "").replace(" ", "")
+        if not ans:
+            return False
+        val = Fraction(ans)
+        t = str(question or "").translate(_W159_DEV)
+        t = t.replace(",", "")
+        lits = set()
+        for m in re.finditer(r"\d+\s*/\s*\d+", t):
+            try:
+                lits.add(Fraction(m.group(0).replace(" ", "")))
+            except Exception:
+                pass
+        for m in re.finditer(r"\d+(?:\.\d+)?", t):
+            try:
+                lits.add(Fraction(m.group(0)))
+            except Exception:
+                pass
+        return val in lits
+    except Exception:
+        return False
+
+
+# A concrete solvable problem riding in the message: at
+# least two numbers AND a computation ask or a problem
+# schema keyword, in any of the app's three scripts. Such a
+# message must never be answered by an advice / concept /
+# non-maths card (the Wave 148 anti-hijack principle,
+# extended by Wave 159 to the whole meta layer in all
+# languages): the sweep's Hindi mean question was served
+# exam advice because it contained the word "परीक्षा", a
+# Hindi SI question got the formula card with no
+# computation, and a Hindi LCM problem was refused as
+# non-maths. Pure small-talk / guidance asks carry no such
+# number+ask combination and are untouched.
+_W159_ASK_WORDS = (
+    "ज्ञात कीजिए", "ज्ञात करो", "ज्ञात करें", "निकालिए",
+    "निकालो", "गणना कीजिए", "गणना करो", "हल कीजिए", "हल करो",
+    "बताइए", "क्या होगा", "क्या होगी", "क्या होंगे",
+    "क्या है", "क्या हैं", "कितना", "कितने", "कितनी",
+    "का मान", "मान ज्ञात",
+    "find", "calculate", "compute", "evaluate", "determine",
+    "how many", "how much", "what is", "value of",
+    "batao", "nikalo", "kitna", "kitne", "kitni", "gyat",
+)
+
+_W159_SCHEMA_WORDS = (
+    "ब्याज", "interest", "क्षेत्रफल", "area", "परिमाप",
+    "परिधि", "perimeter", "circumference", "आयतन", "volume",
+    "लघुत्तम", "महत्तम", "lcm", "hcf", "गति", "चाल", "speed",
+    "दूरी", "distance", "छूट", "discount", "लाभ", "profit",
+    "हानि", "loss", "प्रतिशत", "percent", "अनुपात", "ratio",
+    "त्रिज्या", "radius", "व्यास", "diameter", "माध्य",
+    "औसत", "mean", "average", "माध्यक", "median", "बहुलक",
+    "mode", "प्रायिकता", "probability", "ऊँचाई", "height",
+)
+
+
+def _w159_problem_bearing(question):
+    """True when the message contains a concrete solvable
+    problem: >= 2 numeric literals (Devanagari digits
+    folded) plus a computation ask or a problem-schema
+    keyword. maths_meta.py carries the mirror for its own
+    fresh-problem veto."""
+    q = str(question or "").lower().translate(_W159_DEV)
+    if len(_w159_atoms(q)) < 2:
+        return False
+    if any(w in q for w in _W159_ASK_WORDS):
+        return True
+    return any(w in q for w in _W159_SCHEMA_WORDS)
+
+
+# ---------------------------------------------------------------------------
 # Layer 1: salvage — strip the chatter, solve the maths inside
 # ---------------------------------------------------------------------------
 
@@ -2249,6 +2876,27 @@ def _candidates(question):
                   re.I)
     if m:
         add(m.group(1))
+    # Wave 159: the question's own explicit FULL expression
+    # ("using the expression (12 * 9) - (4 * 1)") outranks
+    # every chain fragment below — the sweep's salvage
+    # served 108 for that question by evaluating only the
+    # first bracket. A fragment can only win when no full
+    # expression exists.
+    _full159 = _w159_full_expression(q)
+    if _full159:
+        add(_full159)
+    # Wave 156 (Wave 153 audit bank-109): the bracketed
+    # expression "(9/10 * 20) + 11" is the real core — offer
+    # it before bare chains. (Where Wave 159's full-
+    # expression extractor already found the same span,
+    # add() dedupes; this catches bracketed shapes the
+    # full-expression extractor passes over.)
+    _pm156 = re.search(
+        r"\(\s*\d[^()]*\)(?:\s*[-+*/x×]\s*"
+        r"(?:\([^()]*\)|\d+(?:\.\d+)?"
+        r"(?:\s*/\s*\d+(?:\.\d+)?)?))+", q)
+    if _pm156:
+        add(_pm156.group(0))
     if not equation:
         for m in re.finditer(
                 r"(\d+(?:\.\d+)?(?:\s*[-+\*/x×]\s*"
@@ -2257,6 +2905,14 @@ def _candidates(question):
             # scientific notation, not a multiplication sum —
             # "2 x 10^8" must never be salvaged as "2 x 10".
             if q[m.end():].lstrip().startswith("^"):
+                continue
+            # Wave 156: a DATE is not an arithmetic chain
+            # ("4/11/2025" -> 0.000179574, "2019-20" -> 1999,
+            # "22-12-2025" -> -2015 in the audit).
+            if re.fullmatch(
+                    r"\d{1,2}\s*/\s*\d{1,2}\s*/\s*\d{2,4}"
+                    r"|\d{1,2}\s*-\s*\d{1,2}\s*-\s*\d{2,4}"
+                    r"|\d{4}\s*-\s*\d{2}", m.group(1)):
                 continue
             add(m.group(1))
     add(_strip_filler(q))
@@ -2359,6 +3015,15 @@ def _salvage(question, hindi):
     for cand in _candidates(question):
         if cand.strip().lower() == str(question).strip().lower():
             continue  # identical to the original: already failed
+        # Wave 159: a salvage candidate may serve only when
+        # it accounts for every numeric atom of the original
+        # question. _is_real below judges the result against
+        # the CANDIDATE, so a fragment ("12 * 9" carved out
+        # of "(12 * 9) - (4 * 1)") looked perfectly real
+        # while answering a smaller question than the one
+        # asked — the sweep found 40/40 such serves wrong.
+        if not _w159_covers(question, cand):
+            continue
         try:
             result = solve_question(cand)
         except Exception:
@@ -2769,6 +3434,97 @@ def _verified_ai_answer(question, hindi, lang_request,
 
 
 # ---------------------------------------------------------------------------
+# Wave 158: the last resort — "jawab milega hi"
+# ---------------------------------------------------------------------------
+
+# Chain order of the AI legs (Wave 37/41/108): the
+# last-resort preferences below are stated in this order.
+_AI_LEG_ORDER = {"gemini": 0, "groq": 1, "openrouter": 2}
+
+
+def _mark_last_resort(result, basis):
+    """Copy a rejected AI candidate for its last-resort
+    serve. The mark is deliberately NOT one of Wave 133's:
+    "last_resort" never promotes in the Live Bank (the
+    record hook promotes only "deterministic"), and the
+    store's classifier files the result as an ordinary
+    pending AI answer (ai_generated / fallback_kind do
+    that), so a repeat ask is never served this copy from
+    the store — it re-runs the chain. `basis` records how
+    the candidate won: "majority" or "single"."""
+    out = dict(result)
+    out["ai_verification"] = "last_resort"
+    out["ai_last_resort"] = basis
+    return out
+
+
+def _last_resort_ai_answer(question, rejected):
+    """Wave 158 (Suraj, 18 Nov 2026): "Aisa nhi bolna —
+    nhi aa rha; ans kahi se bhi de, ans bs chahiye, chahe
+    kisi AI se leke de" — joined with his quality bar the
+    same morning: "ans 101% sahi hona chahiye."
+
+    Pick the best answer out of Wave 133's rejected bundle
+    (the candidates verification turned away), or None when
+    the bundle holds no answer at all — every leg silent is
+    the one case where the honest not-found may still
+    stand. The candidates arrive already shaped and
+    re-voiced by the legs themselves (each leg's
+    _shape_result runs ganitra_voice.normalize_ai_text,
+    Wave 132), so the picked one is served exactly as a
+    verified AI answer is served: short plain steps, the
+    bare final value, no disclaimer, no apology.
+
+    Strict preference (the quality bar applied inside the
+    last resort):
+      (a) MAJORITY — a final value two or more legs agree
+          on, judged by aiverify's own claim extraction +
+          agreement, wins over everything else here; its
+          earliest carrier in chain order is served. (An
+          answer that PASSES a deterministic check never
+          reaches this function — Wave 133 serves it first;
+          agreement is the strongest evidence a rejected
+          candidate can still carry.)
+      (b) SINGLE — otherwise the first leg's answer in
+          chain order (Gemini -> Groq -> OpenRouter).
+    Before this picker runs, the chain has already given
+    Ganitra's own arithmetic its chances: deep_solve's
+    reformulations (before the AI block) and Wave 134's
+    method transfer over these very candidates (AI gives
+    the method, Ganitra does the counting) — a recomputed
+    own answer always beats any candidate picked here."""
+    cands = []
+    for rec in rejected or []:
+        if not isinstance(rec, dict):
+            continue
+        res = rec.get("result")
+        if not isinstance(res, dict):
+            continue
+        if not str(res.get("answer") or "").strip():
+            continue
+        cands.append((_AI_LEG_ORDER.get(rec.get("leg"), 99),
+                      res))
+    if not cands:
+        return None
+    cands.sort(key=lambda item: item[0])
+    try:
+        from aiverify import claims_agree, extract_claim
+        claims = [extract_claim(res.get("answer"), question)
+                  for _order, res in cands]
+    except Exception:
+        claims = [None] * len(cands)
+    for i in range(len(cands)):
+        if claims[i] is None:
+            continue
+        for j in range(i + 1, len(cands)):
+            if claims[j] is not None and claims_agree(
+                    question, claims[i], claims[j]):
+                return _mark_last_resort(cands[i][1],
+                                         "majority")
+    return _mark_last_resort(cands[0][1], "single")
+
+
+# ---------------------------------------------------------------------------
 # The entry point
 # Wave 90: the not-found learning log hook (notfound_log.py)
 # ---------------------------------------------------------------------------
@@ -2896,6 +3652,17 @@ def _with_fallback_chain(question, result, lang=None,
     greeting = _greeting_result(question, hindi, req_flavour)
     if greeting is not None:
         return greeting
+    # Wave 156: Mathematical Reasoning statements
+    # (negations, quantifier conversions) carry no maths
+    # keywords, so the non-maths guard below would refuse
+    # them even when the solver has genuinely solved them
+    # (Wave 153 audit book-068). A real reasoning result
+    # outranks the guard.
+    if isinstance(result, dict) and str(
+            result.get("op") or "") in (
+            "reasoning_negation", "reasoning_quantifier") \
+            and _is_real(question, result):
+        return result
     if _is_nonmaths(question):
         return _nonmaths_result(question, hindi, req_flavour)
 
@@ -2913,10 +3680,20 @@ def _with_fallback_chain(question, result, lang=None,
     # its computation veto keep every real problem and every
     # concept ask out — it returns None for all of them, and
     # the flow below is then exactly the pre-Wave-111 one.
+    # Wave 159: the meta layer yields to a message carrying
+    # a concrete solvable problem (numbers + an operation /
+    # asked quantity, any script) — maths_meta's own
+    # fresh-problem veto now refuses those too, and this
+    # chain-level gate keeps the promise even if a future
+    # meta entry forgets it: the sweep's Hindi mean question
+    # was served exam advice (its "परीक्षा" trigger) before
+    # the solver's answer was ever looked at, because this
+    # layer sits ahead of _is_real below.
+    _w159_pb = _w159_problem_bearing(question)
     try:
         from maths_meta import meta_result
-        meta = meta_result(question,
-                           req_flavour or _flavour(question))
+        meta = None if _w159_pb else meta_result(
+            question, req_flavour or _flavour(question))
     except Exception:
         meta = None
     if meta is not None:
@@ -2963,7 +3740,8 @@ def _with_fallback_chain(question, result, lang=None,
             mp_preferred = None
         if mp_preferred is not None \
                 and not _w150_veto(question, mp_preferred) \
-                and not _w151_veto(question, mp_preferred):
+                and not _w151_veto(question, mp_preferred) \
+                and not _w156_veto(question, mp_preferred):
             return _with_figure(question, mp_preferred)
         # Wave 95: for a proof ask, a SymPy-verified identity
         # derivation (proofs.py) upgrades the solver's bare
@@ -3265,7 +4043,8 @@ def _with_fallback_chain(question, result, lang=None,
     except Exception:
         multi = None
     if multi is not None and not _w150_veto(question, multi) \
-            and not _w151_veto(question, multi):
+            and not _w151_veto(question, multi) \
+            and not _w156_veto(question, multi):
         return multi
 
     # Wave 95: the proof layer (proofs.py). "Prove that ..."
@@ -3307,7 +4086,8 @@ def _with_fallback_chain(question, result, lang=None,
         formatted = formats_result(question)
     except Exception:
         formatted = None
-    if formatted is not None and not _w151_veto(question, formatted):
+    if formatted is not None and not _w151_veto(question, formatted) \
+            and not _w156_veto(question, formatted):
         return formatted
 
     # Wave 143: the graph-METHOD layer (graphsolve.py).
@@ -3362,7 +4142,8 @@ def _with_fallback_chain(question, result, lang=None,
         graphed = graph_result(question, hindi)
     except Exception:
         graphed = None
-    if graphed is not None and not _w151_veto(question, graphed):
+    if graphed is not None and not _w151_veto(question, graphed) \
+            and not _w156_veto(question, graphed):
         return graphed
 
     # The solver did not really answer. Work the layers.
@@ -3437,7 +4218,15 @@ def _with_fallback_chain(question, result, lang=None,
         # decide, not a concept to teach, either.
         options_bearing = True
     concept = None
-    if not options_bearing:
+    if not options_bearing and not _w159_pb:
+        # Wave 159: the concept layers yield to a concrete
+        # problem the same way they yield to options-bearing
+        # questions (Wave 100) — a problem that carries its
+        # numbers and its ask is not a concept ask, and the
+        # sweep's Hindi SI question (Rs 9000, 6%, 4 years)
+        # was served the bare formula card with no
+        # computation. Such a question falls through to the
+        # guide / AI path and the honest collapse instead.
         try:
             concept = topic_concept_result(question)
         except Exception:
@@ -3525,6 +4314,11 @@ def _with_fallback_chain(question, result, lang=None,
                               lang_request=lang_request,
                               student_class=student_class)
         except Exception:
+            deep = None
+        # Wave 159: a deep serve that merely echoes one of
+        # the question's stated literals on an expression-
+        # evaluation ask is not a solve (see _w159_echo).
+        if deep is not None and _w159_echo(question, deep):
             deep = None
         if deep is not None:
             return _with_figure(question, deep)
@@ -3627,6 +4421,26 @@ def _with_fallback_chain(question, result, lang=None,
                     own = None
                 if own is not None:
                     return _with_figure(question, own)
+        # Wave 158: the last resort — "jawab milega hi".
+        # Verification (Wave 133) and Ganitra's own counting
+        # (deep_solve + the Wave 134 transfers above) have
+        # all had their chances and none produced a servable
+        # answer; what remains is a standing that would
+        # collapse to the one-line not-found (a similar
+        # example or the general guide — the concept card is
+        # a real answer and keeps its as-is serve below).
+        # When any leg DID answer, serve the best of those
+        # answers instead of not-found (see
+        # _last_resort_ai_answer for the strict preference:
+        # majority first, then the first leg). An empty
+        # bundle — every leg silent — changes nothing: the
+        # honest collapse below stands.
+        if rejected_sink and result_out.get(
+                "fallback_kind") in ("similar", "guide"):
+            last = _last_resort_ai_answer(
+                question, rejected_sink[0].get("rejected"))
+            if last is not None:
+                return last
 
     # Wave 67: whatever honest layer is still standing here —
     # a similar example, gibberish, the general guide — means
