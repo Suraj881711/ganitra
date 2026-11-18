@@ -459,6 +459,16 @@ def test_e2e_consensus_stays_pending(db, monkeypatch):
 
 def test_e2e_all_wrong_falls_through_to_not_found(db,
                                                    monkeypatch):
+    # Wave 158 SUPERSESSION (Suraj, 18 Nov 2026 — "jawab
+    # milega hi"): this scenario's ending changed by
+    # order. Verification still fails every candidate
+    # (1/3 and 1/4 are both wrong; the true value is 1/6)
+    # and every rejection is still logged — but the chain
+    # no longer collapses to not-found while a leg's answer
+    # stands: Gemini + Groq agree on 1/3, so the last
+    # resort serves that majority value's earliest carrier
+    # (Gemini), marked "last_resort". The full Wave 158
+    # behaviour is pinned in test_wave158.py.
     _stub_legs(monkeypatch,
                gemini=_ai("gemini", "1/3 square units"),
                groq=_ai("groq", "1/3 square units"),
@@ -468,7 +478,10 @@ def test_e2e_all_wrong_falls_through_to_not_found(db,
     monkeypatch.setattr(fallback, "_salvage",
                         lambda q, h: None)
     res = with_fallback(AREA_Q, dict(FAILED), lang="en")
-    assert res["fallback_kind"] == "not_found"
+    assert res["fallback_kind"] == "gemini"
+    assert res["answer"] == "1/3 square units"
+    assert res["ai_verification"] == "last_resort"
+    assert res["ai_last_resort"] == "majority"
     # The served not-found dict never carries the Wave 134
     # bundle (it lives on the chain's internal fall-through
     # result only, inside _with_fallback_chain).

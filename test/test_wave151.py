@@ -142,7 +142,7 @@ FED = {
 # hand-verified wrong; each must now decline to the
 # honest fallback (none can serve correctly without a
 # new solver schema — see the notes).
-WRONG = [26, 49, 62, 63, 66, 67, 96, 109, 144, 153, 216,
+WRONG = [26, 62, 63, 66, 67, 96, 109, 144, 153, 216,
          276, 280, 290, 292, 339, 342, 347, 353, 380, 395,
          401, 402, 403, 434, 448, 460, 489, 491, 529, 553,
          555, 629]
@@ -180,6 +180,24 @@ def test_wave151_wrong_rows_now_decline(idx):
     assert not _served(r), (
         f"idx {idx} still served: "
         f"{(r.get('answer') or '')[:120]}")
+
+
+def test_wave151_idx49_unit_rate_now_solved_by_schema():
+    # Wave 156 pin update: idx 49 was pinned as a decline
+    # because its serve was the WRONG value (30.7667) via
+    # op=mean (vetoed by W28). Wave 151's own follow-up
+    # list asked for a real rate schema for this row; the
+    # Wave 153 audit independently adjudicated the same
+    # question a genuine missed solve with answer 40.5.
+    # Wave 156's speed schema now serves exactly that,
+    # via the correct op — so the row moves from the
+    # decline battery to a served pin. The W28 veto
+    # itself is untouched (a mean-op serve on a unit-rate
+    # ask still declines).
+    r = _solve(49)
+    assert _served(r), "idx 49 regressed to a decline"
+    assert (r.get("answer") or "").strip() == "40.5 km/h"
+    assert r.get("op") == "speed"
 
 
 @pytest.mark.parametrize("idx", sorted(CONTROLS))
