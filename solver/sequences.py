@@ -160,6 +160,28 @@ def solve_sequences(question: str):
     if _w65 is not None:
         return _w65
 
+    # Wave 156 (Wave 153 audit book-066): "sum of the
+    # first 40 positive integers divisible by 6" — the
+    # terms form an AP with a = d = k: S = n*k*(n+1)/2.
+    _dv156 = re.search(
+        r"sum of (?:the )?first (\d+) (?:positive )?"
+        r"integers divisible by (\d+)", q)
+    if _dv156:
+        _n156 = int(_dv156.group(1))
+        _k156 = int(_dv156.group(2))
+        _s156 = _n156 * _k156 * (_n156 + 1) // 2
+        return {"type": "sequences", "op": "ap_sum_divisible",
+                "answer": fmt_num(_s156), "value": _s156,
+                "steps": [
+                    f"The integers divisible by {_k156} "
+                    f"form an AP: {_k156}, "
+                    f"{2 * _k156}, {3 * _k156}, ... with "
+                    f"a = {_k156}, d = {_k156}",
+                    f"Sum of first {_n156} terms = "
+                    f"{_n156}/2 × (2 × {_k156} + "
+                    f"({_n156} - 1) × {_k156}) = "
+                    f"{fmt_num(_s156)}"]}
+
     # --- Wave 42: Hindi / Hinglish AP phrasing + next term ----
     # Wave 33 covered Hindi probability but left Hindi AP
     # behind: "समांतर श्रेढ़ी 5, 10, 15, ... का 12वां पद" and

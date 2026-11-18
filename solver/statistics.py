@@ -355,6 +355,26 @@ def _probability_hindi(q, ql):
     if re.search(r"पत्त|ताश|taash", qn) and \
             ("52" in qn or "गड्डी" in qn or "pack" in qn
              or "deck" in qn):
+        # Wave 156 (Wave 153 audit bank-120): a SPECIFIC card
+        # — a rank named together with a suit ('पान का राजा',
+        # King of Hearts) — is exactly ONE card in the pack.
+        # The suit/rank table below matches the suit alone
+        # first (पान → 13 hearts → 1/4), which is the wrong
+        # quantity for a specific-card ask; the pair check
+        # must run before the table.
+        _rank = re.search(r"इक्का|बादशाह|राजा|बेगम|रानी|गुलाम|"
+                          r"\bikka\b|\bking\b|\bqueen\b|\bjack\b|"
+                          r"\bace\b", qn)
+        _suit = re.search(r"हुकुम|पान|ईंट|चिड़ी|\bhukum\b|"
+                          r"\bhearts?\b|\bdiamonds?\b|"
+                          r"\bspades?\b|\bclubs?\b", qn)
+        if _rank and _suit:
+            steps = [
+                "A standard pack has 52 cards.",
+                "The named rank-and-suit card is exactly 1 "
+                "specific card in the pack.",
+            ]
+            return _prob_answer(Fraction(1, 52), steps)
         table = [
             (_DNB + r"इक्का|\bikka\b", 4, "aces"),
             (_DNB + r"बादशाह|badshah", 4, "kings"),
@@ -456,6 +476,45 @@ def _probability(q: str):
     _hindi = _probability_hindi(q, ql)
     if _hindi is not None:
         return _hindi
+
+    # Wave 156 (Wave 153 audit book-052): event-probability
+    # relations — "P(A) = 0.42, P(B) = 0.48 and P(A and B) =
+    # 0.16. Determine (i) P(not A), (ii) P(not B) and
+    # (iii) P(A or B)". No schema parsed the stated event
+    # values, so the whole family declined. Compute exactly
+    # the quantities the text asks for.
+    _pa = re.search(r"p\(\s*a\s*\)\s*=\s*(\d+(?:\.\d+)?)", ql)
+    _pb = re.search(r"p\(\s*b\s*\)\s*=\s*(\d+(?:\.\d+)?)", ql)
+    _pab = re.search(r"p\(\s*a\s*(?:and|∩|cap)\s*b\s*\)\s*=\s*"
+                     r"(\d+(?:\.\d+)?)", ql)
+    if _pa and _pb:
+        _va, _vb = float(_pa.group(1)), float(_pb.group(1))
+        _vab = float(_pab.group(1)) if _pab else None
+        _rel = []
+        _rel_steps = []
+        if re.search(r"p\(\s*not\s+a\s*\)", ql):
+            _rel.append(f"P(not A) = {fmt_num(1 - _va)}")
+            _rel_steps.append(
+                f"P(not A) = 1 - P(A) = 1 - {fmt_num(_va)} "
+                f"= {fmt_num(1 - _va)}")
+        if re.search(r"p\(\s*not\s+b\s*\)", ql):
+            _rel.append(f"P(not B) = {fmt_num(1 - _vb)}")
+            _rel_steps.append(
+                f"P(not B) = 1 - P(B) = 1 - {fmt_num(_vb)} "
+                f"= {fmt_num(1 - _vb)}")
+        if re.search(r"p\(\s*a\s*(?:or|∪|cup)\s*b\s*\)", ql) \
+                and _vab is not None:
+            _rel.append(
+                f"P(A or B) = {fmt_num(_va + _vb - _vab)}")
+            _rel_steps.append(
+                f"P(A or B) = P(A) + P(B) - P(A and B) = "
+                f"{fmt_num(_va)} + {fmt_num(_vb)} - "
+                f"{fmt_num(_vab)} = "
+                f"{fmt_num(_va + _vb - _vab)}")
+        if _rel:
+            return {"type": "statistics", "op": "probability",
+                    "answer": "; ".join(_rel), "value": None,
+                    "steps": _rel_steps}
 
     # Wave 65: card / coin / dice / lottery / bag families in
     # plain phrasings the older patterns missed (they fell
@@ -1790,6 +1849,124 @@ def solve_statistics(question: str):
                                   f"{fmt_num(_nn * _pp * (1 - _pp))}",
                         "value": float(_nn * _pp), "steps": steps}
 
+    # Wave 156 (Wave 153 audit book-020): corrected mean & SD
+    # after a wrong observation — the NCERT form: "The mean
+    # and standard deviation of N observations are M and S.
+    # ... an observation W was incorrect. (i) If the wrong
+    # item is omitted. (ii) If it is replaced by C." The raw
+    # path harvested the stated numbers as a data list and
+    # answered with their own std. Sigma x = N*M and
+    # Sigma x^2 = N*(S^2 + M^2); adjust for the case.
+    _cm = re.search(
+        r"mean\s+and\s+standard\s+deviation\s+of\s+(\d+)\s+"
+        r"observations?\s+are\s+(?:found\s+to\s+be\s+)?"
+        r"(\d+(?:\.\d+)?)\s+and\s+(\d+(?:\.\d+)?)", ql)
+    _cw = re.search(
+        r"observation\s+(\d+(?:\.\d+)?)\s+was\s+(?:incorrect|"
+        r"wrong)", ql) or re.search(
+            r"wrong\s+(?:item|observation)\s+(?:is|was)\s+"
+            r"(\d+(?:\.\d+)?)", ql)
+    if _cm and _cw:
+        _cn = int(_cm.group(1))
+        _cmean, _csd = float(_cm.group(2)), float(_cm.group(3))
+        _cwrong = float(_cw.group(1))
+        _sx = _cn * _cmean
+        _sx2 = _cn * (_csd ** 2 + _cmean ** 2)
+        _cases = []
+        _parts = []
+        _rep = re.search(r"replaced\s+by\s+(\d+(?:\.\d+)?)",
+                         ql)
+        if re.search(r"omit|removed|left\s+out|excluded",
+                     ql) and _cn >= 2:
+            _n1 = _cn - 1
+            _m1 = (_sx - _cwrong) / _n1
+            _v1 = (_sx2 - _cwrong ** 2) / _n1 - _m1 ** 2
+            if _v1 >= 0:
+                _cases.append(
+                    f"(i) omitted: new sum = {fmt_num(_sx)} - "
+                    f"{fmt_num(_cwrong)} = "
+                    f"{fmt_num(_sx - _cwrong)} over {_n1} "
+                    f"observations, so correct mean = "
+                    f"{fmt_num(_m1)}; correct SD = "
+                    f"sqrt({fmt_num(_v1)}) = "
+                    f"{fmt_num(_v1 ** 0.5)}")
+                _parts.append(
+                    f"(i) mean = {fmt_num(_m1)}, SD = "
+                    f"{fmt_num(_v1 ** 0.5)}")
+        if _rep:
+            _crc = float(_rep.group(1))
+            _m2 = (_sx - _cwrong + _crc) / _cn
+            _v2 = (_sx2 - _cwrong ** 2 + _crc ** 2) / _cn \
+                - _m2 ** 2
+            if _v2 >= 0:
+                _cases.append(
+                    f"(ii) replaced by {fmt_num(_crc)}: correct "
+                    f"mean = {fmt_num(_m2)}; correct SD = "
+                    f"sqrt({fmt_num(_v2)}) = "
+                    f"{fmt_num(_v2 ** 0.5)}")
+                _parts.append(
+                    f"(ii) mean = {fmt_num(_m2)}, SD = "
+                    f"{fmt_num(_v2 ** 0.5)}")
+        if _parts:
+            steps = [
+                f"Sum of the {_cn} observations = {_cn} x "
+                f"{fmt_num(_cmean)} = {fmt_num(_sx)}; sum of "
+                f"squares = {_cn} x ({fmt_num(_csd)}^2 + "
+                f"{fmt_num(_cmean)}^2) = {fmt_num(_sx2)}",
+            ] + _cases
+            return {"type": "statistics",
+                    "op": "corrected_mean_sd",
+                    "answer": "; ".join(_parts),
+                    "value": None, "steps": steps}
+
+    # Wave 156 (Wave 153 audit book-038): regression estimate
+    # — "bivariate data: x = 53, y = 28, bYX = -1.5 ...
+    # Estimate Y when X = 50" uses the regression line
+    # y - ybar = bYX (x - xbar). The algebra path echoed the
+    # stem's x value (x = 53) instead.
+    if "estimate" in ql and ("byx" in ql or "bxy" in ql):
+        _qn = ql.replace("−", "-").replace("–", "-")
+        _xb = re.search(r"(?<![a-z])x\s*=\s*(-?\d+(?:\.\d+)?)",
+                        _qn)
+        _yb = re.search(r"(?<![a-z])y\s*=\s*(-?\d+(?:\.\d+)?)",
+                        _qn)
+        _byx = re.search(r"byx\s*=\s*(-?\d+(?:\.\d+)?)", _qn)
+        _bxy = re.search(r"bxy\s*=\s*(-?\d+(?:\.\d+)?)", _qn)
+        _tx = re.search(r"estimate\s+y\s+when\s+x\s*=\s*"
+                        r"(-?\d+(?:\.\d+)?)", _qn)
+        _ty = re.search(r"estimate\s+x\s+when\s+y\s*=\s*"
+                        r"(-?\d+(?:\.\d+)?)", _qn)
+        if _xb and _yb and _byx and _tx:
+            _est = float(_yb.group(1)) + float(_byx.group(1)) \
+                * (float(_tx.group(1)) - float(_xb.group(1)))
+            steps = [
+                f"Regression line of Y on X: y - "
+                f"{fmt_num(float(_yb.group(1)))} = "
+                f"{fmt_num(float(_byx.group(1)))} (x - "
+                f"{fmt_num(float(_xb.group(1)))})",
+                f"At x = {fmt_num(float(_tx.group(1)))}: y = "
+                f"{fmt_num(_est)}",
+            ]
+            return {"type": "statistics",
+                    "op": "regression_estimate",
+                    "answer": fmt_num(_est),
+                    "value": float(_est), "steps": steps}
+        if _xb and _yb and _bxy and _ty:
+            _est = float(_xb.group(1)) + float(_bxy.group(1)) \
+                * (float(_ty.group(1)) - float(_yb.group(1)))
+            steps = [
+                f"Regression line of X on Y: x - "
+                f"{fmt_num(float(_xb.group(1)))} = "
+                f"{fmt_num(float(_bxy.group(1)))} (y - "
+                f"{fmt_num(float(_yb.group(1)))})",
+                f"At y = {fmt_num(float(_ty.group(1)))}: x = "
+                f"{fmt_num(_est)}",
+            ]
+            return {"type": "statistics",
+                    "op": "regression_estimate",
+                    "answer": fmt_num(_est),
+                    "value": float(_est), "steps": steps}
+
     # Wave 33: ogive (cumulative frequency) median — before
     # the grouped/raw paths, which misread the cf pairs.
     _ogive = _ogive_median(ql)
@@ -1809,10 +1986,36 @@ def solve_statistics(question: str):
     # and could not answer at all.
     _mf56 = re.search(
         r"(?:mean|average)\s+of\s+(?:the\s+)?first\s+(\d+)\s+"
-        r"(natural|even|odd)\s+numbers?", ql)
+        r"(natural|even|odd)\s+numbers?", ql) or re.search(
+            r"(?:mean|average)\s+of\s+(?:the\s+)?first\s+(\d+)\s+"
+            r"multiples?\s+of\s+(\d+)", ql) or re.search(
+            # Wave 156 (audit book-018): the multipart stem
+            # form — "Find the mean of the following data
+            # ... (i) The first 50 natural numbers." — puts
+            # intervening words between "mean of" and the
+            # "first N" phrase (each multipart segment
+            # carries the stem plus one part).
+            r"(?:mean|average)\s+of\b[^.]{0,60}?first\s+"
+            r"(\d+)\s+(natural|even|odd)\s+numbers?", ql) \
+        or re.search(
+            r"(?:mean|average)\s+of\b[^.]{0,60}?first\s+"
+            r"(\d+)\s+multiples?\s+of\s+(\d+)", ql)
     if _mf56:
         _n56 = int(_mf56.group(1))
         _kind56 = _mf56.group(2)
+        # Wave 156: "first n multiples of k" — group 2 is the
+        # multiplier k, not a kind word.
+        if _kind56.isdigit():
+            _k56 = int(_kind56)
+            _v56 = _k56 * (_n56 + 1) / 2
+            steps = [
+                f"The first {_n56} multiples of {_k56} are "
+                f"{_k56}, {2 * _k56}, ..., {_k56 * _n56}; "
+                f"their mean is {_k56} x ({_n56} + 1)/2 "
+                f"= {fmt_num(_v56)}"]
+            return {"type": "statistics", "op": "mean_first_n",
+                    "answer": fmt_num(_v56), "value": float(_v56),
+                    "steps": steps}
         if _n56 >= 1:
             if _kind56 == "natural":
                 _v56 = (_n56 + 1) / 2
@@ -2021,8 +2224,17 @@ def solve_statistics(question: str):
     _mp59 = re.search(r"p\(\s*([a-z])\s*\)\s*=\s*"
                       r"(\d+(?:\.\d+)?(?:\s*/\s*\d+(?:\.\d+)?)?)",
                       ql)
-    if _mp59 and re.search(r"p\(\s*not\s+" + _mp59.group(1)
-                           + r"\s*\)", ql):
+    # Wave 156: a MULTI-relation ask (P(not A) AND P(not B)
+    # AND P(A or B), audit book-052) belongs to the relations
+    # schema inside _probability, which answers every asked
+    # quantity; this single-complement shortcut must not
+    # swallow it by answering only the first.
+    _multi_rel156 = len(re.findall(r"p\(\s*not\s+[a-z]\s*\)",
+                                   ql)) >= 2 or re.search(
+                                       r"p\(\s*[a-z]\s*or\s*"
+                                       r"[a-z]\s*\)", ql)
+    if _mp59 and not _multi_rel156 and re.search(
+            r"p\(\s*not\s+" + _mp59.group(1) + r"\s*\)", ql):
         from fractions import Fraction as _F59
         _pv = _F59(_mp59.group(2).replace(" ", ""))
         if 0 <= _pv <= 1:
@@ -2234,9 +2446,12 @@ def solve_statistics(question: str):
             # the scavenged coordinates (0, 1, 2).
             op = None
         if op in ("mean", "median", "mode", "std", "variance",
-                  "range") and "[" not in q and len(re.findall(
-                      r"\d+(?:\.\d+)?\s*[-–—]\s*\d+(?:\.\d+)?",
-                      q)) >= 3:
+                  "range") and "[" not in q and (
+                      len(re.findall(
+                          r"\d+(?:\.\d+)?\s*[-–—]\s*"
+                          r"\d+(?:\.\d+)?", q))
+                      + len(re.findall(
+                          r"\d+\s+\.\s+\d+", q))) >= 3:
             # Three or more class-interval ranges = GROUPED
             # data. The grouped handlers above own it; a raw
             # sweep would mix class bounds with frequencies
@@ -2269,22 +2484,64 @@ def solve_statistics(question: str):
         # median came out 50 instead of 52; audit #223). The
         # stated-count drop covers the same pollution when
         # there is no colon.
+        _from_colon156 = False
         if "[" not in q and ":" in q:
             _after = _extract_list(q.split(":", 1)[1])
             if len(_after) >= 3:
                 nums = _after
+                _from_colon156 = True
         _mc = re.search(
             r"\bof\s+(\d+)\s+(?:students|observations|numbers|"
             r"items|values|persons|people)\b", ql)
         if _mc and len(nums) == int(_mc.group(1)) + 1 \
                 and nums[0] == int(_mc.group(1)):
             nums = nums[1:]
+        # Wave 156 (audit book-079): a colon list followed
+        # by a SECOND worked data set in the same text (the
+        # "your friend found the median as follows: <another
+        # list>" tail of the NCERT question) — the sweep
+        # merged both lists and served the median of the
+        # union. When the question states the data's count
+        # (15 विद्यार्थियों / of 15 students), the data is
+        # exactly the first that many values of the list.
+        _cnt156 = _mc or re.search(r"(\d+)\s+विद्यार्थियों", q)
+        if _from_colon156 and _cnt156 \
+                and len(nums) > int(_cnt156.group(1)):
+            nums = nums[:int(_cnt156.group(1))]
         # For std/variance questions the numbers are the data itself.
         out = _stats_result(op, nums)
         if out:
             val, steps = out
             ans = val if not isinstance(val, list) else \
                 ", ".join(fmt_num(v) for v in val)
+            # Wave 156 (Wave 153 audit book-006): "calculate
+            # the variance AND standard deviation" chose op
+            # std and served ONLY the SD — the steps computed
+            # the variance (21.84) but the answer line dropped
+            # it. When both are asked, the answer names both.
+            if op == "std" and re.search(r"\bvariance\b", ql):
+                _var156 = _variance(nums)
+                ans = (f"Variance = {fmt_num(_var156)}, "
+                       f"Standard deviation = {fmt_num(val)}")
+            # Wave 156 (audit book-079): median AND mode both
+            # asked in Hindi ("बहुलक और माध्यक ज्ञात कीजिए")
+            # — name both quantities, like the variance/SD
+            # pair above.
+            if op in ("median", "mode") and "बहुलक" in q \
+                    and "माध्यक" in q:
+                _other156 = "mode" if op == "median" \
+                    else "median"
+                _o156 = _stats_result(_other156, nums)
+                if _o156 is not None:
+                    _ov156 = _o156[0]
+                    _ovs156 = _ov156 if not isinstance(
+                        _ov156, list) else ", ".join(
+                        fmt_num(v) for v in _ov156)
+                    _lbl156 = {"median": "Median",
+                               "mode": "Mode"}
+                    steps = steps + _o156[1]
+                    ans = (f"{_lbl156[op]} = {ans}, "
+                           f"{_lbl156[_other156]} = {_ovs156}")
             return {
                 "type": "statistics",
                 "op": op,

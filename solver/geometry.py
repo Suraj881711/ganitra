@@ -430,6 +430,42 @@ def _area_perimeter_volume(q: str):
         return extra
     # ---- Circle ------------------------------------------------------
     if "circle" in q or wants_circumference(q):
+        # Wave 156 (audit book-056): a circle inscribed in
+        # a square, touching all four sides — its diameter
+        # IS the square's side ("the square is of sides
+        # 28 cm. It encloses a circle touching all its
+        # sides. Find the circular area.").
+        if "square" in q and ("touching all" in q
+                              or "inscribed" in q
+                              or "encloses a circle" in q):
+            _sq = re.search(r"sides?\s+(?:of\s+)?"
+                            r"(\d+(?:\.\d+)?)", q) or \
+                re.search(r"side\s*(?:is|=)?\s*"
+                          r"(\d+(?:\.\d+)?)", q)
+            if _sq and "area" in q:
+                _side = float(_sq.group(1))
+                _r156 = _side / 2
+                _pi, _u227, _reason = pi_choice(
+                    radius=_r156, diameter=_side)
+                _val = _pi * _r156 * _r156
+                _steps = [
+                    f"The circle touches all four sides, "
+                    f"so its diameter = the square's side "
+                    f"= {fmt_num(_side)}",
+                    f"Radius = {fmt_num(_side)} / 2 = "
+                    f"{fmt_num(_r156)}",
+                ]
+                if _u227:
+                    _steps.append(pi_note(_reason))
+                    _steps.append(
+                        f"Area = (22/7) × "
+                        f"{fmt_num(_r156)}² = "
+                        f"{fmt_num(_val)}")
+                else:
+                    _steps.append(
+                        f"Area = pi × {fmt_num(_r156)}² = "
+                        f"{fmt_num(_val)}")
+                return "area", fmt_num(_val), _steps
         r = _param_flex(q, ["radius", "r"])
         d = find_param(q, ["diameter"])
         # Wave 59: the radius itself asked from a stated
@@ -609,9 +645,25 @@ def _area_perimeter_volume(q: str):
         return None
 
     # ---- Rectangle ---------------------------------------------------
-    if "rectangle" in q:
+    if "rectangle" in q or "rectangular" in q:
         l = find_param(q, ["length", "l"])
         b = find_param(q, ["breadth", "width", "b", "w"])
+        if l is None or b is None:
+            # Wave 156 (Wave 153 audit bank-081/102): the
+            # dimensions stated as prose — "a rectangular
+            # field that is 120 meters long and 80 meters
+            # wide" — name no "length"/"breadth" words at
+            # all, and "rectangular" never opened this
+            # branch before. Read the long/wide pair.
+            _lw = re.search(
+                r"(\d+(?:\.\d+)?)\s*(?:meters?|metres?|cm|mm|"
+                r"km|feet|foot|ft)?\s+long\s+and\s+"
+                r"(\d+(?:\.\d+)?)\s*(?:meters?|metres?|cm|mm|"
+                r"km|feet|foot|ft)?\s+wide", q)
+            if _lw:
+                l, b = float(_lw.group(1)), float(_lw.group(2))
+                l = int(l) if l == int(l) else l
+                b = int(b) if b == int(b) else b
         if (l is None) != (b is None) and "perimeter" in q:
             # Wave 56: perimeter + one side -> the other side
             # ("perimeter is 60, length is 18, find breadth").
@@ -668,7 +720,10 @@ def _area_perimeter_volume(q: str):
                 b = int(b) if b == int(b) else b
         if l is None or b is None:
             return None
-        if "perimeter" in q:
+        # Wave 156: fencing / wire around a field IS the
+        # perimeter ask ("wants to fence it with a single
+        # wire — total length of the wire needed?").
+        if "perimeter" in q or "fenc" in q or "wire" in q:
             steps = [f"Perimeter = 2(l + b) = 2({fmt_num(l)} + "
                      f"{fmt_num(b)}) = {fmt_num(2 * (l + b))}"]
             return "perimeter", fmt_num(2 * (l + b)), steps
@@ -1914,6 +1969,71 @@ def _vectors56(q):
             return "vector magnitude", fmt_num(val), steps
         return None
     if "distance" in q and "origin" in q:
+        # Wave 156 (Wave 153 audit book-030): the asked point
+        # may be SYMBOLIC — "find the distance of P (a, b, c)
+        # from the origin" after a centroid condition fixes
+        # a, b, c. Taking the first numeric point in the text
+        # (the centroid itself) answered sqrt(6) for a point
+        # whose true distance is sqrt(107). When the asked
+        # point carries letters, either resolve them from a
+        # tetrahedron-centroid condition or abstain.
+        _sym_pt = re.search(
+            r"distance\s+of\s+[a-z]\s*\(\s*([a-z])\s*,\s*"
+            r"([a-z])\s*,\s*([a-z])\s*\)", q)
+        if _sym_pt:
+            _cen = re.search(
+                r"centroid[^()]*\(\s*(-?\d+(?:\.\d+)?)\s*,\s*"
+                r"(-?\d+(?:\.\d+)?)\s*,\s*"
+                r"(-?\d+(?:\.\d+)?)\s*\)", q)
+            _verts = re.findall(
+                r"[a-c]\s*=\s*\(\s*([^()]+?)\s*\)", q)
+            if _cen and len(_verts) == 3:
+                _g = [float(_cen.group(i)) for i in (1, 2, 3)]
+                _grid = [[c.strip() for c in v.split(",")]
+                         for v in _verts]
+                if all(len(r) == 3 for r in _grid):
+                    _vals = {}
+                    _ok = True
+                    for _ax in range(3):
+                        _known = 0.0
+                        _letter = None
+                        for _r in range(3):
+                            _cell = _grid[_r][_ax]
+                            if re.fullmatch(r"-?\d+(?:\.\d+)?",
+                                            _cell):
+                                _known += float(_cell)
+                            elif re.fullmatch(r"[a-z]", _cell):
+                                if _letter is not None:
+                                    _ok = False
+                                _letter = _cell
+                            else:
+                                _ok = False
+                        if _letter is not None:
+                            _vals[_letter] = 4 * _g[_ax] - _known
+                    _want = [_sym_pt.group(i) for i in (1, 2, 3)]
+                    if _ok and all(w in _vals for w in _want):
+                        _pv = [_vals[w] for w in _want]
+                        _val = math.sqrt(
+                            sum(x * x for x in _pv))
+                        steps = [
+                            "The centroid of tetrahedron "
+                            "OABC is ((x1+x2+x3)/4, "
+                            "(y1+y2+y3)/4, (z1+z2+z3)/4) "
+                            "with O at the origin.",
+                            "Matching the given centroid "
+                            "coordinate by coordinate gives "
+                            + ", ".join(
+                                f"{w} = {fmt_num(_vals[w])}"
+                                for w in _want) + ".",
+                            "Distance of P from the origin = "
+                            "sqrt(a^2 + b^2 + c^2) = sqrt("
+                            + " + ".join(
+                                fmt_num(x) + "^2" for x in _pv)
+                            + f") = {fmt_num(round(_val, 4))}",
+                        ]
+                        return "distance from origin", \
+                            fmt_num(round(_val, 4)), steps
+            return None
         pts = _points3(q)
         if pts:
             v = pts[0]
@@ -1944,6 +2064,44 @@ def _mensuration_hindi(q: str):
     def _val(m):
         v = float(m.group(1))
         return int(v) if v == int(v) else v
+
+    # Wave 156 (audit book-047): parallelogram area from a
+    # side and its corresponding height — "समांतर चतुर्भुज
+    # की एक भुजा और संगत ऊँचाई क्रमशः 4 सेमी और 3 सेमी है।
+    # क्षेत्रफल ज्ञात कीजिए" -> base x height.
+    if "चतुर्भुज" in q and "क्षेत्रा" in q:
+        _pm = re.search(
+            r"क्रमशः\s*" + _NUM_HI +
+            r"(?:\s*[^\d\s]+)?\s*और\s*" + _NUM_HI, q)
+        if _pm:
+            _b = float(_pm.group(1))
+            _h = float(_pm.group(2))
+            return "parallelogram area", fmt_num(_b * _h), [
+                "समांतर चतुर्भुज का क्षेत्रफल = आधार "
+                "× ऊँचाई",
+                f"= {fmt_num(_b)} × {fmt_num(_h)} = "
+                f"{fmt_num(_b * _h)}",
+            ]
+    # Wave 156 (audit book-053): cube side from its surface
+    # area — "उस घन की भुजा ज्ञात कीजिए जिसका पृष्ठीय
+    # क्षेत्रफल 600 वर्ग सेमी है" -> 6a^2 = SA.
+    if "घन" in q and "पृष्ठीय" in q and "क्षेत्रा" in q \
+            and "भुजा" in q:
+        _sm = re.search(
+            r"(?:क्षेत्रापफल|क्षेत्रफल)\s*(?:है\s*)?"
+            + _NUM_HI, q)
+        if _sm:
+            _sa = float(_sm.group(1))
+            _a2 = _sa / 6
+            _a = math.sqrt(_a2)
+            return "cube side from surface area", \
+                fmt_num(_a), [
+                    "घन का पृष्ठीय क्षेत्रफल = 6 × भुजा²",
+                    f"6 × भुजा² = {fmt_num(_sa)}, तो भुजा² "
+                    f"= {fmt_num(_a2)}",
+                    f"भुजा = √{fmt_num(_a2)} = "
+                    f"{fmt_num(_a)}",
+                ]
 
     if "वृत्त" in q:
         m = re.search(r"त्रिज्या\s*" + _NUM_HI, q)

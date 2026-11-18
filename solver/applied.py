@@ -51,7 +51,7 @@ def _ratio(q):
     m = re.search(
         r"\bdivide\s+(?:" + _RS + r"\s*)?(" + _NUM + r")"
         r"\s*(?:" + _RS + r")?\s+"
-        r"(?:among\s+([^.]+?)\s+)?in\s+"
+        r"(?:(?:among|between)\s+([^.]+?)\s+)?in\s+"
         r"(?:the\s+)?ratio\s+(\d+)\s*:\s*(\d+)(?:\s*:\s*(\d+))?", q)
     if m:
         total = _num(m.group(1))
@@ -305,6 +305,44 @@ def _ratio(q):
                     "value": [shares[n_] for n_ in names]}
 
 
+    # Wave 156 (Wave 153 audit bank-111): a TOTAL split in a
+    # ratio with an "each" ask — "spends a total of 180
+    # minutes ... in the ratio 4:5. How much time does she
+    # spend on each subject?" — fell to the simplify branch
+    # below and echoed "4 : 5" back. The split is the answer.
+    _mt156 = re.search(
+        r"total\s+of\s+(" + _NUM + r")\s*"
+        r"(minutes?|hours?|rs\.?|rupees?)?", q) or re.search(
+            r"\bdivide\s+(?:" + _RS + r"\s*)?(" + _NUM + r")",
+            q)
+    _mr156 = re.search(r"in\s+(?:the\s+)?ratio\s+(\d+)\s*:\s*"
+                       r"(\d+)", q)
+    if _mt156 and _mr156 and ("each" in q or "how much" in q):
+        _tot156 = _num(_mt156.group(1))
+        _a156, _b156 = int(_mr156.group(1)), int(_mr156.group(2))
+        _s156 = _a156 + _b156
+        _v1156 = _tot156 * _a156 / _s156
+        _v2156 = _tot156 * _b156 / _s156
+        _unit156 = (_mt156.group(2) or "").rstrip(".")
+        _unit156 = {"rs": "Rs", "rupees": "Rs"}.get(
+            _unit156, _unit156)
+        _sfx = f" {_unit156}" if _unit156 else ""
+        steps = [
+            f"Ratio parts: {_a156} + {_b156} = {_s156} parts "
+            f"= {fmt_num(_tot156)}{_sfx} in total.",
+            f"Value of 1 part = {fmt_num(_tot156)} ÷ {_s156} "
+            f"= {fmt_num(_tot156 / _s156)}{_sfx}",
+            f"First share = {_a156} × "
+            f"{fmt_num(_tot156 / _s156)} = {fmt_num(_v1156)}"
+            f"{_sfx}",
+            f"Second share = {_b156} × "
+            f"{fmt_num(_tot156 / _s156)} = {fmt_num(_v2156)}"
+            f"{_sfx}",
+        ]
+        return {"type": "applied", "op": "ratio_split_total",
+                "answer": f"{fmt_num(_v1156)}{_sfx} and "
+                          f"{fmt_num(_v2156)}{_sfx}",
+                "steps": steps, "value": [_v1156, _v2156]}
     # Simplify a ratio: "ratio of 20 to 45"
     m = re.search(r"\bratio\s+of\s+(" + _NUM + r")\s+(?:to|and)\s+("
                   + _NUM + r")", q) or re.search(
@@ -934,6 +972,66 @@ def _sum_difference(q):
     return {"type": "applied", "op": "sum_difference",
             "answer": f"{fmt_num(a)} and {fmt_num(b)}",
             "steps": steps, "value": [a, b]}
+
+
+def _point_on_line(q):
+    """Wave 156 (Wave 153 audit bank-100): a point with one
+    unknown coordinate lying on a stated line — "the point
+    (x, 4) lies on the line 2x + 3y = 18" (the Hindi form
+    arrives via the router's translation). Substitute the
+    known coordinate and solve the linear equation."""
+    m = re.search(
+        r"point\s*\(\s*(-?[a-z]|-?\d+(?:\.\d+)?)\s*,\s*"
+        r"(-?[a-z]|-?\d+(?:\.\d+)?)\s*\)\s*(?:lies|is)\s+on\s+"
+        r"(?:the\s+)?line\s+([^.]+?)(?:\.|find|$)", q)
+    if not m:
+        return None
+    c1, c2, line = m.group(1), m.group(2), m.group(3)
+    if "=" not in line:
+        return None
+    try:
+        from .expression_parser import parse_expression
+        import sympy as _sp
+        lhs, rhs = line.split("=", 1)
+        expr = parse_expression(lhs) - parse_expression(rhs)
+    except Exception:
+        return None
+    syms = {str(s): s for s in expr.free_symbols}
+    if not syms:
+        return None
+    subs = {}
+    unknown = None
+    for pos, coord in ((0, c1), (1, c2)):
+        var = "xy"[pos]
+        if re.fullmatch(r"-?\d+(?:\.\d+)?", coord):
+            if var in syms:
+                subs[syms[var]] = _sp.Rational(coord)
+        elif coord in syms:
+            unknown = syms[coord]
+    if unknown is None or len(subs) == 0 and len(syms) > 1:
+        return None
+    try:
+        eq = expr.subs(subs)
+        sols = _sp.solve(eq, unknown)
+    except Exception:
+        return None
+    if len(sols) != 1:
+        return None
+    val = sols[0]
+    known_txt = ", ".join(
+        f"{v} = {fmt_num(float(sv))}" for v, sv in
+        ((str(k), v) for k, v in subs.items()))
+    steps = [
+        f"The point lies on the line, so its coordinates "
+        f"satisfy the equation {line.strip()}.",
+        f"Substitute {known_txt}: the equation becomes a "
+        f"linear equation in {unknown}.",
+        f"Solving gives {unknown} = {fmt(val)}",
+    ]
+    return {"type": "applied", "op": "point_on_line",
+            "answer": f"{unknown} = {fmt(val)}",
+            "steps": steps,
+            "value": float(val) if val.is_number else None}
 
 
 def _clean_name(s):
@@ -3888,6 +3986,16 @@ def _wrapped_equation(q, op_name):
                                  "nikaalo",
                                  "value", "root", "solve")):
         return None
+    # Wave 156 (Wave 153 audit bank-107): Hindi-medium book
+    # text writes the minus as U+2212 and the square as the
+    # superscript "²" — neither is in the extraction alphabet
+    # below, so the match silently started AFTER the
+    # quadratic term ("x² − 15x + 54 = 0" was extracted as
+    # "15x + 54 = 0" and solved linearly, x = -18/5).
+    # Normalise both glyphs before extracting.
+    q = q.replace("−", "-").replace("–", "-")
+    q = re.sub(r"([a-z0-9])²", r"\1^2", q)
+    q = re.sub(r"([a-z0-9])³", r"\1^3", q)
     m = re.search(
         r"((?:[a-z]|\d)\s*[0-9a-z\s+\-*/^().]*?=\s*-?"
         r"\d+(?:\.\d+)?(?:\s*/\s*\d+)?)", q)
@@ -3949,6 +4057,93 @@ def _hindi_schemas(q):
         _we = _wrapped_equation(qt, "hindi_equation")
         if _we is not None:
             return _we
+
+    # --- Wave 156 (audit book-021): "प्रत्येक में न्यूनतम
+    # संख्या क्या घटाई जाए कि पूर्ण वर्ग प्राप्त हो जाए,
+    # वर्गमूल भी ज्ञात कीजिए: (i) 402 (ii) 1989 ..." —
+    # for each listed n: subtract n - floor(sqrt(n))^2,
+    # the root is floor(sqrt(n)).
+    if "पूर्ण वर्ग" in qt and "घटाई" in qt:
+        _ns = [int(float(x)) for x in
+               re.findall(_NUM, qt) if float(x) >= 50]
+        if _ns:
+            _lines = []
+            for _n in _ns:
+                _r = math.isqrt(_n)
+                _sub = _n - _r * _r
+                if _sub == 0:
+                    _lines.append(
+                        f"{_n} पहले से पूर्ण वर्ग है, "
+                        f"वर्गमूल = {_r}")
+                else:
+                    _lines.append(
+                        f"{_n} - {_sub} = {_r * _r}, "
+                        f"वर्गमूल = {_r} (घटाई जाने वाली "
+                        f"संख्या {_sub})")
+            return {"type": "applied",
+                    "op": "hindi_perfect_square_subtract",
+                    "answer": "; ".join(_lines),
+                    "steps": [
+                        "सबसे बड़ा पूर्ण वर्ग जो संख्या से "
+                        "छोटा या बराबर हो, वही घटाकर मिलता "
+                        "है।"] + _lines}
+
+    # --- Wave 156 (audit book-069): inverse proportion —
+    # "मिठाई 24 बच्चों में बाँटा जाए तो प्रत्येक को 5
+    # मिलती हैं। बच्चों की संख्या में 4 की कमी हो जाए तो
+    # प्रत्येक को कितनी मिलेंगी?" Total is fixed:
+    # each = C*S / (C - D).
+    if "बाँटा" in qt and "कमी" in qt and "प्रत्येक" in qt:
+        _mc = re.search(r"(" + _NUM + r")\s*बच्चों", qt)
+        _ms = re.search(r"प्रत्येक बच्चे को\s*(" + _NUM
+                        + r")", qt)
+        _md = re.search(r"(" + _NUM + r")\s*की कमी", qt)
+        if _mc and _ms and _md:
+            _C, _S, _D = (_num(_mc.group(1)),
+                          _num(_ms.group(1)),
+                          _num(_md.group(1)))
+            if _C and _S and _D and _C > _D:
+                _tot = _C * _S
+                _each = _tot / (_C - _D)
+                return {"type": "applied",
+                        "op": "hindi_inverse_prop_children",
+                        "answer": fmt_num(_each),
+                        "steps": [
+                            f"कुल मिठाइयाँ = {fmt_num(_C)}"
+                            f" × {fmt_num(_S)} = "
+                            f"{fmt_num(_tot)}",
+                            f"नए बच्चे = {fmt_num(_C)} - "
+                            f"{fmt_num(_D)} = "
+                            f"{fmt_num(_C - _D)}",
+                            f"प्रत्येक को = "
+                            f"{fmt_num(_tot)} / "
+                            f"{fmt_num(_C - _D)} = "
+                            f"{fmt_num(_each)}"]}
+
+    # --- Wave 156 (audit book-061): "अनुपातों को प्रतिशत
+    # में परिवर्तित कीजिए: 3 रू 4, 2 रू 3" — the ratio
+    # separator survived extraction as "रू" (or ":").
+    # Each pair a : b becomes a/b x 100 %.
+    if "प्रतिशत में परिवर्तित" in qt:
+        _pairs = re.findall(
+            r"(\d+(?:\.\d+)?)\s*(?:रू|:)\s*"
+            r"(\d+(?:\.\d+)?)", qt)
+        if _pairs:
+            _lines = []
+            for _a, _b in _pairs:
+                _fa, _fb = float(_a), float(_b)
+                if _fb == 0:
+                    continue
+                _lines.append(
+                    f"{fmt_num(_fa)} : {fmt_num(_fb)} = "
+                    f"{fmt_num(_fa / _fb * 100)}%")
+            if _lines:
+                return {"type": "applied",
+                        "op": "hindi_ratio_to_percent",
+                        "answer": ", ".join(_lines),
+                        "steps": [
+                            "अनुपात a : b का प्रतिशत = "
+                            "a/b × 100%"] + _lines}
 
     def _slot(*pats):
         for pat in pats:
@@ -4963,6 +5158,320 @@ def _simple_interest_hindi(q):
             "answer": fmt_num(si), "steps": steps, "value": si}
 
 
+def _age_times_plus(qt):
+    """Wave 156 (Wave 153 audit bank-110): "A grandfather
+    is 3 times his son's age plus 12 years. The grandfather
+    is 33 years old. How old is the son?" — the linear form
+    elder = k * younger + c with the elder's age given.
+    Narrow: all four facts must be present."""
+    m = re.search(
+        r"(\w+) is (\d+(?:\.\d+)?) times (?:his|her) "
+        r"(\w+)'s age plus (\d+(?:\.\d+)?) years", qt)
+    if not m:
+        return None
+    _elder, _k, _younger, _c = (m.group(1),
+                                float(m.group(2)),
+                                m.group(3),
+                                float(m.group(4)))
+    _t = re.search(
+        rf"{_elder} is (\d+(?:\.\d+)?) years old", qt)
+    _ask = re.search(
+        rf"how old is the {_younger}\b", qt)
+    if not _t or not _ask or _k == 0:
+        return None
+    _total = float(_t.group(1))
+    _age = (_total - _c) / _k
+    if _age <= 0:
+        return None
+    steps = [
+        f"Let the {_younger}'s age be x years.",
+        f"{_elder.capitalize()}'s age = {fmt_num(_k)}x + "
+        f"{fmt_num(_c)} = {fmt_num(_total)}",
+        f"{fmt_num(_k)}x = {fmt_num(_total)} - "
+        f"{fmt_num(_c)} = {fmt_num(_total - _c)}",
+        f"x = {fmt_num(_age)}",
+    ]
+    return {"type": "applied", "op": "age_times_plus",
+            "answer": fmt_num(_age), "steps": steps}
+
+
+def _three_plan_investment(qt):
+    """Wave 156 (Wave 153 audit book-054): "A man invests
+    ₹5000 in three plans at 6%, 7% and 8%. Total annual
+    income is ₹350. Income from the first two plans is ₹70
+    more than from the third. Find each amount." — a 3x3
+    linear system: x+y+z = T; r1x + r2y + r3z = 100*I;
+    r1x + r2y - r3z = 100*D. Narrow gates: "three plans",
+    three rates, the two income facts."""
+    if "three plans" not in qt or "invest" not in qt:
+        return None
+    _rates = re.findall(r"(\d+(?:\.\d+)?)\s*%", qt)
+    if len(_rates) < 3:
+        return None
+    r1, r2, r3 = (float(_rates[0]), float(_rates[1]),
+                  float(_rates[2]))
+    _t = re.search(
+        r"(?:amount of|invests?|invested)\s*"
+        r"(?:rs\.?|₹|inr)?\s*(\d+(?:\.\d+)?)", qt)
+    _inc = re.search(
+        r"total (?:annual )?income\b[^.]{0,40}?is\s*"
+        r"(?:rs\.?|₹)?\s*(\d+(?:\.\d+)?)", qt)
+    _more = re.search(
+        r"first two (?:plans|investments) is\s*"
+        r"(?:rs\.?|₹)?\s*(\d+(?:\.\d+)?)\s*more than", qt)
+    if not (_t and _inc and _more):
+        return None
+    _T = float(_t.group(1))
+    _I = float(_inc.group(1))
+    _D = float(_more.group(1))
+    try:
+        import sympy as _sp
+        x, y, z = _sp.symbols("x y z")
+        _sol = _sp.solve([
+            _sp.Eq(x + y + z, _T),
+            _sp.Eq(r1 * x + r2 * y + r3 * z, 100 * _I),
+            _sp.Eq(r1 * x + r2 * y - r3 * z, 100 * _D),
+        ], (x, y, z), dict=True)
+    except Exception:
+        return None
+    if not _sol:
+        return None
+    _s = _sol[0]
+    _vals = [float(_s[v]) for v in (x, y, z)]
+    if any(v <= 0 for v in _vals):
+        return None
+    steps = [
+        f"Let the three amounts be x, y, z. x + y + z = "
+        f"{fmt_num(_T)}",
+        f"Income: {fmt_num(r1)}% of x + {fmt_num(r2)}% of "
+        f"y + {fmt_num(r3)}% of z = {fmt_num(_I)}, so "
+        f"{fmt_num(r1)}x + {fmt_num(r2)}y + "
+        f"{fmt_num(r3)}z = {fmt_num(100 * _I)}",
+        f"First two incomes exceed the third by "
+        f"{fmt_num(_D)}: {fmt_num(r1)}x + {fmt_num(r2)}y - "
+        f"{fmt_num(r3)}z = {fmt_num(100 * _D)}",
+        "Solving the three equations: x = "
+        f"{fmt_num(_vals[0])}, y = {fmt_num(_vals[1])}, "
+        f"z = {fmt_num(_vals[2])}",
+    ]
+    return {"type": "applied", "op": "three_plan_investment",
+            "answer": (f"Rs {fmt_num(_vals[0])}, "
+                       f"Rs {fmt_num(_vals[1])}, "
+                       f"Rs {fmt_num(_vals[2])}"),
+            "steps": steps}
+
+
+def _reasoning_negation(qt):
+    """Wave 156 (Wave 153 audit book-068): Mathematical
+    Reasoning — "Write the negation of the following
+    statements: (i) Chennai is the capital of Tamil
+    Nadu. ..." Rule templates, applied per part; if ANY
+    part matches no template the whole question declines
+    (no half-negations)."""
+    if "negation" not in qt:
+        return None
+    _parts = re.split(r"\([ivx]+\)", qt)
+    _stmts = [p.strip(" .") for p in _parts[1:]
+              if len(p.strip(" .")) > 3]
+    if not _stmts:
+        _tail = qt.split("statements", 1)[-1].lstrip(": ")
+        _stmts = [s.strip(" .") for s in
+                  re.split(r"\.\s+", _tail)
+                  if len(s.strip(" .")) > 3]
+    if not _stmts:
+        return None
+    _labels = ["(i)", "(ii)", "(iii)", "(iv)", "(v)",
+               "(vi)"]
+    _out = []
+    for _i, _s in enumerate(_stmts):
+        _sl = _s[0].lower() + _s[1:] if _s else _s
+        _neg = None
+        _m = re.match(r"all (\w+?)s are not (.+)$", _sl)
+        if _m:
+            _neg = (f"There exists a {_m.group(1)} which "
+                    f"is {_m.group(2)}.")
+        if _neg is None:
+            _m = re.match(r"every (.+?) is (an? .+)$", _sl)
+            if _m:
+                _neg = (f"There exists a {_m.group(1)} "
+                        f"which is not {_m.group(2)}.")
+        if _neg is None:
+            _m = re.match(r"all (\w+?)s are (.+)$", _sl)
+            if _m:
+                _neg = (f"There exists a {_m.group(1)} "
+                        f"which is not {_m.group(2)}.")
+        if _neg is None:
+            _m = re.match(r"(.+?) is not (.+)$", _sl)
+            if _m:
+                _neg = f"{_m.group(1)} is {_m.group(2)}."
+        if _neg is None:
+            _m = re.match(r"(.+?) is (.+)$", _sl)
+            if _m:
+                _neg = (f"{_m.group(1)} is not "
+                        f"{_m.group(2)}.")
+        if _neg is None:
+            return None
+        _neg = _neg[0].upper() + _neg[1:]
+        _out.append(f"{_labels[_i]} {_neg}")
+    return {"type": "applied", "op": "reasoning_negation",
+            "answer": " ".join(_out),
+            "steps": ["Negation reverses the statement: "
+                      "'is' becomes 'is not', 'is not' "
+                      "becomes 'is', and 'All/Every ... is' "
+                      "becomes 'There exists ... which is "
+                      "not'."] + _out}
+
+
+def _reasoning_quantifier(qt):
+    """Wave 156 (Wave 153 audit book-046): Mathematical
+    Reasoning — "Using quantifiers, convert the following
+    open sentences on N into true statements." Each part
+    is a polynomial equation or inequality in one
+    variable. ∃ is claimed only with a concrete natural
+    witness (searched, then confirmed by substitution);
+    ∀ only when sympy's solution set over [1, ∞) is the
+    whole interval. Any part that resolves neither way
+    declines the whole question."""
+    if "quantifier" not in qt:
+        return None
+    _parts = re.split(r"\(?[ivxIVX]+\)", qt)
+    _stmts = [p.strip(" .") for p in _parts[1:]
+              if len(p.strip(" .")) > 3]
+    if not _stmts:
+        return None
+    try:
+        import sympy as _sp
+    except Exception:
+        return None
+    _labels = ["(i)", "(ii)", "(iii)", "(iv)", "(v)",
+               "(vi)"]
+    _out = []
+    _steps = ["For each open sentence, check whether ONE "
+              "natural number makes it true (∃) or EVERY "
+              "natural number does (∀)."]
+    for _i, _s in enumerate(_stmts):
+        _sn = _s.replace("−", "-").replace("–", "-") \
+            .replace("≥", ">=").replace("≤", "<=")
+        # drop a trailing domain tail ("for all n in N")
+        _sn = re.sub(r"\s+for all\b.*$", "", _sn)
+        _m = re.match(
+            r"(.+?)\s*(>=|<=|=|>|<)\s*(-?\d+(?:\.\d+)?)\s*$",
+            _sn)
+        if not _m:
+            return None
+        _lhs, _rel, _rhs = (_m.group(1).strip(),
+                            _m.group(2),
+                            float(_m.group(3)))
+        _vars = re.findall(r"[a-zA-Z]", _lhs)
+        if not _vars:
+            return None
+        _v = max(set(_vars), key=_vars.count)
+        # extraction typesetting: "x2" for x^2
+        _lhs = re.sub(rf"\b{_v}2\b", f"{_v}^2", _lhs)
+        _lhs = re.sub(rf"\b{_v}3\b", f"{_v}^3", _lhs)
+        try:
+            _expr = parse_expression(_lhs.replace("^", "**"))
+            # exact rationals: with Float coefficients
+            # solveset's is_subset verdict comes back None
+            # and a ∀ statement would be mis-served as ∃
+            _expr = _sp.nsimplify(_expr, rational=True)
+            _syms = [s for s in _expr.free_symbols
+                     if s.name == _v]
+            if not _syms:
+                return None
+            _sym = _syms[0]
+            _f = _sp.lambdify(_sym, _expr - _rhs, "math")
+        except Exception:
+            return None
+        def _holds(_n):
+            try:
+                _val = _f(_n)
+            except Exception:
+                return False
+            if _rel == "=":
+                return abs(_val) < 1e-9
+            if _rel == ">":
+                return _val > 0
+            if _rel == ">=":
+                return _val >= 0
+            if _rel == "<":
+                return _val < 0
+            return _val <= 0
+        _wit = None
+        for _n in range(1, 201):
+            if _holds(_n):
+                _wit = _n
+                break
+        _disp = (f"{_lhs} {_rel if _rel != '=' else '='} "
+                 f"{fmt_num(_rhs)}")
+        _disp = _disp.replace(">=", "≥").replace("<=", "≤")
+        if _rel == "=":
+            _ident = _sp.simplify(_expr - _rhs) == 0
+            if _ident:
+                _out.append(
+                    f"{_labels[_i]} ∀{_v} ∈ N such that "
+                    f"{_disp}")
+            elif _wit is not None:
+                _out.append(
+                    f"{_labels[_i]} ∃{_v} ∈ N such that "
+                    f"{_disp} ({_v} = {_wit} works)")
+            else:
+                return None
+        else:
+            _all = False
+            try:
+                _relmap = {">": _sp.Gt, ">=": _sp.Ge,
+                           "<": _sp.Lt, "<=": _sp.Le}
+                _sol = _sp.solveset(
+                    _sp.nsimplify(
+                        _relmap[_rel](_expr, _rhs),
+                        rational=True), _sym,
+                    domain=_sp.Interval(1, _sp.oo))
+                _all = _sp.Interval(1, _sp.oo).is_subset(
+                    _sol)
+            except Exception:
+                _all = False
+            if _all:
+                _out.append(
+                    f"{_labels[_i]} ∀{_v} ∈ N such that "
+                    f"{_disp}")
+            elif _wit is not None:
+                _out.append(
+                    f"{_labels[_i]} ∃{_v} ∈ N such that "
+                    f"{_disp} ({_v} = {_wit} works)")
+            else:
+                return None
+    return {"type": "applied",
+            "op": "reasoning_quantifier",
+            "answer": " ".join(_out),
+            "steps": _steps + _out}
+
+
+def _plate_cost_expression(qt):
+    """Wave 156 (Wave 153 audit book-058): the MCQ stem
+    "One plate of Jowar roti costs ₹30 and one plate of
+    Pulao costs ₹20. If x plates of Jowar roti and y
+    plates of pulao were ordered, the total amount is
+    ..." — build the cost expression so the MCQ layer
+    can match it against the printed options."""
+    if "plates of" not in qt or "costs" not in qt:
+        return None
+    _items = re.findall(
+        r"one plate of .+? costs\s*(?:rs\.?|₹|rs)?\s*"
+        r"(\d+(?:\.\d+)?)", qt)
+    _vars = re.search(
+        r"(\w) plates of .+? and (\w) plates of", qt)
+    if len(_items) < 2 or not _vars:
+        return None
+    _e = (f"{fmt_num(float(_items[0]))}{_vars.group(1)} + "
+          f"{fmt_num(float(_items[1]))}{_vars.group(2)}")
+    return {"type": "applied", "op": "expression_build",
+            "answer": _e,
+            "steps": [f"Total cost = cost per plate × "
+                      f"number of plates, added for both "
+                      f"items: {_e}"]}
+
+
 def _wave65_schemas(q):
     """Wave 65: general word-problem schemas for the phrasing
     families the trilingual batteries exposed (percent change
@@ -5845,7 +6354,11 @@ _FAMILIES = (_hindi_word_problems,
              _sdt_hindi, _speed, _word_equation, _quadratic_info,
              _find_k_equal_roots, _sum_product_roots,
              _identity_eval, _insert_means,
-             _speed_time_quadratic, _sum_difference, _ages,
+             _speed_time_quadratic, _sum_difference,
+             _point_on_line, _age_times_plus,
+             _three_plan_investment,
+             _reasoning_negation, _reasoning_quantifier,
+             _plate_cost_expression, _ages,
              _consecutive_product, _rectangle_word,
              _rectangle_diagonal,
              _compound_interest_freq, _compound_interest,

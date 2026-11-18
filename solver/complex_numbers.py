@@ -3,7 +3,7 @@ import re
 
 import sympy as sp
 
-from .expression_parser import fmt, parse_expression
+from .expression_parser import fmt, fmt_num, parse_expression
 
 
 def _extract_expr(q: str) -> str:
@@ -37,6 +37,49 @@ def _to_sympy(text: str):
 def solve_complex(question: str):
     q = question.strip()
     ql = q.lower()
+    # Wave 156 (Wave 153 audit book-027): "If 2 - i√3 is a
+    # root of x^2 + ax + b = 0, find a + b." Complex roots
+    # of a real quadratic come in conjugate pairs, so the
+    # other root is 2 + i√3: sum of roots 4 = -a, product
+    # 4 + 3 = 7 = b, hence a + b = 3.
+    _mr156 = re.search(
+        r"(\d+(?:\.\d+)?)\s*[-−]\s*i\s*(?:√|sqrt)\s*"
+        r"(\d+(?:\.\d+)?)", q)
+    if _mr156 and "root" in ql and "ax + b" in ql \
+            and re.search(r"a\s*\+\s*b", ql):
+        _p = float(_mr156.group(1))
+        _qq = float(_mr156.group(2))
+        _a = -2 * _p
+        _b = _p * _p + _qq
+        return {"type": "complex", "op": "root_conjugate_ab",
+                "answer": fmt_num(_a + _b),
+                "steps": [
+                    f"Complex roots come in conjugate "
+                    f"pairs, so the other root is "
+                    f"{fmt_num(_p)} + i√{fmt_num(_qq)}",
+                    f"Sum of roots = 2 × {fmt_num(_p)} = "
+                    f"{fmt_num(2 * _p)} = -a, so a = "
+                    f"{fmt_num(_a)}",
+                    f"Product of roots = {fmt_num(_p)}² + "
+                    f"(√{fmt_num(_qq)})² = {fmt_num(_b)} "
+                    f"= b",
+                    f"a + b = {fmt_num(_a)} + "
+                    f"{fmt_num(_b)} = {fmt_num(_a + _b)}"]}
+    # Wave 156 (audit book-059): "(z - 1)/(z + 1) is
+    # purely imaginary — what is |z|?" Purely imaginary
+    # means the number plus its conjugate is 0, which
+    # gives (z-1)(z̄+1) + (z̄-1)(z+1) = 0, i.e. |z|^2 = 1.
+    if re.search(r"\(\s*z\s*-\s*1\s*\)\s*/\s*\(\s*z\s*"
+                 r"\+\s*1\s*\)", ql) \
+            and "purely imaginary" in ql and "|z|" in ql:
+        return {"type": "complex", "op": "purely_imag_modulus",
+                "answer": "1",
+                "steps": [
+                    "A purely imaginary number plus its "
+                    "conjugate is 0.",
+                    "(z - 1)/(z + 1) + (z̄ - 1)/(z̄ + 1) "
+                    "= 0 gives |z|² - 1 = 0",
+                    "|z|² = 1, so |z| = 1"]}
     # Wave 59: a bare power of i — "value of i^2". The generic
     # expression path returned the unevaluated "i**2".
     _mi59 = re.fullmatch(

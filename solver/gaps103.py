@@ -797,7 +797,20 @@ def degree_upgrade(question, result):
     ql = q.lower()
     if "differential" in ql or "dy/dx" in ql or "order" in ql:
         return None
-    if not re.search(r"\bdegree\b|घात", q, re.I):
+    # Wave 156 (Wave 153 audit book-022): a proof / verify
+    # prompt that merely MENTIONS a degree ("verify that
+    # ... is a homogeneous equation of degree two") is not
+    # a degree ask — the upgrade harvested the combined
+    # equation's degree (1) and served it as the answer.
+    # Proof prompts abstain, and the degree must be ASKED
+    # ("degree of ...", "what is the degree", घात), not
+    # just named.
+    if re.search(r"\bprove\b|\bshow that\b|\bverify\b|"
+                 r"\bv\s+erify\b|सिद्ध", q, re.I):
+        return None
+    if not re.search(r"\bdegree\s+of\b|what\s+is\s+the\s+"
+                     r"degree|find\s+(?:the\s+)?degree|घात",
+                     q, re.I):
         return None
     try:
         from .papers10 import _poly_degree, _prep as _p10_prep

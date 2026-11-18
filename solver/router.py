@@ -1550,14 +1550,14 @@ def normalize_hinglish(question: str) -> str:
             and not re.search(r"\bf\s*:", ql):
         _mlist = re.search(r"(\d+(?:\.\d+)?(?:\s*,\s*"
                            r"\d+(?:\.\d+)?){1,}"
-                           r"(?:\s*(?:aur|and)\s*"
+                           r"(?:\s*,?\s*(?:aur|and)\s*"
                            r"\d+(?:\.\d+)?)?)", ql)
         if _mlist and "class interval" not in ql \
                 and "frequenc" not in ql and "ogive" not in ql \
                 and not re.search(
                 r"(?:average|ausat|mean)\s+(?:of\s+)?\d+\s+"
                 r"(?:numbers|sankhya)", ql):
-            return f"mean of {re.sub(r'\s*(?:aur|and)\s*', ', ', _mlist.group(1))}"
+            return f"mean of {re.sub(r'\s*,?\s*(?:aur|and)\s*', ', ', _mlist.group(1))}"
     m = re.search(_N + r"\s+match\s+me\s+kul\s+" + _N +
                   r"\s+run", ql)
     if m and "average" in ql:
@@ -1575,9 +1575,9 @@ def normalize_hinglish(question: str) -> str:
         return "find the value of sin^2 theta + cos^2 theta"
     _ml59 = re.search(r"(\d+(?:\.\d+)?(?:\s*,\s*"
                       r"\d+(?:\.\d+)?){1,}"
-                      r"(?:\s*(?:aur|and)\s*"
+                      r"(?:\s*,?\s*(?:aur|and)\s*"
                       r"\d+(?:\.\d+)?)?)", ql)
-    _ml59t = re.sub(r"\s*(?:aur|and)\s*", ", ",
+    _ml59t = re.sub(r"\s*,?\s*(?:aur|and)\s*", ", ",
                     _ml59.group(1)) if _ml59 else ""
     if _ml59 and ("madhyika" in ql or "median" in ql) \
             and "class interval" not in ql \
@@ -2529,8 +2529,14 @@ def normalize_hinglish(question: str) -> str:
                 f"fencing at {m.group(3)} rs per metre")
 
     # --- Devanagari: speed / distance / train conditional ----------------
-    if any(w in q for w in ("किलोमीटर", "रेलगाड़ी", "ट्रेन",
-                            "km")):
+    # Wave 156 (audit bank-108 / book-007): the gate and the
+    # distance pattern knew only the full word किलोमीटर —
+    # the standard abbreviation किमी ("कार 7 घंटे में 420
+    # किमी की दूरी तय करती है") never entered the block, and
+    # a garbled unit ("89.1 ाउ की दूरी") matched nothing.
+    if any(w in q for w in ("किलोमीटर", "किमी", "रेलगाड़ी",
+                            "ट्रेन", "km")) or (
+            "दूरी" in q and "तय" in q and "घंट" in q):
         _cond = re.search(
             r"" + _N + r"\s*(?:किलोमीटर|km)(?:\s+की\s+दूरी)?"
             r"[^0-9]{0,80}?चाल\s+" + _N + r"\s*(?:किलोमीटर"
@@ -2555,9 +2561,10 @@ def normalize_hinglish(question: str) -> str:
             return (f"a train travels at {_sm.group(1)} "
                     f"km/h for {_tm.group(1)} hours, find "
                     f"the distance")
-        _dm = re.search(r"" + _N + r"\s*किलोमीटर"
+        _dm = re.search(r"" + _N + r"\s*(?:किलोमीटर|किमी)"
                         r"(?!\s+प्रति)", q) or re.search(
-            r"" + _N + r"\s*km\b", q)
+            r"" + _N + r"\s*km\b", q) or re.search(
+            r"" + _N + r"\s+[^0-9\s]{1,6}\s+की\s+दूरी", q)
         if _dm and _tm and ("चाल" in q or "गति" in q
                             or "रफ़्तार" in q or "speed" in ql
                             or ("दूरी" in q and "तय" in q)) \
@@ -2617,6 +2624,154 @@ def normalize_hinglish(question: str) -> str:
     if m:
         return (f"compound interest on {m.group(1)} at "
                 f"{m.group(2)}% for {m.group(3)} years")
+    # --- Devanagari: CI with "पर" phrasing (Wave 156, audit
+    # bank-084 — "₹10,000 पर 10% वार्षिक दर से 2 वर्ष का
+    # चक्रवृद्धि ब्याज"): the pattern above needs "रुपये का"
+    # before the rate; the equally standard "पर ... दर से"
+    # order missed and the question declined.
+    m = re.search(r"(?:₹|rs\.?|रुपये?)\s*([\d][\d,]*"
+                  r"(?:\.\d+)?)\s*पर\s+" + _N +
+                  r"\s*%\s*वार्षिक\s+दर\s+से\s+" + _N +
+                  r"\s*वर्ष\s+का\s+चक्रवृद्धि\s+ब्याज", q)
+    if m:
+        return (f"compound interest on "
+                f"{m.group(1).replace(',', '')} at "
+                f"{m.group(2)}% for {m.group(3)} years")
+    # --- Devanagari: simple interest, free word order
+    # (Wave 156, audit bank-082 — "₹15000 का ऋण 7% वार्षिक
+    # साधारण ब्याज की दर पर लिया। 2 वर्ष के अंत में ... ब्याज
+    # चुकाना होगा?"): the applied Hindi SI schema wants one
+    # fixed order (P रुपये का T वर्ष ... R%); the loan
+    # phrasing states rate before time and asks at the end.
+    # The gate is the rate-phrase form "साधारण ब्याज की दर"
+    # — the standard statement ("5000 रुपये पर 8% वार्षिक
+    # दर से 3 वर्ष का साधारण ब्याज निकालो") belongs to the
+    # Hindi schema itself (Wave 130 pins its exact steps).
+    if "साधारण ब्याज की दर" in q:
+        _p82 = re.search(r"(?:₹|रुपये?\s+|का\s+ऋण)" + _N, q) \
+            or re.search(_N + r"\s*(?:रुपये|रुपए|का\s+ऋण)", q)
+        _r82 = re.search(_N + r"\s*%", q)
+        _t82 = re.search(_N + r"\s*वर्ष", q)
+        if _p82 and _r82 and _t82:
+            return (f"simple interest on {_p82.group(1)} at "
+                    f"{_r82.group(1)}% for {_t82.group(1)} "
+                    f"years")
+    # --- Devanagari: sum and difference of two numbers
+    # (Wave 156, audit bank-087 — "दो संख्याओं का योग 154 है
+    # और उनका अंतर 46 है। दोनों संख्याएँ ज्ञात कीजिए।").
+    m = re.search(r"दो\s+संख्याओं\s+का\s+योग\s+" + _N +
+                  r"[^0-9]{0,20}?अंतर\s+" + _N, q)
+    if m:
+        return (f"The sum of two numbers is {m.group(1)} "
+                f"and their difference is {m.group(2)}. "
+                f"Find the two numbers.")
+    # --- Devanagari: LCM timing (Wave 156, audit bank-095 —
+    # "पहली बस हर 12 मिनट में और दूसरी बस हर 15 मिनट में ...
+    # कितने समय बाद फिर से एक साथ"): two "every N minutes"
+    # cycles meeting again is an LCM ask.
+    _lc = re.findall(r"हर\s+" + _N + r"\s*मिनट", q)
+    if len(_lc) >= 2 and "एक साथ" in q:
+        return f"find the lcm of {_lc[0]} and {_lc[1]}"
+    # --- Devanagari: triangle area from base + height
+    # (Wave 156, audit bank-098/112/119 — "त्रिकोणीय खेत का
+    # आधार 12 ... ऊँचाई 9 ... क्षेत्रफल निकालिए"): the
+    # geometry intent never saw the Hindi slot words.
+    if ("त्रिकोण" in q or "त्रिभुज" in q) \
+            and "क्षेत्रफल" in q:
+        _ba = re.search(r"आधार\s*(?:लंबाई\s*)?" + _N, q) \
+            or re.search(r"लंबाई\s*\(आधार\)\s*" + _N, q)
+        _ha = re.search(r"ऊँचाई\s*" + _N, q) or re.search(
+            r"ऊंचाई\s*" + _N, q)
+        if _ba and _ha:
+            return (f"area of a triangle with base "
+                    f"{_ba.group(1)} and height "
+                    f"{_ha.group(1)}")
+    # --- Devanagari: point on a line (Wave 156, audit
+    # bank-100 — "बिंदु (x, 4) रेखा 2x + 3y = 18 पर स्थित
+    # है। x का मान ज्ञात कीजिए।").
+    m = re.search(r"बिंदु\s*\(\s*([^,]+?)\s*,\s*([^)]+?)\s*\)"
+                  r"\s*रेखा\s+(.+?)\s*पर\s*स्थित", q)
+    if m:
+        return (f"the point ({m.group(1)}, {m.group(2)}) "
+                f"lies on the line {m.group(3)}. find the "
+                f"unknown value")
+    # --- Devanagari: worded fraction arithmetic (Wave 156,
+    # audit bank-116 — "छात्र ने 5/6 घंटा ... और 1/3 घंटा ...
+    # इस अंतर को 18 से गुणा करके 4 जोड़ा जाए"): the operations
+    # are stated in words around two fractions; the salvage
+    # layer served the first fraction alone (5/6). Rewrite to
+    # the explicit expression (f1 - f2) * mult + add.
+    _fr156 = re.findall(r"(\d+)\s*/\s*(\d+)", q)
+    if len(_fr156) >= 2 and "अंतर" in q and "गुणा" in q:
+        _fm156 = re.search(r"(" + _N + r")\s*से\s*गुणा", q)
+        _fa156 = re.search(r"(" + _N + r")\s*जोड़", q)
+        if _fm156:
+            _expr156 = (f"({_fr156[0][0]}/{_fr156[0][1]} - "
+                        f"{_fr156[1][0]}/{_fr156[1][1]}) * "
+                        f"{_fm156.group(1)}")
+            if _fa156:
+                _expr156 += f" + {_fa156.group(1)}"
+            return _expr156
+    # --- Devanagari: angle equal to its own supplement /
+    # complement (Wave 156, audit book-071 — "ऐसा कोण
+    # ज्ञात कीजिए जो अपने संपूरक के समान हो" -> 90°).
+    # संपूरक checked first: it CONTAINS पूरक.
+    if "संपूरक" in q and ("समान" in q or "बराबर" in q):
+        return "find the angle which is equal to its " \
+               "supplementary angle"
+    if "पूरक" in q and "संपूरक" not in q \
+            and ("समान" in q or "बराबर" in q):
+        return "find the angle which is equal to its " \
+               "complementary angle"
+    # --- Devanagari: length-to-breadth RATIO across units
+    # (Wave 156, audit book-040 — "कमरे की लम्बाई 8 मीटर
+    # और चौड़ाई 500 सेंटीमीटर है। लम्बाई और चौड़ाई को
+    # अनुपात के रूप में लिखिए"): convert both to cm first,
+    # else the length+breadth translation below computes
+    # the AREA 8 x 500.
+    if "अनुपात" in q and "लम्बाई" in q and "चौड़ाई" in q:
+        _unit_cm = {"मीटर": 100.0, "सेंटीमीटर": 1.0,
+                    "सेमी": 1.0, "किमी": 100000.0,
+                    "मिमी": 0.1}
+        _lm = re.search(
+            r"लम्बाई\s*(\d+(?:\.\d+)?)\s*"
+            r"(मीटर|सेंटीमीटर|सेमी|किमी|मिमी)", q)
+        _bm = re.search(
+            r"चौड़ाई\s*(\d+(?:\.\d+)?)\s*"
+            r"(मीटर|सेंटीमीटर|सेमी|किमी|मिमी)", q)
+        if _lm and _bm:
+            _av = float(_lm.group(1)) \
+                * _unit_cm[_lm.group(2)]
+            _bv = float(_bm.group(1)) \
+                * _unit_cm[_bm.group(2)]
+            _fa = int(_av) if _av == int(_av) else _av
+            _fb = int(_bv) if _bv == int(_bv) else _bv
+            return f"ratio of {_fa} to {_fb}"
+    # --- Devanagari: HCF / LCM asked over two stated
+    # measures (Wave 156, audit bank-092 — "आयताकार खेत की
+    # लंबाई 945 मीटर और चौड़ाई 630 मीटर है। इन दोनों मापों का
+    # HCF निकालें।"): the length+breadth translation below
+    # claimed the question for the rectangle AREA and served
+    # the product 945 x 630. An explicit HCF/LCM ask owns
+    # the question; the two measures are its operands.
+    # The measures gate matters: a generic three-number
+    # LCM ask ("lcm of 12, 15 and 20") must NOT be
+    # truncated to its first two numbers by this block —
+    # it exists only for the two-measures prose shape.
+    _measures156 = ("लंबाई" in q or "चौड़ाई" in q
+                    or "मीटर" in q)
+    if _measures156 and ("महत्तम" in q or "समापवर्तक" in q
+                         or "hcf" in ql):
+        _hn = re.findall(_N, q)
+        if len(_hn) >= 2:
+            return (f"find the hcf of {_hn[0]} and "
+                    f"{_hn[1]}")
+    if _measures156 and ("लघुत्तम" in q or "समापवर्त्य" in q
+                         or "lcm" in ql):
+        _hn = re.findall(_N, q)
+        if len(_hn) >= 2:
+            return (f"find the lcm of {_hn[0]} and "
+                    f"{_hn[1]}")
     # --- Devanagari: length + breadth shapes ------------------------------------------
     if "ऊँचाई" not in q and "गहराई" not in q \
             and "आयतन" not in q:
@@ -2946,6 +3101,14 @@ def route_intent(question: str) -> str:
     if len(re.findall(r"P\(\s*[A-Z]\b", question)) >= 2:
         return "statistics"
 
+    # Wave 156 (Wave 153 audit book-038): regression-coefficient
+    # asks ("bivariate data: x = 53, y = 28, bYX = -1.5 ...
+    # Estimate Y when X = 50") carry no statistics keyword and
+    # fell to algebra, which echoed a stem value. The bYX/bXY
+    # tokens are unambiguous — route them to statistics.
+    if re.search(r"\bb\s*yx\b|\bb\s*xy\b|bivariate", q):
+        return "statistics"
+
     # Statistics & probability ("mode" as a standalone word only, so
     # "model" etc. are not hijacked; dice handled by word boundary)
     # Wave 33: Hindi / Hinglish statistics tokens — प्रायिकता /
@@ -2972,9 +3135,15 @@ def route_intent(question: str) -> str:
             r"equation of|triangle.{0,50}angle|section\s+formula|"
             r"divides\s+the\s+line|coordinates\s+of\s+the\s+point|"
             r"diagonal|pythagor|समकोण|कर्ण|"
-            r"क्षेत्रफल|परिमाप|परिधि|त्रिज्या|आयत|वर्ग\s+क|"
-            r"त्रिभुज|वृत्त|भुजा|लंबाई|चौड़ाई|ऊँचाई|आधार)",
+            r"क्षेत्रफल|क्षेत्रापफल|परिमाप|परिधि|त्रिज्या|आयत|वर्ग\s+क|"
+            r"त्रिभुज|चतुर्भुज|वृत्त|भुजा|लंबाई|चौड़ाई|ऊँचाई|आधार)",
             q):
+        return "geometry"
+    # Wave 156 (audit bank-102): a fencing/wire ask about a
+    # rectangular field carries no area/perimeter keyword —
+    # "rectangular field ... fence it with a single wire" is
+    # a perimeter question and belongs to geometry.
+    if "rectang" in q and ("fenc" in q or "wire" in q):
         return "geometry"
 
     # Sequences & series
@@ -2995,6 +3164,15 @@ def route_intent(question: str) -> str:
             re.search(r"\d+\s*(?:वां|वाँ|वीं)\s*पद", q) or \
             re.search(r"\d+\s*(?:va|wa|vaa)\s+pad\b", q):
         return "sequences"
+
+    # Wave 156: two complex-number word shapes the bare-i
+    # tests miss — a stated root of x^2 + ax + b (audit
+    # book-027) and the (z-1)/(z+1) purely-imaginary
+    # modulus ask (book-059).
+    if "purely imaginary" in q or (
+            "root" in q and "ax + b" in q
+            and re.search(r"i\s*(?:√|sqrt)", q)):
+        return "complex"
 
     # Complex numbers (bare "i" expressions need digits around the i)
     if re.search(r"\bcomplex\b|conjugate|modulus|argument of|"
@@ -3565,6 +3743,27 @@ def _w77_candidates(question):
                   q, re.I)
     if m:
         add(m.group(1))
+    # Wave 159: NO full-expression candidate in this pass.
+    # It was tried here first, and it did make the core
+    # pass solve stated expressions whole — but that also
+    # let the solver shadow the verified BANK layer for
+    # banked questions whose stated expression it could
+    # now evaluate (test_wave39_bank pins the bank's
+    # provenance for exactly that shape: the solver could
+    # previously only fragment-serve them). The stated-
+    # expression family is instead served where the bank
+    # cannot pre-empt it: fallback's salvage carries the
+    # full-expression candidate, and the echo vetoes
+    # (_w159_veto / _w159_frac_echo / _w159_subexpr_echo)
+    # stop the fragment serves that used to win here.
+    # Merge note (Waves 156+159): Wave 156's bracketed-
+    # expression candidate for this pass (the bank-109
+    # fix) is NOT carried here for the same reason — its
+    # end-to-end behaviour is preserved by the _w156_veto
+    # V5 / _w159_frac_echo serve blocks plus the bracketed
+    # candidate in fallback's _candidates, and Wave 159's
+    # test_full_expression_candidate_lives_in_salvage pins
+    # this split.
     if not equation:
         for m in re.finditer(
                 r"(\d+(?:\.\d+)?(?:\s*[-+\*/x×]\s*"
@@ -3606,9 +3805,162 @@ def _w77_candidates(question):
                 if k >= 0 and (q[k].isdigit() or q[k] == ")"
                                or q[k] in "√π"):
                     continue
+            # Wave 156 (Wave 153 audit book-010/028/034):
+            # a DATE is not an arithmetic chain — "4/11/2025"
+            # was evaluated as 4/11/2025 = 0.000179574,
+            # "2019-20" (a page-header year range) as 1999,
+            # and "22-12-2025" as -2015. Date-shaped chains
+            # are never candidates.
+            if re.fullmatch(
+                    r"\d{1,2}\s*/\s*\d{1,2}\s*/\s*\d{2,4}"
+                    r"|\d{1,2}\s*-\s*\d{1,2}\s*-\s*\d{2,4}"
+                    r"|\d{4}\s*-\s*\d{2}", m.group(1)):
+                continue
             add(m.group(1))
     add(_w77_strip_filler(q))
     return out
+
+
+# ---------------------------------------------------------------------------
+# Wave 159: full-consumption guards for the carve layers.
+#
+# The Wave 157 full-databank sweep found the dominant
+# wrong-serve family in the whole app: on multi-step
+# arithmetic word problems the carve layers (this Wave 77
+# core pass and fallback's salvage) served a SUB-EXPRESSION
+# — the first fraction echoed verbatim ("(3/4 + 5/6) x 12
+# - 10" answered "3/4"), or the first term of a stated
+# expression ("(48 * 6) + (24 * 3)" answered 288). The
+# chain extractor takes the FIRST digit-op-digit fragment
+# it can find, and a fragment is a perfectly good solve —
+# of a different, smaller question. Two rules fix it:
+#
+# 1. COVERAGE: a carved candidate may serve only when it
+#    accounts for EVERY numeric atom of the text it was
+#    carved from (a leading "Question 5:" label aside).
+#    A wrapped single problem ("oye 1/2 + 1/3 kitna hoga")
+#    covers exactly; a word problem whose numbers live in
+#    the prose around the fragment does not, and its
+#    fragment is refused so the question declines honestly
+#    instead of echoing.
+# 2. FULL EXPRESSION: when the question itself states a
+#    complete bracketed expression ("using the expression
+#    (12 * 9) - (4 * 1)", "the total distance is
+#    (48 * 6) + (24 * 3)"), that expression — the maximal
+#    run of mathy tokens — is offered as a candidate ahead
+#    of any fragment, so the whole thing is evaluated.
+#
+# fallback.py mirrors both helpers (the layers import this
+# module, not the other way round — the Wave 77 pattern).
+# ---------------------------------------------------------------------------
+
+_W159_DEV = str.maketrans("०१२३४५६७८९", "0123456789")
+
+_W159_LABEL = re.compile(
+    r"^\s*(?:question|q|प्रश्न|सवाल)\s*(?:no\.?)?\s*\d+"
+    r"\s*[:.)\]]?\s*", re.I)
+
+
+def _w159_atoms(text):
+    """The set of numeric atoms in a text: every integer /
+    decimal literal as an exact Fraction (a fraction
+    literal contributes its numerator and denominator as
+    separate atoms, since both sides of a comparison are
+    read the same way). Devanagari digits are folded and
+    thousands commas dropped."""
+    from fractions import Fraction
+    t = str(text or "").translate(_W159_DEV).replace(",", "")
+    out = set()
+    for m in re.finditer(r"\d+(?:\.\d+)?", t):
+        try:
+            out.add(Fraction(m.group(0)))
+        except Exception:
+            pass
+    return out
+
+
+def _w159_covers(src, cand):
+    """True when every numeric atom of the source text (a
+    leading question-number label aside) appears in the
+    candidate — the candidate consumed the whole question,
+    not a fragment of it."""
+    src_atoms = _w159_atoms(_W159_LABEL.sub("", str(src or ""),
+                                            count=1))
+    if not src_atoms:
+        return True
+    return src_atoms <= _w159_atoms(cand)
+
+
+def _w159_full_expression(text):
+    """The question's own explicit full expression, or
+    None: the longest run of consecutive mathy tokens that
+    carries a bracket pair and at least one operator (or
+    at least two operators), at least three numeric atoms,
+    and no '=' (an equation is the equation candidate's
+    shape, and a bracketed group after '=' is a definition,
+    not the ask). Mirrors fallback._w159_full_expression."""
+    t = str(text or "").replace("−", "-").replace("–", "-") \
+        .replace("×", "*").replace("÷", "/").replace("।", " ")
+    best = None
+    run = []
+
+    def _flush():
+        nonlocal best
+        if run:
+            cand = " ".join(run).strip(" .,?!;:")
+            if _w159_expr_qualifies(cand) and (
+                    best is None or len(cand) > len(best)):
+                best = cand
+        run.clear()
+
+    for tok in t.split():
+        if _w77_mathy(tok):
+            run.append(tok)
+        else:
+            _flush()
+    _flush()
+    return best
+
+
+def _w159_expr_qualifies(cand):
+    # Wave 159 (tightened after the first full-suite run):
+    # the stated expression must be PURELY NUMERIC. Any
+    # letter (the variable in "x^2 - 3x - 4", the function
+    # call in "2x - 5 f(10)"), superscript, root or pi sign
+    # makes the run an ALGEBRA expression — the algebra
+    # solver's business, never this layer's; serving it
+    # here displaced the f(n) schema and the hence-chain
+    # multipart layer (test_wave100 / test_wave103).
+    if re.search(r"[A-Za-z\u0900-\u0965\u0970-\u097f"
+                 r"\u00b2\u00b3\u221a\u03c0]", cand):
+        return False
+    # A comma followed by space separates LIST items
+    # ("1, 1/(2^2 - 1), 1/(2^3 - 1)" — the terms of a
+    # series), not one expression; a thousands comma is
+    # never followed by a space.
+    if re.search(r",\s", cand):
+        return False
+    if "=" in cand or len(_w159_atoms(cand)) < 3:
+        return False
+    ops = sum(cand.count(ch) for ch in "+-*/")
+    if "(" in cand and ")" in cand:
+        return ops >= 1
+    return ops >= 2
+
+
+_W159_EXPR_ASK = re.compile(
+    r"व्यंजक|\bexpression|\bevaluat", re.I)
+
+
+def _w159_expr_ask(text):
+    """True when the text explicitly asks for the VALUE
+    OF AN EXPRESSION (व्यंजक का मान / "using the
+    expression..." / "evaluate...") — the one ask shape
+    where the question states a single computation and a
+    fragment of it is never an answer. A variable-value
+    ask ("उ का मान ज्ञात कीजिए जिसके लिए...") carries no
+    such marker and is not an expression ask."""
+    return bool(_W159_EXPR_ASK.search(str(text or "")))
 
 
 _W77_FRAC = r"\d+\s*/\s*\d+"
@@ -3733,6 +4085,32 @@ def _w77_core_result(original, working):
             if not key or key in seen:
                 continue
             seen.add(key)
+            # Wave 159 (scope settled by the first
+            # full-suite run): a coverage skip ONLY for an
+            # explicit expression-evaluation ask (व्यंजक /
+            # "expression" / "evaluate"). There the text
+            # states one computation in prose ("पहले 3/4
+            # किमी और फिर 5/6 किमी... 12 से गुणा करके 10
+            # घटाया गया। व्यंजक का मान ज्ञात कीजिए।") and a
+            # fragment candidate ("3/4") is the first term
+            # echoed as the answer — a solve of a smaller
+            # question, never of this one. Everywhere else
+            # this pass keeps its Wave 77 rescue role
+            # untouched: the book corpora pin rows where a
+            # small core carved out of noisy text ("5- 3"
+            # out of OCR garble, "1/2" out of a series
+            # question) is the intended primary
+            # (test_wave146/151), and an unconditional
+            # coverage rule only ever changed WHICH
+            # candidate won, for the worse. Bracketed
+            # stated expressions are handled by the
+            # full-expression candidate above and the
+            # _w159_veto at fallback's _is_real; salvage
+            # keeps its own coverage gate (its candidates
+            # are pure fragments by construction).
+            if not _w159_covers(src, cand) \
+                    and _w159_expr_ask(src):
+                continue
             try:
                 res = solve_question(cand)
             except Exception:
@@ -3773,9 +4151,15 @@ def _solve_question_uncached(question: str):
     # theory FIRST and accept ONLY its perfect-power check
     # ops, so other perfect-square word problems route
     # exactly as before.
+    # Wave 156: the "least number to SUBTRACT to make a
+    # perfect square" form (घटाई / subtract) is a different
+    # question — applied's hindi_perfect_square_subtract
+    # owns it; the haan-nahi check must not claim it.
     if re.search(r"perfect\s+(?:square|cube)"
                  r"|purna\s+(?:varg|ghan)"
-                 r"|पूर्ण\s*(?:वर्ग|घन)", working, re.I):
+                 r"|पूर्ण\s*(?:वर्ग|घन)", working, re.I) \
+            and "घटाई" not in working \
+            and not re.search(r"\bsubtract", working, re.I):
         try:
             out = solve_number_theory(working)
         except Exception:

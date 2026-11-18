@@ -96,6 +96,26 @@ def clean_text(text: str) -> str:
         if t2 == t:
             break
         t = t2.strip()
+    # Wave 156 (Wave 153 audit book-036): NCERT's spaced
+    # typesetting prints the quadratic head as "27 x 2"
+    # (27x^2) — the Wave 58 rule below read it as 27 x 2 =
+    # 54 and served x = 11/2 for 27x^2 - 10x + 1 = 0. The
+    # spaced power is recognisable when the SAME text also
+    # uses x as a genuine variable (an x NOT flanked by
+    # digits — "10 x + 1") and the digit-x-2/3 group sits at
+    # a term head followed by an operator or the end. Pure
+    # arithmetic ("3 x 4", "2^3 x 2^2") has no variable x
+    # and is untouched.
+    _head156 = re.search(
+        r"(?:^|[=+\-])\s*(\d+(?:\.\d+)?)\s+[xX]\s+([23])"
+        r"(?=\s*(?:[-+=]|$))", t)
+    if _head156 and re.search(r"[xX](?!\s*\d)", t) and \
+            re.search(r"(?<![\d.])[xX]\s*(?:[-+=]|$)", t):
+        t = (t[:_head156.start()] +
+             re.sub(r"(\d+(?:\.\d+)?)\s+[xX]\s+([23])",
+                    r"\1*x^\2",
+                    t[_head156.start():_head156.end()]) +
+             t[_head156.end():])
     # Wave 58: a standalone "x" between two numbers is a TIMES
     # sign in school typing — "2^3 x 2^2" was parsed as
     # 2^3 · x · 2^2 and "simplified" to 32·x, and "3 x 4"

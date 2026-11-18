@@ -1373,6 +1373,20 @@ def _ratio_angles(q):
               or "त्रिभुज" in q)
     if not (is_quad or is_tri):
         return None
+    # Wave 156 (Wave 153 audit book-025): the ratio must be
+    # a ratio of ANGLES. A triangular plot whose SIDES are
+    # in ratio 3:5:7 with perimeter 300 and an AREA ask was
+    # answered with the angles 36/60/84 — the wrong quantity
+    # entirely. Sides / perimeter / area markers, or the
+    # absence of any angle word, mean this schema abstains
+    # (the Heron schema below owns the sides form).
+    if "भुजाओं" in q or "परिमाप" in q or "क्षेत्रफल" in q \
+            or re.search(r"\bsides?\b|\bperimeter\b|\barea\b",
+                         ql):
+        return None
+    if "कोण" not in q and "angle" not in ql \
+            and not re.search(r"\bkon\b|\bkone\b", ql):
+        return None
     m = re.search(r"(\d+)\s*:\s*(\d+)\s*:\s*(\d+)"
                   r"(?:\s*:\s*(\d+))?", q)
     if not m:
@@ -1480,6 +1494,68 @@ def _func_eval(q):
 # Entry points
 # ---------------------------------------------------------------------------
 
+def _heron_ratio_sides(q):
+    """Wave 156 (Wave 153 audit book-025): the sides of a
+    triangle in ratio a:b:c with a given perimeter, area
+    asked — "त्रिभुजाकार भूखंड की भुजाओं का अनुपात 3:5:7 है
+    और उसका परिमाप 300 है। क्षेत्रफल ज्ञात कीजिए।" Scale the
+    parts to the perimeter, then Heron's formula."""
+    ql = q.lower()
+    if not ("त्रिभुज" in q or "triangle" in ql or "triangular"
+            in ql):
+        return None
+    if not ("क्षेत्रफल" in q or "क्षेत्रापफल" in q
+            or "area" in ql):
+        return None
+    m = re.search(r"(\d+)\s*:\s*(\d+)\s*:\s*(\d+)", q)
+    mp = re.search(r"(?:परिमाप|perimeter)[^.0-9]{0,12}?"
+                   r"(\d+(?:\.\d+)?)", q) or re.search(
+                       r"(\d+(?:\.\d+)?)[^.]{0,30}?"
+                       r"(?:परिमाप|perimeter)", q)
+    if not m or not mp:
+        return None
+    parts = [int(m.group(i)) for i in (1, 2, 3)]
+    per = float(mp.group(1))
+    s_parts = sum(parts)
+    sides = [per * p / s_parts for p in parts]
+    a, b, c = sides
+    if a + b <= c or a + c <= b or b + c <= a:
+        return None
+    s = per / 2
+    area2 = s * (s - a) * (s - b) * (s - c)
+    if area2 <= 0:
+        return None
+    area = sp.sqrt(sp.nsimplify(area2, rational=True))
+    area = sp.simplify(area)
+    ans = fmt(area)
+    if not area.is_number or area.has(sp.Float):
+        ans = f"{ans} ≈ {float(area):.4g}"
+    hi = _hindi(q)
+    steps = ([
+        f"भुजाएँ अनुपात में हैं, इसलिए भुजाएँ = "
+        f"{fmt_num(per)} × {parts[0]}/{s_parts}, "
+        f"{fmt_num(per)} × {parts[1]}/{s_parts}, "
+        f"{fmt_num(per)} × {parts[2]}/{s_parts} = "
+        f"{fmt_num(a)}, {fmt_num(b)}, {fmt_num(c)}।",
+        f"अर्ध-परिमाप s = {fmt_num(per)}/2 = {fmt_num(s)}।",
+        f"हीरोन सूत्र: क्षेत्रफल = √(s(s−a)(s−b)(s−c)) = "
+        f"√({fmt_num(s)} × {fmt_num(s - a)} × "
+        f"{fmt_num(s - b)} × {fmt_num(s - c)}) = {ans}।",
+    ] if hi else [
+        f"The sides are in ratio, so sides = "
+        f"{fmt_num(per)} × {parts[0]}/{s_parts}, "
+        f"{fmt_num(per)} × {parts[1]}/{s_parts}, "
+        f"{fmt_num(per)} × {parts[2]}/{s_parts} = "
+        f"{fmt_num(a)}, {fmt_num(b)}, {fmt_num(c)}.",
+        f"Semi-perimeter s = {fmt_num(per)}/2 = "
+        f"{fmt_num(s)}.",
+        f"Heron's formula: area = sqrt(s(s-a)(s-b)(s-c)) "
+        f"= sqrt({fmt_num(s)} × {fmt_num(s - a)} × "
+        f"{fmt_num(s - b)} × {fmt_num(s - c)}) = {ans}.",
+    ])
+    return _mk("geometry", "heron_ratio_sides", ans, steps)
+
+
 def solve_depth125(question):
     """Failure-gate entry (router): strict schemas, each
     returns None unless it settles the question fully."""
@@ -1488,7 +1564,8 @@ def solve_depth125(question):
                _lp_toys_hi, _lp_diet, _prob_relations,
                _prob_two_bags, _prob_factory_ab,
                _prob_conditional, _coin_die, _de_solve,
-               _area_between, _ratio_angles, _func_eval):
+               _area_between, _ratio_angles,
+               _heron_ratio_sides, _func_eval):
         try:
             out = fn(q)
         except Exception:
