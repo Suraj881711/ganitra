@@ -75,8 +75,8 @@ def test_delivery_pins_bumped_for_new_css():
     base = (root / "templates" / "base.html").read_text(
         encoding="utf-8")
     sw = (root / "static" / "sw.js").read_text(encoding="utf-8")
-    assert "v='51'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v28"' in sw
+    assert "v='52'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v29"' in sw
 
 
 # --- the exact checker ---------------------------------------------
