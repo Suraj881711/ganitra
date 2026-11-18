@@ -3514,6 +3514,7 @@ _W94_LOCAL = threading.local()
 _W103_LOCAL = threading.local()
 _W115_LOCAL = threading.local()
 _W142_LOCAL = threading.local()
+_W169_LOCAL = threading.local()
 _W125_LOCAL = threading.local()
 
 _W77_FILLER_WORDS = {
@@ -4971,6 +4972,35 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     w142.setdefault("interpreted_as", translated)
                 return w142
+        # Wave 169: Tier-A book-gap method families
+        # (solver/tierA169.py) — the same failure-only gate as
+        # Waves 77/94/103/115/125/142: sector / annular /
+        # mensuration-cost forms, the straight-line forms the
+        # Rekha wave left (axis-parallel, equal / summed
+        # intercepts, perpendicular shapes, 3D lines), the
+        # Class 12 probability-distribution table, rational /
+        # irrational numbers between two numbers, and the
+        # state-board commercial sentence forms (profit /
+        # loss, simple interest). A real primary answer is
+        # never displaced, and tierA169 returns None unless
+        # one of its strict schemas settles the question
+        # completely with an exactly verified answer.
+        if getattr(_W169_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W169_LOCAL.depth = 1
+            try:
+                from .tierA169 import solve_tierA169
+                w169 = solve_tierA169(original)
+                if w169 is None and working != original:
+                    w169 = solve_tierA169(working)
+            except Exception:
+                w169 = None
+            finally:
+                _W169_LOCAL.depth = 0
+            if w169 is not None:
+                if was_translated:
+                    w169.setdefault("interpreted_as", translated)
+                return w169
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])

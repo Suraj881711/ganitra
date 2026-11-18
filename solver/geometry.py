@@ -2378,17 +2378,47 @@ def _wave65_geometry(q):
                     [f"In one revolution the wheel covers "
                      f"2πr = 2π × {fmt_num(r)} = "
                      f"{fmt_num(dist)}"])
-    # Equilateral triangle perimeter from its side.
-    if "equilateral" in q and "perimeter" in q:
-        m = re.search(r"side[^0-9]{0,40}?" + N, q) or \
-            re.search(N, q)
-        if m:
-            s = float(m.group(1))
-            return _res("equilateral_perimeter",
-                        fmt_num(3 * s), 3 * s,
-                        [f"All three sides are equal: "
-                         f"perimeter = 3 × {fmt_num(s)} = "
-                         f"{fmt_num(3 * s)}"])
+    # Equilateral triangle: perimeter from its side, or
+    # (Wave 151c) the side from a GIVEN perimeter. The old
+    # branch grabbed the first number in the text as the
+    # side, so "perimeter is 12.9, find each side" was
+    # served 3 x 12.9 = 38.7 — the perimeter multiplied by
+    # 3 instead of divided. When the perimeter is what is
+    # given and the side is what is asked, divide; when
+    # several perimeters are listed, this branch stays
+    # silent (the multipart layer / honest decline owns
+    # it) rather than serving the first one times 3.
+    if "equilateral" in q and "perimeter" in q \
+            and not re.search(
+                r"perimeter[^.]{0,40}rectangle", q):
+        per_given = re.findall(
+            r"perimeter\b[^0-9]{0,40}?(?:is|=|:)"
+            r"[^0-9]{0,4}?" + N, q)
+        asks_side = bool(re.search(
+            r"(?:find|length of|what is|side of)\b[^.]{0,30}"
+            r"\bside\b", q)) or "if the perimeter is" in q \
+            or "each side" in q
+        if per_given and asks_side:
+            _after = q[q.index("perimeter"):]
+            _vals = re.findall(r"\d+(?:\.\d+)?", _after)
+            if len(per_given) == 1 and len(_vals) == 1:
+                p = float(per_given[0])
+                return _res("equilateral_side_from_perimeter",
+                            fmt_num(p / 3), p / 3,
+                            [f"All three sides are equal: "
+                             f"side = perimeter / 3 = "
+                             f"{fmt_num(p)} / 3 = "
+                             f"{fmt_num(p / 3)}"])
+        elif not per_given:
+            m = re.search(r"side[^0-9]{0,40}?" + N, q) or \
+                re.search(N, q)
+            if m:
+                s = float(m.group(1))
+                return _res("equilateral_perimeter",
+                            fmt_num(3 * s), 3 * s,
+                            [f"All three sides are equal: "
+                             f"perimeter = 3 × {fmt_num(s)} = "
+                             f"{fmt_num(3 * s)}"])
     # Cuboid given as "A cm by B cm by C cm".
     m = re.search(r"cuboid\s+" + N + r"\s*(?:cm|m)?\s*by\s+"
                   + N + r"\s*(?:cm|m)?\s*by\s+" + N, q)
@@ -2521,7 +2551,23 @@ def _wave65_geometry(q):
                              f"{fmt_num(h / s)}",
                              f"Angle = {fmt_num(round(ang, 2))}°"])
     # Polygon diagonals from the shape's name / side count.
-    if "diagonal" in q:
+    # Wave 151c: this branch used to fire on ANY text that
+    # mentioned a diagonal and a shape name — a rectangle
+    # area/perimeter question whose diagonal was given, a
+    # "diagonal divides a parallelogram" statement, a
+    # why-question about a quadrilateral's diagonal — and
+    # served the diagonals count (usually 0) for all of
+    # them. It now serves only when the question actually
+    # ASKS for the number of diagonals.
+    if "diagonal" in q and (
+            "how many diagonals" in q
+            or "number of diagonals" in q
+            or "diagonals are there" in q
+            or "diagonals does" in q
+            or "diagonals in a" in q
+            or "find the diagonals" in q
+            or "विकर्णों की संख्या" in q
+            or "कितने विकर्ण" in q):
         names = {"triangle": 3, "quadrilateral": 4,
                  "pentagon": 5, "hexagon": 6, "heptagon": 7,
                  "octagon": 8, "nonagon": 9, "decagon": 10}
