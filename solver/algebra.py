@@ -79,6 +79,57 @@ def _linear_steps(a, b, var):
     return steps
 
 
+def _school_linear_steps(left_expr, right_expr, var):
+    """Wave 149: school-style steps for the simple shape
+    a*var + b = c — the variable on ONE side only and a
+    plain number on the other. Narrate from the equation
+    AS ASKED: move the constant first ("Subtract b from
+    both sides: a*var = c - b"), then divide — the order a
+    teacher writes on the board. _linear_steps instead
+    narrates from the standard form a*var + b = 0, which
+    produced the pedagogically backwards "Bring all terms
+    to one side: 3·x + -15 = 0 / Add 15 to both sides"
+    for 3x + 7 = 22 (live check after Deploy-29: answer
+    right, working confusing).
+
+    Returns None for anything outside the gated shape —
+    variable on both sides, a non-numeric side, non-
+    rational coefficients — and the caller falls back to
+    _linear_steps, so those families keep their existing
+    narration byte-for-byte."""
+    for var_side, const_side in ((left_expr, right_expr),
+                                 (right_expr, left_expr)):
+        if var_side.free_symbols != {var}:
+            continue
+        if const_side.free_symbols or \
+                not const_side.is_number:
+            continue
+        degree, coeffs = _poly_coeffs(var_side, var)
+        if degree != 1:
+            continue
+        a, b, c = coeffs.get(1, 0), coeffs.get(0, 0), \
+            const_side
+        if not all(v.is_rational for v in (a, b, c)):
+            continue
+        target = c - b
+        steps = []
+        if b > 0:
+            steps.append(
+                f"Subtract {fmt(b)} from both sides: "
+                f"{_term_str(a, str(var))} = {fmt(target)}")
+        elif b < 0:
+            steps.append(
+                f"Add {fmt(-b)} to both sides: "
+                f"{_term_str(a, str(var))} = {fmt(target)}")
+        if a != 1:
+            steps.append(
+                f"Divide both sides by {fmt(a)}: {var} = "
+                f"{fmt(sp.nsimplify(target / a, rational=True))}")
+        if steps:
+            return steps
+    return None
+
+
 def _quadratic_steps(a, b, c, var):
     D = b**2 - 4 * a * c
     steps = [
@@ -102,7 +153,9 @@ def _quadratic_steps(a, b, c, var):
 
 def _solve_single_equation(eq_text: str):
     left, right = eq_text.split("=", 1)
-    expr = parse_expression(left) - parse_expression(right)
+    left_expr = parse_expression(left)
+    right_expr = parse_expression(right)
+    expr = left_expr - right_expr
     symbols = sorted(expr.free_symbols, key=lambda s: s.name)
     if not symbols:
         return {
@@ -116,7 +169,12 @@ def _solve_single_equation(eq_text: str):
     degree, coeffs = _poly_coeffs(expr, var)
     steps = []
     if degree == 1:
-        steps = _linear_steps(coeffs.get(1, 0), coeffs.get(0, 0), var)
+        # Wave 149: the simple a*var + b = c shape gets
+        # school-style steps narrated from the equation as
+        # asked; everything else keeps _linear_steps.
+        steps = _school_linear_steps(left_expr, right_expr,
+                                     var) or _linear_steps(
+            coeffs.get(1, 0), coeffs.get(0, 0), var)
     elif degree == 2:
         steps = _quadratic_steps(
             coeffs.get(2, 0), coeffs.get(1, 0), coeffs.get(0, 0), var
