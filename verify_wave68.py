@@ -168,8 +168,8 @@ check("no notebook panel in chat",
       '"steps notebook"' not in INDEX and "makeHwToggle" not in INDEX)
 check("no example chips (Wave 69)", INDEX.count('class="example-chip"') == 0
       and 'id="example-chips"' not in INDEX)
-check("pins ?v=52 / v29 (Wave 163)", "v='52'" in BASE
-      and 'GANITRA_CACHE = "ganitra-static-v29"' in SW)
+check("pins ?v=52 / v29 (Wave 163)", "v='53'" in BASE
+      and 'GANITRA_CACHE = "ganitra-static-v30"' in SW)
 check("wave68 CSS present", ".example-chip" not in CSS
       and ".plain-reply" in CSS and ".answer-intro" in CSS)
 
