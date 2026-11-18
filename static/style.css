@@ -642,6 +642,48 @@ body.chat-page .chat-log {
   color: var(--muted); font-size: 16.5px; line-height: 1.6;
   max-width: 560px; margin: 0 auto;
 }
+/* Wave 155: short greeting row + mascot + thought line. The
+   mascot is an original SVG teddy drawn inline in
+   templates/index.html (no image file; nothing to do with the
+   logo or the parked 3D scene). It waves a paw, blinks and
+   bobs gently beside the short greeting, and the day's
+   rotating thought sits below as a small muted line. */
+.empty-hello {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px;
+}
+.empty-thought { font-size: 15px; }
+.mascot {
+  width: 80px; height: 80px; flex: none;
+  animation: mascot-bob 3.4s ease-in-out infinite;
+}
+.mascot-eyes {
+  transform-box: fill-box; transform-origin: center;
+  animation: mascot-blink 4.8s ease-in-out infinite;
+}
+.mascot-paw {
+  transform-box: fill-box; transform-origin: 12% 88%;
+  animation: mascot-wave 2.8s ease-in-out infinite;
+}
+@keyframes mascot-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes mascot-blink {
+  0%, 91%, 100% { transform: scaleY(1); }
+  94% { transform: scaleY(0.08); }
+  97% { transform: scaleY(1); }
+}
+@keyframes mascot-wave {
+  0%, 58%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(-16deg); }
+  22% { transform: rotate(9deg); }
+  34% { transform: rotate(-12deg); }
+  46% { transform: rotate(5deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mascot, .mascot-eyes, .mascot-paw { animation: none; }
+}
 body.chat-page .saathi-card {
   max-width: 560px; margin: 24px auto 4px; padding: 18px 20px;
   text-align: left;
