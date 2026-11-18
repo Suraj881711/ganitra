@@ -36,7 +36,9 @@ Pins:
   * prefers-reduced-motion stills everything (static smile
     pose at home, writing pose only in the bubble, static
     soft glow);
-  * pins moved with the CSS/JS: ?v=50 / ganitra-static-v27;
+  * pins moved with the CSS/JS: ?v=51 / ganitra-static-v28
+    (Wave 161 moved them on from ?v=50 / v27 — palette +
+    placement only; every behaviour pin below is unchanged);
   * SCENE_ENABLED stays False; greeting + thought wiring is
     Wave 155's and untouched.
 """
@@ -268,9 +270,9 @@ def test_reduced_motion_stills_everything():
 
 
 def test_pins_and_scene_flag():
-    assert "v='50'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v27"' in SW
-    assert '"/static/style.css?v=50"' in SW
+    assert "v='51'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v28"' in SW
+    assert '"/static/style.css?v=51"' in SW
     assert "SCENE_ENABLED = False" in APP
 
 

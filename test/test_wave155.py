@@ -13,6 +13,9 @@ positive. (Wave 160 replaced the original teddy with Suraj's
 locked robot character; the mascot-specific assertions below
 were updated to the robot reality — the thoughts, greeting,
 slot and language pins are unchanged.)
+(Wave 161, same day: Suraj moved the robot to a centred line
+ABOVE the greeting — .empty-hello is a centred column now;
+the layout assertion below was updated to pin exactly that.)
 
 Pins:
   * thought bank — >= 50 thoughts, each with all 3 variants
@@ -32,8 +35,8 @@ Pins:
     prefers-reduced-motion rule stills them;
   * Wave 69 stands — no example-question chips anywhere;
   * the 3D scene stays parked (SCENE_ENABLED untouched);
-  * CSS changed, so the pins moved WITH it: ?v=50 /
-    ganitra-static-v27 everywhere.
+  * CSS changed, so the pins moved WITH it: ?v=51 /
+    ganitra-static-v28 everywhere.
 """
 import re
 from datetime import date, datetime, time, timedelta, timezone
@@ -171,10 +174,19 @@ def test_template_greeting_row_structure():
     # Short greeting in the same .empty-greeting element…
     assert '<h2 class="empty-greeting">{{ saathi_greeting_short }}</h2>' \
         in INDEX
-    # …inside the greeting row, after the mascot…
+    # …inside the greeting container, after the mascot…
     assert '<div class="empty-hello">' in INDEX
     assert INDEX.index('class="robot"') < \
         INDEX.index("{{ saathi_greeting_short }}")
+    # Wave 161 pin update (Suraj, 18 Nov 2026 — "robot ko
+    # Muse ki tarah top or beech mai kar do"): the container
+    # is no longer a row with the mascot at the greeting's
+    # left — it is a CENTRED COLUMN, so the robot stands on
+    # its own line above the greeting and both are centred.
+    hello_rule = CSS[CSS.index(".empty-hello {"):]
+    hello_rule = hello_rule[:hello_rule.index("}")]
+    assert "flex-direction: column" in hello_rule
+    assert "align-items: center" in hello_rule
     # …and the thought line BELOW the greeting.
     assert '<p class="empty-sub empty-thought">{{ daily_thought }}</p>' \
         in INDEX
@@ -249,9 +261,9 @@ def test_scene_flag_untouched():
 
 
 def test_pins_moved_with_the_css():
-    assert "v='50'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v27"' in SW
-    assert '"/static/style.css?v=50"' in SW
+    assert "v='51'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v28"' in SW
+    assert '"/static/style.css?v=51"' in SW
 
 
 # --- The page itself -------------------------------------------------------

@@ -93,9 +93,9 @@ def test_finish_details():
 
 
 def test_pins_v42_v19():
-    assert "filename='style.css', v='50'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v27"' in SW
-    assert '"/static/style.css?v=50"' in SW
+    assert "filename='style.css', v='51'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v28"' in SW
+    assert '"/static/style.css?v=51"' in SW
     # Deploy-25 merge: the final pins are ?v=43 / v20 (this
     # wave's ?v=42 / v19 superseded in the combined tree);
     # every earlier pin must be gone.

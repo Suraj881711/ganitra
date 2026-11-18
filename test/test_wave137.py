@@ -455,8 +455,8 @@ def test_reconstruction_is_never_auto_submitted():
 
 
 def test_wave137_static_pins():
-    assert "style.css?v=50" in SW
-    assert "ganitra-static-v27" in SW
+    assert "style.css?v=51" in SW
+    assert "ganitra-static-v28" in SW
 
 
 # --------------------------- rebuilt questions solve when SENT by the
