@@ -4056,6 +4056,55 @@ def _w77_core_ok(question, result):
     return True
 
 
+def _w171_fragment_hijack(question, result, cand):
+    """Wave 171: True when the primary result is a FRAGMENT of
+    a Tier-A question that a strict Wave 169 schema (cand, from
+    solver/tierA169.py) settles completely — so the Wave 169
+    failure-only gate, which requires _w77_needs_core, can
+    never see it.  The measured fragment shapes (Deploy-40
+    live check + Wave 171 audit):
+
+      * op "evaluate": the arithmetic solver evaluated ONE
+        endpoint of a between ask ("Find two rational numbers
+        between 3/5 and 4/5" came back as the bare "3/5") —
+        an echoed sub-expression, never an answer to a
+        method question a strict schema also matches.
+      * op "area": a mensuration fragment (the full circle's
+        area served for a sector-area ask).
+      * op "line equation" on a "perpendicular" ask: the
+        line through the given point with the WRONG slope
+        (the perpendicular condition dropped).
+
+    Displacement is allowed only when the schema's answer
+    verifiably DIFFERS from the primary's: identical strings
+    never displace, and — except for line answers, which are
+    equations, not numbers — equal numeric values never
+    displace either (a primary simple-interest "180" already
+    answers the schema's "Rs 180"; it stands)."""
+    if not isinstance(result, dict) or not isinstance(cand, dict):
+        return False
+    if result.get("op") == cand.get("op"):
+        return False
+    pans = str(result.get("answer", "") or "").strip()
+    cans = str(cand.get("answer", "") or "").strip()
+    if not pans or not cans or pans == cans:
+        return False
+    if not str(cand.get("op", "")).startswith("w169_line"):
+        pv = _w77_result_value(result)
+        cv = _w77_result_value(cand)
+        if pv is not None and cv is not None and abs(pv - cv) < 0.01:
+            return False
+    op = result.get("op")
+    if op == "evaluate":
+        return True
+    if op == "area":
+        return True
+    if op == "line equation" and \
+            "perpendicular" in str(question or "").lower():
+        return True
+    return False
+
+
 def _w77_core_result(original, working):
     """Solve the wrapper-stripped core of a chat-phrased
     question through the ordinary pipeline; None when no
@@ -4824,6 +4873,30 @@ def _solve_question_uncached(question: str):
                         core.get("answer", "")).lower()
                     and "no solution" in str(
                         result.get("answer", "")).lower()):
+                # Wave 171: a Tier-A question whose primary
+                # result failed can be hijacked HERE — the
+                # wrapper-core pass extracts a bare fragment
+                # (the endpoint "3/5" of a between ask) and
+                # would return its evaluation before the
+                # Wave 169 gate below is ever reached (the
+                # Deploy-40 live miss).  When a strict
+                # tierA169 schema settles the whole question
+                # and the core is only a fragment of it
+                # (_w171_fragment_hijack), the schema's
+                # verified answer stands instead; every other
+                # core result is returned exactly as before.
+                try:
+                    from .tierA169 import solve_tierA169
+                    w171 = solve_tierA169(original)
+                    if w171 is None and working != original:
+                        w171 = solve_tierA169(working)
+                except Exception:
+                    w171 = None
+                if w171 is not None and \
+                        _w171_fragment_hijack(original, core, w171):
+                    if was_translated:
+                        w171.setdefault("interpreted_as", translated)
+                    return w171
                 if was_translated:
                     core.setdefault("interpreted_as", translated)
                 return core
@@ -5001,6 +5074,38 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     w169.setdefault("interpreted_as", translated)
                 return w169
+        # Wave 171: fragment-hijack repair for the Tier-A gate
+        # above.  The failure-only gate never fires when the
+        # primary solver "answers" a Tier-A question with a
+        # fragment of it — the Deploy-40 live miss: "Find two
+        # rational numbers between 3/5 and 4/5" left the router
+        # as op "evaluate", answer "3/5" (the first endpoint
+        # evaluated), so the native Wave 169 between schema
+        # never ran and only the Gemini fallback leg answered
+        # correctly.  This block runs the strict tierA169
+        # schemas ONLY for the three measured fragment ops and
+        # displaces ONLY under _w171_fragment_hijack (strict
+        # complete match + verifiably different answer); every
+        # other real primary answer stands untouched.
+        if getattr(_W169_LOCAL, "depth", 0) == 0 and \
+                not _w77_needs_core(original, result) and \
+                result.get("op") in ("evaluate", "area",
+                                     "line equation"):
+            _W169_LOCAL.depth = 1
+            try:
+                from .tierA169 import solve_tierA169
+                w171 = solve_tierA169(original)
+                if w171 is None and working != original:
+                    w171 = solve_tierA169(working)
+            except Exception:
+                w171 = None
+            finally:
+                _W169_LOCAL.depth = 0
+            if w171 is not None and \
+                    _w171_fragment_hijack(original, result, w171):
+                if was_translated:
+                    w171.setdefault("interpreted_as", translated)
+                return w171
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])

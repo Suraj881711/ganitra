@@ -73,6 +73,20 @@ Families:
 
 Phrasings: English book text first; the between family also
 takes the Devanagari ask.  Steps are Ganitra's short voice.
+
+Wave 171 (phrasing coverage): the Wave 169 schemas were tuned
+on book-pool phrasings; natural student phrasings of the SAME
+shapes missed — "…between 3/5 and 4/5?" (sentence-final "?"),
+"lying between", a verb-less ask, the roman-Hinglish "… aur
+… ke beech … batao" forms, "whose arc is …", "… units to its
+left", "the line joining A and B", "with x-intercept" without
+"and having", bare "parallel to 3i + 2j - 2k", a probability
+table stated before its "is the distribution" words, "bought
+… for Rs X and sold it for Rs Y", and "at 5% for 2 years".
+Each broadening below keeps the schema strict (complete
+match, exact recomputation, decline on ambiguity); the
+router-side half of the fix lives in the Wave 171 gate block
+in solver/router.py.
 """
 import math
 import re
@@ -154,6 +168,10 @@ def _sector_radius_arc(q):
                    r"[^0-9]{0,12}?(" + _NUM + r")\s*(cm|mm|m)?", q, re.I)
     if not ma:
         ma = re.search(r"\barc\b[^0-9a-z]{0,10}?(" + _NUM + r")\s*(cm|mm|m)?",
+                       q, re.I)
+    if not ma:
+        # Wave 171: the natural "whose arc is 50 mm" phrasing.
+        ma = re.search(r"\barc\s+is\s+(" + _NUM + r")\s*(cm|mm|m)?",
                        q, re.I)
     if mr and ma:
         return _frac(mr.group(1)), _frac(ma.group(1))
@@ -515,6 +533,19 @@ def _lines_axis_parallel(q):
     md = re.search(r"distance of\s+(" + _NUM + r")", q, re.I)
     steps = []
     if "x-axis" in ql.replace(" ", "") or "x −axis" in ql or "x-axis" in ql:
+        if not md:
+            # Wave 171: "5 units below it" with no "distance of".
+            mu = re.search(r"(" + _NUM + r")\s*units?\s+(above|below)",
+                           ql)
+            if mu:
+                d = abs(_frac(mu.group(1)))
+                v = d if mu.group(2) == "above" else -d
+                steps = [f"A line parallel to the X-axis at distance "
+                         f"{_fmt_fr(d)} {'below' if v < 0 else 'above'} "
+                         f"it has every point's y-coordinate = "
+                         f"{_fmt_fr(v)}."]
+                return _line_answer(Fraction(0), Fraction(1), -v, steps,
+                                    "w169_line_axis_parallel")
         if md:
             d = abs(_frac(md.group(1)))
             if "below" in ql:
@@ -537,6 +568,19 @@ def _lines_axis_parallel(q):
             return _line_answer(Fraction(0), Fraction(1), -v, steps,
                                 "w169_line_axis_parallel")
     if "y-axis" in ql.replace(" ", "") or "y-axis" in ql:
+        if not md:
+            # Wave 171: "7 units to its left" with no "distance of".
+            mu = re.search(r"(" + _NUM + r")\s*units?\s+to\s+"
+                           r"(?:its\s+|the\s+)?(left|right)", ql)
+            if mu:
+                d = abs(_frac(mu.group(1)))
+                v = -d if mu.group(2) == "left" else d
+                steps = [f"A line parallel to the Y-axis at distance "
+                         f"{_fmt_fr(d)} to the "
+                         f"{'left' if v < 0 else 'right'} has every "
+                         f"point's x-coordinate = {_fmt_fr(v)}."]
+                return _line_answer(Fraction(1), Fraction(0), -v, steps,
+                                    "w169_line_axis_parallel")
         if md:
             d = abs(_frac(md.group(1)))
             if "left" in ql:
@@ -670,13 +714,21 @@ def _lines_perpendicular(q):
                  f"{_fmt_fr(px * px + py * py)}."]
         return _line_answer(A, B, C, steps, "w169_line_perp_from_origin")
     # (b) perpendicular to the line through two points
-    mt = re.search(r"through the points\s*" + _PT + r"\s*and\s*" + _PT,
-                   q, re.I)
-    mp = re.search(r"passing through\s*" + _PT, q, re.I)
+    # Wave 171: "the line joining (3, 4) and (5, 6)" and a bare
+    # "through (1, 2)" for the point are the natural phrasings;
+    # the through-point is searched OUTSIDE the two-points span
+    # so it can never be mistaken for one of them.
+    mt = re.search(r"(?:through the points|joining(?:\s+the\s+points)?"
+                   r"|passing through the points)\s*" + _PT
+                   + r"\s*and\s*" + _PT, q, re.I)
+    q_mp = (q[:mt.start()] + " " + q[mt.end():]) if mt else q
+    mp = re.search(r"(?:passing through|through)\s*" + _PT, q_mp, re.I)
     if mt and mp:
         P = (_frac(mp.group(1)), _frac(mp.group(2)))
         A_ = (_frac(mt.group(1)), _frac(mt.group(2)))
         B_ = (_frac(mt.group(3)), _frac(mt.group(4)))
+        if P == A_ or P == B_:
+            return None
         dx, dy = B_[0] - A_[0], B_[1] - A_[1]
         if dx == 0 and dy == 0:
             return None
@@ -695,8 +747,11 @@ def _lines_perpendicular(q):
                  f"{_fmt_fr(P[1])}) is:"]
         return _line_answer(A, B, C, steps, "w169_line_perp_two_points")
     # (c) perpendicular to a given line, with x-intercept
-    mg = re.search(r"perpendicular to the line\s+(.+?)\s+and\s+"
-                   r"(?:having|with)\s+x\s*-?\s*intercept\s+(" + _NUM + r")",
+    # Wave 171: "with x-intercept 3" directly after the given
+    # line (no "and having") is the natural phrasing.
+    mg = re.search(r"perpendicular to the line\s+(.+?)\s*,?\s*"
+                   r"(?:and\s+)?(?:having\s+|with\s+)?"
+                   r"x\s*-?\s*intercept\s+(" + _NUM + r")",
                    q, re.I)
     if mg:
         pc = _parse_line_eq(mg.group(1))
@@ -824,7 +879,9 @@ def _lines_3d(q):
             return None
     # direction
     d = None
-    md = re.search(r"(?:parallel to the vector|in the direction|direction)"
+    # Wave 171: bare "parallel to 3i + 2j - 2k" (no "the vector").
+    md = re.search(r"(?:parallel to(?:\s+the\s+vector)?|in the direction"
+                   r"(?:\s+of)?|direction(?:\s+vector)?)"
                    r"\s+(.+)$", q, re.I)
     if md:
         d = _parse_vec(md.group(1))
@@ -962,7 +1019,16 @@ def _prob_dist(q):
         merged.append(t)
         i += 1
     if len(merged) != len(xs):
-        return None
+        # Wave 171: a table stated BEFORE the words "is the
+        # probability distribution of X" leaves prose tokens
+        # after the P row.  Accept only when the row's own
+        # tokens come first and every extra token is pure prose
+        # (no digit, no k) — a numeric extra declines.
+        if len(merged) > len(xs) and all(
+                not re.search(r"[0-9kK]", t) for t in merged[len(xs):]):
+            merged = merged[:len(xs)]
+        else:
+            return None
     ps = []
     for t in merged:
         e = _p_token(t)
@@ -1070,23 +1136,60 @@ _WORD_NUM = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
 
 
 def _endpoint(seg):
-    """First number token of a segment, if the segment is clean."""
-    seg = seg.strip().strip(".")
+    """First number token of a segment, if the segment is clean.
+
+    Wave 171: sentence-final punctuation and a trailing
+    "please" are clean (the Wave 169 version declined the
+    natural "...between 3/5 and 4/5?" form); a rest that
+    smuggles in a THIRD endpoint ("...and 4/5 and 5/6") now
+    declines instead of silently dropping it."""
+    seg = seg.strip()
+    seg = re.sub(r"(?i)\bplease\s*$", "", seg).strip()
+    seg = seg.rstrip(".?!").strip()
     m = re.match(r"(-?\d+\s*/\s*\d+|-?\d+(?:\.\d+)?)", seg)
     if not m:
         return None
-    rest = seg[m.end():].strip()
-    if rest and not rest.startswith(("(", "and")):
-        return None
+    rest = seg[m.end():].strip().rstrip(".?!").strip()
+    rest = re.sub(r"(?i)^please\b", "", rest).strip()
+    if rest:
+        if rest.startswith("("):
+            pass
+        elif rest.startswith("and") and not re.search(r"\d", rest):
+            pass
+        else:
+            return None
     try:
         return _frac(m.group(1))
     except Exception:
         return None
 
 
+_HINDI_COUNT = {"ek": 1, "do": 2, "teen": 3, "char": 4, "chaar": 4,
+                "panch": 5, "paanch": 5, "chhe": 6, "saat": 7,
+                "aath": 8, "nau": 9, "das": 10}
+_COUNT_TOK = (r"(\d+|one|two|three|four|five|six|seven|eight|nine|"
+              r"ten|eleven|twelve|a|an)")
+_HCOUNT_TOK = (r"(ek|do|teen|char|chaar|panch|paanch|chhe|saat|aath|"
+               r"nau|das|\d+|one|two|three|four|five)")
+
+
+def _between_n(tok):
+    tok = (tok or "a").lower()
+    if tok in _WORD_NUM:
+        return _WORD_NUM[tok]
+    if tok in _HINDI_COUNT:
+        return _HINDI_COUNT[tok]
+    if tok in ("a", "an"):
+        return 1
+    try:
+        return int(tok)
+    except Exception:
+        return None
+
+
 def _between(q):
     ql = q.lower()
-    if "between" not in ql and "के बीच" not in q:
+    if "between" not in ql and "ke beech" not in ql and "के बीच" not in q:
         return None
     if re.search(r"\(\s*ii\s*\)", ql) or (
             re.search(r"\ba\)", ql) and re.search(r"\bb\)", ql)):
@@ -1095,26 +1198,61 @@ def _between(q):
     irrational = ("irrational" in ql) or ("अपरिमेय" in q)
     if not irrational and "rational" not in ql and "परिमेय" not in q:
         return None
-    m = re.search(r"(?:find|write|insert|list|give|state)\s+"
+    # Wave 171 phrasing broadening (all still strict: a count,
+    # the rational/irrational keyword and two clean endpoints
+    # must ALL be present, and the construction below verifies
+    # every served value): sentence-final "?" / "!" terminators,
+    # "lying between", a verb-less ask anchored at the start of
+    # the question, and the roman-Hinglish "… aur … ke beech …
+    # batao" forms in both word orders.
+    _TAIL = r"\s*(?:\.(?!\d)|\?|!|$|\()"
+    m = re.search(r"(?:find|write|insert|list|give|state|tell)\s+"
                   r"(?:any\s+|me\s+)?"
-                  r"(\d+|one|two|three|four|five|six|seven|eight|nine|"
-                  r"ten|eleven|twelve|a|an)?\s*"
+                  + _COUNT_TOK + r"?\s*"
                   r"(?:different\s+|equidistant\s+)?"
-                  r"(?:irrational|rational)\s+numbers?\s+between\s+"
-                  r"(.+?)\s+and\s+(.+?)\s*(?:\.(?!\d)|$|\()", q, re.I)
+                  r"(?:irrational|rational)\s+numbers?\s+"
+                  r"(?:lying\s+)?between\s+"
+                  r"(.+?)\s+and\s+(.+?)" + _TAIL, q, re.I)
     if not m:
-        return None
-    n_tok = (m.group(1) or "a").lower()
-    n = _WORD_NUM.get(n_tok, 1 if n_tok in ("a", "an") else None)
+        m = re.match(r"\s*(?:please\s+)?"
+                     + _COUNT_TOK + r"\s+"
+                     r"(?:different\s+|equidistant\s+)?"
+                     r"(?:irrational|rational)\s+numbers?\s+"
+                     r"(?:lying\s+)?between\s+"
+                     r"(.+?)\s+and\s+(.+?)" + _TAIL, q, re.I)
+    if m:
+        n_tok, seg_a, seg_b = m.group(1), m.group(2), m.group(3)
+    else:
+        mh = re.search(_HCOUNT_TOK + r"\s+(?:irrational|rational)\s+"
+                       r"numbers?\s+(?:batao|bata\s+do)\s+"
+                       r"(.+?)\s+aur\s+(.+?)\s+ke\s+beech\b", q, re.I)
+        if mh:
+            n_tok, seg_a, seg_b = mh.group(1), mh.group(2), mh.group(3)
+        else:
+            mh = re.search(_HCOUNT_TOK + r"\s+(?:irrational|rational)\s+"
+                           r"numbers?\s+"
+                           r"(.+?)\s+aur\s+(.+?)\s+ke\s+beech\s+"
+                           r"(?:mein\s+)?(?:batao|bata\s+do)\b", q, re.I)
+            if mh:
+                n_tok, seg_a, seg_b = (mh.group(1), mh.group(2),
+                                       mh.group(3))
+            else:
+                mh = re.search(r"(.+?)\s+aur\s+(.+?)\s+ke\s+beech\s+"
+                               r"(?:mein\s+|me\s+)?" + _HCOUNT_TOK
+                               + r"\s+(?:irrational|rational)\s+"
+                               r"numbers?\s+(?:batao|bata\s+do)\b",
+                               q, re.I)
+                if not mh:
+                    return None
+                seg_a, seg_b, n_tok = (mh.group(1), mh.group(2),
+                                       mh.group(3))
+    n = _between_n(n_tok)
     if n is None:
-        try:
-            n = int(n_tok)
-        except Exception:
-            return None
+        return None
     if not (1 <= n <= 25):
         return None
-    a = _endpoint(m.group(2))
-    b = _endpoint(m.group(3))
+    a = _endpoint(seg_a)
+    b = _endpoint(seg_b)
     if a is None or b is None or a == b:
         return None
     if a > b:
@@ -1348,8 +1486,13 @@ def _commercial(q):
         return _result("w169_pl_bulk_rate", f"{kind} {_fmt_fr(abs(pct))}%",
                        steps, typ="applied", value=abs(pct))
     # C8: CP/SP pair -> profit percent
-    m8 = re.search(r"(?:purchased|bought)[^.]{0,40}?\bin\s+" + _MONEY
-                   + r"[^.]{0,40}?sold[^.]{0,25}?\bin\s+" + _MONEY, q, re.I)
+    # Wave 171: the natural "bought ... for Rs X and sold it
+    # for Rs Y" / present-tense "buys ... sells" forms join the
+    # pool's extraction-mangled "in" forms.
+    m8 = re.search(r"(?:purchased|bought|buys|buy)\b[^.]{0,45}?"
+                   r"(?:in|for)\s+" + _MONEY
+                   + r"[^.]{0,45}?(?:sold|sells)\b[^.]{0,30}?"
+                   r"(?:in|for)\s+" + _MONEY, q, re.I)
     if m8 and "profit percent" in ql:
         cp, spv = _frac(m8.group(1)), _frac(m8.group(2))
         if cp <= 0 or spv <= cp:
@@ -1362,10 +1505,14 @@ def _commercial(q):
         return _result("w169_pl_pair_pct", f"{_fmt_fr(pct)}%", steps,
                        typ="applied", value=pct)
     # C9: simple interest sentence form
-    if "interest" in ql:
+    # Wave 171: compound-interest asks decline (this schema is
+    # simple interest only), and the bare "at 5% for 2 years"
+    # rate phrasing joins "rate of" / "% per annum".
+    if "interest" in ql and "compound" not in ql:
         mp9 = re.search(r"rate of\s+(" + _NUM + r")\s*%", q, re.I) or \
             re.search(r"(" + _NUM + r")\s*%\s*(?:annual|per annum|annually)",
-                      q, re.I)
+                      q, re.I) or \
+            re.search(r"\bat\s+(" + _NUM + r")\s*%", q, re.I)
         mt9 = re.search(r"for\s+(" + _NUM + r")\s*years?", q, re.I)
         moneys = re.findall(_MONEY, q, re.I)
         P = _frac(moneys[0]) if moneys else None
