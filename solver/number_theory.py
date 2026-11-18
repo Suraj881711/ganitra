@@ -427,6 +427,107 @@ def solve_number_theory(question: str):
                     f"Add {_d65 - _base65 % _d65 if _base65 % _d65 else 0}"
                     f" to reach {_v65}"]}
 
+    # Wave 150: prime-FACTOR asks are not primality asks.
+    # "Find prime factors of 1728" used to hit the prime
+    # check below and serve "1728 is not prime" — the
+    # audits' isprime hijack (UP idx 3841/3847/3848, Bihar
+    # likewise). Three shapes, all before the prime check:
+    # (a) the factors are GIVEN and the number is asked
+    #     ("prime factors of a number are 2, 2 and 3, find
+    #     the number") -> their product;
+    # (b) two factors are given and the prime factors of
+    #     the number are asked -> factorise the product;
+    # (c) the plain ask ("prime factors of N", possibly a
+    #     list of numbers) -> factorise each number named
+    #     after the ask phrase.
+    _pf_given = re.search(
+        r"prime\s+factors?\s+of\s+a\s+number\s+are\s+"
+        r"([\d][\d,\s]*(?:and\s+\d+)?)", q)
+    if _pf_given:
+        _facs = [int(v) for v in
+                 re.findall(r"\d+", _pf_given.group(1))]
+        if _facs:
+            import math as _m150
+            _prod = _m150.prod(_facs)
+            return {"type": "number_theory", "op": "factorint",
+                    "answer": str(_prod), "value": _prod,
+                    "steps": ["The number is the product of "
+                              "its prime factors: "
+                              + " × ".join(str(v) for v in _facs)
+                              + f" = {_prod}"]}
+    # (a2) the factorisation is described by COUNT words
+    # ("prime factorisation of a number has one 2, two 3s,
+    # and one 11. What is the number?") -> prod p^count.
+    _pf_has = re.search(
+        r"prime\s+factorisation\s+of\s+a\s+number\s+has\s+"
+        r"(.+?)(?:\.|\?|$)", q)
+    if _pf_has:
+        _cnt_words = {"one": 1, "two": 2, "three": 3,
+                      "four": 4, "five": 5, "six": 6}
+        _pairs = re.findall(
+            r"(one|two|three|four|five|six|\d+)\s+"
+            r"(\d+)s?\b", _pf_has.group(1))
+        if _pairs:
+            _prod = 1
+            _desc = []
+            for _cnt, _p in _pairs:
+                _e = _cnt_words.get(_cnt)
+                if _e is None:
+                    _e = int(_cnt)
+                _prod *= int(_p) ** _e
+                _desc.append(f"{_p}^{_e}")
+            return {"type": "number_theory", "op": "factorint",
+                    "answer": str(_prod), "value": _prod,
+                    "steps": ["The number is the product of "
+                              "its prime factors: "
+                              + " × ".join(_desc)
+                              + f" = {_prod}"]}
+    _f_given = re.search(
+        r"factors?\s+of\s+a\s+number\s+are\s+(\d+)\s+and\s+"
+        r"(\d+)", q)
+    if _f_given and "prime factor" in q:
+        _n150 = int(_f_given.group(1)) * int(_f_given.group(2))
+        return {"type": "number_theory", "op": "factorint",
+                "answer": f"{_n150} = {_factor_str(_n150)}",
+                "value": {str(k): v for k, v in
+                          factorint(_n150).items()},
+                "steps": [f"The number is {_f_given.group(1)} "
+                          f"× {_f_given.group(2)} = {_n150}",
+                          f"Prime factorisation: {_n150} = "
+                          f"{_factor_str(_n150)}"]}
+    if "prime factor" in q:
+        _tail = q[q.index("prime factor"):]
+        _of = _tail.index("of") if "of" in _tail else -1
+        _nums = [int(v) for v in re.findall(
+            r"\d+", _tail[_of + 2:])] if _of >= 0 else []
+        # Unique numbers only, and at most 6: a longer
+        # tail is a whole textbook PAGE whose numbers are
+        # not a factorisation list (the Ganita Prakash
+        # exposition pages) — leave those to the layers
+        # below instead of factorising the page.
+        _uniq = list(dict.fromkeys(_nums))
+        if len(_uniq) > 6:
+            _nums = []
+        elif _uniq != _nums or 1 in _uniq:
+            _nums = [v for v in _uniq if v > 1]
+        if _nums and _nums != [1]:
+            if len(_nums) == 1:
+                _n = _nums[0]
+                return {"type": "number_theory",
+                        "op": "factorint",
+                        "answer": _factor_str(_n),
+                        "value": {str(k): v for k, v in
+                                  factorint(_n).items()},
+                        "steps": [f"Break {_n} into prime "
+                                  f"factors: {_factor_str(_n)}"]}
+            _parts = [f"{_n} = {_factor_str(_n)}"
+                      for _n in _nums]
+            return {"type": "number_theory", "op": "factorint",
+                    "answer": "; ".join(_parts),
+                    "value": None,
+                    "steps": [f"Prime factorisation: {_p}"
+                              for _p in _parts]}
+
     # Prime check
     if "prime" in q:
         n = _first_int(question)

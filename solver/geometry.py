@@ -490,6 +490,17 @@ def _area_perimeter_volume(q: str):
         _pi, _u227, _reason = (pi_choice(diameter=d)
                                if d is not None
                                else pi_choice(radius=r))
+        # Wave 150: the DIAMETER itself asked from a stated
+        # radius ("radius is 4.5 cm, find the measure of the
+        # diameter") — the branch used to fall through to
+        # the area and serve pi*r^2 for a length ask (the
+        # UP Board audit's diameter case). Mirror of Wave
+        # 59's radius-from-diameter branch above.
+        if d is None and "diameter" in q and "area" not in q:
+            steps = [f"Diameter = 2 × radius = 2 × "
+                     f"{fmt_num(r)}",
+                     f"= {fmt_num(2 * r)}"]
+            return "diameter", fmt_num(2 * r), steps
         if wants_circumference(q) or "perimeter" in q:
             val = 2 * _pi * r
             if _u227:
