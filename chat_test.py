@@ -80,14 +80,32 @@ Design (all deterministic — no AI calls anywhere):
        next question / result rides as a plain trailing
        bubble (``w124_next`` in the payload).
   4. End card (plain lines): Score x/y, %, time taken, the
-     Sahi / Galat / Answer dekha / Skip counts, the weak
-     topics (from WRONG answers only), one-line advice —
-     all in the student's language flavour (en / roman /
-     dev, via followups.flavour_for, incl. the Wave-107
+     Sahi / Galat / Answer dekha / Skip counts, the weakest
+     1–2 topics, one-line advice — all in the student's
+     language flavour (en / roman / dev, via
+     followups.flavour_for, incl. the Wave-107
      explicit-language override captured at test start).
      Wrong answers are also written into the existing
      Mistake Notebook session mechanism (same entry shape
      as app._record_mistakes, source "chat test").
+
+     Wave 164 upgrades this end card into a diagnostic
+     (the Wave-162 all-AI comparison's adoption #2, from
+     Gemini's test summaries — Ganitra's own version):
+     when more than one topic was attempted, a per-topic
+     breakdown (Sahi / Galat / Dekha per topic, Skip shown
+     when it happened); the weakest topics are the top 1–2
+     by not-right count (wrong + answer-dekha, so a topic
+     the student kept peeking at also counts as weak); and
+     one concrete next step naming the weakest topic and
+     pointing at the Wave-87 practice entry — "My Weak
+     Topics" in the Mistake Notebook, which builds a fresh
+     set from these very mistakes (the wrong answers above
+     are already recorded there). Every number on the card
+     comes from THIS test's recorded outcomes only. A
+     one-question test stays minimal and honest: score,
+     counts, weakest topic, advice — no breakdown and no
+     practice line.
 
 * NO hard timer in chat v1 — deliberate: the page modes own
   timers. Elapsed time is recorded and shown in the result.
@@ -463,6 +481,15 @@ _LINES = {
         "left": "{r} questions were left.",
         "weak": "Weak topics: {topics}",
         "no_weak": "No topic went wrong 🎉",
+        "diag_head": "Topic-wise:",
+        "diag_topic": "{topic} — Correct {c} • Wrong {w} • "
+                      "Dekha {v}",
+        "diag_skip": " • Skip {k}",
+        "practice_next": "{topic}: {bad} did not go right — "
+                         "practise this topic? 'My Weak "
+                         "Topics' (Mistake Notebook) has a "
+                         "fresh set from these mistakes "
+                         "ready.",
         "advice_high": "Great work — keep practising like "
                        "this daily.",
         "advice_mid": "Good effort — revise the weak topics "
@@ -502,6 +529,14 @@ _LINES = {
         "left": "Baaki {r} sawal bache the.",
         "weak": "Kamzor topic: {topics}",
         "no_weak": "Koi topic galat nahi hua 🎉",
+        "diag_head": "Topic ke hisaab se:",
+        "diag_topic": "{topic} — Sahi {c} • Galat {w} • "
+                      "Dekha {v}",
+        "diag_skip": " • Skip {k}",
+        "practice_next": "{topic} me {bad} sahi nahi hue — "
+                         "iski practice karein? 'My Weak "
+                         "Topics' (Mistake Notebook) me inhi "
+                         "galtiyon se naya set taiyaar hai.",
         "advice_high": "Bahut badhiya — aise hi roz practice "
                        "karte raho.",
         "advice_mid": "Achha prayas — kamzor topic ek baar "
@@ -540,6 +575,14 @@ _LINES = {
         "left": "बाकी {r} सवाल बचे थे।",
         "weak": "कमज़ोर विषय: {topics}",
         "no_weak": "कोई विषय गलत नहीं हुआ 🎉",
+        "diag_head": "विषय के हिसाब से:",
+        "diag_topic": "{topic} — सही {c} • गलत {w} • "
+                      "देखा {v}",
+        "diag_skip": " • छोड़े {k}",
+        "practice_next": "{topic} में {bad} सही नहीं हुए — "
+                         "इसका अभ्यास करें? 'My Weak Topics' "
+                         "(Mistake Notebook) में इन्हीं "
+                         "गलतियों से नया सेट तैयार है।",
         "advice_high": "बहुत बढ़िया — ऐसे ही रोज़ अभ्यास "
                        "करते रहो।",
         "advice_mid": "अच्छा प्रयास — कमज़ोर विषय एक बार "
@@ -844,6 +887,50 @@ def _counts(state):
     return c
 
 
+def _topic_rows(state):
+    """Wave 164: per-topic outcome rows over the questions
+    REACHED, in first-attempt order — one row per distinct
+    topic label with correct / wrong / dekha / skip counts.
+    "Dekha" is the card's Answer-dekha bucket: the "seen"
+    outcome plus the solve-command outcome (Ganitra solved
+    and showed it — 0 marks either way). Facts only: every
+    number comes from this test's own recorded outcomes."""
+    rows = []
+    by_label = {}
+    for outcome, item in zip(state["outcomes"],
+                             state["items"]):
+        label = item.get("topic_label") or ""
+        if not label:
+            continue
+        row = by_label.get(label)
+        if row is None:
+            row = {"topic": label, "correct": 0, "wrong": 0,
+                   "dekha": 0, "skip": 0}
+            by_label[label] = row
+            rows.append(row)
+        kind = outcome["outcome"]
+        if kind in ("seen", "solved"):
+            row["dekha"] += 1
+        elif kind in ("correct", "wrong", "skip"):
+            row[kind] += 1
+    return rows
+
+
+def _weakest_rows(state, limit=2):
+    """Wave 164: the weakest topics of THIS test, weakest
+    first — ranked by not-right count (wrong + dekha: a
+    topic the student answered wrong OR kept peeking at),
+    ties broken by wrong count, then by first attempt (the
+    rows arrive in first-attempt order and the sort is
+    stable). Only topics with at least one not-right
+    question qualify."""
+    rows = [r for r in _topic_rows(state)
+            if r["wrong"] + r["dekha"] > 0]
+    rows.sort(key=lambda r: (-(r["wrong"] + r["dekha"]),
+                             -r["wrong"]))
+    return rows[:limit]
+
+
 def _progress_line(state):
     ln = _LINES[state["flavour"]]
     return ln["progress"].format(
@@ -887,17 +974,34 @@ def _result_lines(state, stopped=False):
         time.time() - state["started_at"], state["flavour"])))
     if stopped and total - reached > 0:
         lines.append(ln["left"].format(r=total - reached))
-    weak, seen_topics = [], set()
-    for outcome, item in zip(state["outcomes"], state["items"]):
-        if outcome["outcome"] == "wrong":
-            label = item.get("topic_label") or ""
-            if label and label not in seen_topics:
-                seen_topics.add(label)
-                weak.append(label)
-    if weak:
-        lines.append(ln["weak"].format(topics=", ".join(weak)))
+    # Wave 164 diagnostic: per-topic breakdown (only when
+    # more than one topic was attempted — with a single
+    # topic the counts line above already says it all), the
+    # weakest 1–2 topics named plainly, and one concrete
+    # next step into the Wave-87 weak-topic practice. A
+    # one-question test stays minimal: no breakdown, no
+    # practice line.
+    rows = _topic_rows(state)
+    if len(rows) > 1:
+        lines.append(ln["diag_head"])
+        for row in rows:
+            line = ln["diag_topic"].format(
+                topic=row["topic"], c=row["correct"],
+                w=row["wrong"], v=row["dekha"])
+            if row["skip"]:
+                line += ln["diag_skip"].format(k=row["skip"])
+            lines.append(line)
+    weakest = _weakest_rows(state)
+    if weakest:
+        lines.append(ln["weak"].format(
+            topics=", ".join(r["topic"] for r in weakest)))
     else:
         lines.append(ln["no_weak"])
+    if weakest and reached >= 2:
+        top = weakest[0]
+        lines.append(ln["practice_next"].format(
+            topic=top["topic"],
+            bad=top["wrong"] + top["dekha"]))
     if denom and pct >= 80:
         lines.append(ln["advice_high"])
     elif denom and pct >= 50:
