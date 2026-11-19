@@ -4601,6 +4601,28 @@ def _solve_question_uncached(question: str):
                 out["interpreted_as"] = translated
             return out
 
+    # Wave 202: a series-bearing NEXT-TERM ask in any
+    # phrasing ("predict the next number: 3, 6, 11, 18, 27",
+    # "pattern batao: 7, 14, 21, 28, ?", a bare "2, 4, 8,
+    # 16, ?") carries no AP/GP keyword for route_intent, so
+    # it fell to the arithmetic parser and errored — the
+    # native sequence engine (solver/sequences.py) settles
+    # it from the numbers. Its own gates (an extractable
+    # series + a next-term intent; nth-term / sum / average
+    # / MCQ vetoes) return None for every other shape, so
+    # the flow below is then exactly the pre-Wave-202 one.
+    try:
+        from .sequences import solve_series_next
+        out = solve_series_next(working)
+        if out is None and working != original:
+            out = solve_series_next(original)
+    except Exception:
+        out = None
+    if out is not None:
+        if was_translated:
+            out["interpreted_as"] = translated
+        return out
+
     # Wave 56: heights-and-distances shapes can route to
     # geometry ("Two poles ... distance between their
     # tops") and never reach trigonometry. Try trigonometry

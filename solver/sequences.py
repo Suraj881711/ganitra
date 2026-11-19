@@ -152,6 +152,444 @@ def _wave65_sequences(q):
     return None
 
 
+# ---------------------------------------------------------------------------
+# Wave 202: the native SEQUENCE ENGINE — next term by the NUMBERS,
+# not by the phrasing.
+#
+# Suraj (20 Nov 2026): "prediction nhi kar paa rha hai ganitra
+# achhe se" + "questions ko achhe se samajh nahi raha hai". The
+# parent probed the live site with 10 series questions: only ONE
+# ("next term kya hoga 100, 90, 80") was solved natively — the
+# Wave 42/56 next-term paths recognise a few fixed WORDINGS
+# ("next term", "agla pad", "ke baad") and only AP/GP patterns.
+# Every other phrasing ("predict the next number", "pattern
+# batao", a bare "2, 4, 8, 16, ?", a second-difference series)
+# fell to the AI legs, and when the legs all came back silent
+# the chain collapsed to "Answer not found." (see
+# ganitra-wave202-notes.md for the traced seam).
+#
+# This engine therefore works the other way round: extract the
+# number series from the message WHATEVER words surround it
+# (English / Hinglish / Devanagari, comma or space separated,
+# Devanagari digits folded), require a next-term INTENT (a
+# prediction/next/pattern marker in any script, or a bare
+# series shape), refuse every differently-shaped ask (nth term,
+# sum, common difference, average, MCQ...), and detect the
+# pattern MATHEMATICALLY with exact Fraction arithmetic, in a
+# fixed priority order — simplest school pattern first.
+# ---------------------------------------------------------------------------
+from fractions import Fraction as _F202
+
+_W202_NUM = r"-?\d+(?:\.\d+)?(?:\s*/\s*\d+)?"
+_W202_RUN = re.compile(
+    r"(" + _W202_NUM + r"(?:\s*,\s*|\s+)" + _W202_NUM +
+    r"(?:(?:\s*,\s*|\s+)" + _W202_NUM + r")+)")
+
+
+def _w202_token_value(tok):
+    tok = tok.strip()
+    try:
+        if "/" in tok:
+            a, b = tok.split("/", 1)
+            return _F202(int(a.strip()), int(b.strip()))
+        return _F202(tok)
+    except Exception:
+        return None
+
+
+def extract_series_terms(text):
+    """The longest run of >= 3 numbers written as a series in
+    `text` (comma and/or space separated, fractions allowed,
+    Devanagari digits folded), as exact Fractions — or None.
+    Separators between two terms may contain ONLY spaces and
+    at most one comma, so the numbers of a word problem
+    ("3 pens, 5 books") never fuse into a fake series."""
+    if not text:
+        return None
+    t = str(text).translate(_DEV_DIGITS_42)
+    best = None
+    for m in _W202_RUN.finditer(t):
+        raw = m.group(1)
+        # A separator run with two commas or a comma inside a
+        # space-run is not one series (defensive: the regex
+        # already forbids words between terms).
+        toks = re.findall(_W202_NUM, raw)
+        if len(toks) < 3:
+            continue
+        vals = [_w202_token_value(tok) for tok in toks]
+        if any(v is None for v in vals):
+            continue
+        if best is None or len(vals) > len(best[0]) or (
+                len(vals) == len(best[0]) and m.start() > best[1]):
+            best = (vals, m.start(), m.end(), raw)
+    if best is None:
+        return None
+    return best[0]
+
+
+def _w202_series_span(text):
+    """(terms, start, end) of the chosen run, or None."""
+    if not text:
+        return None
+    t = str(text).translate(_DEV_DIGITS_42)
+    best = None
+    for m in _W202_RUN.finditer(t):
+        raw = m.group(1)
+        toks = re.findall(_W202_NUM, raw)
+        if len(toks) < 3:
+            continue
+        vals = [_w202_token_value(tok) for tok in toks]
+        if any(v is None for v in vals):
+            continue
+        if best is None or len(vals) > len(best[0]) or (
+                len(vals) == len(best[0]) and m.start() > best[1]):
+            best = (vals, m.start(), m.end())
+    return best
+
+
+_W202_MARKERS = re.compile(
+    r"predict|prediction|next|agla|agli|agle|series|sequence|"
+    r"pattern|aayega|kya\s+hoga|kya\s+aayega|comes\s+next|"
+    r"coming\s+next|what\s+comes|continue|"
+    r"batao|bataao|bataiye|"
+    r"अगला|अगली|अगले|श्रृंखला|श्रेणी|अनुक्रम|पैटर्न|आगे",
+    re.IGNORECASE)
+
+_W202_VETO = re.compile(
+    r"\bsum\b|\btotal\b|average|ausat|ausaat|avrej|avrage|mean\b|median|mode\b|"
+    r"nth\s+term|n-th\s+term|general\s+term|which\s+term|"
+    r"how\s+many\s+terms|number\s+of\s+terms|"
+    r"common\s+(difference|ratio)|\bantar\b|first\s+term\s+is|"
+    r"term\s+from\s+the\s+end|"
+    r"\d+\s*(?:st|nd|rd|th)\s+term|"
+    r"\d+\s*(?:वां|वाँ|वीं|वा)\s*पद|"
+    r"\d+\s*(?:va|wa|vaa)\s+(?:pad|term)\b|"
+    r"योग|जोड़|औसत|अंतर|पदों\s+का\s+योग",
+    re.IGNORECASE)
+
+
+def is_series_next_ask(question):
+    """True when `question` carries an extractable series
+    (>= 3 terms) AND a next-term intent, and is NOT a
+    differently-shaped ask (nth term / sum / average / ...).
+    Used by the engine's hook, the router pre-dispatch and
+    aiverify's malformed-answer guard."""
+    if not question:
+        return False
+    q = str(question)
+    if _W202_VETO.search(q):
+        return False
+    # MCQ options: the Wave-146 authority owns those.
+    if re.search(r"\(\s*[a-dA-D]\s*\)", q) and \
+            re.search(r"\(\s*[b-dB-D]\s*\)", q):
+        return False
+    span = _w202_series_span(q)
+    if span is None:
+        return False
+    terms, start, end = span
+    if _W202_MARKERS.search(q):
+        return True
+    # Bare shape: once the series itself is removed,
+    # NOTHING word-like is left — a pasted series with at
+    # most punctuation around it (a trailing "?", "...").
+    # The bar is zero words, deliberately: the router's
+    # Wave-77 core pass re-solves FRAGMENTS carved out of
+    # longer questions ("AP: 3, 8, 13, 18, ... d" from a
+    # find-d ask, "X = 1, 2, 4" from a distribution ask),
+    # and a fragment's one or two leftover label words must
+    # never promote it to a next-term ask — the broad gate
+    # caught exactly those two hijacks (Wave 188/195).
+    rest = (q[:start] + " " + q[end:]).translate(_DEV_DIGITS_42)
+    rest = re.sub(r"[?\.,…:;!\"'()\-=/]", " ", rest)
+    words = [w for w in rest.split() if w.strip()]
+    return len(words) == 0
+
+
+def _w202_fmt(v, fraction_style=False):
+    """Format an exact Fraction the school way: integers
+    plain, a p/q when the series itself was written in
+    fractions, a trimmed decimal otherwise."""
+    if not isinstance(v, _F202):
+        v = _F202(v)
+    if v.denominator == 1:
+        return str(v.numerator)
+    if fraction_style:
+        return f"{v.numerator}/{v.denominator}"
+    return fmt_num(float(v))
+
+
+def _w202_is_prime(n):
+    if n < 2:
+        return False
+    i = 2
+    while i * i <= n:
+        if n % i == 0:
+            return False
+        i += 1 if i == 2 else 2
+    return True
+
+
+def _w202_next_prime(n):
+    c = n + 1
+    while not _w202_is_prime(c):
+        c += 1
+    return c
+
+
+def _w202_next_composite(n):
+    c = n + 1
+    while c < 4 or _w202_is_prime(c):
+        c += 1
+    return c
+
+
+def _w202_sub_rule(sub):
+    """("AP", d) / ("GP", r) for a subsequence, or None.
+    A 2-term subsequence is read as AP by its difference
+    (the weakest claim, used only inside interleaving)."""
+    if len(sub) < 2:
+        return None
+    if len(sub) == 2:
+        return "AP", sub[1] - sub[0]
+    diffs = [sub[i + 1] - sub[i] for i in range(len(sub) - 1)]
+    if all(d == diffs[0] for d in diffs):
+        return "AP", diffs[0]
+    if all(t != 0 for t in sub[:-1]):
+        ratios = [sub[i + 1] / sub[i] for i in range(len(sub) - 1)]
+        if all(r == ratios[0] for r in ratios):
+            return "GP", ratios[0]
+    return None
+
+
+def _w202_detect(terms, fraction_style=False):
+    """Detect the pattern of `terms` (Fractions, len >= 3)
+    mathematically. Returns (family, next_term, steps) or
+    None. Priority: simplest school pattern first — AP, GP,
+    squares/cubes (+- offset), second difference, differences
+    in GP, Fibonacci-type, primes/composites, interleaved,
+    multiply-add recurrence, ratios in AP (factorial family).
+    Where two families genuinely generate the same series
+    (squares ARE a second-difference family; a x a+b
+    recurrence's differences ARE a GP) they agree on the
+    next term, so the order only chooses the explanation."""
+    n = len(terms)
+    last = terms[-1]
+    diffs = [terms[i + 1] - terms[i] for i in range(n - 1)]
+
+    def fmt(v):
+        return _w202_fmt(v, fraction_style)
+
+    def join(vals):
+        return ", ".join(fmt(v) for v in vals)
+
+    # 1. Arithmetic — constant difference.
+    if all(d == diffs[0] for d in diffs):
+        d = diffs[0]
+        nxt = last + d
+        return "ap", nxt, [
+            f"AP with a = {fmt(terms[0])}, d = {fmt(d)}",
+            f"Each term adds {fmt(d)}, so the term after "
+            f"{fmt(last)} is {fmt(last)} + {fmt(d)} = {fmt(nxt)}"]
+
+    # 2. Geometric — constant ratio.
+    if all(t != 0 for t in terms[:-1]):
+        ratios = [terms[i + 1] / terms[i] for i in range(n - 1)]
+        if all(r == ratios[0] for r in ratios):
+            r = ratios[0]
+            nxt = last * r
+            return "gp", nxt, [
+                f"GP with a = {fmt(terms[0])}, r = {fmt(r)}",
+                f"Each term multiplies by {fmt(r)}, so the "
+                f"term after {fmt(last)} is {fmt(last)} × "
+                f"{fmt(r)} = {fmt(nxt)}"]
+
+    # 3. Squares / cubes, with a constant offset allowed.
+    for power, label in ((2, "square"), (3, "cube")):
+        root0 = None
+        base = terms[0]
+        if base >= 0:
+            approx = round(float(base) ** (1.0 / power))
+            for cand in range(max(0, approx - 2), approx + 3):
+                if _F202(cand ** power) <= base:
+                    root0 = cand
+        if root0 is None:
+            continue
+        for b0 in range(max(0, root0 - 1), root0 + 2):
+            off = terms[0] - _F202(b0 ** power)
+            if all(terms[i] - off == _F202((b0 + i) ** power)
+                   for i in range(n)):
+                bn = b0 + n
+                nxt = _F202(bn ** power) + off
+                sym = "²" if power == 2 else "³"
+                parts = []
+                for i in range(n):
+                    piece = f"{b0 + i}{sym}"
+                    if off > 0:
+                        piece += f" + {fmt(off)}"
+                    elif off < 0:
+                        piece += f" - {fmt(-off)}"
+                    parts.append(piece)
+                step1 = (f"Each term is a {label}"
+                         + (f" plus {fmt(off)}" if off > 0 else
+                            f" minus {fmt(-off)}" if off < 0 else "")
+                         + f": {', '.join(parts)}")
+                tail = f"{bn}{sym}"
+                if off > 0:
+                    tail += f" + {fmt(off)}"
+                elif off < 0:
+                    tail += f" - {fmt(-off)}"
+                return f"{label}s", nxt, [
+                    step1,
+                    f"Next term = {tail} = {fmt(nxt)}"]
+
+    # 4. Second difference constant (the differences form
+    # an AP) — the 3, 6, 11, 18, 27 family.
+    if n >= 4:
+        sd = [diffs[i + 1] - diffs[i] for i in range(len(diffs) - 1)]
+        if sd[0] != 0 and all(s == sd[0] for s in sd):
+            nd = diffs[-1] + sd[0]
+            nxt = last + nd
+            return "second_difference", nxt, [
+                f"Differences: {join(diffs)} — they grow by "
+                f"{fmt(sd[0])} each time",
+                f"Next difference = {fmt(diffs[-1])} + "
+                f"{fmt(sd[0])} = {fmt(nd)}",
+                f"Next number = {fmt(last)} + {fmt(nd)} = "
+                f"{fmt(nxt)}"]
+
+    # 5. The differences themselves form a GP.
+    if n >= 4 and all(d != 0 for d in diffs[:-1]):
+        dratios = [diffs[i + 1] / diffs[i]
+                   for i in range(len(diffs) - 1)]
+        if dratios[0] != 1 and all(r == dratios[0]
+                                   for r in dratios):
+            nd = diffs[-1] * dratios[0]
+            nxt = last + nd
+            return "diff_gp", nxt, [
+                f"Differences: {join(diffs)} — they multiply "
+                f"by {fmt(dratios[0])} each time",
+                f"Next difference = {fmt(diffs[-1])} × "
+                f"{fmt(dratios[0])} = {fmt(nd)}",
+                f"Next number = {fmt(last)} + {fmt(nd)} = "
+                f"{fmt(nxt)}"]
+
+    # 6. Fibonacci-type — each term is the sum of the two
+    # before it (needs >= 4 terms: two confirmations).
+    if n >= 4 and all(terms[i] == terms[i - 1] + terms[i - 2]
+                      for i in range(2, n)):
+        nxt = terms[-1] + terms[-2]
+        return "fibonacci", nxt, [
+            f"Each term is the sum of the two before it: "
+            f"{fmt(terms[-3])} + {fmt(terms[-2])} = "
+            f"{fmt(terms[-1])}",
+            f"Next term = {fmt(terms[-2])} + {fmt(last)} = "
+            f"{fmt(nxt)}"]
+
+    # 7. Consecutive primes / composites (whole terms only).
+    if all(t.denominator == 1 for t in terms):
+        ints = [int(t) for t in terms]
+        if all(_w202_is_prime(v) for v in ints) and all(
+                _w202_next_prime(ints[i]) == ints[i + 1]
+                for i in range(n - 1)):
+            nxt = _F202(_w202_next_prime(ints[-1]))
+            return "primes", nxt, [
+                "The terms are consecutive prime numbers",
+                f"The next prime after {ints[-1]} is "
+                f"{fmt(nxt)}"]
+        if all(v >= 4 and not _w202_is_prime(v) for v in ints) \
+                and all(_w202_next_composite(ints[i])
+                        == ints[i + 1] for i in range(n - 1)):
+            nxt = _F202(_w202_next_composite(ints[-1]))
+            return "composites", nxt, [
+                "The terms are consecutive composite numbers",
+                f"The next composite after {ints[-1]} is "
+                f"{fmt(nxt)}"]
+
+    # 8. Interleaved — two alternating series, each AP/GP.
+    # The longer subsequence must verify on >= 3 terms.
+    if n >= 5:
+        sub_a = terms[0::2]
+        sub_b = terms[1::2]
+        rule_a = _w202_sub_rule(sub_a)
+        rule_b = _w202_sub_rule(sub_b)
+        if rule_a and rule_b and len(sub_a) >= 3:
+            if n % 2 == 0:
+                kind, step = rule_a
+                nxt = sub_a[-1] + step if kind == "AP" \
+                    else sub_a[-1] * step
+            else:
+                kind, step = rule_b
+                nxt = sub_b[-1] + step if kind == "AP" \
+                    else sub_b[-1] * step
+            return "interleaved", nxt, [
+                f"Two series alternate: {join(sub_a)} and "
+                f"{join(sub_b)}",
+                f"Following the alternating pattern, the "
+                f"next term is {fmt(nxt)}"]
+
+    # 9. Multiply-add recurrence: t = a * prev + b with
+    # whole a, b (a not in {0, 1} — those are GP/AP shapes).
+    if n >= 4 and diffs[0] != 0:
+        a_frac = diffs[1] / diffs[0]
+        if a_frac.denominator == 1:
+            a = int(a_frac)
+            b = terms[1] - a * terms[0]
+            if a not in (0, 1) and abs(a) <= 12 \
+                    and b.denominator == 1 and all(
+                        terms[i] == a * terms[i - 1] + b
+                        for i in range(1, n)):
+                nxt = a * last + b
+                btxt = f"+ {int(b)}" if b > 0 else \
+                    (f"- {int(-b)}" if b < 0 else "")
+                return "recurrence", nxt, [
+                    f"Each term = previous × {a} "
+                    f"{btxt}".strip(),
+                    f"Next term = {fmt(last)} × {a} {btxt} = "
+                    f"{fmt(nxt)}"]
+
+    # 10. Ratios in AP — the factorial family (1, 2, 6, 24,
+    # ...: ratios 2, 3, 4, 5 grow by 1).
+    if n >= 4 and all(t != 0 for t in terms[:-1]):
+        ratios = [terms[i + 1] / terms[i] for i in range(n - 1)]
+        rd = [ratios[i + 1] - ratios[i]
+              for i in range(len(ratios) - 1)]
+        if rd[0] != 0 and all(d == rd[0] for d in rd):
+            nr = ratios[-1] + rd[0]
+            nxt = last * nr
+            return "ratio_ap", nxt, [
+                f"Ratios: {join(ratios)} — they grow by "
+                f"{fmt(rd[0])} each time",
+                f"Next term = {fmt(last)} × {fmt(nr)} = "
+                f"{fmt(nxt)}"]
+
+    return None
+
+
+def solve_series_next(question):
+    """Wave 202: the native next-term engine. Returns a
+    sequences result dict for a series-bearing next-term ask
+    in ANY phrasing, or None — for a differently-shaped ask,
+    for no extractable series, and for a series whose pattern
+    no family settles (the caller's AI legs stay the backstop
+    for that residue, per the standing rule)."""
+    if not is_series_next_ask(question):
+        return None
+    span = _w202_series_span(question)
+    if span is None:
+        return None
+    terms = span[0]
+    raw = str(question).translate(_DEV_DIGITS_42)
+    fraction_style = "/" in raw
+    found = _w202_detect(terms, fraction_style=fraction_style)
+    if found is None:
+        return None
+    _family, nxt, steps = found
+    answer = _w202_fmt(nxt, fraction_style)
+    value = int(nxt) if nxt.denominator == 1 else float(nxt)
+    return {"type": "sequences", "op": "series_next",
+            "answer": answer, "value": value, "steps": steps}
+
+
 def solve_sequences(question: str):
     q = question.lower()
     params = _get_params(q)
@@ -446,6 +884,18 @@ def solve_sequences(question: str):
                             "Sum of first n terms: S_n = n/2 · "
                             "(2a + (n - 1)d)",
                             f"S_{_n} = {fmt_num(_val)}"]}
+
+    # --- Wave 202: the native sequence engine (see the
+    # Wave 202 section above). Every next-term ask the
+    # wording-gated blocks above did not claim — a new
+    # phrasing, a bare series, a non-AP/GP pattern family —
+    # is settled here from the NUMBERS. The engine's own
+    # gates (series + next intent, nth/sum/average vetoes)
+    # keep every differently-shaped ask flowing to the
+    # sections below exactly as before.
+    _w202 = solve_series_next(question)
+    if _w202 is not None:
+        return _w202
 
     # --- Wave 56: named-series sums, common difference
     # from two terms, and the explicit-series AP sum.
