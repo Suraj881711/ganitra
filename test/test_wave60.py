@@ -170,7 +170,7 @@ def test_delivery_pins_bumped_for_new_css():
         encoding="utf-8")
     sw = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
     css = (ROOT / "static" / "style.css").read_text(encoding="utf-8")
-    assert "v='59'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v36"' in sw
+    assert "v='60'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v37"' in sw
     assert ".backnav-btn" in css
     assert "min-height: 44px" in css

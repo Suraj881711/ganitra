@@ -194,5 +194,5 @@ def test_chat_font_scale_wave27():
 # --- Delivery hygiene --------------------------------------------------
 
 def test_delivery_versions_bumped():
-    assert "v='59'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
+    assert "v='60'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW

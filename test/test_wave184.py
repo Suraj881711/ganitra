@@ -24,8 +24,8 @@ What this wave pins:
     understand) all stay exactly as they were. On a
     successful result the note is simply CLEARED, so
     nothing is left sitting under the composer.
-  * Pins move together, as always: stylesheet ?v=59,
-    worker cache ganitra-static-v36.
+  * Pins move together, as always: stylesheet ?v=60,
+    worker cache ganitra-static-v37.
 """
 import pytest
 from pathlib import Path
@@ -121,6 +121,6 @@ def test_served_chat_page_keeps_mic(client):
 # --- Pins --------------------------------------------------------------
 
 def test_wave184_pins():
-    assert "v='59'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
-    assert '"/static/style.css?v=59"' in SW
+    assert "v='60'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
+    assert '"/static/style.css?v=60"' in SW
