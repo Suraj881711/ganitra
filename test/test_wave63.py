@@ -13,7 +13,7 @@ marks, OR dividers for internal choices, [Figure] markers
 where the printed paper's figure is not in the data; the
 stored-paper print view (?paper=<id>) renders the same sheet;
 the generated-paper flow is untouched; delivery pins
-?v=35 / cache ganitra-static-v31.
+?v=35 / cache ganitra-static-v35.
 """
 import re
 from pathlib import Path
@@ -89,6 +89,26 @@ FIGURE_COUNTS = {
     "jac-9-2024-model": 1, "jac-8-2025-model": 0,
     "jac-11-2024-model": 0, "kerala-6-2025-annual": 1,
     "kerala-7-2025-second-term": 0,
+    # Wave 179: the 29 Phase-1 papers — census counted from
+    # the stored texts with the sheet's own figure-reference
+    # rule (Odisha Class 10's geometry MCQs lean on figures
+    # the objective booklet prints; most board papers' texts
+    # carry no figure-reference phrase).
+    "wbbse-10-2025": 0, "wbchse-12-2025": 0,
+    "pseb-10-2025": 2, "pseb-12-2025": 0,
+    "seba-10-2025": 3, "ahsec-12-2025": 0,
+    "cgbse-10-2025": 0, "cgbse-10-2025-hindi": 0,
+    "cgbse-12-2025": 0, "cgbse-12-2025-hindi": 0,
+    "hpbose-10-2025": 0, "hpbose-10-2025-hindi": 0,
+    "hpbose-12-2025": 0, "jkbose-10-2025": 0,
+    "jkbose-12-2025": 0, "bseodisha-10-2025": 6,
+    "chseodisha-12-2025": 0, "bseap-10-2025": 0,
+    "bieap-12-2025": 0, "bsetelangana-10-2025": 0,
+    "tsbie-12-2024": 0, "gbshse-10-2025": 2,
+    "gbshse-12-2025": 0, "gseb-12-2025": 0,
+    "kseab-12-2025": 1, "tn-12-2025": 0,
+    "ubse-12-2025": 0, "ubse-12-2025-hindi": 0,
+    "jac-12-2026-model": 0,
 }
 
 
@@ -154,7 +174,10 @@ def test_sheet_is_the_complete_typed_paper(client, paper):
     # every stored question rendered exactly once
     assert body.count('class="paper-q"') == len(paper["questions"])
     # header: code/set line + subject + instructions
-    assert paper["set_label"] in body
+    # (autoescaped, like the source_name check above —
+    # Wave 179: two printed set codes contain "&".)
+    import markupsafe
+    assert str(markupsafe.escape(paper["set_label"])) in body
     if paper.get("medium") == "hindi":
         # Wave 64: Hindi-medium sheets carry the instructions in
         # the paper's own language.
@@ -222,10 +245,28 @@ def test_header_maximum_marks_are_the_real_totals(client):
         "jac-11-2024-model", "kerala-6-2025-annual",
         "kerala-7-2025-second-term",
     }
+    # Wave 179: the Phase-1 papers print their own totals
+    # (Odisha Part-I 50, AP 100/75, WB 90/80, JAC model 80…)
+    # via the max_marks override — same rule.
+    wave179_ids = {
+        "wbbse-10-2025", "wbchse-12-2025", "pseb-10-2025",
+        "pseb-12-2025", "seba-10-2025", "ahsec-12-2025",
+        "cgbse-10-2025", "cgbse-10-2025-hindi",
+        "cgbse-12-2025", "cgbse-12-2025-hindi",
+        "hpbose-10-2025", "hpbose-10-2025-hindi",
+        "hpbose-12-2025", "jkbose-10-2025", "jkbose-12-2025",
+        "bseodisha-10-2025", "chseodisha-12-2025",
+        "bseap-10-2025", "bieap-12-2025",
+        "bsetelangana-10-2025", "tsbie-12-2024",
+        "gbshse-10-2025", "gbshse-12-2025", "gseb-12-2025",
+        "kseab-12-2025", "tn-12-2025", "ubse-12-2025",
+        "ubse-12-2025-hindi", "jac-12-2026-model",
+    }
     for p in papers_data.PAPERS:
         body = _paper_page(client, p["id"])
         if (p["id"] in wave66_ids or p["id"] in wave113_ids
-                or p["id"] in wave152_ids):
+                or p["id"] in wave152_ids
+                or p["id"] in wave179_ids):
             want = p.get("max_marks",
                          papers_data.paper_total_marks(p))
         else:
@@ -265,7 +306,8 @@ def test_figure_markers_match_census(client):
     # Deploy-25 merge: 71 (pre-113/114) + 14 (Wave 113) + 23
     # (Wave 114) figure markers across the 68-paper library.
     # Wave 152: + 2 across the 5 new papers — 110 in total.
-    assert total == 110
+    # Wave 179: + 14 across the 29 new papers — 124 in total.
+    assert total == 124
 
 
 def test_section_order_and_subjects(client):
@@ -305,8 +347,8 @@ def test_generated_print_flow_unchanged(client):
 def test_pins_bumped():
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()
-    assert "v='54'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v31"' in sw
+    assert "v='58'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v35"' in sw
 
 
 def test_sheet_css_present():

@@ -84,7 +84,7 @@ def test_real_payload_shape():
 # --- Bug 3's root: the service worker ------------------------
 
 def test_service_worker_never_freezes_code_again():
-    assert 'GANITRA_CACHE = "ganitra-static-v31"' in SW
+    assert 'GANITRA_CACHE = "ganitra-static-v35"' in SW
     assert '"ganitra-static-v4"' not in SW
     assert '"ganitra-static-v3"' not in SW
     assert '"ganitra-static-v2"' not in SW
@@ -135,7 +135,10 @@ def test_sprite_attribute_sizes(client):
     for actor in ("scene-eagle", "scene-tiger", "scene-boy"):
         assert f'id="{actor}"' not in page
     assert "boyWriter.width = 82" in INDEX
-    assert "boy.width = 54" in INDEX
+    # Wave 176: the typing bubble's boy sprite (boy.width =
+    # 54) is removed with the bubble post; the board writer's
+    # attribute size above is the one that remains.
+    assert "boy.width = 54" not in INDEX
 
 
 # --- Bug 4: the Teach minimum-beat floor ---------------------

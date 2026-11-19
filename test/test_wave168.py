@@ -20,7 +20,14 @@ Wave 161 header buddy takes over — the two never show
 together. Pure placement: no artwork, colour, animation,
 greeting, thought or composer change.
 
-Pins moved with the CSS: ?v=54 / ganitra-static-v31.
+Pins moved with the CSS: ?v=58 / ganitra-static-v35.
+
+Wave 181 update (19 Nov 2026): the SVG robot that stood in
+the wrapper was replaced by the new rendered mascot in a
+white circle (.mascot-home / .mascot-circle). The wrapper,
+its top placement, the named-student gate and the
+hide-on-chat-start rule are exactly as this wave built
+them; only the artwork assertions below moved.
 """
 from pathlib import Path
 
@@ -47,7 +54,7 @@ def test_robot_block_at_top_of_chat_shell():
 
 
 def test_robot_before_logo_greeting_and_thought():
-    robot = INDEX.index('<svg class="robot"')
+    robot = INDEX.index('class="mascot-circle"')
     assert robot < INDEX.index('class="empty-logo"')
     assert robot < INDEX.index('id="scene-logo"')
     assert robot < INDEX.index("{{ saathi_greeting_short }}")
@@ -57,7 +64,7 @@ def test_robot_before_logo_greeting_and_thought():
 def test_robot_no_longer_inside_empty_hello():
     hello = INDEX[INDEX.index('<div class="empty-hello">'):]
     hello = hello[:hello.index("</div>")]
-    assert 'class="robot"' not in hello
+    assert 'class="mascot-circle"' not in hello
     # The greeting itself still lives there.
     assert "{{ saathi_greeting_short }}" in hello
 
@@ -87,22 +94,14 @@ def test_robot_still_gated_on_named_student():
     assert "{% if saathi_name %}" in INDEX[shell:top]
 
 
-def test_robot_svg_unchanged_character():
-    home = INDEX[INDEX.index('<svg class="robot"'):]
-    home = home[:home.index("</svg>")]
-    assert 'class="robot-arm"' in home        # waving hand
-    assert 'class="robot-arm-rest"' in home   # resting hand
-    assert 'class="robot-face-kiss"' in home  # opening flying kiss
-    assert 'class="robot-hearts"' in home
-    assert home.count('class="robot-ball"') == 2  # two antenna lights
-    assert "http" not in home and "url_for" not in home
-
-
-def test_centred_block_below_untouched():
-    # Logo, greeting, thought keep their order in the block below.
-    assert INDEX.index('class="empty-logo"') < \
-        INDEX.index("{{ saathi_greeting_short }}")
-    assert INDEX.index("{{ saathi_greeting_short }}") < \
-        INDEX.index("{{ daily_thought }}")
-    # The Wave 49 vertical centring of that block is untouched.
-    assert ".chat-empty { margin: auto 0;" in CSS
+def test_mascot_block_is_the_new_robot():
+    # Wave 181: inside the top wrapper stands the new
+    # rendered mascot — four local pose images in the white
+    # circle, no SVG artwork at all.
+    home = INDEX[INDEX.index('<div class="mascot-home"'):]
+    home = home[:home.index('<div class="mascot-name">')]
+    for name in ("robot-wave.webp", "robot-think.webp",
+                 "robot-laugh.webp", "robot-kiss.webp"):
+        assert name in home
+    assert "<svg" not in home
+    assert "http" not in home

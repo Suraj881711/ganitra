@@ -118,7 +118,9 @@ def test_eagle_variants_perch_carry_kiss():
 def test_boy_writer_is_the_2d_sprite_again():
     assert "__ganitraBoyWriter3D" not in S3D
     assert 'boyWriter.src = "/static/scene-boy.webp?v=29"' in INDEX
-    assert 'boy.src = "/static/scene-boy.webp?v=29"' in INDEX
+    # Wave 176: the typing bubble's sprite (boy.src) is gone
+    # with the bubble post; the board writer remains.
+    assert 'boy.src = "/static/scene-boy.webp' not in INDEX
 
 
 # --- served --------------------------------------------------------
@@ -130,7 +132,7 @@ def test_served_page_wave62b(client):
     assert 'id="scene-3d"' not in page and 'id="scene-stage"' not in page
     # Merge-4: pins reconciled to ?v=43 / ganitra-static-v25
     # (historical note; the live pin asserted below is current).
-    assert "style.css?v=54" in page
+    assert "style.css?v=58" in page
     r = client.get("/static/logo-g-t.png")
     assert r.status_code == 200
     # the parked files are still served (they exist) — the

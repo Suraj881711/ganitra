@@ -14,7 +14,7 @@ The normaliser itself is JavaScript, so these tests extract
 it from the template (between the WAVE84-SPEECH-NORMALISE
 markers) and run it under node, the same approach as
 verify_wave18.py's teacher-narration checks. Pins ?v=43 /
-cache ganitra-static-v31 (bumped this wave because the chat
+cache ganitra-static-v35 (bumped this wave because the chat
 page's JS changed).
 """
 import json
@@ -151,5 +151,5 @@ def test_voice_language_fallback_chain():
 
 
 def test_wave84_pins():
-    assert "v='54'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v31"' in SW
+    assert "v='58'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v35"' in SW

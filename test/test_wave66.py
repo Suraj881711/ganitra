@@ -72,11 +72,15 @@ def test_library_totals():
     # Wave 113: + 11 CBSE papers, 381 questions (53 / 1,989).
     # Deploy-25 merge: Wave 114 adds 15 papers / 375 questions
     # — combined library 68 papers / 2,364 questions.
-    assert len(papers_data.PAPERS) == 68
+    # Wave 152: + 5 papers / 133 questions — 73 / 2,497.
+    # Wave 179: + 29 papers / 911 questions — 102 / 3,408.
+    assert len(papers_data.PAPERS) == 102
     assert sum(len(p["questions"])
-               for p in papers_data.PAPERS) == 2364
+               for p in papers_data.PAPERS) == 3408
+    # Wave 179: Hindi-medium papers 16 -> 20 (CGBSE 10/12,
+    # HPBOSE 10 and UBSE 12 Hindi twins added).
     assert sum(1 for p in papers_data.PAPERS
-               if p.get("medium") == "hindi") == 16
+               if p.get("medium") == "hindi") == 20
 
 
 @pytest.mark.parametrize("pid", sorted(EXPECTED))
@@ -119,10 +123,14 @@ def test_list_labels_boards_and_mediums(client):
     # Wave 94: 42 papers — 16 Hindi-medium, 26 English-medium.
     # Deploy-25 merge: 68 papers — 16 Hindi-medium, 52
     # English-medium (Wave 113 → 37, Wave 114 → 52).
-    assert body.count("हिंदी माध्यम · Hindi Medium</span>") == 16
-    assert body.count("English Medium</span>") == 52
+    # Wave 152: 73 papers — 16 Hindi-medium, 57 English-medium.
+    # Wave 179: 102 papers — 20 Hindi-medium, 82 English-medium.
+    assert body.count("हिंदी माध्यम · Hindi Medium</span>") == 20
+    assert body.count("English Medium</span>") == 82
     for p in papers_data.PAPERS:
-        assert p["board"] in body
+        # Board names render autoescaped (Wave 179: "J&K
+        # Board (JKBOSE)" contains "&").
+        assert _html.escape(p["board"]) in body
         assert p["source_url"] not in body
 
 

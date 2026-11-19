@@ -9,7 +9,7 @@ the lion, gated on 3D activation); scene3d.js performing the
 director's scenes (no orbit / no idle wander / no tap buttons);
 the 3D boy writer with the sprite fallback; the 2D fallback
 intact; and the bumped pins (?v=35 / ganitra-static-v12;
-merge-4 reconciled them to ?v=43 / ganitra-static-v31).
+merge-4 reconciled them to ?v=43 / ganitra-static-v35).
 
 Wave 62B update (Suraj's final spec, same day): the 3D scene
 performs ONLY the eagle — perch / carry / kiss on the G
@@ -107,14 +107,18 @@ def test_boy_writer_prefers_3d_canvas():
     # always lands on the 2D sprite (the pre-61 behaviour).
     assert INDEX.count("__ganitraBoyWriter3D") >= 2
     assert "boy-writer at-board boy-writer-3d" in INDEX
-    assert "boy-writer in-typing on boy-writer-3d" in INDEX
+    # Wave 176: the in-typing writer is removed — the boy no
+    # longer rides the thinking bubble (Suraj's order).
+    assert "boy-writer in-typing on boy-writer-3d" not in INDEX
     assert "__ganitraBoyWriter3D" not in S3D
     assert "writerPivot" not in S3D
 
 
 def test_boy_writer_sprite_fallback_intact():
     assert 'boyWriter.src = "/static/scene-boy.webp?v=29"' in INDEX
-    assert 'boy.src = "/static/scene-boy.webp?v=29"' in INDEX
+    # Wave 176: the typing bubble's boy sprite (boy.src) is
+    # gone with the bubble post; the board writer remains.
+    assert 'boy.src = "/static/scene-boy.webp' not in INDEX
     assert ".boy-writer-3d { animation: none !important; }" in CSS
     assert "@keyframes boy-write" in CSS
 
@@ -170,7 +174,7 @@ def test_served_page_wave62(client):
     # its stage element).
     assert 'id="scene-3d"' not in page and 'id="scene-stage"' not in page
     assert "__ganitraBoyWriter3D" in page
-    # Merge-4: pins reconciled to ?v=43 / ganitra-static-v31.
-    assert "style.css?v=54" in page
+    # Merge-4: pins reconciled to ?v=43 / ganitra-static-v35.
+    assert "style.css?v=58" in page
     for n in ("eagle", "tiger", "boy"):
         assert f'id="scene-{n}"' not in page

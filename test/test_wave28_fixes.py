@@ -92,28 +92,31 @@ def test_sprite_urls_versioned_everywhere(client):
     page = client.get("/").get_data(as_text=True)
     # Wave 70 (Suraj, 16 Nov 2026): the scene is PARKED — the
     # preload + stage <img> mentions are gone (eagle/tiger 0);
-    # the boy keeps only his two JS-built writer sprites in
-    # the inline scripts (the answer flow, not the scene).
+    # the boy keeps only his JS-built writer sprites in the
+    # inline scripts (the answer flow, not the scene).
+    # Wave 176 (Suraj, 19 Nov 2026): the thinking bubble's
+    # writer sprite is removed — only the Teach-board writer
+    # sprite remains, so the count drops from two to one.
     assert page.count("scene-eagle.webp?v=29") == 0
     assert page.count("scene-tiger.webp?v=29") == 0
-    assert page.count("scene-boy.webp?v=29") == 2
+    assert page.count("scene-boy.webp?v=29") == 1
     # No unversioned sprite URL survives anywhere in the page:
     # every mention of a sprite file carries the version query.
     for name in ("eagle", "tiger", "boy"):
         assert page.count(f"scene-{name}.webp") \
             == page.count(f"scene-{name}.webp?v=29"), name
-    # The two JS-built boy-writer sprites use the versioned URL.
-    assert INDEX.count('"/static/scene-boy.webp?v=29"') == 2
+    # The one JS-built boy-writer sprite uses the versioned URL.
+    assert INDEX.count('"/static/scene-boy.webp?v=29"') == 1
 
 
 def test_delivery_versions_wave28():
-    assert "v='54'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v31"' in SW
+    assert "v='58'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v35"' in SW
     for old in ("ganitra-static-v5", "ganitra-static-v4",
                 "ganitra-static-v3",
                 "ganitra-static-v2", "ganitra-static-v1"):
         # Wave 60: match the FULL quoted cache name —
-        # "ganitra-static-v31" contains "ganitra-static-v1"
+        # "ganitra-static-v35" contains "ganitra-static-v1"
         # as a bare substring, which is not the old cache.
         assert f'"{old}"' not in SW
 
