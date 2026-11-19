@@ -304,3 +304,11 @@ def test_guard_is_series_scoped_prose_untouched(monkeypatch):
     out = fallback_answer("abacus kya hota hai")
     assert str(out.get("answer")) == \
         "Because it has only one factor"
+
+
+# Wave 205 (test-loop find, 20 Nov): "ke baad kaunsa ... aata hai" phrasing
+def test_w205_prime_ke_baad_aata_hai():
+    from api import _solve_friendly
+    r = _solve_friendly("sir 2, 3, 5, 7, 11 ke baad kaunsa prime number aata hai? bhool gaya")
+    txt = " ".join(str(x) for x in (r.get("steps") or [])) + " " + str(r.get("answer") or "")
+    assert "13" in txt, txt[:200]
