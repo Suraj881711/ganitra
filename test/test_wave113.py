@@ -36,9 +36,12 @@ def test_library_totals():
     # Deploy-25 merge: Wave 114's 15 state-board papers are
     # in the library too — combined totals 68 / 2,364 (this
     # wave alone took the library to 53 / 1,989).
-    assert len(papers_data.PAPERS) == 68
+    # Wave 152: + 5 papers for Classes 6, 7, 8, 9 and 11
+    # (133 questions) — combined totals 73 / 2,497.
+    # Wave 179: + 29 papers / 911 questions — 102 / 3,408.
+    assert len(papers_data.PAPERS) == 102
     total = sum(len(p["questions"]) for p in papers_data.PAPERS)
-    assert total == 2364
+    assert total == 3408
 
 
 def test_new_papers_present_with_counts():

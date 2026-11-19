@@ -105,15 +105,17 @@ def test_every_class_6_to_12_now_has_a_paper():
     assert counts[8] == 1
     assert counts[9] == 1
     assert counts[11] == 1
-    # The pre-existing bulk is untouched:
-    assert counts[10] == 39
-    assert counts[12] == 29
+    # The pre-existing bulk is untouched (Wave 179 grew
+    # Classes 10 and 12 only: +12 and +17 papers):
+    assert counts[10] == 51
+    assert counts[12] == 46
 
 
 def test_library_totals_after_wave152():
-    assert len(papers_data.PAPERS) == 73
+    # Wave 179: 102 papers / 3,408 questions.
+    assert len(papers_data.PAPERS) == 102
     assert sum(len(p["questions"])
-               for p in papers_data.PAPERS) == 2497
+               for p in papers_data.PAPERS) == 3408
 
 
 # --- the new papers ----------------------------------------------

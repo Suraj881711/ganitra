@@ -247,6 +247,6 @@ def test_client_gates_labels_on_the_payload_flag():
 
 
 def test_pins_bumped_for_wave123():
-    assert "filename='style.css', v='54'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v31"' in SW
-    assert '"/static/style.css?v=54"' in SW
+    assert "filename='style.css', v='58'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v35"' in SW
+    assert '"/static/style.css?v=58"' in SW

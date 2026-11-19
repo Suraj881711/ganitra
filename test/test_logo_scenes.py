@@ -248,8 +248,10 @@ console.log(JSON.stringify(out));
 
 
 def test_boy_writer_hooks():
+    # Wave 176: addTypingBoy is gone — the boy no longer rides
+    # the thinking bubble (Suraj's order); his board hooks stay.
     for fn in ("showBoyWriter", "hideBoyWriter",
-               "scheduleBoyWriterHide", "addTypingBoy"):
+               "scheduleBoyWriterHide"):
         assert f"function {fn}" in INDEX
     # No steps board -> no boy.
     assert "if (boyBroken || !stepsDet) return;" in INDEX
@@ -265,20 +267,22 @@ def test_boy_writer_hooks():
     assert "showBoyWriter();" in INDEX[t0:t1]
     stop = INDEX[INDEX.index("function stopTeachPlayback"):t0]
     assert "scheduleBoyWriterHide();" in stop
-    # Loading wiring: both addTyping paths carry the boy.
+    # Wave 176: the loading wiring is GONE — neither addTyping
+    # path carries the boy (or any figure) any more.
     a0 = INDEX.index("function addTyping()")
     window = INDEX[a0:a0 + 1200]
-    assert "addTypingBoy(node)" in window
-    assert "addTypingBoy(fb)" in window
+    assert "addTypingBoy" not in window
+    assert "boy-writer" not in window
 
 
 def test_boy_writer_css():
     assert ".boy-writer" in CSS
     assert "@keyframes boy-write" in CSS
     assert ".boy-writer.at-board" in CSS
-    assert ".boy-writer.in-typing" in CSS
+    # Wave 176: the typing post's CSS is removed with the post.
+    assert ".boy-writer.in-typing" not in CSS
     # The board rail keeps step text clear of the boy.
     assert ".boy-host > ol.steps" in CSS
-    assert ".bubble.typing.boy-host" in CSS
+    assert ".bubble.typing.boy-host" not in CSS
     w23 = CSS[CSS.index("Wave 23: Logo Jungle"):]
     assert ".boy-writer { animation: none" in w23  # reduced motion

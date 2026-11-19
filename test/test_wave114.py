@@ -31,8 +31,10 @@ import papers_data
 # Deploy-25 merge: Wave 113's 11 CBSE papers are in the
 # library too — combined totals 68 papers / 2,364 questions
 # (this wave alone took the library to 57 / 1,983).
-ROOT_PAPERS = 68
-ROOT_QUESTIONS = 2364
+# Wave 152: + 5 papers / 133 questions — 73 / 2,497.
+# Wave 179: + 29 papers / 911 questions — 102 / 3,408.
+ROOT_PAPERS = 102
+ROOT_QUESTIONS = 3408
 
 # id -> (stored questions, stored marks, header marks,
 #        class_num, board)

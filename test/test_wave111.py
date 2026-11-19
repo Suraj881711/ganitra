@@ -79,6 +79,10 @@ def test_history_coverage():
         "pascal_triangle", "trigonometry", "logarithm",
         "binary", "shakuntala_devi", "ramanujan", "aryabhata",
         "brahmagupta", "bhaskara",
+        # Wave 177: three seed-list titles/persons added
+        # (Archimedes = father of mathematics, Gauss =
+        # number theory, Fibonacci).
+        "archimedes", "gauss", "fibonacci",
     }
     for e in HISTORY:
         for flavour in ("en", "roman", "dev"):
@@ -328,7 +332,13 @@ _SENTINEL = {
 
 @pytest.mark.parametrize("question", [
     "Euler kaun the?",
-    "Gauss kaun tha?",
+    # Wave 177: "Gauss kaun tha?" is a curated HIT now
+    # (the seed list's father-of-number-theory item), so
+    # the canonical miss example moved to Leibniz
+    # (meta-shaped, no entry, no other guard claims him;
+    # Newton was tried first but the science guard claims
+    # him as Physics).
+    "Leibniz kaun the?",
 ])
 def test_meta_miss_reaches_ai(monkeypatch, question):
     calls = _patch_ai(monkeypatch, dict(_SENTINEL))
@@ -339,7 +349,9 @@ def test_meta_miss_reaches_ai(monkeypatch, question):
 
 @pytest.mark.parametrize("question", [
     "Euler kaun the?",
-    "Gauss kaun tha?",
+    # Wave 177: see test_meta_miss_reaches_ai — Gauss is
+    # curated now; Leibniz is the standing miss example.
+    "Leibniz kaun the?",
 ])
 def test_meta_miss_without_ai_still_not_found(monkeypatch,
                                               question):
