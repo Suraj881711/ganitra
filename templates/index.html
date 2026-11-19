@@ -3236,7 +3236,13 @@
               box.value = text;
               box.dispatchEvent(new Event("input"));
               box.focus();
-              say(L.js_voice_heard.replace("{text}", text));
+              /* Wave 184 (Suraj): NO voice-confirmation line
+                 under the composer — he circled the old one
+                 and ordered it gone. The transcript in the box
+                 is the whole feedback; just clear the listening
+                 prompt so nothing is left sitting under the
+                 composer. */
+              say("");
             }
           };
           mine.onerror = function (ev) {
