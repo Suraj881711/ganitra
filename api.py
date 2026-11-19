@@ -709,6 +709,49 @@ def api_solve():
             **fields,
         })
 
+    # Wave 201: the PRACTICE-REQUEST intent
+    # (practice_req.py) — "12th class ke kuch qustin
+    # milinge solve karane ke liye" asks FOR questions to
+    # solve and used to earn the bare not-found line: no
+    # layer recognised a request for questions (guidance
+    # only advises HOW to practice). Runs AFTER the
+    # chat-test, guided and practice-loop blocks (a test
+    # in progress and an open loop own their messages,
+    # and the loop's own "aur ek" is never stolen) and
+    # BEFORE the Wave-129 galti block (a practice request
+    # is a fresh intent, never a step doubt). The module
+    # claims only its own messages — a practice request,
+    # the class reply to its parked ask, and "aur do"
+    # while its state lives in this chat; its vetoes keep
+    # paper asks, test asks, fact asks, advice asks and
+    # concrete problems on their existing paths, so every
+    # other message reaches the normal path below exactly
+    # as before this wave. Its turns never carry chips.
+    import practice_req
+    pr_payload = practice_req.handle_message(
+        session, session.get("user_id"), chat_id, question,
+        lang=lang, lang_request=lang_request,
+        student_class=session.get("saathi_class"))
+    if pr_payload is not None:
+        pr_result = pr_payload["result"]
+        history = session.get("history", [])
+        history.insert(0, trimmed_history_entry(question,
+                                                pr_result))
+        session["history"] = history[:_HISTORY_LIMIT]
+        pr_w122 = w122_payload(pr_result, lang=lang,
+                               lang_request=lang_request,
+                               question=question)
+        pr_w122["chips"] = []
+        return jsonify({
+            **pr_payload,
+            "explanation": explanation_for(pr_result, lang),
+            "advice": None,
+            "methods": [],
+            "teach": teach_for(pr_result, lang),
+            "w122": pr_w122,
+            **fields,
+        })
+
     # Wave 129: "meri galti kahan hai" — the two-turn flow
     # around the Wave 85 step checker.
     # (a) A parked "apne steps bhejo" prompt is waiting: this

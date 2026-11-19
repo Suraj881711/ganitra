@@ -82,6 +82,10 @@ _NOT_SOLVED_KINDS = {
     # availability line) is library content, not a solve —
     # no answer box, no follow-up chips.
     "paper",
+    # Wave 201: a served practice-question set (or its
+    # which-class ask line) is served material, not a
+    # solve — no answer box, no follow-up chips.
+    "practice_req",
 }
 _NOT_SOLVED_OPS = {"error", "explain_step", "check_steps",
                    "not_found"}

@@ -183,11 +183,17 @@ def split_hence(question):
 # ---------------------------------------------------------------------------
 
 def _not_found_line_for(text):
+    # Wave 204: fallback._not_found_line returns the
+    # clarification line now (the not-found text is
+    # retired); the import-failure literal below is the
+    # same clarification line in English.
     try:
         from fallback import _looks_hindi, _not_found_line
         return _not_found_line(text, _looks_hindi(text))
     except Exception:
-        return "Answer not found."
+        return "I didn't understand that — type your " \
+            "maths question a little clearly and I'll " \
+            "solve it right away."
 
 
 def _part_is_real(text, result):

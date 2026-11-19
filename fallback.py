@@ -94,6 +94,32 @@ Bank row and is never promoted or store-served. The
 not-found line survives only where it was always honest:
 no leg produced any answer (pure gibberish / nonsense),
 and the maths-only guards are untouched.
+
+Wave 204 (Suraj, 20 Nov 2026): "user toh kuch bhi puch
+leta hai toh uska kuch naa kuch ans hona chahiye; aisa bhi
+nhi ki ans de deta hu toh glt de diya; ans dena hai wo bhi
+sahi wala; ab se ans not found toh aana hi nhi chahiye."
+The not-found TEXT is now retired forever: every terminal
+line this layer can render is the kind CLARIFICATION line
+("Samajh nahi aaya — maths ka sawal thoda saaf likh kar
+bhejo, main turant solve kar dunga." and its per-language
+twins in i18n / _NOT_FOUND_LINES) — an answer that asks
+for a rephrase, never a refusal. The internal sentinel
+(op / fallback_kind "not_found") keeps its name: every
+renderer, the Live Bank classifier and the Wave-90 log
+gate on the label, not the words. The class discipline is
+unchanged and is what keeps the clarification line honest:
+it can only be reached by a message with zero recoverable
+content (the gibberish gate: no digits, no operators, no
+known words, no meta/knowledge/followup shape) or after
+every real answer path — solver, bank, deep solve, the
+verified AI chain, Wave 134 method transfer, the Wave 158
+last resort — produced nothing at all. A real question,
+however messy or misspelled, is solved or AI-answered;
+it is never told its question was unclear while an answer
+path still exists (Suraj's refinement, same night: "Aisa
+nhi ho ki question likh kar bheja hai fir bhi saaf suthra
+maang rha hai").
 """
 import re
 from fractions import Fraction
@@ -2154,18 +2180,39 @@ def _plain_result(kind, answer, hindi, steps=None):
 
 # ---------------------------------------------------------------------------
 # Wave 67: the one-line not-found answer
+# Wave 204: the line's TEXT is now the clarification line
+# (see _HINGLISH_NOT_FOUND) — the one-line shape, the
+# language selection and the "not_found" sentinel are
+# unchanged; only the retired words are gone.
 # ---------------------------------------------------------------------------
 
-_HINGLISH_NOT_FOUND = "Answer nahi mila."
+# Wave 204 (Suraj, 20 Nov 2026): the constant keeps its
+# name (internal label), but the not-found TEXT is retired
+# forever — the terminal line is now the kind clarification
+# line: a request to rephrase, never a refusal. It is the
+# floor for messages with zero recoverable content only;
+# anything carrying a real question is routed to the solve
+# / AI paths long before this line can be reached (the
+# gibberish gate demands no digits, no operators, no known
+# words and no meta/knowledge/followup shape, and the
+# similar/guide standings run the full AI chain + the
+# Wave 158 last resort first).
+_HINGLISH_NOT_FOUND = "Samajh nahi aaya — maths ka sawal " \
+    "thoda saaf likh kar bhejo, main turant solve kar " \
+    "dunga."
 
 
 def _not_found_line(question, hindi, lang=None, lang_request=None):
-    """The not-found line in the question's own language:
+    """The terminal one-liner in the question's own language:
     Devanagari question -> Hindi (Marathi UI keeps its own
-    line), Roman Hinglish -> "Answer nahi mila.", a bn/mr/ta/te
-    UI language -> its i18n line, otherwise English. The
-    Devanagari/Hinglish wording is Suraj's spec verbatim; the
-    rest ride the i18n "answer_not_found" key.
+    line), Roman Hinglish -> the Hinglish clarification
+    line, a bn/mr/ta/te UI language -> its i18n line,
+    otherwise English. Wave 204: every wording this can
+    return is now a CLARIFICATION line ("samajh nahi aaya —
+    sawal thoda saaf likh kar bhejo..."), never the retired
+    not-found text; the language selection below is exactly
+    the pre-Wave-204 one, and the rest ride the i18n
+    "answer_not_found" key (whose values Wave 204 changed).
 
     Wave 107: an explicit language request in the message
     (lang_request: "hi" / "en" / "hinglish") outranks the
@@ -2192,11 +2239,18 @@ def _not_found_line(question, hindi, lang=None, lang_request=None):
 
 
 def _not_found_result(question, hindi, lang=None, lang_request=None):
-    """The ONLY answer to anything that was not solved: one
-    short line, no steps, nothing else. fallback_kind ==
-    "not_found" is the sentinel every renderer gates on (the
-    chat shows a plain minimal bubble; i18n gives it no
-    explanation / advice / teach lines)."""
+    """The terminal answer when nothing in the chain could
+    answer: one short line, no steps, nothing else.
+    fallback_kind == "not_found" is the sentinel every
+    renderer gates on (the chat shows a plain minimal
+    bubble; i18n gives it no explanation / advice / teach
+    lines) — the label is internal and unchanged. Wave 204:
+    the LINE ITSELF is the kind clarification line (a
+    request to rephrase in the student's own language),
+    served only when the message carried zero recoverable
+    content or every answer path — solver, bank, deep
+    solve, the verified AI chain, method transfer and the
+    Wave 158 last resort — produced nothing at all."""
     return {
         "type": "Ganitra",
         "op": "not_found",
@@ -2301,6 +2355,16 @@ def _nonmaths_result(question, hindi, flavour=None):
         flavour = _flavour(question)
     return _plain_result(
         "nonmaths", _NONMATHS_LINES[flavour], hindi)
+
+
+def nonmaths_line_for(text):
+    """Wave 203: the maths-only guard line in the flavour of
+    `text` — the very _NONMATHS_LINES the typed guard serves
+    above, reused by the photo path: a photo whose question
+    is readable but not maths earns this one-liner (in the
+    read question's own flavour), never the photo not-found
+    line. Empty text falls back to the English line."""
+    return _NONMATHS_LINES[_flavour(text)]
 
 
 # ---------------------------------------------------------------------------
@@ -3978,10 +4042,21 @@ def _is_gibberish(question):
 # implements): when nothing solved, the reply is ONE short
 # line in the question's own language/script. No guide card,
 # no "questions I solve for sure" panel, no tips, no advice.
+# Wave 204 (Suraj, 20 Nov 2026): that one line's text is now
+# the clarification line — see the note on the dict below.
+# Wave 204: the dict keeps its name (internal label; also
+# imported by formats.py for its per-part line), but the
+# values are the clarification lines now — the not-found
+# strings are retired forever (Suraj, 20 Nov 2026).
 _NOT_FOUND_LINES = {
-    "en": "Answer not found.",
-    "roman": "Answer nahi mila.",
-    "dev": "उत्तर नहीं मिला।",
+    "en": "I didn't understand that — type your maths "
+          "question a little clearly and I'll solve it "
+          "right away.",
+    "roman": "Samajh nahi aaya — maths ka sawal thoda "
+             "saaf likh kar bhejo, main turant solve kar "
+             "dunga.",
+    "dev": "समझ नहीं आया — गणित का सवाल थोड़ा साफ़ लिखकर "
+           "भेजिए, मैं तुरंत हल कर दूँगा।",
 }
 
 _VAGUE_LINES = {
@@ -4009,7 +4084,8 @@ def _guide_result(question, hindi, kind, flavour=None):
     # _GEMINI_KINDS and this result is only settled when they
     # return None): both are the same honest one-liner. The
     # fallback_kind is preserved for analytics/tests; the
-    # content is the Wave 67/68 not-found line.
+    # content is the Wave 67/68 one-liner — whose text Wave
+    # 204 made the clarification line (see _NOT_FOUND_LINES).
     return _plain_result(
         kind, _NOT_FOUND_LINES[flavour], hindi)
 
@@ -4242,6 +4318,24 @@ def _last_resort_ai_answer(question, rejected):
     if not cands:
         return None
     cands.sort(key=lambda item: item[0])
+    # Wave 202: the last resort must not resurrect a
+    # candidate that carries no value on a series next-term
+    # ask — a step sentence in the answer field ("Look at
+    # the numbers.") is not an answer to that question at
+    # all, however confidently a leg phrased it. The sanity
+    # gate rejects such candidates in verify_chain; this
+    # filter keeps the same promise at THIS door (the
+    # picker runs on the rejected bundle). If nothing else
+    # remains, the honest outcome stands.
+    try:
+        from aiverify import series_answer_missing_value
+        cands = [(order, res) for order, res in cands
+                 if not series_answer_missing_value(
+                     question, res.get("answer"))]
+    except Exception:
+        pass
+    if not cands:
+        return None
     try:
         from aiverify import claims_agree, extract_claim
         claims = [extract_claim(res.get("answer"), question)
@@ -4300,9 +4394,16 @@ def _honest_after_ai_miss(question, result_out, hindi, lang,
     compute the identical outcome without serving it yet):
     a similar example, gibberish or the general guide means
     the student's OWN question was not solved, so the answer
-    collapses to the one not-found line (Wave 67); anything
+    collapses to the one terminal line (Wave 67); anything
     else still standing — a concept card above all — is
-    served as-is. `log` fires the Wave-90 not-found learning
+    served as-is. Wave 204: that terminal line is the kind
+    clarification line, never the retired not-found text —
+    and it is reached only after solver, bank, deep solve,
+    the verified AI chain, method transfer and the Wave 158
+    last resort have all produced nothing (for a real
+    question that means every AI leg stayed silent; the
+    Wave 204 notes flag that provider-outage floor for the
+    parent). `log` fires the Wave-90 not-found learning
     log; the deferred path passes log=False at defer time
     and logs later, only if this outcome is actually served
     (see log_deferred_not_found)."""

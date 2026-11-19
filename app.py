@@ -38,7 +38,7 @@ from test_mode import (TEST_TIME_LIMIT, TOPIC_LABELS as TEST_TOPICS,
                        check_test_answer, generate_test, worked_steps)
 from solver.answer_cache import get_negative, put_negative
 from solver.router import solve_question
-from fallback import with_fallback
+from fallback import nonmaths_line_for, with_fallback
 from notation import annotate_method, annotate_result
 from langdetect_local import detect_language_confident, \
     detect_language_request
@@ -1619,11 +1619,23 @@ def create_app():
         #           chain (/photo-ocr -> browser Tesseract).
         #   {"ok": false, "code": "no_question"}
         #        -> the photo WAS read; there is no readable
-        #           maths question in it. No fallback (a second
-        #           read would only garble) — the script says
-        #           the one honest not-found line.
+        #           question in it at all (blank / too blurry).
+        #           No fallback (a second read would only
+        #           garble) — the script says the one honest
+        #           not-found line.
+        #   {"ok": false, "code": "not_maths", "message": ...}
+        #        -> Wave 203: the photo WAS read and its
+        #           question is readable — but it is not maths.
+        #           The message is the maths-only one-liner (the
+        #           typed guard's own line, in the read
+        #           question's flavour). Never the not-found
+        #           line: the question WAS found, and "send a
+        #           clear photo again" would loop forever.
         #   {"ok": false, "code": "too_large" | "unsupported" |
         #    "no_file"} -> same meanings as /photo-ocr.
+        #        A success payload gains a "notice" field only
+        #        when the photo held further questions beyond
+        #        the first (Wave 203 MORE channel).
         upload = request.files.get("file")
         if upload is None:
             return jsonify({"ok": False, "code": "no_file"}), 400
@@ -1634,7 +1646,7 @@ def create_app():
         if mime is None:
             return jsonify({"ok": False, "code": "unsupported"})
         try:
-            text = gemini_vision.transcribe_image(data, mime)
+            outcome = gemini_vision.transcribe_detailed(data, mime)
         except gemini_vision.VisionUnavailable:
             return jsonify({"ok": False,
                             "code": "vision_unavailable"})
@@ -1642,7 +1654,13 @@ def create_app():
             return jsonify({"ok": False, "code": "vision_quota"})
         except gemini_vision.VisionFailed:
             return jsonify({"ok": False, "code": "vision_failed"})
-        if not text:
+        if outcome["outcome"] == "not_maths":
+            return jsonify({
+                "ok": False, "code": "not_maths",
+                "message": nonmaths_line_for(
+                    outcome.get("read") or "")})
+        text = outcome["text"]
+        if outcome["outcome"] != "text" or not text:
             return jsonify({"ok": False, "code": "no_question"})
         payload = {
             "kind": "text",
@@ -1655,10 +1673,30 @@ def create_app():
         # words identify the family but a slot is unclear, the
         # composer is prefilled with the REBUILT question plus
         # the one confirmation line — never a silent guess.
-        fixed = photofix.analyse(normalize_ocr_text(text))
+        # Wave 203 (audit fix 5): photofix reads the RAW
+        # transcription — gemini_vision.py's contract is that
+        # the OCR normaliser never rewrites vision text (its
+        # digit-fenced corrections are for Tesseract garble;
+        # a vision read is not garble).
+        fixed = photofix.analyse(text)
         if fixed is not None and fixed.get("confirm"):
             payload["prefill"] = fixed["question"]
             payload["confirm"] = fixed["confirm"]
+        if payload["confirm"] is None and outcome["unsure"]:
+            # Wave 203 (audit fix 2): the vision model itself
+            # flagged a span it could not read surely — the
+            # photofix-style ONE confirmation line names it.
+            # The read still only prefills the composer; the
+            # flagged guess is never solved unseen.
+            line = photofix.unsure_confirm(text,
+                                           outcome["unsure"])
+            if line:
+                payload["confirm"] = line
+        if outcome["more"]:
+            # Wave 203 (audit fix 4): the photo held further
+            # questions; only the first was taken and the
+            # student is TOLD so (one line, system text).
+            payload["notice"] = photofix.more_notice(text)
         return jsonify(payload)
 
     @app.post("/photo-fix")

@@ -180,7 +180,13 @@ _EN = {
     "js_photo_check": "I read this question from your photo — please check it, fix any mistake, then press Solve.",
     # Wave 67: the ONE-line not-found answer (Suraj: gibberish /
     # unsolved input gets just this line, no long guide card).
-    "answer_not_found": "Answer not found.",
+    # Wave 204 (Suraj, 20 Nov 2026): the KEY keeps its name
+    # (internal label), but the text is retired forever —
+    # the terminal line is now the kind clarification line.
+    "answer_not_found": "I didn't understand that — type "
+                        "your maths question a little "
+                        "clearly and I'll solve it right "
+                        "away.",
     "js_file_reading": "Reading the file… ⏳",
     "js_file_unsupported": "I can't read this file type yet — please send a photo, a PDF, a Word (.docx) or a text (.txt) file.",
     "js_file_too_large": "That file is too big — please send a file under 2 MB.",
@@ -329,7 +335,10 @@ _HI = {
                           "फ़ोटो फिर भेजिए, या प्रश्न लिख दीजिए।",
     "js_photo_sending": "प्रश्न मिल गया — भेजा जा रहा है…",
     "js_photo_check": "मैंने यह प्रश्न आपकी फ़ोटो से पढ़ा है — कृपया जाँच लीजिए, कोई गलती हो तो ठीक करके Solve दबाइए।",
-    "answer_not_found": "उत्तर नहीं मिला।",
+    # Wave 204: clarification line (see the en block).
+    "answer_not_found": "समझ नहीं आया — गणित का सवाल थोड़ा "
+                        "साफ़ लिखकर भेजिए, मैं तुरंत हल कर "
+                        "दूँगा।",
     "js_file_reading": "File padh raha hoon… ⏳",
     "js_file_unsupported": "Ye file type main abhi nahi padh sakta — photo, PDF, Word (.docx) ya text (.txt) file bhejo.",
     "js_file_too_large": "Ye file bahut badi hai — 2 MB se chhoti file bhejo.",
@@ -479,7 +488,10 @@ _BN = {
                           "ছবি আবার পাঠান, বা প্রশ্নটি লিখে দিন।",
     "js_photo_sending": "প্রশ্ন পাওয়া গেছে — পাঠানো হচ্ছে…",
     "js_photo_check": "আমি এই প্রশ্নটি আপনার ছবি থেকে পড়েছি — অনুগ্রহ করে যাচাই করুন, ভুল থাকলে ঠিক করে Solve চাপুন।",
-    "answer_not_found": "উত্তর পাওয়া যায়নি।",
+    # Wave 204: clarification line (see the en block).
+    "answer_not_found": "বুঝতে পারিনি — গণিতের প্রশ্নটা "
+                        "একটু পরিষ্কার করে লিখে পাঠাও, আমি "
+                        "সঙ্গে সঙ্গে সমাধান করে দেব।",
     "js_file_reading": "ফাইল পড়ছি… ⏳",
     "js_file_unsupported": "এই ধরনের ফাইল আমি এখনো পড়তে পারি না — ছবি, PDF, Word (.docx) বা text (.txt) ফাইল পাঠাও।",
     "js_file_too_large": "ফাইলটা খুব বড় — 2 MB-এর ছোট ফাইল পাঠাও।",
@@ -627,7 +639,10 @@ _MR = {
                           "फोटो पुन्हा पाठवा, किंवा प्रश्न लिहा.",
     "js_photo_sending": "प्रश्न सापडला — पाठवत आहे…",
     "js_photo_check": "मी हा प्रश्न तुमच्या फोटोवरून वाचला आहे — कृपया तपासा, चूक असल्यास दुरुस्त करून Solve दाबा.",
-    "answer_not_found": "उत्तर सापडले नाही.",
+    # Wave 204: clarification line (see the en block).
+    "answer_not_found": "समजलं नाही — गणिताचा प्रश्न थोडा "
+                        "स्पष्ट लिहून पाठवा, मी लगेच सोडवून "
+                        "देईन.",
     "js_file_reading": "फाइल वाचत आहे… ⏳",
     "js_file_unsupported": "हा फाइल प्रकार मी अजून वाचू शकत नाही — फोटो, PDF, Word (.docx) किंवा text (.txt) फाइल पाठव.",
     "js_file_too_large": "ही फाइल खूप मोठी आहे — 2 MB पेक्षा लहान फाइल पाठव.",
@@ -795,7 +810,11 @@ _TA = {
                           "செய்யவும்.",
     "js_photo_sending": "கேள்வி கிடைத்தது — அனுப்புகிறேன்…",
     "js_photo_check": "இந்தக் கேள்வியை உங்கள் புகைப்படத்திலிருந்து படித்தேன் — சரிபார்த்து, தவறு இருந்தால் திருத்தி, Solve அழுத்தவும்.",
-    "answer_not_found": "பதில் கிடைக்கவில்லை.",
+    # Wave 204: clarification line (see the en block).
+    "answer_not_found": "புரியவில்லை — கணிதக் கேள்வியை "
+                        "கொஞ்சம் தெளிவாக எழுதி "
+                        "அனுப்புங்கள், உடனே தீர்த்து "
+                        "தருகிறேன்.",
     "js_file_reading": "கோப்பைப் படிக்கிறேன்… ⏳",
     "js_file_unsupported": "இந்த வகை கோப்பை என்னால் இன்னும் படிக்க முடியாது — புகைப்படம், PDF, Word (.docx) அல்லது text (.txt) கோப்பை அனுப்பு.",
     "js_file_too_large": "அந்தக் கோப்பு மிகப் பெரியது — 2 MB-க்கு குறைவான கோப்பை அனுப்பு.",
@@ -952,7 +971,10 @@ _TE = {
                           "చేయండి.",
     "js_photo_sending": "ప్రశ్న దొరికింది — పంపుతున్నాను…",
     "js_photo_check": "ఈ ప్రశ్నను మీ ఫోటో నుండి చదివాను — దయచేసి తనిఖీ చేసి, పొరపాటు ఉంటే సరిచేసి, Solve నొక్కండి.",
-    "answer_not_found": "సమాధానం దొరకలేదు.",
+    # Wave 204: clarification line (see the en block).
+    "answer_not_found": "అర్థం కాలేదు — గణిత ప్రశ్నను "
+                        "కొంచెం స్పష్టంగా రాసి పంపండి, "
+                        "వెంటనే పరిష్కరించి ఇస్తాను.",
     "js_file_reading": "ఫైల్ చదువుతున్నాను… ⏳",
     "js_file_unsupported": "ఈ రకం ఫైల్‌ను నేను ఇంకా చదవలేను — ఫోటో, PDF, Word (.docx) లేదా text (.txt) ఫైల్ పంపు.",
     "js_file_too_large": "ఆ ఫైల్ చాలా పెద్దది — 2 MB కంటే చిన్న ఫైల్ పంపు.",

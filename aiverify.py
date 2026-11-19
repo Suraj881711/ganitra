@@ -331,11 +331,40 @@ def _is_probability_q(question):
     return bool(_PROB_WORDS.search(str(question or "")))
 
 
+def series_answer_missing_value(question, answer_text):
+    """Wave 202: True when `question` is a series NEXT-TERM
+    ask (an extractable >= 3-term series plus a next-term
+    intent, and not an nth-term / sum / average ask — see
+    solver.sequences.is_series_next_ask) and `answer_text`
+    states no numeric value at all. A series question has
+    exactly one acceptable answer shape — the next term, a
+    value — so a value-less candidate (a step sentence like
+    "Look at the numbers." that a leg's shaping placed in
+    the answer field) is not an answer to it. Shared by
+    sanity_check below and fallback's Wave-158 last-resort
+    picker, so such a candidate reaches the student
+    through NEITHER door."""
+    try:
+        from solver.sequences import is_series_next_ask
+        if not is_series_next_ask(question):
+            return False
+    except Exception:
+        return False
+    return not extract_values(answer_text)
+
+
 def sanity_check(question, result):
     """(ok, check_name). Fails ONLY on hard impossibilities —
     this gate must never accuse a plausible answer."""
     q = str(question or "")
     answer = str((result or {}).get("answer") or "")
+    # Wave 202: on a series next-term ask, an answer stating
+    # no value at all is a step sentence wearing the answer
+    # field's clothes ("Look at the numbers.") — reject it
+    # before the no-values early return below can wave it
+    # through (see series_answer_missing_value).
+    if series_answer_missing_value(q, answer):
+        return False, "sanity_series_answer_no_value"
     values = extract_values(answer)
     if not values:
         return True, None
@@ -1248,4 +1277,5 @@ def _flush_rejections(question, rejected):
 
 __all__ = ["verify_chain", "deterministic_check",
            "sanity_check", "extract_claim", "extract_values",
-           "claims_agree", "log_rejection", "all_rejections"]
+           "claims_agree", "log_rejection", "all_rejections",
+           "series_answer_missing_value"]

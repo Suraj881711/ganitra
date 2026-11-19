@@ -17,8 +17,13 @@ This module is the deterministic brain of that flow:
                       "family": str} | None
 
 * ``text`` is the OCR read AFTER ``normalize_ocr_text`` (the
-  callers normalise first — this module never re-guesses what
-  the normaliser already fixed).
+  OCR callers normalise first — this module never re-guesses
+  what the normaliser already fixed). Wave 203 exception:
+  the /photo-vision caller passes the RAW vision
+  transcription, per gemini_vision.py's own contract that
+  the OCR normaliser never rewrites vision text; this
+  module's own digit translation + whitespace collapse are
+  all the preparation a vision read needs.
 * Numbers in a reconstruction come ONLY from the OCR text
   itself. A slot with two surviving candidates is filled with
   the first and named in the confirmation line; a slot with
@@ -45,7 +50,7 @@ try:
 except Exception:  # pragma: no cover - langdetect is in-tree
     detect_language = None
 
-__all__ = ["analyse"]
+__all__ = ["analyse", "unsure_confirm", "more_notice"]
 
 # ------------------------------------------------------------------ basics
 
@@ -158,6 +163,46 @@ def _confirm_line(unclear, lang):
 def _result(family, question, unclear, lang):
     return {"family": family, "question": question,
             "confirm": _confirm_line(unclear, lang)}
+
+
+# ------------------------------------------------ Wave 203 vision lines
+
+def unsure_confirm(text, unsure):
+    """Wave 203: ONE confirmation line for a VISION read whose
+    model flagged a span as unsure (gemini_vision's UNSURE
+    channel). Same contract as _confirm_line: one line, the
+    FIRST unsure thing only, in the read's language. The read
+    itself still only prefills the editable composer — this
+    line names what to check, and nothing is ever solved on
+    the flagged guess. Returns None for an empty flag list."""
+    spans = [str(s).strip() for s in (unsure or ()) if str(s).strip()]
+    if not spans:
+        return None
+    span = spans[0]
+    lang = _language(text)
+    if lang == "hi":
+        return (f"एक हिस्सा साफ़ नहीं पढ़ा — क्या वह {span} है? "
+                f"ऊपर जाँच लीजिए।")
+    if lang == "hinglish":
+        return (f"Ek hissa saaf nahi padha — woh {span} hai? "
+                f"Upar check kar lo.")
+    return (f"One part was not read clearly — is it {span}? "
+            f"Please check it above.")
+
+
+def more_notice(text):
+    """Wave 203: ONE line when a photo held more questions
+    than the first (gemini_vision's MORE channel) — the drop
+    is no longer silent. This is fixed system text, so
+    Suraj's system-message rule applies: English or Hinglish
+    (Roman) only, never Devanagari — a Devanagari read gets
+    the Hinglish line."""
+    if _language(text) == "en":
+        return ("Your photo had more than one question — I "
+                "took only the first one. Send the next "
+                "question separately.")
+    return ("Photo me ek se zyada sawal the — maine sirf "
+            "pehla liya hai. Agla sawal alag se bhejo.")
 
 
 # ------------------------------------------------------- shared slot tools
@@ -952,7 +997,9 @@ _MATCHERS = (_match_simple_interest, _match_train_std,
 def analyse(text):
     """Rebuild a partially-read photo question, or return None.
 
-    ``text`` must already have passed ``normalize_ocr_text``.
+    OCR callers pass text that has already been through
+    ``normalize_ocr_text``; the vision caller passes the raw
+    transcription (Wave 203 — see the module docstring).
     The result is shown to the student for confirmation — it
     is NEVER solved directly (the callers' contract, pinned
     by test_wave137)."""
