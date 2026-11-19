@@ -143,9 +143,11 @@ BATTERY = [
     # keeps its own one-line guard wording.
     # Merge-5 (decided rule 1): greetings and vague asks are
     # the exception — Wave 68's friendly per-flavour ONE line
-    # (kinds "greeting" / "vague"), NOT "Answer not found."
+    # (kinds "greeting" / "vague"), NOT "I didn't understand that"
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke
+    # liye band — the one line is now the clarification line.
     ("ek ladke ke paas 50 rupaye hai usne 3 chocolate 10 rupaye "
-     "ki kharidi kitne bache", "not_found", "Answer nahi mila."),
+     "ki kharidi kitne bache", "not_found", "Samajh nahi aaya"),
     # Greetings / small talk -> Wave 68's friendly line (Merge-5)
     ("hello", "greeting", "Hello"),
     ("hi", "greeting", "Hello"),
@@ -159,18 +161,18 @@ BATTERY = [
     ("photosynthesis kya hai", "nonmaths", "Ganitra sirf Maths"),
     ("why is sky blue", "nonmaths", "maths"),
     # Gibberish -> the one line (Wave 67)
-    ("asdf qwer zxq", "not_found", "Answer not found."),
-    ("xkcd blah zzz", "not_found", "Answer not found."),
-    ("blorp snizzle wumpus", "not_found", "Answer not found."),
+    ("asdf qwer zxq", "not_found", "I didn't understand that"),
+    ("xkcd blah zzz", "not_found", "I didn't understand that"),
+    ("blorp snizzle wumpus", "not_found", "I didn't understand that"),
     # Vague asks -> Wave 68's friendly line (Merge-5 rule 1)
     ("ye wala samjhao", "vague", "sawal"),
     ("samjhao", "vague", "sawal"),
     ("solve this", "vague", "full maths question"),
     ("help me", "vague", "full maths question"),
     # Guide cases -> the one line (Wave 67)
-    ("?", "not_found", "Answer not found."),
+    ("?", "not_found", "I didn't understand that"),
     ("what is the formula for volume of sphere", "not_found",
-     "Answer not found."),
+     "I didn't understand that"),
 ]
 
 for q, want_kind, want_text in BATTERY:
@@ -204,9 +206,13 @@ r = fallback_answer(
 # Wave 67: this question used to prove the similar example was
 # honestly labelled; it now proves the stronger honesty rule —
 # an unsolved question gets NO dressed-up answer at all, just
-# the one not-found line and no steps.
-check("unparseable gets the one-line not-found, nothing else",
-      str(r.get("answer", "")) == "Answer nahi mila."
+# the one line and no steps.
+# Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye
+# band — the one line is now the clarification line.
+check("unparseable gets the one-line clarification, nothing else",
+      str(r.get("answer", "")) == (
+          "Samajh nahi aaya — maths ka sawal thoda saaf likh "
+          "kar bhejo, main turant solve kar dunga.")
       and r.get("fallback_kind") == "not_found"
       and not (r.get("steps") or []))
 r = fallback_answer(

@@ -24,6 +24,7 @@ RUN_ID = _uuid.uuid4().hex[:8]
 from app import create_app  # noqa: E402
 from i18n import STRINGS, SUPPORTED_LANGS  # noqa: E402
 from markupsafe import escape as _markupsafe_escape  # noqa: E402
+import thoughts  # noqa: E402
 
 
 def esc(text):
@@ -115,7 +116,12 @@ with c.session_transaction() as sess:
           and sess.get("saathi_class") == 8,
           f"session={sess.get('saathi_name')!r}/{sess.get('saathi_class')!r}")
 check("personalised greeting on homepage",
-      esc(EN["saathi_welcome_name"].format(name="Aarav " + RUN_ID)) in body)
+      # Wave 155: the chat home serves the SHORT greeting (the
+      # welcome line's first clause, "Hello <name>") with the
+      # day's rotating thought below it — not the full line.
+      esc(EN["saathi_welcome_name"].format(
+          name="Aarav " + RUN_ID).split("!")[0].strip()) in body
+      and esc(thoughts.thought_text(lang="en")) in body)
 check("raw HTML name NOT rendered", raw_name not in body
       and "<img src=x" not in body)
 # Wave 10: the pill no longer offers Edit for account users (the
@@ -149,7 +155,11 @@ c.post("/signup", data={"name": "Aarav Hindi " + RUN_ID, "class": "8",
                         "password": "w6test-pass"})
 r = c.get("/")
 check("Hindi personalised greeting",
-      esc(HI["saathi_welcome_name"].format(name="Aarav Hindi " + RUN_ID))
+      # Wave 155: short Hindi greeting + the Hindi daily thought.
+      esc(HI["saathi_welcome_name"].format(
+          name="Aarav Hindi " + RUN_ID).split("!")[0].strip())
+      in r.get_data(as_text=True)
+      and esc(thoughts.thought_text(lang="hi"))
       in r.get_data(as_text=True))
 
 # --- 4. Encouragement: friendly errors + wrong quiz answers -------------------
@@ -167,7 +177,8 @@ body = r.get_data(as_text=True)
 # Wave 67: the friendly fallback for gibberish is the
 # one-line not-found answer.
 check("named session gibberish -> one-line not-found",
-      "Answer not found." in body
+      # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+      "type your maths question a little clearly" in body
       and "error-card" not in body)
 check("encouragement strings intact in i18n",
       "Aarav" in EN["error_encourage_name"].format(name="Aarav")
@@ -183,7 +194,7 @@ check("api gibberish -> fallback reply (Wave 18; "
 c = app.test_client()
 r = c.post("/solve", data={"question": "asdf qwer zxq"})
 check("anonymous gibberish -> one-line not-found (Wave 67)",
-      "Answer not found." in r.get_data(as_text=True))
+      "type your maths question a little clearly" in r.get_data(as_text=True))
 
 # Wrong timed-quiz answers -> the never-scolding line (named + anon).
 def run_wrong_quiz(client):

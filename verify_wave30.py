@@ -159,9 +159,11 @@ for _q, _want in BATTERY:
 _r = _solve_friendly(
     "ek ladke ke paas 50 rupaye hai usne 3 chocolate 10 "
     "rupaye ki kharidi kitne bache")
-check("genuinely unparseable: similar example, still labelled",
-      _r.get("fallback_kind") == "similar"
-      and str(_r.get("answer", "")).startswith("Similar example"))
+# Wave 67: the labelled similar example is retired — an
+# unparseable question now gets the one-line not-found answer.
+check("genuinely unparseable: one-line not-found (Wave 67)",
+      _r.get("fallback_kind") == "not_found"
+      and str(_r.get("answer", "")) == "Samajh nahi aaya — maths ka sawal thoda saaf likh kar bhejo, main turant solve kar dunga.")  # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
 
 # --- 5. Delivery hygiene: solver-only wave, pins unmoved --------
 with open("templates/base.html", encoding="utf-8") as fh:

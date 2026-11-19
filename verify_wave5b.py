@@ -65,7 +65,8 @@ check("gibberish POST /solve status", r.status_code == 200,
 # Wave 67 amendment: the friendly fallback reply is now the
 # ONE-LINE not-found answer — no guide text, no how-to-ask tip.
 check("gibberish one-line not-found reply (Wave 67)",
-      "Answer not found." in body)
+      # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+      "type your maths question a little clearly" in body)
 check("gibberish NO how-to-ask tip (Wave 67)",
       "Try writing it like" not in body
       and "Questions I solve for sure" not in body)

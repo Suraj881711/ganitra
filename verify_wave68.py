@@ -77,9 +77,11 @@ plain_one_liner("vague Hinglish", "kuch bhi bata do", "vague")
 plain_one_liner("vague Devanagari", "समझाओ", "vague")
 
 print("== 2. gibberish -> the exact not-found line ==")
-for q, want in [("If tu gfuf", "Answer not found."),
-                ("asdf qwer zxq", "Answer not found."),
-                ("कखग घङच छजझ", "उत्तर नहीं मिला।")]:
+# Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band — the exact line is now the
+# clarification line.
+for q, want in [("If tu gfuf", "I didn't understand that — type your maths question a little clearly and I'll solve it right away."),
+                ("asdf qwer zxq", "I didn't understand that — type your maths question a little clearly and I'll solve it right away."),
+                ("कखग घङच छजझ", "समझ नहीं आया — गणित का सवाल थोड़ा साफ़ लिखकर भेजिए, मैं तुरंत हल कर दूँगा।")]:
     r = _solve_friendly(q)
     check(f"not-found {q[:14]!r}",
           r.get("plain_reply") is True and r.get("steps") == []

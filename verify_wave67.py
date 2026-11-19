@@ -72,14 +72,16 @@ from solver.router import solve_question  # noqa: E402
 
 print("== A. not-solved inputs -> exactly one line ==")
 CASES = [
-    ("If tu gfuf", "Answer not found."),
-    ("asdf qwer", "Answer not found."),
-    ("कुछ भी लिख दिया बकवास", "उत्तर नहीं मिला।"),
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band — the one line is now the
+    # clarification line.
+    ("If tu gfuf", "I didn't understand that — type your maths question a little clearly and I'll solve it right away."),
+    ("asdf qwer", "I didn't understand that — type your maths question a little clearly and I'll solve it right away."),
+    ("कुछ भी लिख दिया बकवास", "समझ नहीं आया — गणित का सवाल थोड़ा साफ़ लिखकर भेजिए, मैं तुरंत हल कर दूँगा।"),
     ("ek ladke ke paas 50 rupaye hai usne 3 chocolate 10 "
-     "rupaye ki kharidi kitne bache", "Answer nahi mila."),
+     "rupaye ki kharidi kitne bache", "Samajh nahi aaya — maths ka sawal thoda saaf likh kar bhejo, main turant solve kar dunga."),
     ("Ten years ago, a father was twelve times as old as his "
      "son and ten years hence, he will be twice as old as his "
-     "son. Find their present ages.", "Answer not found."),
+     "son. Find their present ages.", "I didn't understand that — type your maths question a little clearly and I'll solve it right away."),
 ]
 for q, line in CASES:
     res = fallback_answer(q)
@@ -115,9 +117,9 @@ for q, kind, line in FRIENDLY_CASES:
           and res.get("plain") is True,
           f"kind={res.get('fallback_kind')} ans={res.get('answer')!r}")
 
-for lang, line in (("bn", "উত্তর পাওয়া যায়নি।"),
-                   ("ta", "பதில் கிடைக்கவில்லை."),
-                   ("te", "సమాధానం దొరకలేదు.")):
+for lang, line in (("bn", "বুঝতে পারিনি — গণিতের প্রশ্নটা একটু পরিষ্কার করে লিখে পাঠাও, আমি সঙ্গে সঙ্গে সমাধান করে দেব।"),
+                   ("ta", "புரியவில்லை — கணிதக் கேள்வியை கொஞ்சம் தெளிவாக எழுதி அனுப்புங்கள், உடனே தீர்த்து தருகிறேன்."),
+                   ("te", "అర్థం కాలేదు — గణిత ప్రశ్నను కొంచెం స్పష్టంగా రాసి పంపండి, వెంటనే పరిష్కరించి ఇస్తాను.")):
     res = fallback_answer("asdf qwer", lang=lang)
     check(f"UI language {lang}", res.get("answer") == line,
           repr(res.get("answer")))
@@ -156,7 +158,7 @@ body = client.post("/api/solve",
 check("api gibberish minimal",
       body["ok"] is True
       and body["result"].get("fallback_kind") == "not_found"
-      and body["result"].get("answer") == "Answer not found."
+      and body["result"].get("answer") == "I didn't understand that — type your maths question a little clearly and I'll solve it right away."
       and body["explanation"] == "" and body["advice"] == ""
       and body["methods"] == [] and body["teach"] == [],
       json.dumps(body)[:200])
@@ -184,7 +186,7 @@ check("chat page ships the Wave-67 gate",
 page = client.post("/solve", data={"question": "If tu gfuf"})
 html = page.get_data(as_text=True)
 check("classic /solve: line only, no advice card",
-      "Answer not found." in html
+      "type your maths question a little clearly" in html
       and "advice-card" not in html
       and "Questions I solve for sure" not in html)
 
@@ -328,7 +330,7 @@ asyncio.run(main())
             if dom is not None:
                 g = dom["gibberish"]
                 check("DOM gibberish = single line, no extras",
-                      g["text"] == "Answer not found."
+                      g["text"] == "I didn't understand that — type your maths question a little clearly and I'll solve it right away."
                       and g["actions"] == 0 and g["advice"] == 0
                       and g["steps"] == 0 and g["wraps"] == 0,
                       json.dumps(g))
