@@ -110,13 +110,13 @@ def test_sprite_urls_versioned_everywhere(client):
 
 
 def test_delivery_versions_wave28():
-    assert "v='58'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v35"' in SW
+    assert "v='59'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
     for old in ("ganitra-static-v5", "ganitra-static-v4",
                 "ganitra-static-v3",
                 "ganitra-static-v2", "ganitra-static-v1"):
         # Wave 60: match the FULL quoted cache name —
-        # "ganitra-static-v35" contains "ganitra-static-v1"
+        # "ganitra-static-v36" contains "ganitra-static-v1"
         # as a bare substring, which is not the old cache.
         assert f'"{old}"' not in SW
 
