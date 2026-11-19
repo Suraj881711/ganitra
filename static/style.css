@@ -724,13 +724,11 @@ body.chat-page:not(.chat-active) {
   border: 2px solid rgba(10, 122, 100, .45);
   box-shadow: 0 12px 30px rgba(101, 84, 40, .14);
   overflow: hidden;
-  animation: mascot-bob 3.4s ease-in-out infinite;
 }
 .mascot-pose {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
-  object-fit: cover; opacity: 0;
-  animation: mascot-cycle 24s linear infinite;
+  object-fit: cover; opacity: 1;
 }
 .mascot-pose-wave {
   opacity: 1; object-position: 50% 4%;
@@ -744,24 +742,6 @@ body.chat-page:not(.chat-active) {
 }
 .mascot-pose-kiss {
   animation-delay: 17.04s; transform: scale(1.05);
-}
-.mascot-name {
-  margin-top: 8px;
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 18px; font-weight: 600; letter-spacing: .02em;
-  color: #074335;
-}
-@keyframes mascot-cycle {
-  0% { opacity: 0; }
-  4% { opacity: 1; }
-  25% { opacity: 1; }
-  29% { opacity: 0; }
-  100% { opacity: 0; }
-}
-@keyframes mascot-bob {
-  0%, 100% { transform: translateY(0); }
-  45% { transform: translateY(-3px); }
-  58% { transform: translateY(-2.3px); }
 }
 .mascot-buddy {
   display: none;
@@ -816,10 +796,7 @@ body.mascot-cheer .mascot-buddy {
 }
 .mascot-pop.show img { transform: scale(1); }
 @media (prefers-reduced-motion: reduce) {
-  .mascot-circle, .mascot-pose,
   body.mascot-cheer .mascot-buddy { animation: none; }
-  .mascot-pose { opacity: 0; }
-  .mascot-pose-wave { opacity: 1; }
   .mascot-pop img { transition: none; transform: none; }
 }
 body.chat-page .saathi-card {
