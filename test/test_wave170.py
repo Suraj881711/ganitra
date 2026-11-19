@@ -32,7 +32,7 @@ and this wave does not touch it. The card hides with
 .empty-robot-top the moment a chat starts
 (body.chat-active), when the header buddy takes over.
 
-Pins moved with the CSS: ?v=59 / ganitra-static-v36.
+Pins moved with the CSS: ?v=60 / ganitra-static-v37.
 
 Wave 181 update (19 Nov 2026): Suraj replaced the robot
 and its card with the new rendered mascot in a WHITE
@@ -86,15 +86,14 @@ def test_circle_wraps_mascot_inside_top_wrapper():
     assert circle < INDEX.index('<div class="chat-scroll"')
 
 
-def test_circle_shows_the_name_ganitra():
-    circle = INDEX.index('<div class="mascot-circle">')
-    name = INDEX.index('<div class="mascot-name">Ganitra</div>')
-    # The name sits under the circle, and there is exactly
-    # one such name plate on the page.
-    assert circle < name
-    assert INDEX.count('<div class="mascot-name">Ganitra</div>') == 1
-    # Still inside the top wrapper (before the thread starts).
-    assert name < INDEX.index('<div class="chat-scroll"')
+def test_circle_has_no_name_plate():
+    # Wave 197 (Suraj, 20 Nov): name/motion removed on his
+    # order — he never asked for the name plate under the
+    # circle ("maine toh nhi bola waha par ganitra ko
+    # likho"), so there is no name plate anywhere now.
+    # (This test pinned the plate's presence until now.)
+    assert "mascot-name" not in INDEX
+    assert '<div class="mascot-name">Ganitra</div>' not in INDEX
 
 
 def test_circle_still_gated_on_named_student():
@@ -125,9 +124,12 @@ def test_mascot_circle_rule_is_white_and_round():
     assert "box-shadow:" in rule  # the soft lift
 
 
-def test_mascot_name_rule_uses_deep_teal():
-    rule = _rule(".mascot-name")
-    assert "#074335" in rule  # Wave 161 deep teal
+def test_mascot_name_rule_removed():
+    # Wave 197 (Suraj, 20 Nov): name/motion removed on his
+    # order — the .mascot-name rule is gone with the plate.
+    # (This test pinned the rule's deep-teal colour until
+    # now.)
+    assert ".mascot-name" not in CSS
 
 
 # --- 3. Soft background, Ganitra colours only -------------------------
@@ -182,8 +184,8 @@ def test_circle_hides_with_top_wrapper_on_chat_active():
 # --- 6. Pins ------------------------------------------------------------
 
 def test_pins_v58_v35():
-    assert "filename='style.css', v='59'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
-    assert '"/static/style.css?v=59"' in SW
+    assert "filename='style.css', v='60'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
+    assert '"/static/style.css?v=60"' in SW
     assert "v='53'" not in BASE
     assert "ganitra-static-v30" not in SW

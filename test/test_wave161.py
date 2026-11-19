@@ -18,7 +18,7 @@ exactly and is what this file pins now:
     body.chat-active hides the home one;
   * the palette pins of the old SVG are retired with the
     artwork (a photograph carries its own colours);
-  * pins moved with the CSS: ?v=59 / ganitra-static-v36.
+  * pins moved with the CSS: ?v=60 / ganitra-static-v37.
 """
 from pathlib import Path
 
@@ -83,18 +83,27 @@ def test_mascot_before_logo_and_greeting():
     assert "body.chat-active .empty-robot-top { display: none; }" in CSS
 
 
-def test_home_circle_crossfades_the_four_poses():
+def test_home_circle_holds_only_the_wave_pose_still():
+    # Wave 197 (Suraj, 20 Nov): name/motion removed on his
+    # order — the crossfade is gone: the circle holds ONLY
+    # the wave pose, plainly visible and completely still.
+    # (This test pinned the four-pose crossfade until now.)
     rule = _rule(".mascot-pose")
-    assert "animation: mascot-cycle 24s linear infinite" in rule
-    assert "@keyframes mascot-cycle" in CSS
+    assert "animation: mascot-cycle 24s linear infinite" not in rule
+    assert "animation" not in rule
+    assert "opacity: 1" in rule
+    assert "@keyframes mascot-cycle" not in CSS
+    assert 'class="mascot-pose mascot-pose-wave"' in INDEX
+    for pose in ("think", "laugh", "kiss"):
+        assert 'class="mascot-pose mascot-pose-%s"' % pose \
+            not in INDEX
     for pose in ("wave", "think", "laugh", "kiss"):
-        assert 'class="mascot-pose mascot-pose-%s"' % pose in INDEX
         assert (ROOT / "static" / ("robot-%s.webp" % pose)).exists()
 
 
 # --- Pins -----------------------------------------------------------
 
 def test_pins_current():
-    assert "v='59'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
-    assert '"/static/style.css?v=59"' in SW
+    assert "v='60'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
+    assert '"/static/style.css?v=60"' in SW

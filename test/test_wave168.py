@@ -20,7 +20,7 @@ Wave 161 header buddy takes over — the two never show
 together. Pure placement: no artwork, colour, animation,
 greeting, thought or composer change.
 
-Pins moved with the CSS: ?v=59 / ganitra-static-v36.
+Pins moved with the CSS: ?v=60 / ganitra-static-v37.
 
 Wave 181 update (19 Nov 2026): the SVG robot that stood in
 the wrapper was replaced by the new rendered mascot in a
@@ -98,10 +98,17 @@ def test_mascot_block_is_the_new_robot():
     # Wave 181: inside the top wrapper stands the new
     # rendered mascot — four local pose images in the white
     # circle, no SVG artwork at all.
+    # Wave 197 (Suraj, 20 Nov): name/motion removed on his
+    # order — the circle now holds ONLY the wave portrait
+    # (the laugh/kiss portraits ride the .mascot-pop
+    # overlay below, outside this block). The slice used
+    # to end at the name plate; it now ends at the close
+    # of the .mascot-home block.
     home = INDEX[INDEX.index('<div class="mascot-home"'):]
-    home = home[:home.index('<div class="mascot-name">')]
-    for name in ("robot-wave.webp", "robot-think.webp",
-                 "robot-laugh.webp", "robot-kiss.webp"):
-        assert name in home
+    home = home[:home.index("{% endif %}")]
+    assert "robot-wave.webp" in home
+    for name in ("robot-think.webp", "robot-laugh.webp",
+                 "robot-kiss.webp"):
+        assert name not in home
     assert "<svg" not in home
     assert "http" not in home

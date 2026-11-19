@@ -24,7 +24,7 @@ contract that survives the swap:
     the Wave 23 boy no longer rides the bubble either);
   * SCENE_ENABLED stays False; greeting + thought wiring
     is Wave 155's and untouched;
-  * pins moved with the CSS: ?v=59 / ganitra-static-v36.
+  * pins moved with the CSS: ?v=60 / ganitra-static-v37.
 """
 import re
 from pathlib import Path
@@ -124,21 +124,25 @@ def test_laugh_mascot_js_hook():
 # --- Reduced motion, pins, parked scene ---------------------------
 
 def test_reduced_motion_stills_mascot():
+    # Wave 197 (Suraj, 20 Nov): name/motion removed on his
+    # order — the circle has no motion left to still, so
+    # the mascot's reduced-motion block keeps only the
+    # buddy cheer and the pop zoom.
     blocks = re.findall(
         r"@media \(prefers-reduced-motion: reduce\) \{(.*?)\n\}",
         CSS, re.S)
-    w181 = [b for b in blocks if ".mascot-circle" in b]
-    assert w181, "the Wave 181 reduced-motion block exists"
+    w181 = [b for b in blocks if ".mascot-pop" in b]
+    assert w181, "the mascot reduced-motion block exists"
     block = w181[0]
     assert "animation: none" in block
-    assert ".mascot-pose { opacity: 0; }" in CSS
-    assert ".mascot-pose-wave { opacity: 1; }" in CSS
+    assert ".mascot-pose { opacity: 0; }" not in CSS
+    assert "mascot-cycle" not in CSS and "mascot-bob" not in CSS
 
 
 def test_pins_and_scene_flag():
-    assert "v='59'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
-    assert '"/static/style.css?v=59"' in SW
+    assert "v='60'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
+    assert '"/static/style.css?v=60"' in SW
     assert "SCENE_ENABLED = False" in APP
 
 

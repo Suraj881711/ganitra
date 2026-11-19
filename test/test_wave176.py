@@ -34,8 +34,8 @@ mascot's laugh pop. The two "neighbours" tests below were
 updated at merge time to pin those successors; this
 wave's own bubble pins are unchanged.
 
-Delivery pins move together, as always: stylesheet ?v=59,
-worker cache ganitra-static-v36 (sprite URLs stay ?v=29 —
+Delivery pins move together, as always: stylesheet ?v=60,
+worker cache ganitra-static-v37 (sprite URLs stay ?v=29 —
 no sprite file changed).
 """
 import os
@@ -159,8 +159,8 @@ def test_served_page_bubble_has_no_figures(client):
 # --- delivery pins --------------------------------------------------------
 
 def test_delivery_versions_wave176():
-    assert "v='59'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
-    assert '"/static/style.css?v=59"' in SW
+    assert "v='60'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
+    assert '"/static/style.css?v=60"' in SW
     assert "v='54'" not in BASE
     assert "ganitra-static-v31" not in SW

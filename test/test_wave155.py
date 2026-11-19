@@ -41,7 +41,7 @@ Pins:
   * Wave 69 stands — no example-question chips anywhere;
   * the 3D scene stays parked (SCENE_ENABLED untouched);
   * CSS changed, so the pins moved WITH it: ?v=52 /
-    ganitra-static-v36 everywhere.
+    ganitra-static-v37 everywhere.
 """
 import html
 import re
@@ -206,16 +206,32 @@ def test_template_greeting_row_structure():
 def test_mascot_images_are_local_files_and_logo_free():
     # Wave 181: the mascot is four local rendered images
     # (Suraj's approved robot), not an SVG and not the logo.
+    # Wave 197 (Suraj, 20 Nov): name/motion removed on his
+    # order — the think portrait no longer rides the page
+    # (the wave rides the circle and the header buddy,
+    # laugh and kiss ride the .mascot-pop overlay); all
+    # four files stay on disk.
+    for name in ("robot-wave.webp", "robot-kiss.webp"):
+        assert name in INDEX
+    # The laugh portrait is not a literal filename in the
+    # page: the pop overlay loads it through its dynamic
+    # src ("/static/robot-" + kind + ".webp").
+    assert '"/static/robot-" + kind + ".webp"' in INDEX
+    assert "robot-laugh.webp" not in INDEX
+    assert "robot-think.webp" not in INDEX
     for name in ("robot-wave.webp", "robot-think.webp",
                  "robot-laugh.webp", "robot-kiss.webp"):
-        assert name in INDEX
         assert (ROOT / "static" / name).exists()
     # The mascot lives in the signed-in empty-state branch only.
     assert INDEX.index('class="mascot-circle"') < \
         INDEX.index('id="signin-card-style"')
     # No external image for the mascot, and the logo is untouched.
+    # (Wave 197: the slice used to end at the name plate;
+    # it now ends at the close of the .mascot-home block.)
     mascot_block = INDEX[INDEX.index('<div class="mascot-home"'):
-                         INDEX.index('<div class="mascot-name">')]
+                         INDEX.index("{% endif %}",
+                                     INDEX.index(
+                                         '<div class="mascot-home"'))]
     assert "http" not in mascot_block
     assert "logo" not in mascot_block
 
@@ -223,15 +239,17 @@ def test_mascot_images_are_local_files_and_logo_free():
 def test_mascot_animation_css_and_reduced_motion():
     # Wave 181: the circle crossfades the four poses and
     # gently bobs; reduced motion rests it on the wave pose.
+    # Wave 197 (Suraj, 20 Nov): name/motion removed on his
+    # order — the circle is completely still (no bob, no
+    # crossfade) and reduced motion only drops the pop zoom.
     assert ".mascot-circle {" in CSS
-    assert "@keyframes mascot-cycle" in CSS
-    assert "@keyframes mascot-bob" in CSS
+    assert "@keyframes mascot-cycle" not in CSS
+    assert "@keyframes mascot-bob" not in CSS
     assert ".empty-hello {" in CSS
     assert ".empty-thought {" in CSS
-    reduced = re.search(
-        r"@media \(prefers-reduced-motion: reduce\) \{\s*"
-        r"\.mascot-circle, \.mascot-pose,", CSS)
-    assert reduced is not None
+    assert ".mascot-pose { opacity: 0; }" not in CSS
+    assert ".mascot-pop img { transition: none; transform: none; }" \
+        in CSS
 
 
 def test_context_processor_serves_greeting_and_thought():
@@ -266,9 +284,9 @@ def test_scene_flag_untouched():
 
 
 def test_pins_moved_with_the_css():
-    assert "v='59'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
-    assert '"/static/style.css?v=59"' in SW
+    assert "v='60'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
+    assert '"/static/style.css?v=60"' in SW
 
 
 # --- The page itself -------------------------------------------------------
