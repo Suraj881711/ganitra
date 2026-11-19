@@ -24,7 +24,7 @@ contract that survives the swap:
     the Wave 23 boy no longer rides the bubble either);
   * SCENE_ENABLED stays False; greeting + thought wiring
     is Wave 155's and untouched;
-  * pins moved with the CSS: ?v=58 / ganitra-static-v35.
+  * pins moved with the CSS: ?v=59 / ganitra-static-v36.
 """
 import re
 from pathlib import Path
@@ -136,9 +136,9 @@ def test_reduced_motion_stills_mascot():
 
 
 def test_pins_and_scene_flag():
-    assert "v='58'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v35"' in SW
-    assert '"/static/style.css?v=58"' in SW
+    assert "v='59'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
+    assert '"/static/style.css?v=59"' in SW
     assert "SCENE_ENABLED = False" in APP
 
 

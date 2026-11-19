@@ -207,5 +207,5 @@ def test_engine_still_lazy_and_deferred():
 
 
 def test_wave126_static_pins():
-    assert "style.css?v=58" in SW
-    assert "ganitra-static-v35" in SW
+    assert "style.css?v=59" in SW
+    assert "ganitra-static-v36" in SW

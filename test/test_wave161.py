@@ -18,7 +18,7 @@ exactly and is what this file pins now:
     body.chat-active hides the home one;
   * the palette pins of the old SVG are retired with the
     artwork (a photograph carries its own colours);
-  * pins moved with the CSS: ?v=58 / ganitra-static-v35.
+  * pins moved with the CSS: ?v=59 / ganitra-static-v36.
 """
 from pathlib import Path
 
@@ -95,6 +95,6 @@ def test_home_circle_crossfades_the_four_poses():
 # --- Pins -----------------------------------------------------------
 
 def test_pins_current():
-    assert "v='58'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v35"' in SW
-    assert '"/static/style.css?v=58"' in SW
+    assert "v='59'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
+    assert '"/static/style.css?v=59"' in SW

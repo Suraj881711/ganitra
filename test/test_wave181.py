@@ -30,7 +30,7 @@ What this wave pins:
     is re-added there; the Teach boy is untouched.
   * The old SVG robot machinery (home SVG, buddy SVG,
     robotSvg() poses, robot-* CSS/keyframes) is removed.
-  * Pins: ?v=58 / ganitra-static-v35; the four portraits
+  * Pins: ?v=59 / ganitra-static-v36; the four portraits
     join the service-worker precache shell.
 """
 from pathlib import Path
@@ -184,9 +184,9 @@ def test_reduced_motion_rests_on_wave():
 # --- Pins and precache -----------------------------------------------------
 
 def test_pins_and_precache():
-    assert "v='58'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v35"' in SW
-    assert '"/static/style.css?v=58"' in SW
+    assert "v='59'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
+    assert '"/static/style.css?v=59"' in SW
     for pose in POSES:
         assert '"/static/robot-%s.webp"' % pose in SW
 

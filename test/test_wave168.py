@@ -20,7 +20,7 @@ Wave 161 header buddy takes over — the two never show
 together. Pure placement: no artwork, colour, animation,
 greeting, thought or composer change.
 
-Pins moved with the CSS: ?v=58 / ganitra-static-v35.
+Pins moved with the CSS: ?v=59 / ganitra-static-v36.
 
 Wave 181 update (19 Nov 2026): the SVG robot that stood in
 the wrapper was replaced by the new rendered mascot in a

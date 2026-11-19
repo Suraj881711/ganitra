@@ -71,9 +71,9 @@ def test_all_four_signs_still_in_the_bar():
 
 
 def test_pins_bumped_to_v58_v35():
-    assert "v='58'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v35"' in SW
-    assert '"/static/style.css?v=58"' in SW
+    assert "v='59'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v36"' in SW
+    assert '"/static/style.css?v=59"' in SW
 
 
 def test_answer_row_icons_closer():

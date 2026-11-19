@@ -29,7 +29,7 @@ non-maths guard and before maths_meta. Serves:
 mirror W122_NOT_SOLVED_KINDS (a paper card is library
 content, not a solve — no answer box, no follow-up chips);
 delivery pins moved with the deploys (final after the
-Deploy-44 merge: ?v=58 / ganitra-static-v35).
+Deploy-44 merge: ?v=59 / ganitra-static-v36).
 """
 import re
 from pathlib import Path
@@ -274,6 +274,6 @@ def test_pins_v58_v35():
     base = (ROOT / "templates" / "base.html").read_text(
         encoding="utf-8")
     sw = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
-    assert "filename='style.css', v='58'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v35"' in sw
-    assert '"/static/style.css?v=58"' in sw
+    assert "filename='style.css', v='59'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v36"' in sw
+    assert '"/static/style.css?v=59"' in sw
