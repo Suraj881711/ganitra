@@ -116,33 +116,30 @@
        the content area, centred, immediately below the
        header/menu line (the Wave 168 placement), inside
        a WHITE CIRCLE with a soft teal ring and shadow —
-       his approved preview — with the name "Ganitra"
-       under the circle. Inside the circle the poses
-       slowly crossfade: wave, think, laugh, kiss. It
-       renders only for a named student, and CSS hides it
+       his approved preview. Inside the circle only the
+       wave pose shows, completely still. It renders
+       only for a named student, and CSS hides it
        the moment a chat starts (body.chat-active), when
        the header buddy takes over — the two never show
        together. On page open the kiss pose ALSO appears
        full-size over the home for a moment (the
        .mascot-pop welcome, below) — Suraj: "kabhi kabhi
-       ye pura bhi dikhana chahiye". #}
+       ye pura bhi dikhana chahiye".
+       Wave 197 (Suraj, 20 Nov 2026): the name "Ganitra"
+       under the circle is REMOVED on his order — he
+       never asked for it to be written there. The
+       circle is made COMPLETELY STILL on his order:
+       the gentle bob and the pose crossfade are gone,
+       only the wave pose remains inside the circle.
+       The .mascot-pop full-size moments and the header
+       buddy are untouched. #}
     <div class="empty-robot-top" aria-hidden="true">
       <div class="mascot-home" id="mascot-home">
         <div class="mascot-circle">
           <img class="mascot-pose mascot-pose-wave"
             src="{{ url_for('static', filename='robot-wave.webp') }}"
             alt="" />
-          <img class="mascot-pose mascot-pose-think"
-            src="{{ url_for('static', filename='robot-think.webp') }}"
-            alt="" />
-          <img class="mascot-pose mascot-pose-laugh"
-            src="{{ url_for('static', filename='robot-laugh.webp') }}"
-            alt="" />
-          <img class="mascot-pose mascot-pose-kiss"
-            src="{{ url_for('static', filename='robot-kiss.webp') }}"
-            alt="" />
         </div>
-        <div class="mascot-name">Ganitra</div>
       </div>
     </div>
     {% endif %}
