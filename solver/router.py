@@ -795,11 +795,33 @@ def normalize_hinglish(question: str) -> str:
     # folded text, so only canonical Hinglish words are matched
     # (btaao/ktna/khetrafal never reach here — they are folded by
     # normalize_spelling first).
+    # Wave 185: LABELLED speed + time + distance ask —
+    # "ek train 60 km ki speed se 2 ghante chalti hai
+    # kitni door gayi": the 60 is the SPEED itself ("60 km
+    # ki speed" = 60 km/h), not a distance, and the ask is
+    # the distance. The speed rule below read the same
+    # numbers as distance-over-time and answered
+    # 60 / 2 = 30 km/h. Rewrite to the canonical distance
+    # form (the Wave 30 shape) before that rule can claim
+    # it. The ask gate (door / doori / distance) keeps
+    # speed asks and time asks on their own rules.
+    m = re.search(r"(\d+(?:\.\d+)?)\s*km\s+ki\s+"
+                  r"(?:speed|chaal|gati)\b[^0-9]{0,40}?"
+                  r"(\d+(?:\.\d+)?)\s*(?:ghante|hours)", ql)
+    if m and ("door" in ql or "doori" in ql
+              or "distance" in ql):
+        return f"{m.group(1)} km/h for {m.group(2)} hours"
     # Speed from distance + time: "ek train 360 km (ki doori)
     # 4 ghante me tay karti hai, speed/chaal kitni hai?"
+    # Wave 185: the distance number must not be the LABELLED
+    # speed itself ("60 km ki speed se 2 ghante...") — the
+    # negative lookahead keeps that shape out even when the
+    # distance-ask gate above did not claim it.
     if "km/h" not in ql and ("speed" in ql or "chaal" in ql
                              or "gati" in ql):
-        m = re.search(r"(\d+(?:\.\d+)?)\s*km\b[^0-9]{0,24}?"
+        m = re.search(r"(\d+(?:\.\d+)?)\s*km\b"
+                      r"(?!\s+ki\s+(?:speed|chaal|gati)\b)"
+                      r"[^0-9]{0,24}?"
                       r"(\d+(?:\.\d+)?)\s*ghante", ql)
         if m:
             return (f"a train travels {m.group(1)} km in "
