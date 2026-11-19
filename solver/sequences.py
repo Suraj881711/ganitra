@@ -251,6 +251,7 @@ _W202_MARKERS = re.compile(
     r"predict|prediction|next|agla|agli|agle|series|sequence|"
     r"pattern|aayega|kya\s+hoga|kya\s+aayega|comes\s+next|"
     r"coming\s+next|what\s+comes|continue|"
+    r"aata\s+hai|aati\s+hai|ke\s+baad\s+kaun|"
     r"batao|bataao|bataiye|"
     r"अगला|अगली|अगले|श्रृंखला|श्रेणी|अनुक्रम|पैटर्न|आगे",
     re.IGNORECASE)
