@@ -644,71 +644,17 @@ body.chat-page .chat-log {
 }
 /* Wave 155: short greeting row + thought line (the day's
    rotating thought sits below the greeting as a small muted
-   line). Wave 160 (Suraj, 18 Nov 2026 — the teddy was
-   rejected; character locked by him, "Yahi done karo"): the
-   mascot is a small chubby CREAM ROBOT with Ganitra
-   teal-green parts — ear caps, hands, feet, chest button,
-   belly patch — glowing teal eyes and TWO antenna LIGHTS,
-   hand-drawn inline SVG in templates/index.html (no image
-   file; NOT the logo, NOT the parked 3D scene, no letter
-   G). Both hands always show. Behaviour, all CSS:
-   - on page open: a flying kiss, then hearts float up like
-     bubbles (one-shot), then the idle cycle takes over;
-   - idle: gentle bob, blink, wave-then-rest, antenna lights
-     softly pulsing, plus occasional beats — a laugh (happy
-     arc eyes, wide mouth, tiny bounce, lights twinkle), an
-     antenna grab (the right arm stretches FULLY up and
-     wraps the right light ball — the grab hand is drawn
-     centred exactly on that ball — eyes looking up
-     happily), and monkey play (hops with kicking legs, one
-     hand scratching its head, cheeky grin, lights
-     twinkling);
-   - while Ganitra solves, the typing bubble carries a mini
-     robot duo (templates/index.html JS): a HUMAN thinking
-     pose (one hand on its head, the other on its waist,
-     eyes up) alternating with the WRITING pose (notebook +
-     green pencil, squiggles appearing), its lights blinking
-     alternately left-right, brighter; the writing robot
-     also grabs its light ball now and then;
-   - a correct chat-test answer gets the laughing mini
-     robot with a quick light twinkle.
-   FEELINGS pass (Suraj, 18 Nov 2026 — "real feelings honi
-   chahiye"; benchmark: Muse's own character, whose face
-   makes the VIEWER feel something — an original character
-   here, built to the same emotional readability): every
-   state has its own facial expression group (smile / laugh
-   / kiss / look-up / cheeky monkey grin / thinking gaze /
-   focused writing gaze), the eyes mostly meet the student's
-   with soft blinks, a gentle "noticing you" head tilt leans
-   in now and then, beats land after a breath of stillness
-   (the laugh bounce even dips in anticipation first), and
-   the decorative loops run at slightly irregular, unaligned
-   lengths with overshoot-and-settle easing — calm and warm,
-   never a stiff metronome.
-   Reduced motion: everything stills — plain smile pose,
-   writing pose only in the bubble, static soft light glow.
-   Wave 161 (Suraj, 18 Nov 2026, after seeing the LIVE
-   Deploy-34 screenshot — "Robot achhe se nhi dikh rha"):
-   (1) the palette is DARKENED everywhere the robot appears
-   — body cream #fdf0dd → #f0d3a0, teal #0d9b83 → #0a7a64,
-   deep #0b5a4a → #074335, smile #0b8a72 → #076e59, seam
-   #e8d9c4 → #dbb87e, pencil #f3e3c2 → #e8cc97, notebook
-   paper #fffaf0 → #f7ead2 (all in templates/index.html;
-   the antenna LIGHTS stay bright mint #2fe8b8 / #46f2c3
-   so they glow against the darker body) — plus a soft
-   drop shadow under each robot for separation;
-   (2) the home robot moved from the greeting's left to a
-   CENTRED line ABOVE the greeting (.empty-hello is now a
-   centred column), Muse-style;
-   (3) a small BUDDY copy of the robot (see the .robot-buddy
-   block below) stays present through an active chat and
-   mirrors the work state, Muse-style. Same character,
-   same shapes, same animations throughout. */
+   line). The mascot that rides this screen was the Wave 155
+   teddy, then the Wave 160/161 hand-drawn SVG robot; Wave
+   181 (Suraj, 19 Nov 2026) replaced it with the new rendered
+   robot — see the .mascot-home block below. The greeting +
+   thought layout itself is unchanged. */
 .empty-hello {
-  /* Wave 161: a centred STACK, not a row — the robot stands
-     on its own line ABOVE the greeting, Muse-style, both
-     centred (the thought line already sits below, outside
-     this container). */
+  /* Wave 161: a centred STACK, not a row (the thought line
+     already sits below, outside this container). Since
+     Wave 168 the mascot stands at the very top instead —
+     see .empty-robot-top — so this container now holds
+     only the greeting, still centred. */
   display: flex; flex-direction: column; align-items: center;
   justify-content: center; gap: 4px;
 }
@@ -730,434 +676,151 @@ body.chat-page .chat-log {
   padding-top: 10px; flex: none;
 }
 body.chat-active .empty-robot-top { display: none; }
-/* Wave 170 (Suraj, 19 Nov 2026 — "Aisa design karana hai
-   background kaa" about a Muse-app screenshot, then
-   "Dono karo" on the two options):
-   (1) the top robot gets an avatar-style CARD — a soft
-   rounded panel in Ganitra's own cream/teal family with
-   the name "Ganitra" under the robot, like a character
-   card at the top of the screen. The robot SVG, its
-   palette and every animation are untouched; the card
-   is only a container, and it hides together with
-   .empty-robot-top the moment a chat starts (rule
-   above), when the header buddy takes over.
-   (2) the home/empty-state backdrop goes soft and calm
-   — a warm cream wash with a whisper of Ganitra teal at
-   the top — scoped to body.chat-page WITHOUT
-   chat-active, so the active chat view, every other
-   page, and all bubbles/cards/menus keep exactly the
-   backdrop they already had. Ganitra colours only —
-   no Muse branding, no Muse palette. */
-.robot-card {
-  display: flex; flex-direction: column; align-items: center;
-  background: linear-gradient(180deg, #fffef9, #fdf6e1);
-  border: 1px solid var(--line); border-radius: 26px;
-  padding: 16px 40px 13px;
-  box-shadow: 0 12px 30px rgba(101, 84, 40, .10);
-}
-.robot-card-name {
-  margin-top: 7px;
-  font-family: "Fraunces", Georgia, serif;
-  font-size: 18px; font-weight: 600; letter-spacing: .02em;
-  color: #074335;
-}
+/* Wave 170 (Suraj, 19 Nov 2026): the home/empty-state
+   backdrop went soft and calm — a warm cream wash with a
+   whisper of Ganitra teal at the top — scoped to
+   body.chat-page WITHOUT chat-active, so the active chat
+   view, every other page, and all bubbles/cards/menus keep
+   exactly the backdrop they already had. Ganitra colours
+   only — no Muse branding, no Muse palette. (The
+   avatar card this wave also added was replaced by the
+   Wave 181 white circle below.) */
 body.chat-page:not(.chat-active) {
   background:
     radial-gradient(760px 360px at 14% -6%, rgba(43, 217, 169, .12), transparent 60%),
     radial-gradient(900px 420px at 86% -5%, rgba(231, 200, 119, .15), transparent 60%),
     linear-gradient(180deg, #fffdf6 0%, #fbf4e6 58%, #f8efdc 100%);
 }
-.robot {
-  width: 80px; height: 80px; flex: none; overflow: visible;
-  animation: robot-bob 3.4s ease-in-out infinite;
-  /* Wave 161: a soft shadow lifts the darkened robot off
-     the cream page. */
-  filter: drop-shadow(0 4px 5px rgba(7, 67, 53, .30));
+/* Wave 181 (Suraj, 19 Nov 2026): the NEW MASCOT — a
+   glossy rendered robot (ivory-cream + deep teal + gold,
+   glowing mint heart on its chest, two antenna
+   light-balls), approved by Suraj with a heart after he
+   rejected the flat SVG robot ("Muse ki tarah real nhi
+   hai, real feelings nhi hai"). The artwork lives in
+   static/robot-wave.webp / robot-think.webp /
+   robot-laugh.webp / robot-kiss.webp; the SVG robot, its
+   header-buddy copy, its typing-bubble duo and every
+   robot-* rule and keyframe are gone.
+   HOME: the mascot stands in a WHITE CIRCLE (soft teal
+   ring + soft shadow) at the top of the empty state, the
+   name "Ganitra" under it; inside the circle the four
+   poses slowly crossfade — wave, think, laugh, kiss —
+   about six seconds each. FULL moments ride the
+   .mascot-pop overlay (JS in templates/index.html): the
+   kiss on page open, the laugh on a correct chat-test
+   answer — Suraj: "kabhi kabhi ye pura bhi dikhana
+   chahiye". HEADER: a small circle with the wave portrait
+   rides the top bar through an active chat (the Wave 161
+   buddy's seat), tilting a touch while Ganitra solves and
+   bouncing on a correct test answer. Reduced motion: the
+   circle rests on the wave pose, no bob, no pop zoom. */
+.mascot-home {
+  display: flex; flex-direction: column; align-items: center;
 }
-.robot-eyes {
-  transform-box: fill-box; transform-origin: center;
-  animation: robot-blink 5.3s ease-in-out infinite;
+.mascot-circle {
+  position: relative; flex: none;
+  width: 118px; height: 118px; border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid rgba(10, 122, 100, .45);
+  box-shadow: 0 12px 30px rgba(101, 84, 40, .14);
+  overflow: hidden;
+  animation: mascot-bob 3.4s ease-in-out infinite;
 }
-.robot-arm {
-  transform-box: fill-box; transform-origin: 8% 92%;
-  animation: robot-wave 3.1s ease-in-out infinite,
-    robot-grab-hide 19.2s linear 2.2s infinite;
+.mascot-pose {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; opacity: 0;
+  animation: mascot-cycle 24s linear infinite;
 }
-.robot-tilt {
-  transform-box: fill-box; transform-origin: 50% 100%;
-  animation: robot-notice-tilt 14.4s ease-in-out 2.2s infinite;
+.mascot-pose-wave {
+  opacity: 1; object-position: 50% 4%;
+  animation-delay: -0.96s;
 }
-.robot-inner {
-  animation: robot-laugh-bounce 9.6s ease-in-out 2.2s infinite;
+.mascot-pose-think {
+  animation-delay: 5.04s; transform: scale(1.05);
 }
-.robot-face-smile {
-  animation: robot-smile-intro 2.2s linear 1 both,
-    robot-face-smile-cycle 9.6s linear 2.2s infinite;
+.mascot-pose-laugh {
+  animation-delay: 11.04s; transform: scale(1.05);
 }
-.robot-face-laugh {
-  opacity: 0;
-  animation: robot-face-laugh-cycle 9.6s linear 2.2s infinite;
+.mascot-pose-kiss {
+  animation-delay: 17.04s; transform: scale(1.05);
 }
-.robot-face-kiss {
-  opacity: 0;
-  animation: robot-kiss-face 2.2s linear 1 both;
+.mascot-name {
+  margin-top: 8px;
+  font-family: "Fraunces", Georgia, serif;
+  font-size: 18px; font-weight: 600; letter-spacing: .02em;
+  color: #074335;
 }
-.robot-kiss-hand {
-  opacity: 0;
-  animation: robot-kiss-hand 2.2s ease-in-out 1 both;
+@keyframes mascot-cycle {
+  0% { opacity: 0; }
+  4% { opacity: 1; }
+  25% { opacity: 1; }
+  29% { opacity: 0; }
+  100% { opacity: 0; }
 }
-.robot-heart {
-  opacity: 0;
-  animation: robot-heart-rise 1.6s ease-out 1 both;
-  animation-delay: calc(1.15s + var(--d, 0s));
-}
-.robot-face-lookup, .robot-grab-arm {
-  opacity: 0;
-  animation: robot-grab-show 19.2s linear 2.2s infinite;
-}
-.robot-hop {
-  animation: robot-monkey-hop 28.8s linear 2.2s infinite;
-}
-.robot-arm-rest {
-  animation: robot-monkey-hide 28.8s linear 2.2s infinite;
-}
-.robot-monkey-face {
-  opacity: 0;
-  animation: robot-monkey-show 28.8s linear 2.2s infinite;
-}
-.robot-monkey-scratch {
-  opacity: 0;
-  transform-box: fill-box; transform-origin: 85% 90%;
-  animation: robot-monkey-show 28.8s linear 2.2s infinite,
-    robot-scratch-wiggle 28.8s linear 2.2s infinite;
-}
-.robot-foot-l, .robot-foot-r {
-  transform-box: fill-box; transform-origin: 50% 0%;
-}
-.robot-foot-l {
-  animation: robot-kick-l 28.8s linear 2.2s infinite;
-}
-.robot-foot-r {
-  animation: robot-kick-r 28.8s linear 2.2s infinite;
-}
-.robot-light-halo {
-  transform-box: fill-box; transform-origin: center;
-  animation: robot-glow-soft 3.7s ease-in-out infinite;
-}
-.robot-light-flare {
-  transform-box: fill-box; transform-origin: center;
-  opacity: 0;
-  animation: robot-twinkle 9.6s linear 2.2s infinite;
-}
-.robot-light-flare2 {
-  transform-box: fill-box; transform-origin: center;
-  opacity: 0;
-  animation: robot-twinkle-monkey 28.8s linear 2.2s infinite;
-}
-.robot-duo {
-  position: relative; display: inline-block; flex: none;
-  width: 47px; height: 47px; pointer-events: none;
-}
-.robot-duo svg {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  display: block;
-  filter: drop-shadow(0 2px 3px rgba(7, 67, 53, .25));
-}
-.robot-pose-think {
-  transform: rotate(-2deg); transform-origin: 50% 90%;
-  animation: robot-pose-think 4.8s ease-in-out infinite;
-}
-.robot-pose-write {
-  animation: robot-pose-write 4.8s ease-in-out infinite;
-}
-.bubble.typing.robot-host {
-  display: flex; align-items: center; gap: 9px;
-}
-.robot-duo .robot-light-halo {
-  animation: robot-blink-alt 1.6s ease-in-out infinite;
-}
-.robot-duo .robot-light-halo-r {
-  animation-delay: -0.8s;
-}
-.robot-mini-face {
-  animation: robot-grab-hide 9.6s linear infinite;
-}
-.robot-mini-lookup, .robot-mini-grab {
-  opacity: 0;
-  animation: robot-grab-show 9.6s linear infinite;
-}
-.robot-pencil {
-  transform-box: fill-box; transform-origin: 30% 90%;
-  animation: robot-write 1.15s ease-in-out infinite,
-    robot-grab-hide 9.6s linear infinite;
-}
-.robot-squiggle {
-  stroke-dasharray: 100; stroke-dashoffset: 100;
-  animation: robot-squiggle 2.7s linear infinite;
-}
-.robot-squiggle.sq2 { animation-delay: 0.9s; }
-.robot-squiggle.sq3 { animation-delay: 1.8s; }
-.robot-laugh-mini {
-  float: left; width: 44px; height: 44px;
-  margin: 1px 9px 3px 0; pointer-events: none;
-}
-.robot-laugh-mini svg {
-  width: 100%; height: 100%; display: block;
-  filter: drop-shadow(0 2px 3px rgba(7, 67, 53, .25));
-}
-.robot-laugh-mini .robot-light-flare {
-  animation: robot-twinkle-once 1.4s ease-out 0.15s 1 both;
-}
-/* Wave 161: the chat BUDDY (templates/index.html, in the
-   header block) — Suraj: "Agar chat bhi kar rahe hai jab
-   bhi rahana chahiye Robot" + "Jaise Muse kaam karta hai
-   naa waise". A compact copy of the same robot rides the
-   top bar for the whole conversation, mirroring the work:
-   calm attentive idle (blink via .robot-eyes, bob, wave,
-   soft light pulse), a thinking face + tilted head +
-   brighter alternating lights while Ganitra solves, and
-   a brief laugh on a correct chat-test answer. It is
-   revealed by body.chat-active — the class hideEmpty()
-   sets when the empty state goes away — so the big home
-   robot and the buddy never show at the same time. The
-   busy state is pure CSS on the typing bubble's presence
-   (body:has(.bubble.typing)): both typing paths put that
-   bubble in the DOM and remove it when the answer lands,
-   so the buddy's feeling can never drift out of sync.
-   Fixed in the header band, dead centre: no message is
-   covered, no tap is taken (pointer-events: none), no
-   layout ever shifts. */
-.robot-buddy {
-  display: none;
-  position: fixed; top: 7px; left: 50%;
-  transform: translateX(-50%);
-  width: 42px; height: 42px;
-  pointer-events: none; z-index: 4;
-  transition: transform .3s ease;
-}
-body.chat-active .robot-buddy { display: block; }
-.robot-buddy-svg {
-  width: 100%; height: 100%; display: block; overflow: visible;
-  animation: robot-bob 3.4s ease-in-out infinite;
-  filter: drop-shadow(0 3px 4px rgba(7, 67, 53, .30));
-}
-.robot-buddy-arm {
-  transform-box: fill-box; transform-origin: 8% 92%;
-  animation: robot-wave 3.1s ease-in-out infinite;
-}
-.robot-buddy-face { transition: opacity .25s ease; }
-.robot-buddy-face-busy, .robot-buddy-face-laugh { opacity: 0; }
-body:has(.bubble.typing) .robot-buddy {
-  transform: translateX(-50%) rotate(-2.5deg);
-}
-body:has(.bubble.typing) .robot-buddy-face-calm { opacity: 0; }
-body:has(.bubble.typing) .robot-buddy-face-busy { opacity: 1; }
-body:has(.bubble.typing) .robot-buddy .robot-light-halo {
-  animation: robot-blink-alt 1.6s ease-in-out infinite;
-}
-body:has(.bubble.typing) .robot-buddy .robot-light-halo-r {
-  animation-delay: -0.8s;
-}
-body.robot-buddy-cheer .robot-buddy {
-  transform: translateX(-50%) translateY(-2px);
-}
-body.robot-buddy-cheer .robot-buddy-face-calm { opacity: 0; }
-body.robot-buddy-cheer .robot-buddy-face-laugh { opacity: 1; }
-@media (prefers-reduced-motion: reduce) {
-  .robot-buddy-svg, .robot-buddy-arm { animation: none; }
-  body:has(.bubble.typing) .robot-buddy-face-busy,
-  body.robot-buddy-cheer .robot-buddy-face-laugh { opacity: 0; }
-  body:has(.bubble.typing) .robot-buddy-face-calm,
-  body.robot-buddy-cheer .robot-buddy-face-calm { opacity: 1; }
-  body:has(.bubble.typing) .robot-buddy,
-  body.robot-buddy-cheer .robot-buddy {
-    transform: translateX(-50%);
-  }
-}
-@keyframes robot-bob {
+@keyframes mascot-bob {
   0%, 100% { transform: translateY(0); }
   45% { transform: translateY(-3px); }
   58% { transform: translateY(-2.3px); }
 }
-@keyframes robot-notice-tilt {
-  0%, 56% { transform: rotate(0deg); }
-  63% { transform: rotate(-1.7deg); }
-  68% { transform: rotate(-1.2deg); }
-  74%, 100% { transform: rotate(0deg); }
+.mascot-buddy {
+  display: none;
+  position: fixed; top: 5px; left: 50%;
+  transform: translateX(-50%);
+  width: 42px; height: 42px; border-radius: 50%;
+  background: #ffffff;
+  border: 2px solid rgba(10, 122, 100, .5);
+  box-shadow: 0 4px 10px rgba(7, 67, 53, .22);
+  overflow: hidden;
+  pointer-events: none; z-index: 4;
+  transition: transform .3s ease;
 }
-@keyframes robot-blink {
-  0%, 91%, 100% { transform: scaleY(1); }
-  94% { transform: scaleY(0.08); }
-  97% { transform: scaleY(1); }
+body.chat-active .mascot-buddy { display: block; }
+.mascot-buddy img {
+  width: 100%; height: 100%; display: block;
+  object-fit: cover; object-position: 50% 4%;
 }
-@keyframes robot-wave {
-  0%, 58%, 100% { transform: rotate(0deg); }
-  10% { transform: rotate(-16deg); }
-  22% { transform: rotate(9deg); }
-  34% { transform: rotate(-12deg); }
-  46% { transform: rotate(5deg); }
+body:has(.bubble.typing) .mascot-buddy {
+  transform: translateX(-50%) rotate(-3deg);
 }
-@keyframes robot-laugh-bounce {
-  0%, 78% { transform: translateY(0); }
-  79.5% { transform: translateY(0.9px); }
-  82% { transform: translateY(-2.6px); }
-  86% { transform: translateY(0); }
-  90% { transform: translateY(-1.6px); }
-  94%, 100% { transform: translateY(0); }
+body.mascot-cheer .mascot-buddy {
+  animation: mascot-cheer-bounce .55s ease-in-out 2;
 }
-@keyframes robot-smile-intro {
-  0% { opacity: 1; }
-  12% { opacity: 0; }
-  58% { opacity: 0; }
-  78% { opacity: 1; }
-  100% { opacity: 1; }
+@keyframes mascot-cheer-bounce {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  40% { transform: translateX(-50%) translateY(-4px); }
+  70% { transform: translateX(-50%) translateY(1px); }
 }
-@keyframes robot-face-smile-cycle {
-  0%, 76% { opacity: 1; }
-  82%, 88% { opacity: 0; }
-  94%, 100% { opacity: 1; }
+.mascot-pop {
+  position: fixed; inset: 0; z-index: 60;
+  display: flex;
+  align-items: flex-start; justify-content: center;
+  padding-top: 11vh;
+  pointer-events: none;
+  visibility: hidden; opacity: 0;
+  transition: opacity .3s ease, visibility 0s linear .3s;
 }
-@keyframes robot-face-laugh-cycle {
-  0%, 76% { opacity: 0; }
-  82%, 88% { opacity: 1; }
-  94%, 100% { opacity: 0; }
+.mascot-pop.show {
+  pointer-events: auto;
+  visibility: visible; opacity: 1;
+  transition: opacity .3s ease;
 }
-@keyframes robot-kiss-face {
-  0%, 8% { opacity: 0; }
-  16%, 58% { opacity: 1; }
-  78%, 100% { opacity: 0; }
+.mascot-pop img {
+  width: min(66vw, 264px); height: min(66vw, 264px);
+  border-radius: 50%; object-fit: cover;
+  background: #ffffff;
+  border: 3px solid rgba(10, 122, 100, .55);
+  box-shadow: 0 18px 44px rgba(7, 67, 53, .30);
+  transform: scale(.86);
+  transition: transform .32s ease;
 }
-@keyframes robot-kiss-hand {
-  0%, 8% { opacity: 0; transform: translate(3px, 3px); }
-  16%, 58% { opacity: 1; transform: translate(0, 0); }
-  78%, 100% { opacity: 0; transform: translate(2px, 2px); }
-}
-@keyframes robot-heart-rise {
-  0% { opacity: 0; transform: translateY(7px) scale(0.7); }
-  25% { opacity: 1; }
-  70% { opacity: 0.9; }
-  100% { opacity: 0; transform: translateY(-17px) scale(1.08); }
-}
-@keyframes robot-grab-show {
-  0%, 86% { opacity: 0; }
-  89.5%, 94.5% { opacity: 1; }
-  97.5%, 100% { opacity: 0; }
-}
-@keyframes robot-grab-hide {
-  0%, 86% { opacity: 1; }
-  89.5%, 94.5% { opacity: 0; }
-  97.5%, 100% { opacity: 1; }
-}
-@keyframes robot-monkey-show {
-  0%, 79% { opacity: 0; }
-  82%, 88% { opacity: 1; }
-  91%, 100% { opacity: 0; }
-}
-@keyframes robot-monkey-hide {
-  0%, 79% { opacity: 1; }
-  82%, 88% { opacity: 0; }
-  91%, 100% { opacity: 1; }
-}
-@keyframes robot-monkey-hop {
-  0%, 80% { transform: translateY(0); }
-  82.5% { transform: translateY(-7px); }
-  85% { transform: translateY(0); }
-  87.5% { transform: translateY(-5px); }
-  90%, 100% { transform: translateY(0); }
-}
-@keyframes robot-scratch-wiggle {
-  0%, 80% { transform: rotate(0deg); }
-  82% { transform: rotate(-7deg); }
-  84% { transform: rotate(6deg); }
-  86% { transform: rotate(-6deg); }
-  88% { transform: rotate(4deg); }
-  90%, 100% { transform: rotate(0deg); }
-}
-@keyframes robot-kick-l {
-  0%, 80% { transform: translate(0, 0) rotate(0deg); }
-  82.5% { transform: translate(-2.5px, -2px) rotate(-14deg); }
-  85%, 100% { transform: translate(0, 0) rotate(0deg); }
-}
-@keyframes robot-kick-r {
-  0%, 85% { transform: translate(0, 0) rotate(0deg); }
-  87.5% { transform: translate(2.5px, -2px) rotate(14deg); }
-  90%, 100% { transform: translate(0, 0) rotate(0deg); }
-}
-@keyframes robot-glow-soft {
-  0%, 100% { opacity: 0.28; transform: scale(0.92); }
-  50% { opacity: 0.52; transform: scale(1.08); }
-}
-@keyframes robot-twinkle {
-  0%, 78% { opacity: 0; transform: scale(0.7); }
-  82% { opacity: 0.75; transform: scale(1.15); }
-  86% { opacity: 0.2; transform: scale(0.95); }
-  90% { opacity: 0.6; transform: scale(1.08); }
-  94%, 100% { opacity: 0; transform: scale(0.8); }
-}
-@keyframes robot-twinkle-monkey {
-  0%, 79% { opacity: 0; transform: scale(0.7); }
-  82% { opacity: 0.8; transform: scale(1.18); }
-  85% { opacity: 0.25; transform: scale(0.95); }
-  88% { opacity: 0.65; transform: scale(1.1); }
-  91%, 100% { opacity: 0; transform: scale(0.8); }
-}
-@keyframes robot-twinkle-once {
-  0% { opacity: 0; transform: scale(0.7); }
-  30% { opacity: 0.8; transform: scale(1.15); }
-  55% { opacity: 0.25; transform: scale(0.95); }
-  75% { opacity: 0.55; transform: scale(1.05); }
-  100% { opacity: 0; transform: scale(0.85); }
-}
-@keyframes robot-blink-alt {
-  0%, 100% { opacity: 0.18; transform: scale(0.9); }
-  50% { opacity: 0.9; transform: scale(1.14); }
-}
-@keyframes robot-pose-think {
-  0%, 42% { opacity: 1; }
-  50%, 92% { opacity: 0; }
-  100% { opacity: 1; }
-}
-@keyframes robot-pose-write {
-  0%, 42% { opacity: 0; }
-  50%, 92% { opacity: 1; }
-  100% { opacity: 0; }
-}
-@keyframes robot-write {
-  0%, 100% { transform: translate(0, 0) rotate(0deg); }
-  25% { transform: translate(-2px, 0.8px) rotate(-3deg); }
-  50% { transform: translate(-4px, 0) rotate(1.5deg); }
-  75% { transform: translate(-2px, -0.8px) rotate(-1.5deg); }
-}
-@keyframes robot-squiggle {
-  0% { stroke-dashoffset: 100; opacity: 1; }
-  50% { stroke-dashoffset: 0; }
-  80% { stroke-dashoffset: 0; opacity: 1; }
-  92% { stroke-dashoffset: 0; opacity: 0.2; }
-  100% { stroke-dashoffset: 0; opacity: 0.2; }
-}
+.mascot-pop.show img { transform: scale(1); }
 @media (prefers-reduced-motion: reduce) {
-  .robot, .robot-eyes, .robot-arm { animation: none; }
-  .robot-inner, .robot-hop, .robot-tilt, .robot-face-smile,
-  .robot-face-laugh,
-  .robot-face-kiss, .robot-kiss-hand, .robot-heart,
-  .robot-face-lookup, .robot-grab-arm, .robot-arm-rest,
-  .robot-monkey-face, .robot-monkey-scratch, .robot-foot-l,
-  .robot-foot-r, .robot-light-halo, .robot-light-flare,
-  .robot-light-flare2, .robot-duo .robot-light-halo,
-  .robot-pose-think, .robot-pose-write, .robot-mini-face,
-  .robot-mini-lookup, .robot-mini-grab, .robot-pencil,
-  .robot-squiggle,
-  .robot-laugh-mini .robot-light-flare { animation: none; }
-  .robot-face-laugh, .robot-face-kiss, .robot-kiss-hand,
-  .robot-heart, .robot-face-lookup, .robot-grab-arm,
-  .robot-monkey-face, .robot-monkey-scratch, .robot-mini-lookup,
-  .robot-mini-grab, .robot-light-flare, .robot-light-flare2 {
-    opacity: 0;
-  }
-  .robot-pose-think { opacity: 0; }
-  .robot-pose-write { opacity: 1; }
-  .robot-light-halo { opacity: 0.35; }
-  .robot-squiggle { stroke-dashoffset: 0; }
+  .mascot-circle, .mascot-pose,
+  body.mascot-cheer .mascot-buddy { animation: none; }
+  .mascot-pose { opacity: 0; }
+  .mascot-pose-wave { opacity: 1; }
+  .mascot-pop img { transition: none; transform: none; }
 }
 body.chat-page .saathi-card {
   max-width: 560px; margin: 24px auto 4px; padding: 18px 20px;
@@ -2366,9 +2029,11 @@ body.chat-page .chat-bar .send-btn svg {
               transform: translateX(calc(var(--boy-stop) + 150px)) translateY(-130px) rotate(380deg); }
 }
 
-/* --- Part 2: the boy writer. One sprite, two posts: at the
-   Teach board (in a reserved right rail of the steps details,
-   so he never covers step text) and beside the thinking line.
+/* --- Part 2: the boy writer. One sprite, one post since
+   Wave 176: at the Teach board (in a reserved right rail of
+   the steps details, so he never covers step text). His old
+   second post beside the thinking line was removed on
+   Suraj's order — the thinking bubble carries no figures.
    .on = present + writing rock; removing .on fades/slides him
    away. Under reduced motion he simply stands still. --------- */
 .boy-writer {
@@ -2400,10 +2065,6 @@ body.chat-page .chat-bar .send-btn svg {
 .boy-writer.at-board { right: 2px; top: 30px; }
 .bubble details.boy-host { position: relative; }
 .bubble details.boy-host > ol.steps { padding-right: 62px; }
-.boy-writer.in-typing {
-  width: 54px; height: 54px; right: 10px; top: 50%; margin-top: -27px;
-}
-.bubble.typing.boy-host { position: relative; padding-right: 80px; }
 
 /* Reduced motion: no scenes at all (the director script also
    refuses to run), and the writer boy stands still. */
@@ -3122,3 +2783,62 @@ body.chat-page .answer-wrap .followup-chip:active {
   overflow-y: hidden;
   padding: 2px 0;
 }
+
+/* ================= Wave 180: composer tightening =============
+   Suraj (19 Nov 2026, viewing the Wave-176 screenshot): "Ye jo
+   icon hai chat ke niche unko thoda close karo woh bahut dur
+   hai — or chat likhte hai uss box ko thoda sakara karna hai,
+   height thodi Kam karo, length sahi hai." Refined a minute
+   later: the CAMERA, MIC and SEND icons specifically — "kuch
+   jyada distance hai" — bring them closer too.
+   The 2px gaps were never the distance he saw: the visible
+   button boxes are 40px wide, so the mic/camera/send glyph
+   centres sat ~42px apart. Two moves, nothing else:
+   (1) ICONS CLOSER — the signs' visible boxes shrink
+       40px -> 34px and both cluster gaps 2px -> 0, so the
+       glyph centres sit ~34px apart. The Wave-118 invisible
+       halo grows to inset -6px, so every sign's tap target
+       stays ~46px even though the visible box is 34px.
+   (2) BOX SLIMMER — bar padding 12px -> 9px vertical and
+       textarea padding 8px -> 5px vertical; the bar loses
+       ~10px of height. The bar's WIDTH and the textarea's
+       horizontal padding are untouched (length sahi hai).
+   Two expansions, same morning (~10:57 IST, his screenshot
+   circling them in red):
+   (3) ANSWER-ROW ICONS CLOSER — the copy / speaker / bulb /
+       ••• row under each answer card: "Ye bhi icon pass mai
+       karo, close mai chahiye, naa ki itni distance mai."
+       Wave 118's 13px side padding made each sign 44px wide
+       with centres ~48px apart. Side padding 13px -> 8px
+       (signs 34px wide, the composer's new rhythm), row gap
+       4px -> 2px: centres ~36px apart. Vertical padding
+       stays 13px, so every sign's tap height stays 44px.
+       Icons, order and functions untouched.
+   (A white background for the robot card was also tried
+   here and then DROPPED from this wave on Suraj's word —
+   the whole robot area was being rebuilt as a separate
+   mascot wave (Wave 181, which has since replaced the
+   card and the robot SVGs with the rendered mascot);
+   a robot recolour was likewise rejected by him this
+   morning — "ye robot achha nhi lg rha".)
+   (4) GREETING BLOCK UP — Suraj circled the centred block
+       (big logo + "Hello <name>" + the daily thought):
+       "Esse upar karo", then "or thoda sa upar karo." The
+       Wave 49 rule centred it with margin: auto 0, leaving
+       a large gap under the robot card. Now the auto
+       centring is gone and a -16px top margin pulls it a
+       notch higher still: the block sits close under the
+       robot card with a modest gap. The block itself —
+       logo, greeting, thought — is unchanged. */
+body.chat-page .chat-bar { gap: 0; padding: 9px 14px; }
+body.chat-page .chat-bar-tools { gap: 0; }
+body.chat-page .chat-bar textarea { padding: 5px 10px; }
+body.chat-page .chat-bar .composer-btn,
+body.chat-page .chat-bar .send-btn {
+  width: 34px; height: 34px; min-height: 34px;
+}
+body.chat-page .chat-bar .composer-btn::after,
+body.chat-page .chat-bar .send-btn::after { inset: -6px; }
+body.chat-page .answer-actions { gap: 2px; }
+body.chat-page .answer-actions .act-btn { padding: 13px 8px; }
+.chat-empty { margin: 0; margin-top: -16px; padding-top: 8px; }

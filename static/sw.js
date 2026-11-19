@@ -96,7 +96,10 @@
    rules themselves are unchanged: code network-first with
    revalidation, media stale-while-revalidate, navigations
    network-first with the cached shell as the fallback. */
-var GANITRA_CACHE = "ganitra-static-v31";
+/* Wave 181: new mascot images — cache v32, stylesheet
+   ?v=58; the four robot portraits join the precache
+   shell so the home mascot paints offline too. */
+var GANITRA_CACHE = "ganitra-static-v35";
 
 /* Wave 98: the chat shell, precached on install. Each URL
    is added on its own so one failure (e.g. a sprite the
@@ -107,11 +110,15 @@ var GANITRA_CACHE = "ganitra-static-v31";
    (which keys on the full URL) hits it offline. */
 var GANITRA_SHELL = [
   "/",
-  "/static/style.css?v=54",
+  "/static/style.css?v=58",
   "/static/offline.js",
   "/static/logo-mark-t.png",
   "/static/logo-full-t.png",
   "/static/scene-boy.webp?v=29",
+  "/static/robot-wave.webp",
+  "/static/robot-think.webp",
+  "/static/robot-laugh.webp",
+  "/static/robot-kiss.webp",
   "/static/favicon.png",
   "/manifest.webmanifest"
 ];
