@@ -1372,7 +1372,7 @@
       var W122_NOT_SOLVED_KINDS = ["not_found", "concept",
         "history", "advice", "greeting", "nonmaths", "science",
         "vague", "gibberish", "guide", "similar", "step_check",
-        "followup_test", "guided", "paper"];
+        "followup_test", "guided", "paper", "practice_req"];
       var W122_NOT_SOLVED_OPS = ["error", "explain_step",
         "check_steps", "not_found"];
       /* Wave 124: a chat-test solve-command turn returns the
@@ -3758,8 +3758,13 @@
         var text = (d && (d.prefill || d.text) || "").trim();
         if (!text) return false;
         if (!ocrFillComposer(text)) return false;
-        say(d.confirm ? (L.js_photo_check + " " + d.confirm)
-                      : L.js_photo_check);
+        /* Wave 203: the server's one-line notice (the photo
+           held more questions than the first) rides after the
+           check line and any confirmation line. */
+        var msg = L.js_photo_check;
+        if (d.confirm) msg += " " + d.confirm;
+        if (d.notice) msg += " " + d.notice;
+        say(msg);
         return true;
       }
       /* Shrink a camera photo for the vision upload: canvas,
@@ -3843,9 +3848,19 @@
               if (d && d.kind === "text" && visionShowText(d)) {
                 return;
               }
+              if (d && d.code === "not_maths") {
+                /* Wave 203: the photo WAS read — its question
+                   is readable but not maths. The server sends
+                   the maths-only one-liner (the typed guard's
+                   own line, in the question's flavour); the
+                   not-found line would be factually wrong and
+                   would invite a futile re-send. */
+                say(d.message || L.js_photo_not_found);
+                return;
+              }
               if (d && d.code === "no_question") {
                 /* The photo WAS read — there is just no
-                   readable maths question in it. A second,
+                   readable question in it at all. A second,
                    weaker read would only garble; say the one
                    honest line instead. */
                 say(L.js_photo_not_found);
