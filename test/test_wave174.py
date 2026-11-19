@@ -45,8 +45,16 @@ ROOT = Path(__file__).resolve().parent.parent
 
 LIVE_1 = "Mp board ka maths ka paper chahiye 12th class ka 2025"
 LIVE_2 = "Mp board ke exams paper 12th class"
-NOT_FOUND = {"Answer not found.", "Answer nahi mila.",
-             "उत्तर नहीं मिला।"}
+# Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+# — the terminal lines a paper serve must never be are the
+# clarification lines now.
+NOT_FOUND = {
+    "I didn't understand that — type your maths question "
+    "a little clearly and I'll solve it right away.",
+    "Samajh nahi aaya — maths ka sawal thoda saaf likh kar "
+    "bhejo, main turant solve kar dunga.",
+    "समझ नहीं आया — गणित का सवाल थोड़ा साफ़ लिखकर भेजिए, "
+    "मैं तुरंत हल कर दूँगा।"}
 
 
 @pytest.fixture(autouse=True)

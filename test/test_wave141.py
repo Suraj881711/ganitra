@@ -295,9 +295,12 @@ def test_e2e_hindi_parts():
 
 def test_e2e_mixed_solved_and_unsolved_parts():
     # Part (ii) asks for a figure that is not there; it
-    # must carry the honest not-found line while (i) and
+    # must carry the honest per-part line while (i) and
     # (iii) still serve — the card never sinks for one
     # bad part, and no part answer is invented.
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke
+    # liye band — the per-part line is now the
+    # clarification line (fallback._not_found_line).
     q = ("Solve: (i) 2x + 3 = 7 "
          "(ii) find the length of AB in the given figure "
          "(iii) 10 + 5")
@@ -309,8 +312,10 @@ def test_e2e_mixed_solved_and_unsolved_parts():
     assert "ii" not in info["solved"]
     steps = "\n".join(out.get("steps") or [])
     assert "(ii)" in steps
-    assert "not found" in steps.lower() \
-        or "नहीं मिला" in steps
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke
+    # liye band — part (ii) carries the clarification line.
+    assert "didn't understand" in steps.lower() \
+        or "साफ़ लिखकर" in steps
 
 
 def test_e2e_verdict_ask_not_answered_with_solutions():

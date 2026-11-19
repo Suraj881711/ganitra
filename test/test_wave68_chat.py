@@ -76,11 +76,19 @@ def test_greeting_language_matches_question():
     assert _solve_friendly("hi")["answer"].startswith("Hello")
 
 
+# Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+# — the gibberish one-liner is the clarification line now.
+_CLARIFY_EN = "I didn't understand that — type your maths " \
+    "question a little clearly and I'll solve it right away."
+_CLARIFY_DEV = "समझ नहीं आया — गणित का सवाल थोड़ा साफ़ " \
+    "लिखकर भेजिए, मैं तुरंत हल कर दूँगा।"
+
+
 @pytest.mark.parametrize("question,want", [
-    ("If tu gfuf", "Answer not found."),
-    ("asdf qwer zxq", "Answer not found."),
-    ("xyzabc pqr stu", "Answer not found."),
-    ("कखग घङच छजझ", "उत्तर नहीं मिला।"),
+    ("If tu gfuf", _CLARIFY_EN),
+    ("asdf qwer zxq", _CLARIFY_EN),
+    ("xyzabc pqr stu", _CLARIFY_EN),
+    ("कखग घङच छजझ", _CLARIFY_DEV),
 ])
 def test_gibberish_is_the_not_found_line(question, want):
     r = _solve_friendly(question)
@@ -241,7 +249,8 @@ def test_api_solve_payload_carries_intro_and_plain(client):
                     json={"question": "If tu gfuf"}).get_json()
     assert d["ok"] is True
     assert d["result"].get("plain_reply") is True
-    assert d["result"]["answer"] == "Answer not found."
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    assert d["result"]["answer"] == _CLARIFY_EN
     assert d["intro"] is None
 
 

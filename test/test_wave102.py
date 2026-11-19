@@ -226,7 +226,11 @@ def test_bare_statement_chat_answers_unchanged():
         "Trigonometric Identity: sin²θ + cos²θ = 1 — "
         "sin²θ + cos²θ = 1 (true for every angle θ)")
     r = _solve_friendly("sec^2 A - tan^2 A = 1")
-    assert r.get("answer") == "Answer not found."
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    assert r.get("answer") == \
+        "I didn't understand that — type your maths " \
+        "question a little clearly and I'll solve it " \
+        "right away."
 
 
 def test_false_identity_trailing_phrase_not_a_proof():
@@ -243,7 +247,10 @@ def test_false_identity_trailing_phrase_not_a_proof():
     assert false.get("answer") == bare.get("answer")
     assert false.get("steps") == bare.get("steps")
     r = _solve_friendly("sec^2 A - tan^2 A = 5 सिद्ध करो")
-    assert r.get("answer") == "उत्तर नहीं मिला।"
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    assert r.get("answer") == \
+        "समझ नहीं आया — गणित का सवाल थोड़ा साफ़ लिखकर " \
+        "भेजिए, मैं तुरंत हल कर दूँगा।"
 
 
 def test_dikhao_is_not_a_proof_phrase():

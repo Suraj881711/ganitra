@@ -217,40 +217,51 @@ def test_classic_solve_page_honours_the_request(client):
 
 
 # --- 4. The not-found line honours the request ---------------
+# Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+# — the line each request selects is that language's
+# clarification line now; the selection rules are unchanged.
+
+_CLARIFY_EN = "I didn't understand that — type your maths " \
+    "question a little clearly and I'll solve it right away."
+_CLARIFY_ROMAN = "Samajh nahi aaya — maths ka sawal thoda " \
+    "saaf likh kar bhejo, main turant solve kar dunga."
+_CLARIFY_DEV = "समझ नहीं आया — गणित का सवाल थोड़ा साफ़ " \
+    "लिखकर भेजिए, मैं तुरंत हल कर दूँगा।"
+
 
 def test_not_found_line_follows_the_request(client):
     # One client, one process: the sequence also proves the
     # negative cache is keyed per language — each ask must
     # get ITS line, including the repeats served from cache.
     body = _ask(client, AGES + " Answer in Hindi")
-    assert body["result"]["answer"] == "उत्तर नहीं मिला।"
+    assert body["result"]["answer"] == _CLARIFY_DEV
     body = _ask(client, AGES + " hinglish me batao")
-    assert body["result"]["answer"] == "Answer nahi mila."
+    assert body["result"]["answer"] == _CLARIFY_ROMAN
     body = _ask(client, AGES)
-    assert body["result"]["answer"] == "Answer not found."
+    assert body["result"]["answer"] == _CLARIFY_EN
     body = _ask(client, AGES + " Answer in Hindi")
-    assert body["result"]["answer"] == "उत्तर नहीं मिला।"
+    assert body["result"]["answer"] == _CLARIFY_DEV
     body = _ask(client, AGES)
-    assert body["result"]["answer"] == "Answer not found."
+    assert body["result"]["answer"] == _CLARIFY_EN
 
 
 def test_not_found_line_unit_level():
     q = "some unsolved thing"
     assert _not_found_line(q, False, "en", "hi") == \
-        "उत्तर नहीं मिला।"
+        _CLARIFY_DEV
     assert _not_found_line(q, True, "hi", "en") == \
-        "Answer not found."
+        _CLARIFY_EN
     assert _not_found_line(q, False, "en", "hinglish") == \
-        "Answer nahi mila."
+        _CLARIFY_ROMAN
     # No request: the pre-Wave-107 choices, untouched.
     res = fallback_answer(AGES)
-    assert res["answer"] == "Answer not found."
+    assert res["answer"] == _CLARIFY_EN
     res = fallback_answer(AGES, lang_request="hi")
-    assert res["answer"] == "उत्तर नहीं मिला।"
+    assert res["answer"] == _CLARIFY_DEV
     res = fallback_answer(AGES, lang_request="hinglish")
-    assert res["answer"] == "Answer nahi mila."
+    assert res["answer"] == _CLARIFY_ROMAN
     res = fallback_answer(AGES, lang_request="en")
-    assert res["answer"] == "Answer not found."
+    assert res["answer"] == _CLARIFY_EN
 
 
 # --- 5. The AI fallback prompt gets the requested language ---
@@ -324,7 +335,10 @@ def test_content_mention_end_to_end(client):
                 "A Hindi textbook costs Rs 200 and an English "
                 "textbook costs Rs 150. What is the total cost?")
     assert body["language"] == "en"
-    assert body["result"]["answer"] == "Answer not found."
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    # — the (unsolved, legs-silent) terminal line is the
+    # ENGLISH clarification line now.
+    assert body["result"]["answer"] == _CLARIFY_EN
     # A solvable content mention solves normally, in English.
     body = _ask(client,
                 "Find 15% of 240, the number of Hindi books "

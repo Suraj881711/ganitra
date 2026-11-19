@@ -222,5 +222,13 @@ def test_genuinely_unparseable_still_gets_labelled_fallback():
         "ek ladke ke paas 50 rupaye hai usne 3 chocolate 10 "
         "rupaye ki kharidi kitne bache")
     assert res.get("fallback_kind") == "not_found"
-    assert str(res.get("answer", "")) == "Answer nahi mila."
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    # — this keys-less environment has every AI leg silent, so
+    # the terminal floor is the Hinglish clarification line;
+    # with a leg answering, this same messy-but-real question
+    # is served the AI answer (50 - 3*10 = 20), never this
+    # line — pinned in test_wave204.py.
+    assert str(res.get("answer", "")) == \
+        "Samajh nahi aaya — maths ka sawal thoda saaf likh " \
+        "kar bhejo, main turant solve kar dunga."
     assert not (res.get("steps") or [])

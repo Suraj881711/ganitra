@@ -236,7 +236,12 @@ def test_gibberish_still_one_line(client):
     result = data.get("result") or {}
     if result:
         assert result.get("fallback_kind") == "not_found"
-        assert result.get("answer") == "Answer not found."
+        # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke
+        # liye band — the one line is the clarification line.
+        assert result.get("answer") == \
+            "I didn't understand that — type your maths " \
+            "question a little clearly and I'll solve it " \
+            "right away."
         assert result.get("steps") == []
 
 

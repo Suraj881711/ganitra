@@ -225,7 +225,11 @@ def test_raising_logger_never_breaks_the_answer(
     monkeypatch.setattr(notfound_log, "log_not_found", boom)
     res = fallback_answer("If tu gfuf")
     assert res["fallback_kind"] == "not_found"
-    assert res["answer"] == "Answer not found."
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    assert res["answer"] == \
+        "I didn't understand that — type your maths " \
+        "question a little clearly and I'll solve it " \
+        "right away."
     assert res["steps"] == []
 
 
@@ -237,7 +241,11 @@ def test_unwritable_db_never_breaks_the_answer(
     assert notfound_log.log_not_found("zxq vbt plok") is False
     res = fallback_answer("If tu gfuf")
     assert res["fallback_kind"] == "not_found"
-    assert res["answer"] == "Answer not found."
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    assert res["answer"] == \
+        "I didn't understand that — type your maths " \
+        "question a little clearly and I'll solve it " \
+        "right away."
 
 
 def test_log_write_is_a_silent_noop_when_disabled(

@@ -271,7 +271,11 @@ def test_reg3_end_to_end():
     assert "75√3" in out["answer"]
     assert "150 cm" in out["answer"]
     steps = "\n".join(out["steps"])
-    assert "(c) Answer not found." in steps
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    # — the unsolved part's line is the clarification line.
+    assert "(c) I didn't understand that — type your " \
+        "maths question a little clearly and I'll solve " \
+        "it right away." in steps
 
 
 def test_case_study_needs_the_cue():

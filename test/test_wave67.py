@@ -48,10 +48,19 @@ def client(tmp_path, monkeypatch):
 # --- 1. Gibberish -> the one line; greetings / vague -> ----
 # --- Merge-5 rule 1: Wave 68's friendly one line ------------
 
+# Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+# — the one terminal line is now the kind clarification line
+# (kind "not_found" and the one-line shape are unchanged).
+_CLARIFY_EN = "I didn't understand that — type your maths " \
+    "question a little clearly and I'll solve it right away."
+_CLARIFY_DEV = "समझ नहीं आया — गणित का सवाल थोड़ा साफ़ " \
+    "लिखकर भेजिए, मैं तुरंत हल कर दूँगा।"
+
+
 @pytest.mark.parametrize("question,line", [
-    ("If tu gfuf", "Answer not found."),
-    ("asdf qwer", "Answer not found."),
-    ("कुछ भी लिख दिया बकवास", "उत्तर नहीं मिला।"),
+    ("If tu gfuf", _CLARIFY_EN),
+    ("asdf qwer", _CLARIFY_EN),
+    ("कुछ भी लिख दिया बकवास", _CLARIFY_DEV),
 ])
 def test_not_solved_inputs_get_exactly_one_line(question, line):
     res = fallback_answer(question)
@@ -99,37 +108,58 @@ def test_unsolvable_real_question_gets_the_line():
     # The Wave 37/41 ages problem: a real-looking maths
     # question the solver + bank cannot solve and (with no AI
     # keys configured) the AI chain cannot either.
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    # — in this keys-less environment every leg is silent, so
+    # the terminal floor is the clarification line (the
+    # provider-outage floor flagged in the Wave 204 notes);
+    # with a leg answering, the SAME question is served the
+    # AI / last-resort answer instead — pinned in
+    # test_wave204.py.
     res = fallback_answer(
         "Ten years ago, a father was twelve times as old as "
         "his son and ten years hence, he will be twice as old "
         "as his son. Find their present ages.")
     assert res.get("fallback_kind") == "not_found"
-    assert res.get("answer") == "Answer not found."
+    assert res.get("answer") == _CLARIFY_EN
 
 
 def test_not_found_line_follows_ui_language():
     # A Roman gibberish question under a bn/ta/te UI still
     # gets that UI's one-liner (the i18n answer_not_found key).
-    for lang, line in (("bn", "উত্তর পাওয়া যায়নি।"),
-                       ("ta", "பதில் கிடைக்கவில்லை."),
-                       ("te", "సమాధానం దొరకలేదు.")):
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    # — each UI's line is its clarification line now.
+    for lang, line in (
+            ("bn", "বুঝতে পারিনি — গণিতের প্রশ্নটা একটু "
+                   "পরিষ্কার করে লিখে পাঠাও, আমি সঙ্গে সঙ্গে "
+                   "সমাধান করে দেব।"),
+            ("ta", "புரியவில்லை — கணிதக் கேள்வியை கொஞ்சம் "
+                   "தெளிவாக எழுதி அனுப்புங்கள், உடனே தீர்த்து "
+                   "தருகிறேன்."),
+            ("te", "అర్థం కాలేదు — గణిత ప్రశ్నను కొంచెం "
+                   "స్పష్టంగా రాసి పంపండి, వెంటనే పరిష్కరించి "
+                   "ఇస్తాను.")):
         res = fallback_answer("asdf qwer", lang=lang)
         assert res.get("answer") == line, lang
     # Devanagari beats the UI language; Marathi UI keeps its
     # own Devanagari line.
     res = fallback_answer("कुछ भी बकवास लिख दिया", lang="mr")
-    assert res.get("answer") == "उत्तर सापडले नाही."
+    assert res.get("answer") == \
+        "समजलं नाही — गणिताचा प्रश्न थोडा स्पष्ट लिहून " \
+        "पाठवा, मी लगेच सोडवून देईन."
     res = fallback_answer("कुछ भी बकवास लिख दिया", lang="bn")
-    assert res.get("answer") == "उत्तर नहीं मिला।"
+    assert res.get("answer") == _CLARIFY_DEV
 
 
 def test_answer_not_found_key_in_all_six_languages():
     for lang in ("en", "hi", "bn", "mr", "ta", "te"):
         assert get_strings(lang)["answer_not_found"]
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    # — the key keeps its name; its values are the
+    # clarification lines now.
     assert get_strings("en")["answer_not_found"] == \
-        "Answer not found."
+        _CLARIFY_EN
     assert get_strings("hi")["answer_not_found"] == \
-        "उत्तर नहीं मिला।"
+        _CLARIFY_DEV
 
 
 # --- 2. The guards: one line, own wording, not broken ---------
@@ -178,7 +208,8 @@ def test_api_gibberish_response_is_minimal(client):
     assert body["ok"] is True
     result = body["result"]
     assert result.get("fallback_kind") == "not_found"
-    assert result.get("answer") == "Answer not found."
+    # Wave 204 (Suraj, 20 Nov): ans not found hamesha ke liye band
+    assert result.get("answer") == _CLARIFY_EN
     assert body["explanation"] == ""
     assert body["advice"] == ""
     assert body["methods"] == []

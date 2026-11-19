@@ -109,7 +109,10 @@ def _entry(entry_id):
 def test_fact_spot_pins():
     zero = _entry("zero")
     assert "628" in " ".join(zero["en"]["steps"])
-    assert "Brahmagupta" in zero["en"]["answer"]
+    # Wave 198 (Suraj, 20 Nov): zero ka shrey Aryabhata ko — uska correction
+    assert "Aryabhata" in zero["en"]["answer"]
+    assert "Brahmagupta" in " ".join(zero["en"]["steps"])
+    assert "Brahmagupta" not in zero["en"]["answer"]
     fermat = _entry("fermat")
     assert "Wiles" in fermat["en"]["answer"]
     assert "1994" in fermat["en"]["answer"]
