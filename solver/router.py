@@ -3515,6 +3515,7 @@ _W103_LOCAL = threading.local()
 _W115_LOCAL = threading.local()
 _W142_LOCAL = threading.local()
 _W169_LOCAL = threading.local()
+_W175_LOCAL = threading.local()
 _W125_LOCAL = threading.local()
 
 _W77_FILLER_WORDS = {
@@ -5137,6 +5138,36 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     w171.setdefault("interpreted_as", translated)
                 return w171
+        # Wave 175: matrix equality (solver/matrixeq175.py)
+        # — the same failure-only gate as Waves 169/171.
+        # The primary linear_algebra solver's matrix parser
+        # accepts digits only, so the classic Class 12
+        # "[[x-y, 2x+z],[2x-y, 2x+w]] = [[-1, 0],[5, 13]],
+        # find x, y, z and w" errors out and, live, burned
+        # the whole AI fallback chain past the browser's
+        # 45 s abort (Suraj's 19 Nov live test: "Server is
+        # slow" for a simple question).  matrixeq175 returns
+        # None unless a strict equality shape (bracketed,
+        # semicolon-grid or a complete flattened paste)
+        # settles completely with substitution-verified
+        # values, so a real primary answer is never
+        # displaced.
+        if getattr(_W175_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W175_LOCAL.depth = 1
+            try:
+                from .matrixeq175 import solve_matrix_equality
+                w175 = solve_matrix_equality(original)
+                if w175 is None and working != original:
+                    w175 = solve_matrix_equality(working)
+            except Exception:
+                w175 = None
+            finally:
+                _W175_LOCAL.depth = 0
+            if w175 is not None:
+                if was_translated:
+                    w175.setdefault("interpreted_as", translated)
+                return w175
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])

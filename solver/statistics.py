@@ -1527,15 +1527,32 @@ def _counting(q: str):
         return {"type": "statistics", "op": "combination",
                 "answer": fmt_num(val), "value": int(val), "steps": steps}
     m = re.search(r"factorial\s*(?:of\s*)?(\d+)", ql) or re.search(
-        r"^\s*(\d+)\s*!\s*$", q)
+        r"^\s*(\d+)\s*!\s*$", q) or re.search(
+        # Wave 177: the Hinglish word order — "0 ka factorial",
+        # "5 ka factorial kya hota hai" — carries the number
+        # BEFORE "ka factorial"; the English patterns above
+        # missed it and the ask fell to a concept card (the
+        # permutations card, for the "kya hota hai" dress)
+        # instead of the computation the student asked for.
+        r"(\d+)\s*(?:ka|ki|ke)\s*factorial", ql)
     if m:
         from math import factorial as _f
         n = int(m.group(1))
-        steps = [
-            f"{n}! = {' × '.join(str(i) for i in range(n, 0, -1))}"
-            if n <= 10 else f"{n}! = {n} × {n-1} × ... × 1",
-            f"= {_f(n)}",
-        ]
+        if n <= 1:
+            # 0! = 1! = 1 by definition (an empty product);
+            # the range-join below renders "0! = " for n = 0.
+            steps = [
+                f"{n}! = 1",
+                "By definition, " + (
+                    "the factorial of 0 is 1."
+                    if n == 0 else "the factorial of 1 is 1."),
+            ]
+        else:
+            steps = [
+                f"{n}! = {' × '.join(str(i) for i in range(n, 0, -1))}"
+                if n <= 10 else f"{n}! = {n} × {n-1} × ... × 1",
+                f"= {_f(n)}",
+            ]
         return {"type": "statistics", "op": "factorial",
                 "answer": fmt_num(_f(n)), "value": _f(n), "steps": steps}
     return None

@@ -817,6 +817,42 @@ def _is_word_soup73(text, expr):
     return covered == syms
 
 
+# ---------------------------------------------------------------- Wave 177
+# Sentence / knowledge-question detector, shared with
+# fallback.py's serve-time relevance veto (_w177_veto).
+# A message is a SENTENCE question — not a computation —
+# when it carries a knowledge shape: who / when / why /
+# what-is phrasings about a subject, in English, Roman
+# Hinglish or Devanagari ("kisne", "kab", "kya hai",
+# "khoj", "avishkar", "क्या है", "किसने", "who",
+# "invented", "discovered", "what is"...). Deliberately
+# phrase-shaped: bare compute asks ("kitna hota hai",
+# "solve", "value of") are NOT triggers — "0/5 kitna hota
+# hai" is a computation and must keep solving.
+
+_W177_KNOW_PHRASES = (
+    "kya hai", "kya hota", "kya hoti", "kya hote", "matlab",
+    "khoj", "avishkar", "aavishkar", "banaya", "banayi",
+    "kisne", "kaha se aaya", "kahan se aaya",
+    "what is", "what was", "father of", "mother of",
+    "किसने", "कौन", "कब", "क्यों", "खोज", "आविष्कार",
+    "बनाया", "क्या है", "क्या होता", "मतलब",
+)
+_W177_KNOW_WORDS = re.compile(
+    r"\b(who|whom|whose|invent\w*|discover\w*|"
+    r"kis|kab|kyu|kyon|kyun|kaun)\b")
+
+
+def _w177_sentence_question(question):
+    """Wave 177: True when the message is a sentence /
+    knowledge question (see the lexicon above), in any of
+    Ganitra's languages."""
+    q = str(question or "").lower()
+    if any(p in q for p in _W177_KNOW_PHRASES):
+        return True
+    return _W177_KNOW_WORDS.search(q) is not None
+
+
 def solve_arithmetic(question):
     # Wave 56 command schemas first: they are whole-question
     # anchored, so they can never shadow a plain expression.
@@ -911,6 +947,29 @@ def solve_arithmetic(question):
                 f"Simplify: {simplified}",
             ],
         }
+
+    # Wave 177: zero-annihilation defence. SymPy's implicit
+    # multiplication reads a sentence's words as letter
+    # factors, and a literal 0 among them annihilates the
+    # whole product — "0 ki khoj kisne ki hai" parsed to the
+    # bare number 0 with NO free symbols, slipping past the
+    # Wave 73 word-soup defence above (which needs symbols
+    # to inspect) and serving "Evaluate: 0 = 0" as the
+    # answer to a history question (Suraj's live test,
+    # 19 Nov 2026). When the parser input still carries
+    # ordinary sentence words (tokens that are not maths
+    # vocabulary) AND the question is a sentence / knowledge
+    # question, this was never an expression: refuse,
+    # exactly like an unparseable input, so the chain's
+    # knowledge layers get the question. A genuine
+    # expression carries no such words, and a cleaned
+    # Hinglish-filler expression ("2/3 + 3/4 kitna hota
+    # hai" -> "2/3 + 3/4") has none left either.
+    if _w177_sentence_question(question) and any(
+            w not in _MATH_WORDS73
+            for w in re.findall(r"[a-zA-Z]{2,}", text)):
+        raise ValueError(
+            f"Could not parse expression: {question!r}")
 
     value = sp.nsimplify(expr, rational=True)
     try:
