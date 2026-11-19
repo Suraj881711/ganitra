@@ -55,137 +55,28 @@
     <a class="chat-brand" href="/"><img class="brand-mark"
       src="{{ url_for('static', filename='logo-mark-t.png') }}"
       alt="" aria-hidden="true" /> Ganitra</a>
-    {# Wave 161 (Suraj, 18 Nov 2026, ~15:30 IST — "Agar chat
-       bhi kar rahe hai jab bhi rahana chahiye Robot", refined
-       ~15:31 IST: "Jaise Muse kaam karta hai naa waise"):
-       a small robot BUDDY rides the top bar during an ACTIVE
-       chat, present and behaving like Muse's character —
-       it mirrors the work state. Hidden while the empty
-       state shows (the big home robot holds that screen;
-       the two never show together): hideEmpty() removes the
-       empty state and puts body.chat-active on the page,
-       which is what reveals the buddy. States, all CSS on
-       top of the Wave 160 animation system: calm attentive
-       idle (robot-eyes blink, robot-bob, robot-wave arm,
-       softly pulsing lights); while Ganitra solves, the
-       typing bubble's mere presence in the DOM (body:has
-       (.bubble.typing) — the same signal in BOTH typing
-       paths, so the buddy can never drift out of sync)
-       switches it to its thinking face, tilts its head and
-       runs the lights on the brighter alternating blink;
-       and the chat-test correct-answer hook below adds
-       body.robot-buddy-cheer for a moment, giving it a
-       brief laugh. Pure decoration: aria-hidden,
-       pointer-events none, fixed inside the header band —
-       it never covers a message, never takes a tap and
-       never moves the layout. Same character, same (Wave
-       161 darkened) palette as the home robot. #}
-    <div class="robot-buddy" aria-hidden="true">
-      <svg class="robot-buddy-svg" viewBox="0 0 100 100"
-        focusable="false">
-        <ellipse cx="41" cy="93" rx="6" ry="4.4" fill="#0a7a64" />
-        <ellipse cx="59" cy="93" rx="6" ry="4.4" fill="#0a7a64" />
-        <rect x="28" y="52" width="44" height="36" rx="13"
-          fill="#f0d3a0" />
-        <path d="M31 82 Q50 87.5 69 82" fill="none"
-          stroke="#dbb87e" stroke-width="1.6" />
-        <rect x="41" y="68" width="18" height="12" rx="5"
-          fill="#0a7a64" />
-        <circle cx="50" cy="61" r="4.6" fill="#0a7a64" />
-        <circle cx="50" cy="61" r="2.2" fill="#46f2c3" />
-        <ellipse cx="30.5" cy="75" rx="2.6" ry="5" fill="#0a7a64"
-          transform="rotate(14 30.5 75)" />
-        <ellipse cx="69.5" cy="75" rx="2.6" ry="5" fill="#0a7a64"
-          transform="rotate(-14 69.5 75)" />
-        <g>
-          <path d="M30 58 Q22 66 23 76" fill="none"
-            stroke="#f0d3a0" stroke-width="7"
-            stroke-linecap="round" />
-          <path d="M29.5 55 Q24 57.5 23.2 62.5" fill="none"
-            stroke="#0a7a64" stroke-width="7.2"
-            stroke-linecap="round" />
-          <circle cx="23.5" cy="80" r="5" fill="#0a7a64" />
-          <circle cx="27.6" cy="77.2" r="2.2" fill="#0a7a64" />
-        </g>
-        <g class="robot-buddy-arm">
-          <path d="M70 57 Q80 52 84 44" fill="none"
-            stroke="#f0d3a0" stroke-width="7"
-            stroke-linecap="round" />
-          <path d="M70.5 56.5 Q76 53.5 79.5 49.5" fill="none"
-            stroke="#0a7a64" stroke-width="7.2"
-            stroke-linecap="round" />
-          <circle cx="86" cy="38" r="5.5" fill="#0a7a64" />
-          <circle cx="80.8" cy="40.5" r="2.3" fill="#0a7a64" />
-          <circle cx="88.2" cy="32.8" r="2.2" fill="#0a7a64" />
-        </g>
-        <rect x="24" y="16" width="52" height="40" rx="17"
-          fill="#f0d3a0" />
-        <circle cx="41" cy="17.5" r="3" fill="#074335" />
-        <circle cx="59" cy="17.5" r="3" fill="#074335" />
-        <path d="M40 16 L37.5 8.5" fill="none" stroke="#074335"
-          stroke-width="2.4" stroke-linecap="round" />
-        <path d="M60 16 L62.5 8.5" fill="none" stroke="#074335"
-          stroke-width="2.4" stroke-linecap="round" />
-        <rect x="20.5" y="30" width="7" height="18" rx="3.5"
-          fill="#0a7a64" />
-        <rect x="72.5" y="30" width="7" height="18" rx="3.5"
-          fill="#0a7a64" />
-        <circle class="robot-light-halo" cx="37" cy="6" r="8.5"
-          fill="#2bd9a9" opacity="0.35" />
-        <circle class="robot-ball" cx="37" cy="6" r="4.3"
-          fill="#2fe8b8" />
-        <circle cx="35.8" cy="4.8" r="1.1" fill="#ffffff"
-          opacity="0.95" />
-        <circle class="robot-light-halo robot-light-halo-r"
-          cx="63" cy="6" r="8.5" fill="#2bd9a9" opacity="0.35" />
-        <circle class="robot-ball" cx="63" cy="6" r="4.3"
-          fill="#2fe8b8" />
-        <circle cx="61.8" cy="4.8" r="1.1" fill="#ffffff"
-          opacity="0.95" />
-        <g class="robot-buddy-face robot-buddy-face-calm">
-          <g class="robot-eyes">
-            <circle cx="41.5" cy="37" r="4.6" fill="#2bd9a9"
-              opacity="0.4" />
-            <circle cx="58.5" cy="37" r="4.6" fill="#2bd9a9"
-              opacity="0.4" />
-            <circle cx="41.5" cy="37" r="2.6" fill="#46f2c3" />
-            <circle cx="58.5" cy="37" r="2.6" fill="#46f2c3" />
-            <circle cx="40.7" cy="36.2" r="0.9" fill="#ffffff"
-              opacity="0.9" />
-            <circle cx="57.7" cy="36.2" r="0.9" fill="#ffffff"
-              opacity="0.9" />
-          </g>
-          <path d="M45.5 44.5 Q50 48.5 54.5 44.5" fill="none"
-            stroke="#076e59" stroke-width="2.1"
-            stroke-linecap="round" />
-        </g>
-        <g class="robot-buddy-face robot-buddy-face-busy">
-          <circle cx="41.5" cy="34" r="4.6" fill="#2bd9a9"
-            opacity="0.4" />
-          <circle cx="58.5" cy="34" r="4.6" fill="#2bd9a9"
-            opacity="0.4" />
-          <circle cx="41.5" cy="34" r="2.6" fill="#46f2c3" />
-          <circle cx="58.5" cy="34" r="2.6" fill="#46f2c3" />
-          <circle cx="40.7" cy="33.2" r="0.9" fill="#ffffff"
-            opacity="0.9" />
-          <circle cx="57.7" cy="33.2" r="0.9" fill="#ffffff"
-            opacity="0.9" />
-          <path d="M46 44.5 Q50 47 54 44.5" fill="none"
-            stroke="#076e59" stroke-width="2"
-            stroke-linecap="round" />
-        </g>
-        <g class="robot-buddy-face robot-buddy-face-laugh">
-          <path d="M37.5 38.5 Q41.5 34.5 45.5 38.5" fill="none"
-            stroke="#074335" stroke-width="2.2"
-            stroke-linecap="round" />
-          <path d="M54.5 38.5 Q58.5 34.5 62.5 38.5" fill="none"
-            stroke="#074335" stroke-width="2.2"
-            stroke-linecap="round" />
-          <path d="M44 44.5 a6 5 0 0 0 12 0 z" fill="#074335" />
-        </g>
-      </svg>
+    {# Wave 181 (Suraj, 19 Nov 2026): the header buddy is
+       now the NEW rendered mascot — a small white circle
+       carrying the wave portrait (static/robot-wave.webp) —
+       riding the top bar during an ACTIVE chat, in the
+       seat the Wave 161 SVG buddy held. Hidden while the
+       empty state shows (the big home mascot holds that
+       screen; the two never show together): hideEmpty()
+       removes the empty state and puts body.chat-active on
+       the page, which is what reveals the buddy. While
+       Ganitra solves, the typing bubble's mere presence in
+       the DOM (body:has(.bubble.typing)) tilts it a touch;
+       a correct chat-test answer gives it a brief happy
+       bounce (body.mascot-cheer, set by the test hook
+       below). Pure decoration: aria-hidden, pointer-events
+       none, fixed inside the header band — it never covers
+       a message, never takes a tap and never moves the
+       layout. #}
+    <div class="mascot-buddy" aria-hidden="true">
+      <img src="{{ url_for('static', filename='robot-wave.webp') }}"
+        alt="" />
     </div>
-    <div class="header-tools">
+    <div class="header-tools">    <div class="header-tools">
       {# Wave 11: Suraj's Brave-style multi-chat — the plain "+"
          opens the all-chats view (no circle around it, per his
          photo iterations). Wave 104: the "+" now sits just left
@@ -215,264 +106,56 @@
      The topic list moved to /topics. #}
   <div class="chat-shell">
     {% if saathi_name %}
-    {# Wave 168 (Suraj, 18 Nov 2026, late night — "Robot ko
-       upar rakho bilkul", refined: "Jo menu wali line hai
-       naa, uske neeche rakhana hai" + "Muse hai jaise"):
-       the home robot no longer rides inside the vertically
-       centred empty-state block. It stands at the VERY TOP
-       of the content area, centred, immediately below the
-       header/menu line — like Muse's character. The logo,
-       greeting and thought stay in the centred block below
-       (.chat-empty), untouched and in their order. Same
-       character, same SVG, same animations (the block below
-       is the Wave 160/161 robot, moved verbatim); it still
+    {# Wave 181 (Suraj, 19 Nov 2026): the home mascot is
+       the NEW rendered robot — a glossy 3D character
+       (ivory-cream + deep teal + gold, a glowing mint
+       heart on its chest, two antenna light-balls) that
+       Suraj approved with a heart after rejecting the
+       flat SVG robot ("Muse ki tarah real nhi hai, real
+       feelings nhi hai"). It stands at the VERY TOP of
+       the content area, centred, immediately below the
+       header/menu line (the Wave 168 placement), inside
+       a WHITE CIRCLE with a soft teal ring and shadow —
+       his approved preview — with the name "Ganitra"
+       under the circle. Inside the circle the poses
+       slowly crossfade: wave, think, laugh, kiss. It
        renders only for a named student, and CSS hides it
        the moment a chat starts (body.chat-active), when
        the header buddy takes over — the two never show
-       together. #}
+       together. On page open the kiss pose ALSO appears
+       full-size over the home for a moment (the
+       .mascot-pop welcome, below) — Suraj: "kabhi kabhi
+       ye pura bhi dikhana chahiye". #}
     <div class="empty-robot-top" aria-hidden="true">
-      {# Wave 170 (Suraj, 19 Nov 2026 — "Aisa design karana
-         hai background kaa" about a Muse-app screenshot,
-         then "Dono karo"): the top robot now sits inside a
-         soft avatar-style CARD with the name "Ganitra"
-         under it, and the empty-state backdrop goes soft
-         and calm (see the Wave 170 block in style.css) —
-         both adapted in Ganitra's OWN cream/teal palette,
-         never Muse's branding or colours. The SVG below
-         is byte-identical to the Wave 160/161/168 artwork
-         (pinned by hash in test_wave170.py); only the
-         presentation around it changed. #}
-      <div class="robot-card">
-      <svg class="robot" viewBox="0 0 100 100" width="80"
-        height="80" aria-hidden="true" focusable="false">
-        <g class="robot-hop">
-        <g class="robot-tilt">
-        <g class="robot-inner">
-          <ellipse class="robot-foot-l" cx="41" cy="93"
-            rx="6" ry="4.4" fill="#0a7a64" />
-          <ellipse class="robot-foot-r" cx="59" cy="93"
-            rx="6" ry="4.4" fill="#0a7a64" />
-          <rect x="28" y="52" width="44" height="36"
-            rx="13" fill="#f0d3a0" />
-          <path d="M31 82 Q50 87.5 69 82" fill="none"
-            stroke="#dbb87e" stroke-width="1.6" />
-          <rect x="41" y="68" width="18" height="12"
-            rx="5" fill="#0a7a64" />
-          <circle cx="50" cy="61" r="4.6"
-            fill="#0a7a64" />
-          <circle cx="50" cy="61" r="2.2"
-            fill="#46f2c3" />
-          <ellipse cx="30.5" cy="75" rx="2.6" ry="5"
-            fill="#0a7a64" transform="rotate(14 30.5 75)" />
-          <ellipse cx="69.5" cy="75" rx="2.6" ry="5"
-            fill="#0a7a64"
-            transform="rotate(-14 69.5 75)" />
-          <g class="robot-arm-rest">
-            <path d="M30 58 Q22 66 23 76" fill="none"
-              stroke="#f0d3a0" stroke-width="7"
-              stroke-linecap="round" />
-            <path d="M29.5 55 Q24 57.5 23.2 62.5"
-              fill="none" stroke="#0a7a64"
-              stroke-width="7.2" stroke-linecap="round" />
-            <circle cx="23.5" cy="80" r="5"
-              fill="#0a7a64" />
-            <circle cx="27.6" cy="77.2" r="2.2"
-              fill="#0a7a64" />
-          </g>
-          <g class="robot-arm">
-            <path d="M70 57 Q80 52 84 44" fill="none"
-              stroke="#f0d3a0" stroke-width="7"
-              stroke-linecap="round" />
-            <path d="M70.5 56.5 Q76 53.5 79.5 49.5"
-              fill="none" stroke="#0a7a64"
-              stroke-width="7.2" stroke-linecap="round" />
-            <circle cx="86" cy="38" r="5.5"
-              fill="#0a7a64" />
-            <circle cx="80.8" cy="40.5" r="2.3"
-              fill="#0a7a64" />
-            <circle cx="88.2" cy="32.8" r="2.2"
-              fill="#0a7a64" />
-          </g>
-          <rect x="24" y="16" width="52" height="40"
-            rx="17" fill="#f0d3a0" />
-          <circle cx="41" cy="17.5" r="3"
-            fill="#074335" />
-          <circle cx="59" cy="17.5" r="3"
-            fill="#074335" />
-          <path d="M40 16 L37.5 8.5" fill="none"
-            stroke="#074335" stroke-width="2.4"
-            stroke-linecap="round" />
-          <path d="M60 16 L62.5 8.5" fill="none"
-            stroke="#074335" stroke-width="2.4"
-            stroke-linecap="round" />
-          <rect x="20.5" y="30" width="7" height="18"
-            rx="3.5" fill="#0a7a64" />
-          <rect x="72.5" y="30" width="7" height="18"
-            rx="3.5" fill="#0a7a64" />
-          <circle class="robot-light-flare" cx="37"
-            cy="6" r="12" fill="#7df5d2" opacity="0" />
-          <circle class="robot-light-flare2" cx="37"
-            cy="6" r="12" fill="#7df5d2" opacity="0" />
-          <circle class="robot-light-halo" cx="37"
-            cy="6" r="8.5" fill="#2bd9a9"
-            opacity="0.35" />
-          <circle class="robot-ball" cx="37" cy="6"
-            r="4.3" fill="#2fe8b8" />
-          <circle cx="35.8" cy="4.8" r="1.1"
-            fill="#ffffff" opacity="0.95" />
-          <circle class="robot-light-flare" cx="63"
-            cy="6" r="12" fill="#7df5d2" opacity="0" />
-          <circle class="robot-light-flare2" cx="63"
-            cy="6" r="12" fill="#7df5d2" opacity="0" />
-          <circle class="robot-light-halo" cx="63"
-            cy="6" r="8.5" fill="#2bd9a9"
-            opacity="0.35" />
-          <circle class="robot-ball" cx="63" cy="6"
-            r="4.3" fill="#2fe8b8" />
-          <circle cx="61.8" cy="4.8" r="1.1"
-            fill="#ffffff" opacity="0.95" />
-          <g class="robot-face-smile">
-            <g class="robot-eyes">
-              <circle cx="41.5" cy="37" r="4.6"
-                fill="#2bd9a9" opacity="0.4" />
-              <circle cx="58.5" cy="37" r="4.6"
-                fill="#2bd9a9" opacity="0.4" />
-              <circle cx="41.5" cy="37" r="2.6"
-                fill="#46f2c3" />
-              <circle cx="58.5" cy="37" r="2.6"
-                fill="#46f2c3" />
-              <circle cx="40.7" cy="36.2" r="0.9"
-                fill="#ffffff" opacity="0.9" />
-              <circle cx="57.7" cy="36.2" r="0.9"
-                fill="#ffffff" opacity="0.9" />
-            </g>
-            <path d="M45.5 44.5 Q50 48.5 54.5 44.5"
-              fill="none" stroke="#076e59"
-              stroke-width="2.1" stroke-linecap="round" />
-          </g>
-          <g class="robot-face-laugh">
-            <path d="M37.5 38.5 Q41.5 34.5 45.5 38.5"
-              fill="none" stroke="#074335"
-              stroke-width="2.2" stroke-linecap="round" />
-            <path d="M54.5 38.5 Q58.5 34.5 62.5 38.5"
-              fill="none" stroke="#074335"
-              stroke-width="2.2" stroke-linecap="round" />
-            <path d="M44 44.5 a6 5 0 0 0 12 0 z"
-              fill="#074335" />
-          </g>
-          <g class="robot-face-kiss">
-            <path d="M37.5 38.5 Q41.5 34.5 45.5 38.5"
-              fill="none" stroke="#074335"
-              stroke-width="2.2" stroke-linecap="round" />
-            <path d="M54.5 38.5 Q58.5 34.5 62.5 38.5"
-              fill="none" stroke="#074335"
-              stroke-width="2.2" stroke-linecap="round" />
-            <circle cx="50" cy="46.5" r="1.6" fill="none"
-              stroke="#076e59" stroke-width="1.6" />
-          </g>
-          <g class="robot-kiss-hand">
-            <path d="M67 57 Q63 52 59 49.5" fill="none"
-              stroke="#f0d3a0" stroke-width="6.5"
-              stroke-linecap="round" />
-            <circle cx="56.5" cy="47.5" r="5"
-              fill="#0a7a64" />
-            <circle cx="53.2" cy="43.2" r="2.1"
-              fill="#0a7a64" />
-            <circle cx="57.8" cy="42.6" r="2.1"
-              fill="#0a7a64" />
-          </g>
-          <g class="robot-face-lookup">
-            <rect x="33" y="29" width="34" height="24"
-              rx="9" fill="#f0d3a0" />
-            <circle cx="41.5" cy="34.5" r="4.6"
-              fill="#2bd9a9" opacity="0.4" />
-            <circle cx="58.5" cy="34.5" r="4.6"
-              fill="#2bd9a9" opacity="0.4" />
-            <circle cx="41.5" cy="34.5" r="2.6"
-              fill="#46f2c3" />
-            <circle cx="58.5" cy="34.5" r="2.6"
-              fill="#46f2c3" />
-            <path d="M45 43 Q50 47 55 43" fill="none"
-              stroke="#076e59" stroke-width="2.1"
-              stroke-linecap="round" />
-          </g>
-          <g class="robot-grab-arm">
-            <path d="M71 56 Q86 46 85 30 Q84 12 67 6.3"
-              fill="none" stroke="#f0d3a0"
-              stroke-width="7" stroke-linecap="round" />
-            <path d="M71.5 55.5 Q79 50 82 44"
-              fill="none" stroke="#0a7a64"
-              stroke-width="7.2" stroke-linecap="round" />
-            <circle class="robot-grab-hand" cx="63"
-              cy="6" r="5.5" fill="#0a7a64" />
-            <circle cx="59.6" cy="1.8" r="2.1"
-              fill="#0a7a64" />
-            <circle cx="64.2" cy="1.1" r="2.1"
-              fill="#0a7a64" />
-          </g>
-          <g class="robot-monkey-face">
-            <rect x="33" y="29" width="34" height="24"
-              rx="9" fill="#f0d3a0" />
-            <path d="M37.5 38.5 Q41.5 34.5 45.5 38.5"
-              fill="none" stroke="#074335"
-              stroke-width="2.2" stroke-linecap="round" />
-            <path d="M54.5 38.5 Q58.5 34.5 62.5 38.5"
-              fill="none" stroke="#074335"
-              stroke-width="2.2" stroke-linecap="round" />
-            <path d="M42.5 43.5 a7.5 6.2 0 0 0 15 0 z"
-              fill="#074335" />
-            <path d="M46.5 48.4 a3.5 2.4 0 0 0 7 0 z"
-              fill="#f2789b" />
-          </g>
-          <g class="robot-monkey-scratch">
-            <path d="M28 55 Q17 42 19.5 28" fill="none"
-              stroke="#f0d3a0" stroke-width="6.5"
-              stroke-linecap="round" />
-            <circle cx="20.5" cy="23.5" r="5.2"
-              fill="#0a7a64" />
-            <circle cx="17.3" cy="19.6" r="2.1"
-              fill="#0a7a64" />
-            <circle cx="21.8" cy="18.8" r="2.1"
-              fill="#0a7a64" />
-          </g>
-        </g>
-        </g>
-        </g>
-        <g class="robot-hearts">
-          <g transform="translate(6 30) scale(1.15)">
-            <path class="robot-heart" style="--d:.05s"
-              fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-          </g>
-          <g transform="translate(85 26) scale(1.3)">
-            <path class="robot-heart" style="--d:.18s"
-              fill="#ef4f63" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-          </g>
-          <g transform="translate(14 12) scale(0.8)">
-            <path class="robot-heart" style="--d:.3s"
-              fill="#ef4f63" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-          </g>
-          <g transform="translate(76 8) scale(0.9)">
-            <path class="robot-heart" style="--d:.42s"
-              fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-          </g>
-          <g transform="translate(2 48) scale(0.7)">
-            <path class="robot-heart" style="--d:.24s"
-              fill="#ef4f63" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-          </g>
-          <g transform="translate(90 46) scale(0.75)">
-            <path class="robot-heart" style="--d:.36s"
-              fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-          </g>
-          <g transform="translate(60 1) scale(0.6)">
-            <path class="robot-heart" style="--d:.5s"
-              fill="#f2789b" d="M2.8 6.2 C1.2 4.9 0 3.8 0 2.4 C0 1 1 -0.1 2 -0.1 C2.5 -0.1 2.8 0.3 2.8 0.6 C2.8 0.3 3.1 -0.1 3.6 -0.1 C4.6 -0.1 5.6 1 5.6 2.4 C5.6 3.8 4.4 4.9 2.8 6.2 Z" />
-          </g>
-        </g>
-      </svg>
-        <div class="robot-card-name">Ganitra</div>
+      <div class="mascot-home" id="mascot-home">
+        <div class="mascot-circle">
+          <img class="mascot-pose mascot-pose-wave"
+            src="{{ url_for('static', filename='robot-wave.webp') }}"
+            alt="" />
+          <img class="mascot-pose mascot-pose-think"
+            src="{{ url_for('static', filename='robot-think.webp') }}"
+            alt="" />
+          <img class="mascot-pose mascot-pose-laugh"
+            src="{{ url_for('static', filename='robot-laugh.webp') }}"
+            alt="" />
+          <img class="mascot-pose mascot-pose-kiss"
+            src="{{ url_for('static', filename='robot-kiss.webp') }}"
+            alt="" />
+        </div>
+        <div class="mascot-name">Ganitra</div>
       </div>
     </div>
     {% endif %}
+    {# Wave 181: the mascot FULL-moment overlay — one
+       portrait at a time, large and uncropped over the
+       page (the welcome kiss on page open, the laugh on a
+       correct chat-test answer). Driven by showMascotPop()
+       in the script below; a tap dismisses it. #}
+    <div class="mascot-pop" id="mascot-pop" aria-hidden="true">
+      <img id="mascot-pop-img"
+        src="{{ url_for('static', filename='robot-kiss.webp') }}"
+        alt="" />
+    </div>
     <div class="chat-scroll" id="chat-scroll">
       <div class="chat-log" id="chat-log" aria-live="polite">
         <div class="chat-empty" id="chat-empty">
@@ -585,7 +268,12 @@
                .chat-shell, immediately below the header/menu
                line). This container now holds only the
                greeting; the logo above it and the thought
-               below it are unchanged. #}
+               below it are unchanged.
+               Wave 181 (Suraj, 19 Nov 2026): the SVG robot
+               was replaced by the new rendered mascot in a
+               white circle (see .mascot-home at the top of
+               .chat-shell); this container still holds only
+               the greeting. #}
             <div class="empty-hello">
               <h2 class="empty-greeting">{{ saathi_greeting_short }}</h2>
             </div>
@@ -1454,170 +1142,71 @@
         return div;
       }
 
-      /* Wave 160 (Suraj, 18 Nov 2026): the little cream
-         robot's other poses, drawn as inline SVG strings in
-         the same hand and palette as the home robot in the
-         empty state above (two glowing antenna lights
-         included). "think" is the HUMAN thinking pose — one
-         hand on its head, the other on its waist, eyes
-         looking up; "write" writes in its notebook with a
-         green pencil (squiggle lines appearing) and now and
-         then grabs its right light ball, exactly like the
-         home robot; "laugh" is the happy laugh pose for a
-         correct chat-test answer. */
-      function robotSvg(kind) {
-        var headOpen =
-          '<rect x="26" y="15" width="48" height="34" rx="15" fill="#f0d3a0"/>'
-          + '<circle cx="42" cy="16.5" r="2.4" fill="#074335"/>'
-          + '<circle cx="58" cy="16.5" r="2.4" fill="#074335"/>'
-          + '<path d="M41.5 15 L39.5 8.5" stroke="#074335" stroke-width="2.2" stroke-linecap="round"/>'
-          + '<path d="M58.5 15 L60.5 8.5" stroke="#074335" stroke-width="2.2" stroke-linecap="round"/>'
-          + '<rect x="22.5" y="25" width="6.5" height="15" rx="3.2" fill="#0a7a64"/>'
-          + '<rect x="71" y="25" width="6.5" height="15" rx="3.2" fill="#0a7a64"/>'
-          + '<circle class="robot-light-flare" cx="39" cy="7" r="10.5" fill="#7df5d2" opacity="0"/>'
-          + '<circle class="robot-light-flare" cx="61" cy="7" r="10.5" fill="#7df5d2" opacity="0"/>'
-          + '<circle class="robot-light-halo" cx="39" cy="7" r="7" fill="#2bd9a9" opacity="0.35"/>'
-          + '<circle class="robot-light-halo robot-light-halo-r" cx="61" cy="7" r="7" fill="#2bd9a9" opacity="0.35"/>'
-          + '<circle class="robot-ball" cx="39" cy="7" r="3.8" fill="#2fe8b8"/>'
-          + '<circle class="robot-ball" cx="61" cy="7" r="3.8" fill="#2fe8b8"/>'
-          + '<circle cx="37.9" cy="5.9" r="1" fill="#ffffff" opacity="0.95"/>'
-          + '<circle cx="59.9" cy="5.9" r="1" fill="#ffffff" opacity="0.95"/>';
-        if (kind === "laugh") {
-          return '<svg class="robot-pose-laugh" viewBox="0 0 100 100" aria-hidden="true" focusable="false">'
-            + '<ellipse cx="40" cy="81" rx="6" ry="4.2" fill="#0a7a64"/>'
-            + '<ellipse cx="60" cy="81" rx="6" ry="4.2" fill="#0a7a64"/>'
-            + '<rect x="30" y="47" width="40" height="30" rx="11" fill="#f0d3a0"/>'
-            + '<circle cx="25" cy="55" r="5" fill="#0a7a64"/>'
-            + '<circle cx="75" cy="55" r="5" fill="#0a7a64"/>'
-            + '<circle cx="50" cy="55" r="3.4" fill="#0a7a64"/>'
-            + '<circle cx="50" cy="55" r="1.6" fill="#46f2c3"/>'
-            + '<rect x="42" y="63" width="16" height="10" rx="4.5" fill="#0a7a64"/>'
-            + headOpen
-            + '<path d="M38 31 Q42 27.5 46 31" fill="none" stroke="#074335" stroke-width="2.2" stroke-linecap="round"/>'
-            + '<path d="M54 31 Q58 27.5 62 31" fill="none" stroke="#074335" stroke-width="2.2" stroke-linecap="round"/>'
-            + '<path d="M44.5 36.5 a5.5 4.6 0 0 0 11 0 z" fill="#074335"/>'
-            + '</svg>';
+      /* Wave 181 (Suraj, 19 Nov 2026): the mascot FULL
+         moments. showMascotPop(kind) floats the new
+         rendered robot's portrait — "kiss" or "laugh" —
+         large and uncropped over the page for a moment,
+         then it settles away; a tap dismisses it at once.
+         It is the welcome on page open (the kiss, wired
+         just below) and the happy moment on a correct
+         chat-test answer (the laugh, in addAnswerBubble).
+         This replaces the Wave 160 SVG pose strings and
+         the typing-bubble robot duo outright — the typing
+         bubble itself stays clean (text + dots only —
+         Wave 176 took both figures out of it). Pure decoration:
+         any failure leaves the page exactly as it was. */
+      var mascotPopTimer = null;
+      function hideMascotPop() {
+        var pop = document.getElementById("mascot-pop");
+        if (mascotPopTimer) {
+          clearTimeout(mascotPopTimer);
+          mascotPopTimer = null;
         }
-        if (kind === "think") {
-          return '<svg class="robot-pose-think" viewBox="0 0 100 100" aria-hidden="true" focusable="false">'
-            + '<ellipse cx="40" cy="90" rx="6" ry="4.2" fill="#0a7a64"/>'
-            + '<ellipse cx="60" cy="90" rx="6" ry="4.2" fill="#0a7a64"/>'
-            + '<rect x="29" y="47" width="42" height="36" rx="12" fill="#f0d3a0"/>'
-            + '<circle cx="50" cy="56" r="3.6" fill="#0a7a64"/>'
-            + '<circle cx="50" cy="56" r="1.7" fill="#46f2c3"/>'
-            + '<rect x="41" y="66" width="18" height="11" rx="5" fill="#0a7a64"/>'
-            + '<path d="M69 53 Q78 59 74.5 67" fill="none" stroke="#f0d3a0" stroke-width="6.5" stroke-linecap="round"/>'
-            + '<path d="M69.5 52.5 Q74 55 75.8 58.5" fill="none" stroke="#0a7a64" stroke-width="6.8" stroke-linecap="round"/>'
-            + '<circle cx="72.5" cy="69" r="4.6" fill="#0a7a64"/>'
-            + '<path d="M31 52 Q20 40 22.5 25" fill="none" stroke="#f0d3a0" stroke-width="6.5" stroke-linecap="round"/>'
-            + headOpen
-            + '<circle cx="42" cy="26.5" r="4" fill="#2bd9a9" opacity="0.4"/>'
-            + '<circle cx="58" cy="26.5" r="4" fill="#2bd9a9" opacity="0.4"/>'
-            + '<circle cx="42" cy="26.5" r="2.3" fill="#46f2c3"/>'
-            + '<circle cx="58" cy="26.5" r="2.3" fill="#46f2c3"/>'
-            + '<path d="M46 35.5 Q50 38.5 54 35.5" fill="none" stroke="#076e59" stroke-width="2" stroke-linecap="round"/>'
-            + '<circle cx="23.5" cy="20" r="5" fill="#0a7a64"/>'
-            + '<circle cx="26.8" cy="16.8" r="2.1" fill="#0a7a64"/>'
-            + '</svg>';
-        }
-        return '<svg class="robot-pose-write" viewBox="0 0 100 100" aria-hidden="true" focusable="false">'
-          + '<ellipse cx="38" cy="91" rx="6" ry="4.2" fill="#0a7a64"/>'
-          + '<ellipse cx="62" cy="91" rx="6" ry="4.2" fill="#0a7a64"/>'
-          + '<rect x="31" y="47" width="38" height="22" rx="10" fill="#f0d3a0"/>'
-          + '<circle cx="50" cy="54" r="3.4" fill="#0a7a64"/>'
-          + '<circle cx="50" cy="54" r="1.6" fill="#46f2c3"/>'
-          + headOpen
-          + '<g class="robot-mini-face">'
-          + '<circle cx="42" cy="31.5" r="4" fill="#2bd9a9" opacity="0.4"/>'
-          + '<circle cx="58" cy="31.5" r="4" fill="#2bd9a9" opacity="0.4"/>'
-          + '<circle cx="42" cy="31.5" r="2.3" fill="#46f2c3"/>'
-          + '<circle cx="58" cy="31.5" r="2.3" fill="#46f2c3"/>'
-          + '<path d="M46 37.5 Q50 40 54 37.5" fill="none" stroke="#076e59" stroke-width="2" stroke-linecap="round"/>'
-          + '</g>'
-          + '<rect x="22" y="63" width="56" height="24" rx="4" fill="#074335"/>'
-          + '<rect x="24.5" y="61.5" width="51" height="22" rx="3" fill="#f7ead2"/>'
-          + '<path d="M50 62 V83" stroke="#dbb87e" stroke-width="1.4"/>'
-          + '<path class="robot-squiggle sq1" pathLength="100" d="M53 68 q3 -2.2 6 0 t6 0" fill="none" stroke="#0a7a64" stroke-width="1.6" stroke-linecap="round"/>'
-          + '<path class="robot-squiggle sq2" pathLength="100" d="M53 74 q3 -2.2 6 0 t6 0" fill="none" stroke="#0a7a64" stroke-width="1.6" stroke-linecap="round"/>'
-          + '<path class="robot-squiggle sq3" pathLength="100" d="M53 80 q3 -2.2 6 0 t6 0" fill="none" stroke="#0a7a64" stroke-width="1.6" stroke-linecap="round"/>'
-          + '<circle cx="23" cy="69" r="4.5" fill="#0a7a64"/>'
-          + '<g class="robot-pencil"><g transform="rotate(38 68 62)"><rect x="65.5" y="50" width="5" height="13" rx="1.6" fill="#0a7a64"/><path d="M65.5 63 L70.5 63 L68 67.5 Z" fill="#e8cc97"/><circle cx="68" cy="66.6" r="1" fill="#074335"/></g><circle cx="68" cy="55" r="4.2" fill="#0a7a64"/></g>'
-          + '<g class="robot-mini-lookup"><rect x="34" y="23" width="32" height="20" rx="8" fill="#f0d3a0"/>'
-          + '<circle cx="42" cy="27.5" r="3.6" fill="#2bd9a9" opacity="0.4"/>'
-          + '<circle cx="58" cy="27.5" r="3.6" fill="#2bd9a9" opacity="0.4"/>'
-          + '<circle cx="42" cy="27.5" r="2.1" fill="#46f2c3"/>'
-          + '<circle cx="58" cy="27.5" r="2.1" fill="#46f2c3"/>'
-          + '<path d="M46 37.5 Q50 40.5 54 37.5" fill="none" stroke="#076e59" stroke-width="1.9" stroke-linecap="round"/></g>'
-          + '<g class="robot-mini-grab"><path d="M69 52 Q82 44 80 28 Q78 13 65 7.3" fill="none" stroke="#f0d3a0" stroke-width="6.5" stroke-linecap="round"/>'
-          + '<circle class="robot-grab-hand" cx="61" cy="7" r="5.1" fill="#0a7a64"/>'
-          + '<circle cx="57.8" cy="3" r="1.9" fill="#0a7a64"/>'
-          + '<circle cx="62.2" cy="2.3" r="1.9" fill="#0a7a64"/></g>'
-          + '</svg>';
+        if (pop) pop.classList.remove("show");
       }
 
-      /* Wave 160: while Ganitra thinks/writes, the mini
-         robot duo rides INSIDE the typing bubble — the
-         thinking pose and the writing pose crossfade on a
-         gentle cycle, so the robot does what Ganitra is
-         doing. It vanishes with the bubble the moment the
-         answer lands. Pure decoration, guarded exactly like
-         the boy beside it: any failure leaves the plain
-         three-dot indicator untouched. */
-      function addTypingRobot(node) {
+      /* Wave 176 (Suraj, 19 Nov 2026): the thinking bubble
+         carries NO figures any more — the mini robot duo
+         (Wave 160) and the boy writer (Wave 23) that rode
+         inside it are removed on his order ("inki jarurat
+         nhi hai"). The bubble is the plain Wave 145
+         indicator: the thinking line + three dots. The
+         robot still lives on the home card and in the
+         header, and the boy still writes at the Teach
+         board — only this bubble lost its passengers. */
+      function showMascotPop(kind, ms) {
         try {
-          if (!node || node.querySelector(".robot-duo")) return;
-          var holder = document.createElement("span");
-          holder.className = "robot-duo";
-          holder.setAttribute("aria-hidden", "true");
-          holder.innerHTML = robotSvg("think") + robotSvg("write");
-          node.classList.add("robot-host");
-          node.insertBefore(holder, node.firstChild);
-        } catch (e) { /* decoration only — never break typing */ }
+          var pop = document.getElementById("mascot-pop");
+          var img = document.getElementById("mascot-pop-img");
+          if (!pop || !img) return;
+          img.src = "/static/robot-" + kind + ".webp";
+          pop.classList.add("show");
+          if (mascotPopTimer) clearTimeout(mascotPopTimer);
+          mascotPopTimer = setTimeout(hideMascotPop, ms || 1900);
+        } catch (e) { /* decoration only */ }
       }
-
-      /* Wave 23 (Part 2): while Ganitra thinks, the jungle boy
-         sits beside the typing line "writing" the answer — the
-         same writing rock as at the Teach board. He rides INSIDE
-         the typing bubble, so he vanishes with it the moment the
-         answer lands (the submit handler removes the node).
-         Pure decoration: wordless, pointer-free, and any failure
-         (e.g. the sprite 404s) just leaves the plain indicator. */
-      function addTypingBoy(node) {
+      (function () {
         try {
-          if (!node || node.querySelector(".boy-writer")) return;
-          /* Wave 62: prefer the real-3D writer boy (scene3d.js
-             paints him into a small canvas, same writing rock)
-             once his model has loaded; until then — and forever
-             on any failure — the 2D sprite boy serves as before.
-             Wave 62B: the 3D writer is retired (the boy is out
-             of the 3D scene) — scene3d.js never defines the
-             hook now, so the sprite below always serves,
-             exactly the pre-61 behaviour. */
-          var boy = null;
-          if (window.__ganitraBoyWriter3D) {
-            try { boy = window.__ganitraBoyWriter3D(); }
-            catch (e) { boy = null; }
+          var pop = document.getElementById("mascot-pop");
+          if (pop) pop.addEventListener("click", hideMascotPop);
+          /* The welcome: on page open, while the empty
+             state is on screen, the kiss pose appears FULL
+             for a moment (~2.2s), then settles to the home
+             circle. If a saved chat reopens instead (the
+             empty state is already gone by the time this
+             timer fires), no welcome shows. */
+          if (document.getElementById("mascot-home")
+              && document.getElementById("chat-empty")) {
+            setTimeout(function () {
+              if (document.getElementById("chat-empty")
+                  && !document.body.classList.contains(
+                    "chat-active")) {
+                showMascotPop("kiss", 2200);
+              }
+            }, 400);
           }
-          if (boy) {
-            boy.className = "boy-writer in-typing on boy-writer-3d";
-            boy.setAttribute("aria-hidden", "true");
-          } else {
-            boy = document.createElement("img");
-            boy.className = "boy-writer in-typing on";
-            boy.width = 54;   /* Wave 25: attribute-level size */
-            boy.height = 54;  /* (see showBoyWriter's note).    */
-            boy.src = "/static/scene-boy.webp?v=29";  /* Wave 28: versioned sprite URL */
-            boy.alt = "";
-            boy.setAttribute("aria-hidden", "true");
-            boy.addEventListener("error", function () {
-              boy.classList.remove("on");
-              node.classList.remove("boy-host");
-            });
-          }
-          node.classList.add("boy-host");
-          node.appendChild(boy);
-        } catch (e) { /* decoration only — never break typing */ }
-      }
+        } catch (e) { /* decoration only */ }
+      })();
 
       function addTyping() {
         // Wave 7: clone the server-rendered typing template (it
@@ -1627,8 +1216,6 @@
         if (tpl && tpl.content && tpl.content.firstElementChild) {
           var node = tpl.content.firstElementChild.cloneNode(true);
           log.appendChild(node);
-          addTypingBoy(node);
-          addTypingRobot(node);
           scrollLog();
           return node;
         }
@@ -1642,8 +1229,6 @@
         dots.innerHTML = "<i></i><i></i><i></i>";
         var fp = fb.querySelector("p") || fb;
         fp.appendChild(dots);
-        addTypingBoy(fb);
-        addTypingRobot(fb);
         return fb;
       }
 
@@ -1790,7 +1375,7 @@
       var W122_NOT_SOLVED_KINDS = ["not_found", "concept",
         "history", "advice", "greeting", "nonmaths", "science",
         "vague", "gibberish", "guide", "similar", "step_check",
-        "followup_test", "guided"];
+        "followup_test", "guided", "paper"];
       var W122_NOT_SOLVED_OPS = ["error", "explain_step",
         "check_steps", "not_found"];
       /* Wave 124: a chat-test solve-command turn returns the
@@ -2020,27 +1605,21 @@
             || result.fallback_kind === "not_found") {
           var plain = document.createElement("div");
           plain.className = "bubble bot plain-reply";
-          /* Wave 160: a correct chat-test answer (the server
-             flags it test_verdict "correct") gets the little
-             laughing robot in its feedback bubble — the happy
-             moment Suraj asked for. Wrong answers get none. */
-          if (result.test_verdict === "correct"
-              && typeof robotSvg === "function") {
+          /* Wave 181: a correct chat-test answer (the server
+             flags it test_verdict "correct") gets the happy
+             moment Suraj asked for — the new mascot's LAUGH
+             portrait pops FULL over the page for a moment
+             (replacing the Wave 160 laughing mini robot in
+             this bubble), and the header buddy bounces
+             along (body.mascot-cheer). Wrong answers get
+             none. */
+          if (result.test_verdict === "correct") {
+            try { showMascotPop("laugh", 1900); }
+            catch (e) { /* decoration only */ }
             try {
-              var laughBot = document.createElement("span");
-              laughBot.className = "robot-laugh-mini";
-              laughBot.setAttribute("aria-hidden", "true");
-              laughBot.innerHTML = robotSvg("laugh");
-              plain.appendChild(laughBot);
-            } catch (e) { /* decoration only */ }
-            /* Wave 161: the header buddy shares the happy
-               moment — a brief laugh while the cheer class
-               rides the body (CSS crossfades its faces). */
-            try {
-              document.body.classList.add("robot-buddy-cheer");
+              document.body.classList.add("mascot-cheer");
               setTimeout(function () {
-                document.body.classList.remove(
-                  "robot-buddy-cheer");
+                document.body.classList.remove("mascot-cheer");
               }, 1900);
             } catch (e) { /* decoration only */ }
           }
