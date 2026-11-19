@@ -414,6 +414,48 @@ def create_app():
     # Register API blueprint
     app.register_blueprint(api_bp, url_prefix="/api")
 
+    # Wave 182: a served PAPER card's body (the whole typed
+    # paper in its steps, ~8-11 KB) must never ride in the
+    # session cookie — one paper serve in session
+    # ["last_result"] pushed the signed cookie past the
+    # 4,093-byte browser limit and PythonAnywhere answered
+    # live paper requests with a 502. The card is
+    # deterministic (paper_requests rebuilds it from
+    # paper_id + flavour + year note), so the cookie stores
+    # only that small reference: the after-request hook
+    # converts any full paper card held as last_result into
+    # its reference before the cookie is written, and the
+    # before-request hook expands a stored reference back
+    # into the full card for the duration of the request,
+    # so /download, /solution/print and every follow-up
+    # layer keep reading the exact full body, byte for
+    # byte, exactly as before this wave.
+    @app.before_request
+    def _wave182_expand_paper_last_result():
+        try:
+            stored = session.get("last_result")
+            if isinstance(stored, dict) \
+                    and "_paper_flavour" in stored:
+                from paper_requests import expand_paper_ref
+                full = expand_paper_ref(stored)
+                if full is not None:
+                    session["last_result"] = full
+        except Exception:
+            pass
+
+    @app.after_request
+    def _wave182_slim_paper_last_result(resp):
+        try:
+            stored = session.get("last_result")
+            if isinstance(stored, dict):
+                from paper_requests import paper_session_ref
+                ref = paper_session_ref(stored)
+                if ref is not None:
+                    session["last_result"] = ref
+        except Exception:
+            pass
+        return resp
+
     # Wave 19 (PWA basics): manifest + service worker are served
     # from the site root so the service worker's scope covers the
     # whole app (a worker under /static/ could only control

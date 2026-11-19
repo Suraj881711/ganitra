@@ -587,4 +587,109 @@ def paper_result(question, flavour=None):
     return _paper_card(paper, flavour, note)
 
 
-__all__ = ["paper_result"]
+# ---------------------------------------------------------------------------
+# Wave 182: session-cookie discipline for paper cards.
+#
+# A served paper card carries the WHOLE typed paper in its
+# steps (~8-11 KB of JSON). The routes keep the last result
+# in the Flask session (session["last_result"], for
+# /download, /solution/print and the follow-up layers), so
+# one paper serve pushed the signed session cookie past the
+# 4,093-byte browser limit (4,170 B after one paper, 5,727 B
+# after a bigger one) — PythonAnywhere answered the live
+# paper requests with a 502 and browsers silently dropped
+# the cookie. The card is fully deterministic, though: it
+# is rebuilt from (paper_id, flavour, year_note) by
+# _paper_card, so the session only ever needs that small
+# reference. paper_session_ref() converts a card into the
+# reference (routes store the reference — app.py's Wave-182
+# hooks do it for every response); expand_paper_ref()
+# rebuilds the exact card from a reference (the same hooks
+# expand it back at the start of the next request, so every
+# in-request reader sees the full body, byte for byte).
+
+_NOTE_PREFIXES = ("Note:", "नोट:")
+
+
+def _ref_flavour_note(steps, answer):
+    """Recover the (flavour, year_note) a paper card was
+    built with, from the card itself. The note, when the
+    served paper substituted for the asked year, is always
+    steps[0] and always opens with Note:/नोट: (the header
+    line that otherwise opens the steps never does). The
+    flavour is read off the card's own language: a
+    Devanagari title means "dev"; the Roman-Hinglish
+    closing line (or note wording) means "roman";
+    everything else in a card is word-for-word identical
+    between "roman" and "en" except those two lines, so
+    the closing line decides."""
+    note = None
+    body = steps
+    if steps and isinstance(steps[0], str) \
+            and steps[0].startswith(_NOTE_PREFIXES):
+        note = steps[0]
+        body = steps[1:]
+    # Only the TITLE decides "dev": a dev card's title is
+    # itself Devanagari, an en/roman title never is — while
+    # the question lines of a Hindi-medium paper carry
+    # Devanagari text in EVERY flavour, so they must not be
+    # consulted for this.
+    if any("ऀ" <= ch <= "ॿ" for ch in (answer or "")):
+        return "dev", note
+    closing = body[-1] if body else ""
+    if isinstance(closing, str) \
+            and closing.startswith("Isi paper ko"):
+        return "roman", note
+    if note and "ka paper abhi library" in note:
+        return "roman", note
+    return "en", note
+
+
+def paper_session_ref(result):
+    """The small session reference for a paper card, or
+    None when `result` is not a full paper card (anything
+    else is stored exactly as before). The reference keeps
+    every small field of the card and replaces the paper
+    body (steps / steps_tex) with the rebuild keys."""
+    if not isinstance(result, dict):
+        return None
+    if result.get("fallback_kind") != "paper" \
+            or result.get("op") != "paper" \
+            or not result.get("paper_id"):
+        return None
+    steps = result.get("steps")
+    if not isinstance(steps, list) or not steps:
+        return None
+    flavour, note = _ref_flavour_note(steps,
+                                      result.get("answer"))
+    ref = {k: v for k, v in result.items()
+           if k not in ("steps", "steps_tex")}
+    ref["steps"] = []
+    ref["_paper_flavour"] = flavour
+    ref["_paper_note"] = note
+    return ref
+
+
+def expand_paper_ref(ref):
+    """Rebuild the full paper card from its session
+    reference, or None when the reference is not one, the
+    paper has left the library, or the rebuilt card no
+    longer matches the reference's title (data drift — the
+    caller then keeps the reference, degraded, rather than
+    serving a different paper under the old title)."""
+    if not isinstance(ref, dict) \
+            or "_paper_flavour" not in ref \
+            or ref.get("fallback_kind") != "paper":
+        return None
+    paper = papers_data.get_paper(ref.get("paper_id"))
+    if paper is None:
+        return None
+    card = _paper_card(paper, ref["_paper_flavour"],
+                       ref.get("_paper_note"))
+    if card.get("answer") != ref.get("answer"):
+        return None
+    return card
+
+
+__all__ = ["paper_result", "paper_session_ref",
+           "expand_paper_ref"]
