@@ -3197,6 +3197,17 @@ ALIASES_BANDC = [
     ("cramer", "solving-a-system-by-cramers-rule"),
     ("eigenvalues", "eigenvalues-of-a-matrix"),
     ("eigenvalue", "eigenvalues-of-a-matrix"),
+    # Wave 185: the inverse asks themselves — "matrix ka
+    # ulta kaise nikale" matched only the bare "matrix"
+    # alias and served the matrix-OPERATIONS card for an
+    # inverse question. These longer phrases sit at the
+    # same position as "matrix" and win the tie in
+    # _alias_match, exactly like the other specific
+    # matrix phrases here.
+    ("matrix ka ulta", "inverse-of-a-3-by-3-matrix"),
+    ("matrix ka inverse", "inverse-of-a-3-by-3-matrix"),
+    ("matrix inverse", "inverse-of-a-3-by-3-matrix"),
+    ("inverse matrix", "inverse-of-a-3-by-3-matrix"),
     ("rank of a matrix", "rank-of-a-matrix"),
     ("trace of a matrix", "trace-of-a-matrix"),
     ("product rule", "product-rule"),

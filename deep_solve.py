@@ -641,6 +641,17 @@ def _core_money_left(text):
     if len(nums) != 2:
         return None
     low = t.lower()
+    # Wave 185: a PERCENT anywhere in the text changes the
+    # shape — "240 rupees hai, 35% kharch kar diye, kitne
+    # bache" spends 35% OF the 240 (84), but the spent
+    # regex below happily captures the bare 35 (the "%"
+    # is just a non-digit to it) and the core served
+    # 240 - 35 = 205. With exactly two numbers present, a
+    # percent sign can only belong to one of them, so the
+    # bare-subtraction core never applies.
+    if "%" in t or "percent" in low or "pratishat" in low \
+            or "प्रतिशत" in t:
+        return None
     have = re.search(r"(?:has|had|have|ke paas|paas)\D{0,20}?"
                      r"(\d+(?:\.\d+)?)", low)
     spent = re.search(r"(?:spent|spend|gave|lost|paid|kharch)"

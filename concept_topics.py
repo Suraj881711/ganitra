@@ -174,6 +174,13 @@ _ROMAN_PHRASES = [
     ("bahulak", "mode"),
     ("pratishat", "percentage"),
     ("feesadi", "percentage"),
+    # Wave 185: voice-typing spellings from the prediction
+    # battery — "parsentage kaise nikale" matched nothing
+    # and classified as gibberish; "trignometry kya hai"
+    # reached only the AI legs.
+    ("parsentage", "percentage"),
+    ("parsantage", "percentage"),
+    ("trignometry", "trigonometry"),
     ("vritt", "circle"),
     ("trijya", "radius"),
     ("kshetrafal", "area"),
@@ -400,6 +407,11 @@ def _vetoed(question, mtext):
 # ---------------------------------------------------------------------------
 
 _ALIASES = [
+    # Wave 185: "vyas" is the everyday Hindi word for
+    # diameter — "2 number ka sawal hai batao vyas kya
+    # hota hai" matched no alias and reached only the AI
+    # legs, although the library owns the topic.
+    ("vyas", "radius-and-diameter"),
     ("pythagoras theorem", "pythagoras-theorem"),
     ("pythagoras", "pythagoras-theorem"),
     ("right angled triangle", "pythagoras-property"),

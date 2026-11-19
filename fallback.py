@@ -2918,6 +2918,108 @@ def _w177_veto_inner(question, result):
     return True
 
 
+# ---------------------------------------------------------------------------
+# Wave 185: the deep stage's bare-echo veto — the mirror of
+# the Wave 177 veto for numbers the question never wrote.
+#
+# The prediction battery caught the deep stage serving
+# "Evaluate: 0 = 0" for KNOWLEDGE asks about zero:
+#   * "1 me kitne zero hote hai" — digitise turned the
+#     word "zero" into the digit 0, a variant then
+#     "evaluated" that lone digit, and the echo was
+#     served as the answer to a counting question.
+#   * "aur detail me batao zero ke baare me" — the same
+#     echo served for a tell-me-about-zero ask (the meta
+#     layer now takes that one first; this veto is the
+#     net underneath it).
+# The Wave 177 veto cannot see these: it judges digit
+# literals only, and the manufactured 0 came from a WORD.
+# This veto fires when ALL of these hold:
+#   * the same bare self-echo shape (op "evaluate",
+#     expression a bare number equal to the answer);
+#   * the echoed number is one the question itself
+#     states — as a digit OR as a number word (the
+#     digitised question contains it). A computed answer
+#     is a NEW number the question never states ("what
+#     is fifteen multiplied by six?" -> 90), so honest
+#     spelled-out computations can never trip this;
+#   * the question names NO operation, in digits or in
+#     words — an operation makes it a computation, and
+#     a computation's echo-shaped result is honest;
+#   * the question is a knowledge / sentence ask, not a
+#     bare instruction ("0 evaluate karo" keeps its
+#     serve — the Wave 177 family owns that boundary).
+# A vetoed deep serve falls through to the AI chain,
+# like every deep miss.
+# ---------------------------------------------------------------------------
+
+# Spelled-out operation words for the veto above: their
+# presence makes the question a computation, however the
+# numbers are written.
+_W185_WORD_OPS = (
+    "multiplied", "multiply", "times", "plus", "minus",
+    "divided", "divide", "addition", "subtract",
+    "jod", "guna", "gunakar", "ghata", "ghatana",
+    "bhaag", "bhag", "sum", "product", "difference",
+    "antar", "yog", "जोड़", "गुणा", "घटाना", "भाग",
+)
+
+def _w185_veto(question, result):
+    try:
+        return _w185_veto_inner(question, result)
+    except Exception:
+        return False
+
+
+def _w185_veto_inner(question, result):
+    if not isinstance(result, dict):
+        return False
+    if str(result.get("op") or "") != "evaluate":
+        return False
+    expr = str(result.get("expression") or "").strip()
+    if not re.fullmatch(r"-?\d+(?:\.\d+)?", expr):
+        return False
+    ans = result.get("numeric")
+    if ans is None:
+        try:
+            ans = float(str(result.get("answer") or "").strip())
+        except (TypeError, ValueError):
+            return False
+    if float(expr) != float(ans):
+        return False
+    q = str(question or "")
+    try:
+        from deep_solve import digitise
+        digitised = digitise(q)
+    except Exception:
+        digitised = q
+    stated = set()
+    for tok in re.findall(r"\d+(?:\.\d+)?",
+                          digitised.translate(_W159_DEV)):
+        try:
+            stated.add(float(tok))
+        except ValueError:
+            pass
+    if float(expr) not in stated:
+        return False
+    if _W177_COMPUTATION.search(q) \
+            or _W177_COMPUTATION.search(digitised):
+        return False
+    ql = q.lower()
+    if any(w in ql for w in _W185_WORD_OPS):
+        return False
+    try:
+        from maths_meta import is_knowledge_shaped, \
+            is_meta_shaped
+        if is_meta_shaped(question) \
+                or is_knowledge_shaped(question):
+            return True
+    except Exception:
+        pass
+    from solver.arithmetic import _w177_sentence_question
+    return bool(_w177_sentence_question(question))
+
+
 def _w151c_part_value(text):
     """Tolerant numeric value of a multipart part's answer
     text: a leading fraction (\"3/8 ≈ 0.3750\") or the
@@ -3835,7 +3937,41 @@ def _is_gibberish(question):
     if len(words) < 2:
         return False
     unknown = [w for w in words if w not in _KNOWN_WORDS]
-    return len(unknown) >= 2 and len(unknown) == len(words)
+    if not (len(unknown) >= 2 and len(unknown) == len(words)):
+        return False
+    # Wave 183: an intent-bearing MATHS question is not
+    # gibberish, even when every one of its words sits
+    # outside the known-word list. "Aryabhata ne kya kiya
+    # tha" is all-unknown Latin words by this detector's
+    # lights, yet it is a real question — and the
+    # "gibberish" bucket is not in _GEMINI_KINDS, so the
+    # label sent it straight to the not-found line
+    # without the AI legs ever seeing it (Suraj, 19 Nov
+    # 2026: "Ganitra ko direct mana nhi karna tha"). The
+    # shape nets carry their own maths anchor (a maths
+    # signal, a who-context word, or a curated keyword),
+    # so letter-soup and non-maths person questions —
+    # which have no anchor — stay gibberish exactly as
+    # before.
+    # Wave 185: the follow-up net joins the deferral. A
+    # continuation fragment ("iska example do") carries
+    # no topic to anchor on — its intent IS the request
+    # phrase itself, and in the live chat the AI chain
+    # fields it with the previous answer as context, like
+    # its sibling fragments already do. The markers are
+    # whole phrases, so letter-soup still cannot trip
+    # them, and the non-maths guards upstream are
+    # untouched.
+    try:
+        from maths_meta import is_followup_shaped, \
+            is_knowledge_shaped, is_meta_shaped
+        if is_meta_shaped(question) \
+                or is_knowledge_shaped(question) \
+                or is_followup_shaped(question):
+            return False
+    except Exception:
+        pass
+    return True
 
 
 # Wave 68 (Suraj, 15 Nov 2026 — the rule Wave 67 also
@@ -4974,6 +5110,14 @@ def _with_fallback_chain(question, result, lang=None,
         # given HCF came back as the deep answer). The new
         # veto judges it against the original question too.
         if deep is not None and _w151c_veto(question, deep):
+            deep = None
+        # Wave 185: the deep stage can also manufacture a
+        # bare "Evaluate: 0 = 0" out of a number WORD (the
+        # digitised "zero" in a knowledge ask about zero).
+        # The Wave 177 veto only covers numbers the
+        # question wrote as digits; this mirror veto covers
+        # the manufactured ones (see _w185_veto).
+        if deep is not None and _w185_veto(question, deep):
             deep = None
         if deep is not None:
             return _with_figure(question, deep)

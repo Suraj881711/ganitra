@@ -162,7 +162,6 @@ _EN = {
     "flash_start_quiz": "Start a quiz first.",
     # JS status notes (index page)
     "js_voice_listening_btn": "🎙️ Listening… speak now",
-    "js_voice_heard": "Heard: “{text}” — now press Solve.",
     "js_voice_no_api": "Voice input is not available in this browser "
                        "— please try Chrome.",
     "js_voice_denied": "Microphone permission was not given — please "
@@ -316,7 +315,6 @@ _HI = {
                             "डाउनलोड कीजिए।",
     "flash_start_quiz": "पहले क्विज़ शुरू कीजिए।",
     "js_voice_listening_btn": "🎙️ सुन रहा हूँ… बोलिए",
-    "js_voice_heard": "सुन लिया: “{text}” — अब 'हल कीजिए' दबाइए।",
     "js_voice_no_api": "इस ब्राउज़र में आवाज़ से प्रश्न पूछना उपलब्ध "
                        "नहीं है — Chrome में प्रयास कीजिए।",
     "js_voice_denied": "माइक की अनुमति नहीं मिली — ब्राउज़र सेटिंग में "
@@ -467,7 +465,6 @@ _BN = {
                             "তার সমাধান ডাউনলোড করুন।",
     "flash_start_quiz": "প্রথমে কুইজ শুরু করুন।",
     "js_voice_listening_btn": "🎙️ শুনছি… বলুন",
-    "js_voice_heard": "শুনলাম: “{text}” — এখন 'সমাধান করুন' চাপুন।",
     "js_voice_no_api": "এই ব্রাউজারে কণ্ঠ ইনপুট উপলভ্য নয় — Chrome-এ "
                        "চেষ্টা করুন।",
     "js_voice_denied": "মাইকের অনুমতি পাওয়া যায়নি — ব্রাউজার "
@@ -616,7 +613,6 @@ _MR = {
                             "डाउनलोड करा.",
     "flash_start_quiz": "आधी क्विझ सुरू करा.",
     "js_voice_listening_btn": "🎙️ ऐकतोय… बोला",
-    "js_voice_heard": "ऐकले: “{text}” — आता 'सोडवा' दाबा.",
     "js_voice_no_api": "या ब्राउझरमध्ये आवाजाने प्रश्न विचारणे उपलब्ध "
                        "नाही — Chrome मध्ये प्रयत्न करा.",
     "js_voice_denied": "माइकची परवानगी मिळाली नाही — ब्राउझर सेटिंगमध्ये "
@@ -781,8 +777,6 @@ _TA = {
                             "பிறகு அதன் தீர்வைப் பதிவிறக்கவும்.",
     "flash_start_quiz": "முதலில் வினாடிவினாவைத் தொடங்கவும்.",
     "js_voice_listening_btn": "🎙️ கேட்கிறேன்… பேசுங்கள்",
-    "js_voice_heard": "கேட்டேன்: “{text}” — இப்போது 'தீர்க்கவும்' "
-                      "என்பதை அழுத்தவும்.",
     "js_voice_no_api": "இந்த உலாவியில் குரல் உள்ளீடு கிடைக்கவில்லை — "
                        "Chrome இல் முயற்சிக்கவும்.",
     "js_voice_denied": "மைக் அனுமதி வழங்கப்படவில்லை — உலாவி "
@@ -943,8 +937,6 @@ _TE = {
                             "చేయండి.",
     "flash_start_quiz": "ముందుగా క్విజ్ ప్రారంభించండి.",
     "js_voice_listening_btn": "🎙️ వింటున్నాను… మాట్లాడండి",
-    "js_voice_heard": "విన్నాను: “{text}” — ఇప్పుడు 'పరిష్కరించండి' "
-                      "నొక్కండి.",
     "js_voice_no_api": "ఈ బ్రౌజర్‌లో వాయిస్ ఇన్‌పుట్ అందుబాటులో లేదు — "
                        "Chrome లో ప్రయత్నించండి.",
     "js_voice_denied": "మైక్ అనుమతి ఇవ్వలేదు — బ్రౌజర్ సెట్టింగ్‌లలో "
@@ -1469,7 +1461,7 @@ SYSTEM_MESSAGE_KEYS = frozenset({
     "js_photo_check", "js_photo_reading", "js_photo_sending",
     "js_file_reading", "js_file_too_large", "js_file_unsupported",
     "js_voice_denied", "js_voice_failed", "js_voice_no_api",
-    "js_voice_heard", "js_voice_speak", "js_voice_listening_btn",
+    "js_voice_speak", "js_voice_listening_btn",
     "js_chats_saved_note",
     # account / sign-in form errors + the saved confirmation
     "acct_err_old_password", "acct_err_password_wrong",

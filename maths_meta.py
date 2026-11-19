@@ -229,6 +229,96 @@ def _has_who_shape(q):
     return any(m in q for m in _WHO_MARKERS)
 
 
+# Wave 183: WHY markers — a question that also asks WHY a
+# thing was made/needed ("...aur kyon", "क्यों बनाया था",
+# "why was zero invented"). Used twice: the zero entry's
+# origin pass below fires on it, and a served entry that
+# carries a "why" line adds that line (see _with_why).
+_WHY_MARKERS = (
+    "why", "kyon", "kyun", "kyu",
+    "क्यों", "क्यूँ", "क्यूं",
+    "kis liye", "kisliye", "किस लिए",
+)
+
+
+def _has_why_shape(q):
+    return any(m in q for m in _WHY_MARKERS)
+
+
+# Wave 183: CONTRIBUTION markers — "what did X do" shapes.
+# Suraj's live test (19 Nov 2026, 13:52 IST): "Aryabhata
+# ne kya kiya tha" and "Brahmagupta ne kya kiya tha" both
+# collapsed to not-found — the person entries only fired
+# on WHO shapes ("kaun tha"), never on the contribution
+# shape students naturally use. The Roman kya-kiya family
+# deliberately requires the "ne" frame ("X ne kya kiya")
+# so a concept ask like "trigonometry me kya kiya jata
+# hai" (no "ne", no person) stays with the concept layers.
+# Everywhere these markers are used they are DOUBLE-gated
+# with a curated person/topic keyword (or a who-context
+# word in the wide nets), exactly like the WHO shapes.
+_CONTRIBUTION_MARKERS = (
+    # Roman Hinglish
+    "ne kya kiya", "ne kya diya", "ne kya banaya",
+    # Wave 185: the same shapes in voice-typing dress —
+    # "aryabhat ne kya kia tha" (kia for kiya) and
+    # "Bhaskara ne kya khoja tha" (a discovery ask) both
+    # missed every marker here and one of them classified
+    # as gibberish in the prediction battery.
+    "ne kya kia", "ne kya khoja", "ne kya khoj",
+    "ka yogdan", "ka yogdaan", "ki yogdan",
+    "yogdan kya", "yogdaan kya",
+    "kis liye mashhoor", "kis liye mashoor", "kis liye mashhur",
+    "mashhoor hai", "mashoor hai", "mashhoor the", "mashhoor thi",
+    "ke baare me batao", "ke bare me batao",
+    "ke baare me bata", "ke bare me bata",
+    # Wave 185: "about X" asks in their other natural
+    # orders — "Euclid ke baare me kuch batao" (kuch
+    # between) and "aur detail me batao zero ke baare me"
+    # (batao first, topic last; that one was deep-solved
+    # into a bare "0 = 0"). The pass stays double-gated
+    # with a curated HISTORY keyword, so only maths
+    # topics/people can fire it.
+    "ke baare me kuch batao", "ke bare me kuch batao",
+    "ke baare me", "ke bare me",
+    # English
+    "what did", "contribution", "contributions",
+    "contribute", "contributed",
+    "famous for", "known for", "tell me about",
+    # Devanagari
+    "ने क्या किया", "ने क्या दिया", "ने क्या बनाया",
+    "ने क्या खोजा",
+    "योगदान", "किस लिए प्रसिद्ध", "किस लिए मशहूर",
+    "प्रसिद्ध है", "मशहूर है",
+    "के बारे में बताओ", "के बारे में बता",
+    "के बारे में",
+)
+
+
+def _has_contribution_shape(q):
+    return any(m in q for m in _CONTRIBUTION_MARKERS)
+
+
+# Wave 183: ORIGIN-creation markers for the zero entry —
+# a zero question whose core asks who made zero OR why
+# it was made ("zero kyon banaya gaya tha", "जीरो क्यों
+# बनाया था") carries no WHO marker, so the who-gated
+# HISTORY pass missed it. These markers are only ever
+# consulted together with the zero entry's own keyword
+# hit (the standalone digit / zero word), which is what
+# keeps every real 0-computation out.
+_ORIGIN_CREATION_MARKERS = (
+    "banaya", "banaye", "बनाया", "बनाये", "बना",
+    "khoj", "खोज", "invent", "discover",
+    "avishkar", "आविष्कार", "ijad", "ईजाद",
+)
+
+
+def _has_origin_shape(q):
+    return _has_who_shape(q) or _has_why_shape(q) \
+        or any(m in q for m in _ORIGIN_CREATION_MARKERS)
+
+
 # Maths signal for the advice gate and the wide shape net:
 # broad maths vocabulary in all three scripts.
 _MATHS_SIGNALS = (
@@ -299,7 +389,41 @@ HISTORY = [
                      # type "0 ki khoj kisne ki hai", and the
                      # digit-boundary match in _keyword_hit
                      # keeps it out of "10"/"0.5".
-                     "0", "०"),
+                     "0", "०",
+                     # Wave 183: the SPOKEN forms — a voice-
+                     # typed question says "जीरो" (or Roman
+                     # "jeero"), never "शून्य"/"zero". Suraj's
+                     # live test: "जीरो की खोज किसने की थी और
+                     # क्यों की थी क्यों बनाया था" missed every
+                     # keyword above and collapsed.
+                     "जीरो", "ज़ीरो", "jeero",
+                     # Wave 185: more voice-typing spellings
+                     # of the same spoken forms — "jero
+                     # kisne banaya" and "sifr kisne banaya"
+                     # (sifr for sifar) both missed every
+                     # keyword above and classified as
+                     # gibberish in the prediction battery.
+                     "jero", "sifr"),
+        # Wave 183: when the ask also carries a WHY ("aur
+        # kyon", "क्यों बनाया था"), meta_result inserts
+        # this one line before the closing gist (see
+        # _with_why). The need came first; the rules came
+        # from Brahmagupta.
+        "why": {
+            "en": "Why was it made? Big calculations and "
+                  "the rules of maths needed a number for "
+                  "'nothing' — that need created zero, and "
+                  "Brahmagupta gave its addition-subtraction "
+                  "rules.",
+            "roman": "Kyon banaya gaya? Bade hisaab-kitab "
+                     "aur ganit ke niyam pure karne ke liye "
+                     "zero ki zaroorat padi — Brahmagupta ne "
+                     "iske jod-ghataav ke niyam diye.",
+            "dev": "क्यों बनाया गया? बड़े हिसाब-किताब और "
+                   "गणित के नियम पूरे करने के लिए शून्य की "
+                   "ज़रूरत पड़ी — ब्रह्मगुप्त ने इसके "
+                   "जोड़-घटाव के नियम दिए।",
+        },
         "en": {
             "answer": "Zero — developed in India; Brahmagupta "
                       "first wrote its rules (628 CE)",
@@ -399,7 +523,10 @@ HISTORY = [
         "id": "algebra",
         "keywords": ("algebra", "बीजगणित", "beejganit",
                      "bijganit", "al-jabr", "khwarizmi",
-                     "ख्वारिज़्मी"),
+                     "ख्वारिज़्मी",
+                     # Wave 185: the voice spelling
+                     # "aljebra kahan se aaya" missed.
+                     "aljebra"),
         "en": {
             "answer": "Algebra — Al-Khwarizmi (Baghdad, ~820 CE); "
                       "the word comes from his book's 'al-jabr'",
@@ -457,7 +584,12 @@ HISTORY = [
         "keywords": ("euclid", "यूक्लिड", "father of geometry",
                      "geometry ke father", "geometry ke pita",
                      "geometry ka janak", "ज्यामिति के जनक",
-                     "ज्यामिति के पिता"),
+                     "ज्यामिति के पिता",
+                     # Wave 185: the Roman "ka" forms of the
+                     # same titles ("geometry ka pita kaun
+                     # hai") — the archimedes entry below
+                     # carries the maths-wide pair.
+                     "geometry ka pita"),
         "en": {
             "answer": "Geometry — Euclid is called the Father "
                       "of Geometry",
@@ -1009,7 +1141,10 @@ HISTORY = [
     },
     {
         "id": "ramanujan",
-        "keywords": ("ramanujan", "रामानुजन"),
+        "keywords": ("ramanujan", "रामानुजन",
+                     # Wave 185: voice spelling "ramanuja
+                     # kaun tha" (final n dropped) missed.
+                     "ramanuja"),
         "en": {
             "answer": "Srinivasa Ramanujan (1887–1920) — "
                       "India's self-taught maths genius",
@@ -1061,6 +1196,11 @@ HISTORY = [
     {
         "id": "aryabhata",
         "keywords": ("aryabhata", "aryabhatta", "आर्यभट",
+                     # Wave 185: voice spelling "aryabhat
+                     # ne kya kia tha" (final a dropped)
+                     # missed; as a substring it also matches
+                     # the full name, which is the same entry.
+                     "aryabhat",
                      # Wave 177: seed-list item 3 — the
                      # school-GK title for Aryabhata.
                      "father of indian mathematics",
@@ -1119,7 +1259,11 @@ HISTORY = [
     },
     {
         "id": "brahmagupta",
-        "keywords": ("brahmagupta", "ब्रह्मगुप्त"),
+        "keywords": ("brahmagupta", "ब्रह्मगुप्त",
+                     # Wave 185: voice spellings "brahmgupt
+                     # kaun tha" / "brahmagupt" (a dropped)
+                     # missed every keyword above.
+                     "brahmgupt", "brahmagupt"),
         "en": {
             "answer": "Brahmagupta (598–668 CE) — the first to "
                       "give clear rules for zero",
@@ -1225,7 +1369,14 @@ HISTORY = [
                      "father of mathematics", "father of maths",
                      "maths ke janak", "maths ke pita",
                      "ganit ke janak", "गणित के जनक",
-                     "गणित के पिता"),
+                     "गणित के पिता",
+                     # Wave 185: the Roman "ka" forms —
+                     # "ganit ka pita kaun hai" and "ganit
+                     # ka janak kise kehte hai" reached only
+                     # the AI legs although this entry is
+                     # exactly that fact in its "ke" dress.
+                     "ganit ka pita", "ganit ka janak",
+                     "ganit ke pita", "maths ka pita"),
         "en": {
             "answer": "Father of Mathematics — Archimedes is "
                       "commonly called the Father of "
@@ -1742,7 +1893,11 @@ FACTS = [
     {
         "id": "smallest_natural",
         "keywords": ("natural number", "prakritik sankhya",
-                     "प्राकृतिक संख्या", "natural sankhya"),
+                     "प्राकृतिक संख्या", "natural sankhya",
+                     # Wave 185: the doubled-a voice spelling
+                     # "praakritik sankhya" (board-dress ask
+                     # in the prediction battery) missed.
+                     "praakritik sankhya"),
         "ask": ("sabse chhota", "sabse chhoti", "smallest"),
         "bound_guard": True,
         "en": {
@@ -2197,7 +2352,13 @@ FACTS = [
         "keywords": ("geometry", "ज्यामिति", "jyamiti"),
         "ask": ("kaha se aaya", "kahan se aaya", "naam kaha",
                 "shabd kaha", "shabd ka matlab", "origin",
-                "matlab kya", "meaning", "word"),
+                "matlab kya", "meaning", "word",
+                # Wave 185: the spoken origin dress —
+                # "geometry ki shuruaat kahan se hui" names
+                # a beginning, not an "aaya"; it matched no
+                # ask phrase and classified as gibberish.
+                "shuruaat", "shuruvat", "kahan se hui",
+                "kahan se hua", "kahan se shuru"),
         "en": {
             "answer": "Geometry — from Greek 'geo' (earth) "
                       "+ 'metria' (measurement)",
@@ -2235,7 +2396,10 @@ FACTS = [
     {
         "id": "algebra_origin",
         "keywords": ("algebra", "बीजगणित", "beejganit",
-                     "bijganit"),
+                     "bijganit",
+                     # Wave 185: voice spelling, as on the
+                     # HISTORY algebra entry.
+                     "aljebra"),
         "ask": ("kaha se aaya", "kahan se aaya", "naam kaha",
                 "shabd kaha", "shabd ka", "origin", "al-jabr",
                 "word"),
@@ -3197,6 +3361,36 @@ def _result(kind, entry, flavour):
     }
 
 
+def _with_why(res, entry, q, flavour):
+    """Wave 183: an entry carrying a "why" line (today
+    only zero) adds it — once, just before the closing
+    gist line — when the student's ask also asks WHY
+    ("0 kisne banaya aur kyon", "जीरो क्यों बनाया था").
+    A plain who-ask keeps the card byte-identical to
+    before, which the Wave 177 pins rely on."""
+    why = entry.get("why")
+    if not why or not _has_why_shape(q):
+        return res
+    line = why[flavour]
+    steps = res["steps"]
+    if line not in steps:
+        res["steps"] = steps[:-1] + [line] + steps[-1:]
+    return res
+
+
+# Wave 185: content-ask shapes for the advice-yield guard
+# in meta_result — the shapes that say "answer THIS maths
+# thing" (a value, a meaning, a what-is), as opposed to
+# asking how to study or attempt. Consulted only together
+# with a curated HISTORY keyword hit.
+_CONTENT_ASK_SHAPES = (
+    "kya hota", "kya hai", "kitna hota", "kitni hoti",
+    "kitna hai", "ka maan", "maan kitna", "ka matlab",
+    "ki value", "ka value", "value kya",
+    "क्या होता", "क्या है", "कितना होता", "का मान",
+)
+
+
 def meta_result(question, flavour=None):
     """The curated maths-meta answer for `question`, or
     None. `flavour` is fallback.py's per-question flavour
@@ -3224,7 +3418,13 @@ def meta_result(question, flavour=None):
             # the same plain markers.
             "sabse", "kitne", "kitna", "kaun sa", "kya hai",
             "kya hota", "hote hai", "hota hai",
-            "kaha se", "kahan se", "shabd", "naam")):
+            "kaha se", "kahan se", "shabd", "naam",
+            # Wave 183: contribution / zero-why asks are
+            # Hinglish too ("ne kya kiya tha", "kyon
+            # banaya") and must not be answered in English.
+            "kya kiya", "kya diya", "yogdan", "yogdaan",
+            "baare me", "bare me", "mashhoor", "mashoor",
+            "kyon", "kyun", "banaya")):
         flavour = "roman"
     # History first: a who-shaped ask about a curated
     # topic/person is answered by the FACT layer, before
@@ -3232,7 +3432,31 @@ def meta_result(question, flavour=None):
     if _has_who_shape(q):
         for entry in HISTORY:
             if _entry_hit(q, entry):
+                return _with_why(
+                    _result("history", entry, flavour),
+                    entry, q, flavour)
+    # Wave 183: CONTRIBUTION asks — "X ne kya kiya tha",
+    # "What did X do?", "X ka yogdan kya hai", "X ke baare
+    # me batao". The person entries' steps ARE their
+    # contributions, so the same card answers both shapes;
+    # the double gate (contribution phrase + curated
+    # keyword) plus the fresh-problem veto above keep real
+    # problems and name-dropping word problems out.
+    if _has_contribution_shape(q):
+        for entry in HISTORY:
+            if _entry_hit(q, entry):
                 return _result("history", entry, flavour)
+    # Wave 183: zero-ORIGIN asks with no who marker —
+    # "zero kyon banaya gaya tha", "जीरो क्यों बनाया था"
+    # (spoken form, extra clauses and all). Only the zero
+    # entry is consulted here, on its own keyword, and a
+    # why-bearing ask gets the why line via _with_why.
+    if _has_origin_shape(q):
+        for entry in HISTORY:
+            if entry["id"] == "zero" and _entry_hit(q, entry):
+                return _with_why(
+                    _result("history", entry, flavour),
+                    entry, q, flavour)
     # Wave 177: the FACT layer — non-who maths GK
     # (superlatives, counting facts, word origins). Same
     # position for the same reason: these asks are not
@@ -3249,6 +3473,20 @@ def meta_result(question, flavour=None):
     # difference, not fear counselling).
     if any(m in q for m in ("fark", "antar", "difference",
                             "versus", " vs ")):
+        return None
+    # Wave 185: advice also yields to an EMBEDDED CONTENT
+    # ask. "exam me pucha gaya tha ki pi ka maan kitna
+    # hota hai" is a pi-value question wearing exam dress
+    # — the exam_solve trigger ("exam me") fired on the
+    # dress and served exam strategy for it. When a
+    # curated topic is named AND a content-ask shape is
+    # present, the ask is the content: return None here
+    # and let the concept layers answer it. A genuine
+    # advice ask names no curated topic with a value /
+    # what-is shape ("exam me darr lagta hai, taiyaari
+    # kaise karu"), so it is untouched.
+    if any(_entry_hit(q, e) for e in HISTORY) and any(
+            s in q for s in _CONTENT_ASK_SHAPES):
         return None
     maths_ok = _has_maths_signal(q) \
         or not _names_other_subject(q)
@@ -3277,7 +3515,12 @@ def is_meta_shaped(question):
     q = str(question or "").lower()
     if not q.strip() or _has_fresh_problem(q):
         return False
-    if _has_who_shape(q) and (
+    # Wave 183: a CONTRIBUTION shape ("Euler ne kya kiya
+    # tha", "What did Leibniz contribute?") is the same
+    # family as a who shape — with the same maths anchor
+    # requirement, so a non-maths person ("Shakespeare ne
+    # kya kiya tha", no anchor) stays out exactly as before.
+    if (_has_who_shape(q) or _has_contribution_shape(q)) and (
             _has_maths_signal(q)
             or any(w in q for w in _WHO_CONTEXT_WORDS)
             or any(_entry_hit(q, e) for e in HISTORY)):
@@ -3306,18 +3549,48 @@ _KNOWLEDGE_SHAPE_PHRASES = (
     "kitne", "kitna", "kaun", "kisne", "kab", "kyu",
     "kyon", "किसने", "कौन", "कब", "क्यों", "क्या", "मतलब",
     "सबसे", "कितने", "कितना",
+    # Wave 185: ORIGIN asks in spoken dress — "abacus ka
+    # avishkar kahan hua tha" carries its shape in
+    # "avishkar" + "kahan hua", neither of which was a
+    # shape here, so the ask classified as gibberish.
+    # The topic gate below is unchanged: a non-maths
+    # invention ask ("telephone ka avishkar kisne kiya")
+    # still has no maths topic word and stays out.
+    "kahan hua", "kahan hui", "kahan bana", "kahan bani",
+    "kahan se hua", "kahan se hui", "avishkar",
+    "कहाँ हुआ", "कहाँ बना", "आविष्कार",
 )
 _KNOWLEDGE_SHAPE_EN = re.compile(
-    r"\b(who|why|when|what|largest|smallest|biggest|"
+    r"\b(who|why|when|what|which|whose|whom|largest|"
+    r"smallest|biggest|"
     r"how many|invent\w*|discover\w*|origin)\b")
 _KNOWLEDGE_TOPIC_WORDS = _MATHS_SIGNALS + (
-    "zero", "shunya", "शून्य", "prime", "composite",
+    "zero", "shunya", "शून्य",
+    # Wave 183: the spoken zero forms, as in the zero
+    # entry's keywords — a voice-typed "जीरो" question is
+    # a maths-knowledge question even when nothing else
+    # in it matches.
+    "जीरो", "ज़ीरो", "jeero",
+    # Wave 185: the remaining voice spellings ("jero",
+    # as on the zero entry) and "aljebra", so their asks
+    # are knowledge-shaped even before an entry is added.
+    "jero", "aljebra",
+    "prime", "composite",
     "abhaajya", "अभाज्य", "infinity", "anant", "अनंत",
     "roman", "crore", "lakh", "million", "billion",
     "dozen", "gross", "decimal", "angle", "kon", "कोण",
     "triangle", "tribhuj", "त्रिभुज", "fibonacci",
     "calculator", "abacus", "vedic", "euler", "gauss",
-    "newton", "archimedes", "leibniz", "symbol", "sign",
+    "newton", "archimedes", "leibniz",
+    # Wave 185: more surnames that name famous
+    # mathematicians and nothing else in a school
+    # context — "Hilbert ne kya kiya tha" has no curated
+    # entry, and without an anchor here it classified as
+    # gibberish although Euler/Leibniz asks (anchored by
+    # the names above) reached the AI legs.
+    "hilbert", "riemann", "cantor", "noether",
+    "poincare", "hardy",
+    "symbol", "sign",
     "chinh", "bodmas", "pemdas", "sankhya", "संख्या",
     "ank", "अंक", "digit", "number", "algebra",
     "geometry", "trigonometry", "theorem", "factorial",
@@ -3338,7 +3611,12 @@ def is_knowledge_shaped(question):
     q = str(question or "").lower()
     if not q.strip() or _has_fresh_problem(q):
         return False
+    # Wave 183: a contribution shape ("Brahmagupta ne kya
+    # diya tha") is a knowledge shape in its own right —
+    # with the topic gate below unchanged, so it cannot
+    # widen the net beyond maths topics/people.
     shape = _has_who_shape(q) \
+        or _has_contribution_shape(q) \
         or _KNOWLEDGE_SHAPE_EN.search(q) is not None \
         or any(w in q for w in _KNOWLEDGE_SHAPE_PHRASES)
     if not shape:
@@ -3348,9 +3626,51 @@ def is_knowledge_shaped(question):
         or any(_fact_hit(q, e) for e in FACTS)
 
 
+# Wave 185: the FOLLOW-UP net — conversational fragments
+# that plainly continue a maths conversation ("iska
+# example do", "phir se samjhao", "detail me batao").
+# They carry no topic of their own, so neither wide net
+# above can see them; measured by the letter test they
+# were "gibberish" ("iska example do": iska + example are
+# both outside the known-word list), and the gibberish
+# bucket never reaches the AI legs — although in the
+# live chat, with the previous answer as context, the AI
+# chain is exactly who should field them (its sibling
+# fragments — "ye wala phir se samjhao", "iska answer
+# step me chahiye" — already reach it, because their
+# words happen to be known). fallback.py consults this
+# net at the same decision point as the two nets above.
+# The markers are whole request phrases, so letter-soup
+# cannot trip them; a fresh problem vetoes, as in the
+# other nets.
+_FOLLOWUP_MARKERS = (
+    "example do", "example batao", "example de do",
+    "ek example", "udaharan do", "udaharan batao",
+    "उदाहरण दो", "उदाहरण बताओ",
+    "phir se samjhao", "phir se batao", "phir samjhao",
+    "dobara samjhao", "dobara batao",
+    "फिर से समझाओ", "फिर से बताओ",
+    "detail me samjhao", "detail me batao",
+    "vistar se batao", "vistar se samjhao", "विस्तार से",
+    "step me batao", "step by step", "step se batao",
+    "ulta batao", "iska ulta", "uska ulta", "usi ka ulta",
+)
+
+
+def is_followup_shaped(question):
+    """True when the message is a follow-up / elaboration
+    request continuing a maths conversation (see the
+    _FOLLOWUP_MARKERS note). fallback.py uses it for the
+    same gibberish-vs-guide decision as the nets above."""
+    q = str(question or "").lower()
+    if not q.strip() or _has_fresh_problem(q):
+        return False
+    return any(m in q for m in _FOLLOWUP_MARKERS)
+
+
 __all__ = ["HISTORY", "FACTS", "ADVICE", "meta_result",
            "is_meta_shaped", "is_knowledge_shaped",
-           "meta_variation"]
+           "is_followup_shaped", "meta_variation"]
 
 
 # ---------------------------------------------------------------------------
