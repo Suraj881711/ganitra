@@ -99,7 +99,10 @@
 /* Wave 181: new mascot images — cache v32, stylesheet
    ?v=58; the four robot portraits join the precache
    shell so the home mascot paints offline too. */
-var GANITRA_CACHE = "ganitra-static-v35";
+/* Wave 184: the voice "Heard: …" line is removed from the
+   chat shell — cache v36, stylesheet ?v=59, so the
+   precached shell refreshes with the new page. */
+var GANITRA_CACHE = "ganitra-static-v36";
 
 /* Wave 98: the chat shell, precached on install. Each URL
    is added on its own so one failure (e.g. a sprite the
@@ -110,7 +113,7 @@ var GANITRA_CACHE = "ganitra-static-v35";
    (which keys on the full URL) hits it offline. */
 var GANITRA_SHELL = [
   "/",
-  "/static/style.css?v=58",
+  "/static/style.css?v=59",
   "/static/offline.js",
   "/static/logo-mark-t.png",
   "/static/logo-full-t.png",
