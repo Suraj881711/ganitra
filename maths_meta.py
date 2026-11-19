@@ -81,6 +81,10 @@ _WHO_MARKERS = (
     "kisne",
     "kaun tha", "kaun thi", "kaun the", "kaun hai",
     "kaun hote", "kis ke dwara", "kisake dwara",
+    # Wave 177: "kise kehte hai" (who is called ...) is a
+    # who-shape — it is how students ask title questions
+    # ("human computer kise kehte hai").
+    "kise kehte", "kise kaha jata",
     # Devanagari: किसने alone is unambiguous; कौन needs its
     # verb phrase (कौन सा is a which-question).
     "किसने", "किसके द्वारा",
@@ -264,6 +268,15 @@ def _keyword_hit(q, keyword):
             and keyword.isalpha():
         return re.search(r"\b" + re.escape(keyword) + r"\b",
                          q) is not None
+    # Wave 177: an all-digit keyword (the zero entry's "0" /
+    # "०") matches only as a STANDALONE number — not inside
+    # "10", "100", "2024" or a decimal like "0.5". Students
+    # ask "0 ki khoj kisne ki hai" with the digit, never the
+    # word, and the entry used to miss every such ask.
+    if keyword.isdigit():
+        return re.search(
+            r"(?<![0-9०-९])" + re.escape(keyword) +
+            r"(?![0-9०-९])(?!\.[0-9])", q) is not None
     return keyword in q
 
 
@@ -281,7 +294,12 @@ def _entry_hit(q, entry):
 HISTORY = [
     {
         "id": "zero",
-        "keywords": ("zero", "shunya", "शून्य", "sifar", "सिफ़र"),
+        "keywords": ("zero", "shunya", "शून्य", "sifar", "सिफ़र",
+                     # Wave 177: the digit itself — students
+                     # type "0 ki khoj kisne ki hai", and the
+                     # digit-boundary match in _keyword_hit
+                     # keeps it out of "10"/"0.5".
+                     "0", "०"),
         "en": {
             "answer": "Zero — developed in India; Brahmagupta "
                       "first wrote its rules (628 CE)",
@@ -935,7 +953,12 @@ HISTORY = [
     },
     {
         "id": "shakuntala_devi",
-        "keywords": ("shakuntala", "शकुंतला", "शकुन्तला"),
+        "keywords": ("shakuntala", "शकुंतला", "शकुन्तला",
+                     # Wave 177: the title IS the question in
+                     # school GK ("human computer kise kehte
+                     # hai").
+                     "human computer", "human calculator",
+                     "manav computer", "मानव कंप्यूटर"),
         "en": {
             "answer": "Shakuntala Devi (1929–2013) — the "
                       "'Human Computer' of India",
@@ -1037,7 +1060,13 @@ HISTORY = [
     },
     {
         "id": "aryabhata",
-        "keywords": ("aryabhata", "aryabhatta", "आर्यभट"),
+        "keywords": ("aryabhata", "aryabhatta", "आर्यभट",
+                     # Wave 177: seed-list item 3 — the
+                     # school-GK title for Aryabhata.
+                     "father of indian mathematics",
+                     "father of indian maths",
+                     "bharatiya ganit ke janak",
+                     "भारतीय गणित के जनक"),
         "en": {
             "answer": "Aryabhata (476–550 CE) — author of the "
                       "Aryabhatiya",
@@ -1185,6 +1214,1439 @@ HISTORY = [
                 "शताब्दियों पहले।",
                 "संक्षेप में: लीलावती वाले भास्कराचार्य — "
                 "कविता में गणित सिखाने वाले।",
+            ],
+        },
+    },
+    # Wave 177: three seed-list titles/persons the who layer
+    # missed (Suraj's web-sourced GK list, 19 Nov 2026).
+    {
+        "id": "archimedes",
+        "keywords": ("archimedes", "आर्किमिडीज़",
+                     "father of mathematics", "father of maths",
+                     "maths ke janak", "maths ke pita",
+                     "ganit ke janak", "गणित के जनक",
+                     "गणित के पिता"),
+        "en": {
+            "answer": "Father of Mathematics — Archimedes is "
+                      "commonly called the Father of "
+                      "Mathematics",
+            "steps": [
+                "Archimedes (Greek, ~287–212 BCE) was the "
+                "greatest mathematician of the ancient world "
+                "— he found a close value of pi and ways to "
+                "measure areas and volumes that later grew "
+                "into calculus.",
+                "Short me: school ki kitabon me aksar "
+                "Archimedes ko hi 'Father of Mathematics' "
+                "kaha jata hai.",
+            ],
+        },
+        "roman": {
+            "answer": "Father of Mathematics — aksar "
+                      "Archimedes ko 'Father of Mathematics' "
+                      "kaha jata hai",
+            "steps": [
+                "Archimedes (Greek, ~287–212 BCE) prachin "
+                "duniya ke sabse bade ganitagya the — unhone "
+                "pi ka acha maan aur kshetrafal-aayatan "
+                "naapne ke tareeke diye, jinse aage chal kar "
+                "calculus bana.",
+                "Short me: school ki kitabon me aksar "
+                "Archimedes ko hi 'Father of Mathematics' "
+                "kaha jata hai.",
+            ],
+        },
+        "dev": {
+            "answer": "गणित के जनक — अक्सर आर्किमिडीज़ को "
+                      "'Father of Mathematics' कहा जाता है",
+            "steps": [
+                "आर्किमिडीज़ (यूनानी, ~287–212 ई.पू.) प्राचीन "
+                "दुनिया के सबसे बड़े गणितज्ञ थे — उन्होंने "
+                "pi का अच्छा मान और क्षेत्रफल-आयतन मापने की "
+                "विधियाँ दीं, जिनसे आगे चलकर कलन बना।",
+                "संक्षेप में: विद्यालय की पुस्तकों में अक्सर "
+                "आर्किमिडीज़ को ही 'Father of Mathematics' "
+                "कहा जाता है।",
+            ],
+        },
+    },
+    {
+        "id": "gauss",
+        "keywords": ("gauss", "गाउस", "father of number theory",
+                     "sankhya siddhant ke janak"),
+        "en": {
+            "answer": "Gauss — Carl Friedrich Gauss, called "
+                      "the Prince of Mathematics and the "
+                      "Father of Number Theory",
+            "steps": [
+                "Gauss (German, 1777–1855) organised number "
+                "theory in his book 'Disquisitiones "
+                "Arithmeticae' (1801).",
+                "Prasiddh katha hai ki bachpan me unhone 1 "
+                "se 100 tak ka yog (5050) kuch hi pal me "
+                "nikaal diya tha — jodi banakar: 101 × 50.",
+                "Short me: number theory ka vyavasthit roop "
+                "Gauss ki den hai.",
+            ],
+        },
+        "roman": {
+            "answer": "Gauss — Carl Friedrich Gauss, jinhe "
+                      "Prince of Mathematics aur Father of "
+                      "Number Theory kaha jata hai",
+            "steps": [
+                "Gauss (German, 1777–1855) ne apni kitab "
+                "'Disquisitiones Arithmeticae' (1801) me "
+                "number theory ko vyavasthit roop diya.",
+                "Prasiddh katha hai ki bachpan me unhone 1 "
+                "se 100 tak ka yog (5050) kuch hi pal me "
+                "nikaal diya tha — jodi banakar: 101 × 50.",
+                "Short me: number theory ka vyavasthit roop "
+                "Gauss ki den hai.",
+            ],
+        },
+        "dev": {
+            "answer": "गाउस — कार्ल फ़्रेडरिक गाउस, जिन्हें "
+                      "गणित का राजकुमार और संख्या सिद्धांत का "
+                      "जनक कहा जाता है",
+            "steps": [
+                "गाउस (जर्मन, 1777–1855) ने अपनी पुस्तक "
+                "'Disquisitiones Arithmeticae' (1801) में "
+                "संख्या सिद्धांत को व्यवस्थित रूप दिया।",
+                "प्रसिद्ध कथा है कि बचपन में उन्होंने 1 से "
+                "100 तक का योग (5050) कुछ ही पल में निकाल "
+                "दिया था — जोड़ी बनाकर: 101 × 50।",
+                "संक्षेप में: संख्या सिद्धांत का व्यवस्थित "
+                "रूप गाउस की देन है।",
+            ],
+        },
+    },
+    {
+        "id": "fibonacci",
+        "keywords": ("fibonacci", "fibonachi", "फिबोनाची"),
+        "en": {
+            "answer": "Fibonacci sequence — Leonardo "
+                      "Fibonacci; 0, 1, 1, 2, 3, 5, 8, 13, …",
+            "steps": [
+                "Har agla number pichle do numbers ka yog "
+                "hota hai: 0, 1, 1, 2, 3, 5, 8, 13, 21, …",
+                "Italian mathematician Leonardo Fibonacci "
+                "ne apni kitab 'Liber Abaci' (1202) se is "
+                "anukram ko Europe me prasiddh kiya; ye "
+                "anukram Bharat me Pingala ke kaam me aur "
+                "bhi pehle milta hai.",
+                "Ye sequence prakriti me bhi dikhta hai — "
+                "phoolon ki pankhudiyon aur shankhon me.",
+                "Short me: Fibonacci sequence = pichle do "
+                "ka yog, har kadam par.",
+            ],
+        },
+        "roman": {
+            "answer": "Fibonacci sequence — Leonardo "
+                      "Fibonacci; 0, 1, 1, 2, 3, 5, 8, 13, …",
+            "steps": [
+                "Har agla number pichle do numbers ka yog "
+                "hota hai: 0, 1, 1, 2, 3, 5, 8, 13, 21, …",
+                "Italian mathematician Leonardo Fibonacci "
+                "ne apni kitab 'Liber Abaci' (1202) se is "
+                "anukram ko Europe me prasiddh kiya; ye "
+                "anukram Bharat me Pingala ke kaam me aur "
+                "bhi pehle milta hai.",
+                "Ye sequence prakriti me bhi dikhta hai — "
+                "phoolon ki pankhudiyon aur shankhon me.",
+                "Short me: Fibonacci sequence = pichle do "
+                "ka yog, har kadam par.",
+            ],
+        },
+        "dev": {
+            "answer": "फिबोनाची अनुक्रम — लियोनार्डो "
+                      "फिबोनाची; 0, 1, 1, 2, 3, 5, 8, 13, …",
+            "steps": [
+                "हर अगली संख्या पिछली दो संख्याओं का योग "
+                "होती है: 0, 1, 1, 2, 3, 5, 8, 13, 21, …",
+                "इतालवी गणितज्ञ लियोनार्डो फिबोनाची ने "
+                "अपनी पुस्तक 'Liber Abaci' (1202) से इस "
+                "अनुक्रम को यूरोप में प्रसिद्ध किया; यह "
+                "अनुक्रम भारत में पिंगल के कार्य में और भी "
+                "पहले मिलता है।",
+                "यह अनुक्रम प्रकृति में भी दिखता है — "
+                "फूलों की पंखुड़ियों और शंखों में।",
+                "संक्षेप में: फिबोनाची अनुक्रम = पिछले दो "
+                "का योग, हर कदम पर।",
+            ],
+        },
+    },
+]
+
+
+# ---------------------------------------------------------------------------
+# Layer 1b (Wave 177): FACTS — school maths-GK that is not a
+# WHO question: superlatives ("sabse chhota prime"), counting
+# facts ("1 crore me kitne zero"), definitions of maths
+# objects ("infinity kya hota hai") and word origins ("algebra
+# naam kaha se aaya"). Built from Suraj's web-sourced seed
+# list (19 Nov 2026, ~/workspace/ganitra-maths-knowledge-
+# web.md; cross-checked school-GK sources). An entry fires
+# when a TOPIC keyword AND an ASK phrase are both present
+# (plus optional ask2, a bound guard against "100 se chhota"
+# bounded asks, and a literal cap against list problems like
+# "5, 9, 2 me sabse bada number"). The concept library keeps
+# the topics it already defines well (prime kya hota hai, pi
+# kya hai, Roman numerals) — this layer only takes the
+# specific FACT asks those cards cannot answer. The angle
+# sums (triangle 180°, quadrilateral 360°) are likewise NOT
+# here: the Wave 103 native schema serves those asks with
+# the crisp exact answer, and a fact entry would displace
+# it (proven by the wave103/wave107 pins).
+# ---------------------------------------------------------------------------
+
+# A bounded ask ("100 se chhota sabse bada prime") is a
+# computation, not this fact. The bound phrases must match
+# as separate words: "sabse chhota" CONTAINS the substring
+# "se chhota" (sab+se), so a plain substring test would
+# veto every superlative ask — the lookbehind demands a
+# non-letter before "se" (and before Devanagari "से",
+# where "सबसे" hides the same trap).
+_FACT_BOUND_RE = re.compile(
+    r"(?<![a-zA-Z])se (?:chhota|chhoti|kam|bada|badi|pehle)\b"
+    r"|(?<![ऀ-ॿ])से (?:छोटा|छोटी|कम|बड़ा|बड़ी)"
+    r"|\b(?:below|under|less than|greater than|between)\b"
+    r"|ke beech")
+
+
+def _fact_hit(q, entry):
+    if not _entry_hit(q, entry):
+        return False
+    ask = entry.get("ask") or ()
+    if ask and not any(a in q for a in ask):
+        return False
+    ask2 = entry.get("ask2") or ()
+    if ask2 and not any(a in q for a in ask2):
+        return False
+    if entry.get("bound_guard") and _FACT_BOUND_RE.search(q):
+        return False
+    max_lit = entry.get("max_literals")
+    if max_lit is not None:
+        t = q.translate(_W159_DEV)
+        if len(re.findall(r"\d+(?:\.\d+)?", t)) > max_lit:
+            return False
+    return True
+
+
+_PRIME_KW = ("prime", "abhaajya", "अभाज्य", "abhaajy")
+_ZERO_COUNT_ASK = ("zero", "zeros", "shunya", "शून्य")
+
+FACTS = [
+    {
+        "id": "one_neither",
+        "keywords": _PRIME_KW + ("composite", "bhaajya", "भाज्य"),
+        "ask": ("1 prime hai ya", "1 prime number hai ya",
+                "is 1 a prime", "is 1 prime", "1 composite hai ya",
+                "kya 1 prime", "1 abhaajya hai ya",
+                "1 prime hai ya composite", "one prime or",
+                "1 prime or composite", "1 prime hai ki"),
+        "en": {
+            "answer": "1 is neither prime nor composite",
+            "steps": [
+                "Prime numbers ke exactly 2 factors hote "
+                "hai (1 aur woh khud); composite ke 2 se "
+                "zyada. 1 ka sirf ek hi factor hai — isliye "
+                "woh na prime hai, na composite.",
+                "Short me: 1 ek khaas number hai — neither "
+                "prime, nor composite.",
+            ],
+        },
+        "roman": {
+            "answer": "1 na prime hai, na composite",
+            "steps": [
+                "Prime number ke exactly 2 factors hote hai "
+                "(1 aur woh khud); composite ke 2 se zyada. "
+                "1 ka sirf ek hi factor hai — isliye woh na "
+                "prime hai, na composite.",
+                "Short me: 1 ek khaas number hai — neither "
+                "prime, nor composite.",
+            ],
+        },
+        "dev": {
+            "answer": "1 न अभाज्य है, न भाज्य",
+            "steps": [
+                "अभाज्य संख्याओं के ठीक 2 गुणनखंड होते हैं "
+                "(1 और वह स्वयं); भाज्य के 2 से अधिक। 1 का "
+                "केवल एक ही गुणनखंड है — इसलिए वह न अभाज्य "
+                "है, न भाज्य।",
+                "संक्षेप में: 1 एक ख़ास संख्या है — न "
+                "अभाज्य, न भाज्य।",
+            ],
+        },
+    },
+    {
+        "id": "largest_2digit_prime",
+        "keywords": _PRIME_KW,
+        "ask": ("sabse bada", "sabse badi", "largest",
+                "biggest"),
+        "ask2": ("two-digit", "two digit", "2-digit",
+                 "do ankon", "do ank", "दो अंकों", "2 ankon"),
+        "en": {
+            "answer": "The largest two-digit prime number "
+                      "is 97",
+            "steps": [
+                "99 = 9 × 11 aur 98 even hai; 97 ko koi "
+                "chhoti sankhya baant nahi sakti — woh "
+                "prime hai.",
+                "Short me: do ankon ka sabse bada prime = 97.",
+            ],
+        },
+        "roman": {
+            "answer": "Do ankon ka sabse bada prime number "
+                      "97 hai",
+            "steps": [
+                "99 = 9 × 11 aur 98 even hai; 97 ko koi "
+                "chhoti sankhya baant nahi sakti — woh "
+                "prime hai.",
+                "Short me: do ankon ka sabse bada prime = 97.",
+            ],
+        },
+        "dev": {
+            "answer": "दो अंकों की सबसे बड़ी अभाज्य संख्या "
+                      "97 है",
+            "steps": [
+                "99 = 9 × 11 और 98 सम है; 97 को कोई छोटी "
+                "संख्या बाँट नहीं सकती — वह अभाज्य है।",
+                "संक्षेप में: दो अंकों की सबसे बड़ी अभाज्य "
+                "= 97।",
+            ],
+        },
+    },
+    {
+        "id": "smallest_2digit_prime",
+        "keywords": _PRIME_KW,
+        "ask": ("sabse chhota", "sabse chhoti", "smallest"),
+        "ask2": ("two-digit", "two digit", "2-digit",
+                 "do ankon", "do ank", "दो अंकों", "2 ankon"),
+        "en": {
+            "answer": "The smallest two-digit prime number "
+                      "is 11",
+            "steps": [
+                "10 even hai, uske baad 11 aata hai — 11 ko "
+                "sirf 1 aur 11 baant sakte hai.",
+                "Short me: do ankon ka sabse chhota prime = 11.",
+            ],
+        },
+        "roman": {
+            "answer": "Do ankon ka sabse chhota prime number "
+                      "11 hai",
+            "steps": [
+                "10 even hai, uske baad 11 aata hai — 11 ko "
+                "sirf 1 aur 11 baant sakte hai.",
+                "Short me: do ankon ka sabse chhota prime = 11.",
+            ],
+        },
+        "dev": {
+            "answer": "दो अंकों की सबसे छोटी अभाज्य संख्या "
+                      "11 है",
+            "steps": [
+                "10 सम है, उसके बाद 11 आता है — 11 को "
+                "केवल 1 और 11 बाँट सकते हैं।",
+                "संक्षेप में: दो अंकों की सबसे छोटी अभाज्य "
+                "= 11।",
+            ],
+        },
+    },
+    {
+        "id": "primes_below_20",
+        "keywords": _PRIME_KW,
+        "ask": ("kitne", "how many", "batao", "kaun kaun",
+                "kaun se"),
+        "ask2": ("20 se chhote", "20 se kam", "below 20",
+                 "under 20", "20 tak", "20 ke andar"),
+        "en": {
+            "answer": "20 se chhote kul 8 prime numbers hai",
+            "steps": [
+                "Woh hai: 2, 3, 5, 7, 11, 13, 17, 19 — kul 8.",
+                "Short me: 20 se neeche 8 prime numbers.",
+            ],
+        },
+        "roman": {
+            "answer": "20 se chhote kul 8 prime numbers hai",
+            "steps": [
+                "Woh hai: 2, 3, 5, 7, 11, 13, 17, 19 — kul 8.",
+                "Short me: 20 se neeche 8 prime numbers.",
+            ],
+        },
+        "dev": {
+            "answer": "20 से छोटे कुल 8 अभाज्य संख्याएँ हैं",
+            "steps": [
+                "वे हैं: 2, 3, 5, 7, 11, 13, 17, 19 — कुल 8।",
+                "संक्षेप में: 20 से नीचे 8 अभाज्य संख्याएँ।",
+            ],
+        },
+    },
+    {
+        "id": "largest_prime_none",
+        "keywords": _PRIME_KW,
+        "ask": ("largest prime", "sabse bada prime",
+                "sabse badi prime", "sabse bada abhaajya",
+                "how many prime numbers are there",
+                "kul kitne prime", "total kitne prime",
+                "kitne prime number hote hai",
+                "prime numbers kitne hote"),
+        "bound_guard": True,
+        "max_literals": 1,
+        "en": {
+            "answer": "There is no largest prime number — "
+                      "primes are endless",
+            "steps": [
+                "Euclid ne 2,000 saal se bhi pehle saabit "
+                "kiya tha ki prime numbers anant hai — jitna "
+                "bada prime socho, usse bada hamesha mil "
+                "jayega.",
+                "Short me: sabse bada prime koi nahi; primes "
+                "kabhi khatm nahi hote.",
+            ],
+        },
+        "roman": {
+            "answer": "Koi sabse bada prime number nahi hai — "
+                      "prime numbers anant hai",
+            "steps": [
+                "Euclid ne 2,000 saal se bhi pehle saabit "
+                "kiya tha ki prime numbers anant hai — jitna "
+                "bada prime socho, usse bada hamesha mil "
+                "jayega.",
+                "Short me: sabse bada prime koi nahi; primes "
+                "kabhi khatm nahi hote.",
+            ],
+        },
+        "dev": {
+            "answer": "कोई सबसे बड़ी अभाज्य संख्या नहीं है — "
+                      "अभाज्य संख्याएँ अनंत हैं",
+            "steps": [
+                "यूक्लिड ने 2,000 वर्ष से भी पहले सिद्ध किया "
+                "था कि अभाज्य संख्याएँ अनंत हैं — जितनी बड़ी "
+                "अभाज्य सोचो, उससे बड़ी हमेशा मिल जाएगी।",
+                "संक्षेप में: सबसे बड़ी अभाज्य कोई नहीं; "
+                "अभाज्य कभी ख़त्म नहीं होते।",
+            ],
+        },
+    },
+    {
+        "id": "smallest_odd_prime",
+        "keywords": _PRIME_KW,
+        "ask": ("smallest odd prime", "sabse chhota odd prime",
+                "sabse chhoti odd prime",
+                "sabse chhota visham prime",
+                "sabse chhoti visham abhaajya"),
+        "en": {
+            "answer": "The smallest odd prime number is 3",
+            "steps": [
+                "2 sabse chhota prime hai par woh even hai; "
+                "uske baad pehla odd prime 3 hai.",
+                "Short me: sabse chhota odd (visham) prime = 3.",
+            ],
+        },
+        "roman": {
+            "answer": "Sabse chhota odd prime number 3 hai",
+            "steps": [
+                "2 sabse chhota prime hai par woh even hai; "
+                "uske baad pehla odd prime 3 hai.",
+                "Short me: sabse chhota odd (visham) prime = 3.",
+            ],
+        },
+        "dev": {
+            "answer": "सबसे छोटी विषम अभाज्य संख्या 3 है",
+            "steps": [
+                "2 सबसे छोटी अभाज्य है पर वह सम है; उसके "
+                "बाद पहली विषम अभाज्य 3 है।",
+                "संक्षेप में: सबसे छोटी विषम अभाज्य = 3।",
+            ],
+        },
+    },
+    {
+        "id": "prime_two",
+        "keywords": _PRIME_KW,
+        "ask": ("smallest prime", "sabse chhota prime",
+                "sabse chhoti prime", "only even prime",
+                "ekmatra even prime", "ekmatra sam prime",
+                "sabse chhota abhaajya",
+                "sabse chhoti abhaajya"),
+        "bound_guard": True,
+        "en": {
+            "answer": "2 — the smallest prime number, and "
+                      "the only even prime",
+            "steps": [
+                "2 ke factors sirf 1 aur 2 hai, isliye woh "
+                "prime hai — aur sabse chhota bhi.",
+                "2 ke baad har even number 2 se kat jata "
+                "hai, isliye 2 hi ekmatra even prime hai.",
+                "Short me: sabse chhota prime = 2.",
+            ],
+        },
+        "roman": {
+            "answer": "2 — sabse chhota prime number, aur "
+                      "ekmatra even prime",
+            "steps": [
+                "2 ke factors sirf 1 aur 2 hai, isliye woh "
+                "prime hai — aur sabse chhota bhi.",
+                "2 ke baad har even number 2 se kat jata "
+                "hai, isliye 2 hi ekmatra even prime hai.",
+                "Short me: sabse chhota prime = 2.",
+            ],
+        },
+        "dev": {
+            "answer": "2 — सबसे छोटी अभाज्य संख्या, और "
+                      "एकमात्र सम अभाज्य",
+            "steps": [
+                "2 के गुणनखंड केवल 1 और 2 हैं, इसलिए वह "
+                "अभाज्य है — और सबसे छोटी भी।",
+                "2 के बाद हर सम संख्या 2 से कट जाती है, "
+                "इसलिए 2 ही एकमात्र सम अभाज्य है।",
+                "संक्षेप में: सबसे छोटी अभाज्य = 2।",
+            ],
+        },
+    },
+    {
+        "id": "smallest_composite",
+        "keywords": ("composite", "bhaajya", "भाज्य",
+                     "samyukt", "संयुक्त"),
+        "ask": ("sabse chhota", "sabse chhoti", "smallest"),
+        "bound_guard": True,
+        "en": {
+            "answer": "The smallest composite number is 4",
+            "steps": [
+                "Composite matlab 1 aur khud ke alawa koi "
+                "aur factor bhi ho: 4 = 2 × 2, isliye 4 "
+                "pehla composite hai (1 na prime hai na "
+                "composite; 2, 3 prime hai).",
+                "Short me: sabse chhota composite = 4.",
+            ],
+        },
+        "roman": {
+            "answer": "Sabse chhota composite number 4 hai",
+            "steps": [
+                "Composite matlab 1 aur khud ke alawa koi "
+                "aur factor bhi ho: 4 = 2 × 2, isliye 4 "
+                "pehla composite hai (1 na prime hai na "
+                "composite; 2, 3 prime hai).",
+                "Short me: sabse chhota composite = 4.",
+            ],
+        },
+        "dev": {
+            "answer": "सबसे छोटी भाज्य संख्या 4 है",
+            "steps": [
+                "भाज्य मतलब 1 और स्वयं के अलावा कोई और "
+                "गुणनखंड भी हो: 4 = 2 × 2, इसलिए 4 पहली "
+                "भाज्य है (1 न अभाज्य है न भाज्य; 2, 3 "
+                "अभाज्य हैं)।",
+                "संक्षेप में: सबसे छोटी भाज्य = 4।",
+            ],
+        },
+    },
+    {
+        "id": "smallest_natural",
+        "keywords": ("natural number", "prakritik sankhya",
+                     "प्राकृतिक संख्या", "natural sankhya"),
+        "ask": ("sabse chhota", "sabse chhoti", "smallest"),
+        "bound_guard": True,
+        "en": {
+            "answer": "The smallest natural number is 1",
+            "steps": [
+                "Natural numbers ginne wali sankhyayen hai: "
+                "1, 2, 3, 4, … — shuruaat 1 se hoti hai.",
+                "Short me: sabse chhoti prakritik sankhya = 1.",
+            ],
+        },
+        "roman": {
+            "answer": "Sabse chhoti natural (prakritik) "
+                      "sankhya 1 hai",
+            "steps": [
+                "Natural numbers ginne wali sankhyayen hai: "
+                "1, 2, 3, 4, … — shuruaat 1 se hoti hai.",
+                "Short me: sabse chhoti prakritik sankhya = 1.",
+            ],
+        },
+        "dev": {
+            "answer": "सबसे छोटी प्राकृतिक संख्या 1 है",
+            "steps": [
+                "प्राकृतिक संख्याएँ गिनने वाली संख्याएँ हैं: "
+                "1, 2, 3, 4, … — शुरुआत 1 से होती है।",
+                "संक्षेप में: सबसे छोटी प्राकृतिक संख्या = 1।",
+            ],
+        },
+    },
+    {
+        "id": "smallest_whole",
+        "keywords": ("whole number", "purn sankhya",
+                     "पूर्ण संख्या", "whole sankhya"),
+        "ask": ("sabse chhota", "sabse chhoti", "smallest"),
+        "bound_guard": True,
+        "en": {
+            "answer": "The smallest whole number is 0",
+            "steps": [
+                "Whole numbers 0 se shuru hote hai: 0, 1, 2, "
+                "3, … — natural numbers me 0 judne se whole "
+                "numbers bante hai.",
+                "Short me: sabse chhoti purn sankhya = 0.",
+            ],
+        },
+        "roman": {
+            "answer": "Sabse chhoti whole (purn) sankhya 0 hai",
+            "steps": [
+                "Whole numbers 0 se shuru hote hai: 0, 1, 2, "
+                "3, … — natural numbers me 0 judne se whole "
+                "numbers bante hai.",
+                "Short me: sabse chhoti purn sankhya = 0.",
+            ],
+        },
+        "dev": {
+            "answer": "सबसे छोटी पूर्ण संख्या 0 है",
+            "steps": [
+                "पूर्ण संख्याएँ 0 से शुरू होती हैं: 0, 1, 2, "
+                "3, … — प्राकृतिक संख्याओं में 0 जुड़ने से "
+                "पूर्ण संख्याएँ बनती हैं।",
+                "संक्षेप में: सबसे छोटी पूर्ण संख्या = 0।",
+            ],
+        },
+    },
+    {
+        "id": "no_reciprocal",
+        "keywords": ("reciprocal", "vyutkram", "व्युत्क्रम"),
+        "ask": ("nahi hota", "nahi hai", "nahin hota",
+                "no reciprocal", "kis sankhya", "which number",
+                "kaun si sankhya", "kaunsi sankhya"),
+        "en": {
+            "answer": "0 — zero is the only number with no "
+                      "reciprocal",
+            "steps": [
+                "Reciprocal matlab 1 ko us sankhya se baantna; "
+                "1/0 undefined hai (0 se bhaag dena hi mana "
+                "hai), isliye 0 ka reciprocal nahi hota.",
+                "Short me: reciprocal nahi hai — sirf 0 ka.",
+            ],
+        },
+        "roman": {
+            "answer": "0 — zero hi ekmatra sankhya hai jiska "
+                      "reciprocal nahi hota",
+            "steps": [
+                "Reciprocal matlab 1 ko us sankhya se "
+                "baantna; 1/0 undefined hai (0 se bhaag dena "
+                "hi mana hai), isliye 0 ka reciprocal nahi "
+                "hota.",
+                "Short me: reciprocal nahi hai — sirf 0 ka.",
+            ],
+        },
+        "dev": {
+            "answer": "0 — शून्य ही एकमात्र संख्या है जिसका "
+                      "व्युत्क्रम नहीं होता",
+            "steps": [
+                "व्युत्क्रम मतलब 1 को उस संख्या से बाँटना; "
+                "1/0 अपरिभाषित है (0 से भाग देना ही मना है), "
+                "इसलिए 0 का व्युत्क्रम नहीं होता।",
+                "संक्षेप में: व्युत्क्रम नहीं है — केवल 0 का।",
+            ],
+        },
+    },
+    {
+        "id": "zero_neither_sign",
+        "keywords": ("positive", "negative", "dhanatmak",
+                     "rinatmak", "धनात्मक", "ऋणात्मक"),
+        "ask": ("neither", "na positive na", "na dhanatmak na",
+                "kaun si sankhya", "which number",
+                "ekmatra", "only number", "na positive hai na"),
+        "en": {
+            "answer": "0 — the only number that is neither "
+                      "positive nor negative",
+            "steps": [
+                "0 se badi sankhyayen positive (+), 0 se "
+                "chhoti negative (−) hoti hai; 0 beech me "
+                "khada hai — na idhar, na udhar.",
+                "Short me: na positive, na negative — sirf 0.",
+            ],
+        },
+        "roman": {
+            "answer": "0 — ekmatra sankhya jo na positive "
+                      "hai, na negative",
+            "steps": [
+                "0 se badi sankhyayen positive (+), 0 se "
+                "chhoti negative (−) hoti hai; 0 beech me "
+                "khada hai — na idhar, na udhar.",
+                "Short me: na positive, na negative — sirf 0.",
+            ],
+        },
+        "dev": {
+            "answer": "0 — एकमात्र संख्या जो न धनात्मक है, न "
+                      "ऋणात्मक",
+            "steps": [
+                "0 से बड़ी संख्याएँ धनात्मक (+), 0 से छोटी "
+                "ऋणात्मक (−) होती हैं; 0 बीच में खड़ा है — "
+                "न इधर, न उधर।",
+                "संक्षेप में: न धनात्मक, न ऋणात्मक — केवल 0।",
+            ],
+        },
+    },
+    {
+        "id": "lakh_zeros",
+        "keywords": ("lakh", "लाख"),
+        "ask": _ZERO_COUNT_ASK,
+        "en": {
+            "answer": "1 lakh has 5 zeros — 1,00,000",
+            "steps": [
+                "1 lakh = 100000 — gin lo: kul 5 zero.",
+                "Short me: 1 lakh me 5 zero.",
+            ],
+        },
+        "roman": {
+            "answer": "1 lakh me 5 zero hote hai — 1,00,000",
+            "steps": [
+                "1 lakh = 100000 — gin lo: kul 5 zero.",
+                "Short me: 1 lakh me 5 zero.",
+            ],
+        },
+        "dev": {
+            "answer": "1 लाख में 5 शून्य होते हैं — 1,00,000",
+            "steps": [
+                "1 लाख = 100000 — गिन लो: कुल 5 शून्य।",
+                "संक्षेप में: 1 लाख में 5 शून्य।",
+            ],
+        },
+    },
+    {
+        "id": "crore_zeros",
+        "keywords": ("crore", "करोड़", "karod"),
+        "ask": _ZERO_COUNT_ASK,
+        "en": {
+            "answer": "1 crore has 7 zeros — 1,00,00,000",
+            "steps": [
+                "1 crore = 10000000 — 1 ke peeche kul 7 zero.",
+                "Yaad rakho: 1 lakh (5 zero) ke aage 2 zero "
+                "aur = 1 crore (7 zero).",
+                "Short me: 1 crore me 7 zero.",
+            ],
+        },
+        "roman": {
+            "answer": "1 crore me 7 zero hote hai — 1,00,00,000",
+            "steps": [
+                "1 crore = 10000000 — 1 ke peeche kul 7 zero.",
+                "Yaad rakho: 1 lakh (5 zero) ke aage 2 zero "
+                "aur = 1 crore (7 zero).",
+                "Short me: 1 crore me 7 zero.",
+            ],
+        },
+        "dev": {
+            "answer": "1 करोड़ में 7 शून्य होते हैं — "
+                      "1,00,00,000",
+            "steps": [
+                "1 करोड़ = 10000000 — 1 के पीछे कुल 7 शून्य।",
+                "याद रखो: 1 लाख (5 शून्य) के आगे 2 शून्य "
+                "और = 1 करोड़ (7 शून्य)।",
+                "संक्षेप में: 1 करोड़ में 7 शून्य।",
+            ],
+        },
+    },
+    {
+        "id": "million_zeros",
+        "keywords": ("million", "मिलियन"),
+        "ask": _ZERO_COUNT_ASK,
+        "en": {
+            "answer": "1 million has 6 zeros — 1,000,000",
+            "steps": [
+                "1 million = 10 lakh hota hai — 1 ke peeche "
+                "kul 6 zero.",
+                "Short me: 1 million me 6 zero.",
+            ],
+        },
+        "roman": {
+            "answer": "1 million me 6 zero hote hai — 1,000,000",
+            "steps": [
+                "1 million = 10 lakh hota hai — 1 ke peeche "
+                "kul 6 zero.",
+                "Short me: 1 million me 6 zero.",
+            ],
+        },
+        "dev": {
+            "answer": "1 मिलियन में 6 शून्य होते हैं — "
+                      "1,000,000",
+            "steps": [
+                "1 मिलियन = 10 लाख होता है — 1 के पीछे कुल "
+                "6 शून्य।",
+                "संक्षेप में: 1 मिलियन में 6 शून्य।",
+            ],
+        },
+    },
+    {
+        "id": "billion_zeros",
+        "keywords": ("billion", "arab", "अरब"),
+        "ask": _ZERO_COUNT_ASK,
+        "en": {
+            "answer": "1 billion (1 arab) has 9 zeros — "
+                      "1,000,000,000",
+            "steps": [
+                "1 billion = 100 crore hota hai — 1 ke "
+                "peeche kul 9 zero.",
+                "Short me: 1 billion / 1 arab me 9 zero.",
+            ],
+        },
+        "roman": {
+            "answer": "1 billion (1 arab) me 9 zero hote hai "
+                      "— 1,000,000,000",
+            "steps": [
+                "1 billion = 100 crore hota hai — 1 ke "
+                "peeche kul 9 zero.",
+                "Short me: 1 billion / 1 arab me 9 zero.",
+            ],
+        },
+        "dev": {
+            "answer": "1 बिलियन (1 अरब) में 9 शून्य होते हैं "
+                      "— 1,000,000,000",
+            "steps": [
+                "1 बिलियन = 100 करोड़ होता है — 1 के पीछे "
+                "कुल 9 शून्य।",
+                "संक्षेप में: 1 बिलियन / 1 अरब में 9 शून्य।",
+            ],
+        },
+    },
+    {
+        "id": "dozen",
+        "keywords": ("dozen", "darjan", "दर्जन"),
+        "ask": ("kitne", "kya", "how many", "what", "hota",
+                "hote"),
+        "en": {
+            "answer": "1 dozen = 12",
+            "steps": [
+                "Darjan ginne ki purani ikai hai — 1 darjan "
+                "me hamesha 12 cheezein (12 kele, 12 ande).",
+                "Short me: 1 dozen = 12.",
+            ],
+        },
+        "roman": {
+            "answer": "1 dozen (darjan) me 12 hote hai",
+            "steps": [
+                "Darjan ginne ki purani ikai hai — 1 darjan "
+                "me hamesha 12 cheezein (12 kele, 12 ande).",
+                "Short me: 1 dozen = 12.",
+            ],
+        },
+        "dev": {
+            "answer": "1 दर्जन = 12",
+            "steps": [
+                "दर्जन गिनने की पुरानी इकाई है — 1 दर्जन में "
+                "हमेशा 12 चीज़ें (12 केले, 12 अंडे)।",
+                "संक्षेप में: 1 दर्जन = 12।",
+            ],
+        },
+    },
+    {
+        "id": "gross",
+        "keywords": ("gross", "ग्रॉस"),
+        "ask": ("kitne", "kya", "how many", "what", "hota",
+                "hote"),
+        "en": {
+            "answer": "1 gross = 144 (12 dozen)",
+            "steps": [
+                "1 gross = 12 darjan = 12 × 12 = 144.",
+                "Short me: 1 gross = 144.",
+            ],
+        },
+        "roman": {
+            "answer": "1 gross me 144 hote hai (12 dozen)",
+            "steps": [
+                "1 gross = 12 darjan = 12 × 12 = 144.",
+                "Short me: 1 gross = 144.",
+            ],
+        },
+        "dev": {
+            "answer": "1 ग्रॉस = 144 (12 दर्जन)",
+            "steps": [
+                "1 ग्रॉस = 12 दर्जन = 12 × 12 = 144।",
+                "संक्षेप में: 1 ग्रॉस = 144।",
+            ],
+        },
+    },
+    {
+        "id": "hardy_ramanujan",
+        "keywords": ("1729", "hardy ramanujan",
+                     "hardy-ramanujan", "ramanujan number",
+                     "taxicab"),
+        "ask": ("kya", "kyu", "kyon", "why", "famous",
+                "khaas", "special", "mahatva"),
+        "en": {
+            "answer": "1729 — the Hardy–Ramanujan number",
+            "steps": [
+                "1729 sabse chhoti sankhya hai jo do alag "
+                "tareekon se do cubes ke yog ke roop me likhi "
+                "ja sakti hai: 1729 = 1³ + 12³ = 9³ + 10³.",
+                "Katha hai: Hardy ne hospital me Ramanujan "
+                "ko ye number 'neeras' kaha, aur Ramanujan "
+                "ne turant iski ye khaasiyat bata di.",
+                "Short me: 1729 = Ramanujan ki pehchan wala "
+                "number.",
+            ],
+        },
+        "roman": {
+            "answer": "1729 — Hardy–Ramanujan number",
+            "steps": [
+                "1729 sabse chhoti sankhya hai jo do alag "
+                "tareekon se do cubes ke yog ke roop me likhi "
+                "ja sakti hai: 1729 = 1³ + 12³ = 9³ + 10³.",
+                "Katha hai: Hardy ne hospital me Ramanujan "
+                "ko ye number 'neeras' kaha, aur Ramanujan "
+                "ne turant iski ye khaasiyat bata di.",
+                "Short me: 1729 = Ramanujan ki pehchan wala "
+                "number.",
+            ],
+        },
+        "dev": {
+            "answer": "1729 — हार्डी–रामानुजन संख्या",
+            "steps": [
+                "1729 सबसे छोटी संख्या है जो दो अलग तरीकों "
+                "से दो घनों के योग के रूप में लिखी जा सकती "
+                "है: 1729 = 1³ + 12³ = 9³ + 10³।",
+                "कथा है: हार्डी ने अस्पताल में रामानुजन को "
+                "यह संख्या 'नीरस' कही, और रामानुजन ने तुरंत "
+                "इसकी यह ख़ासियत बता दी।",
+                "संक्षेप में: 1729 = रामानुजन की पहचान वाली "
+                "संख्या।",
+            ],
+        },
+    },
+    {
+        "id": "infinity",
+        "keywords": ("infinity", "infinite", "anant",
+                     "अनंत", "अनन्त", "∞"),
+        "ask": ("kya", "matlab", "what", "meaning", "symbol",
+                "chinh", "kisne", "who", "kaun"),
+        "en": {
+            "answer": "Infinity (∞) — a quantity with no end; "
+                      "it is not a number",
+            "steps": [
+                "Infinity ka matlab hai jo kabhi khatm na ho "
+                "— jaise sankhyayen: kitni bhi badi sankhya "
+                "socho, usse badi hamesha hai.",
+                "Iska chinh ∞ sabse pehle John Wallis ne "
+                "diya tha (1655).",
+                "Short me: ∞ = ant-heen, jo gina na ja sake.",
+            ],
+        },
+        "roman": {
+            "answer": "Infinity (∞) — jo kabhi khatm na ho; "
+                      "ye koi number nahi hai",
+            "steps": [
+                "Infinity ka matlab hai ant-heen — jaise "
+                "sankhyayen: kitni bhi badi sankhya socho, "
+                "usse badi hamesha hai.",
+                "Iska chinh ∞ sabse pehle John Wallis ne "
+                "diya tha (1655).",
+                "Short me: ∞ = ant-heen, jo gina na ja sake.",
+            ],
+        },
+        "dev": {
+            "answer": "अनंत (∞) — जो कभी ख़त्म न हो; यह कोई "
+                      "संख्या नहीं है",
+            "steps": [
+                "अनंत का मतलब है अंत-हीन — जैसे संख्याएँ: "
+                "कितनी भी बड़ी संख्या सोचो, उससे बड़ी हमेशा "
+                "है।",
+                "इसका चिह्न ∞ सबसे पहले जॉन वॉलिस ने दिया "
+                "था (1655)।",
+                "संक्षेप में: ∞ = अंत-हीन, जो गिना न जा सके।",
+            ],
+        },
+    },
+    {
+        "id": "decimal_system",
+        "keywords": ("decimal", "dashamlav", "दशमलव",
+                     "place value", "place-value",
+                     "hindu-arabic", "hindu arabic"),
+        "ask": ("kisne", "kaha", "kahan", "origin", "where",
+                "who", "kab", "banaya", "aaya", "aayi",
+                "invent"),
+        "en": {
+            "answer": "The decimal place-value system comes "
+                      "from India",
+            "steps": [
+                "0 aur sthan-man (place value) wala aaj ka "
+                "number system Bharat me bana; Arab "
+                "vyapariyon ke dwara ye duniya bhar gaya — "
+                "isiliye in ankon ko 'Hindu-Arabic numerals' "
+                "kehte hai.",
+                "Short me: decimal system ki jad Bharat hai.",
+            ],
+        },
+        "roman": {
+            "answer": "Decimal (place-value) system Bharat "
+                      "se aaya hai",
+            "steps": [
+                "0 aur sthan-man (place value) wala aaj ka "
+                "number system Bharat me bana; Arab "
+                "vyapariyon ke dwara ye duniya bhar gaya — "
+                "isiliye in ankon ko 'Hindu-Arabic numerals' "
+                "kehte hai.",
+                "Short me: decimal system ki jad Bharat hai.",
+            ],
+        },
+        "dev": {
+            "answer": "दशमलव स्थान-मान प्रणाली भारत से आई है",
+            "steps": [
+                "0 और स्थान-मान वाला आज का संख्या तंत्र "
+                "भारत में बना; अरब व्यापारियों के द्वारा यह "
+                "दुनिया भर गया — इसीलिए इन अंकों को "
+                "'Hindu-Arabic numerals' कहते हैं।",
+                "संक्षेप में: दशमलव प्रणाली की जड़ भारत है।",
+            ],
+        },
+    },
+    {
+        "id": "geometry_origin",
+        "keywords": ("geometry", "ज्यामिति", "jyamiti"),
+        "ask": ("kaha se aaya", "kahan se aaya", "naam kaha",
+                "shabd kaha", "shabd ka matlab", "origin",
+                "matlab kya", "meaning", "word"),
+        "en": {
+            "answer": "Geometry — from Greek 'geo' (earth) "
+                      "+ 'metria' (measurement)",
+            "steps": [
+                "Geometry shabd do Greek shabdon se bana: "
+                "geo = dharti (earth), metria = maap "
+                "(measurement) — matlab dharti ko naapne ka "
+                "vigyaan, jisse khet aur zameen naapi jaati "
+                "thi.",
+                "Short me: geometry = dharti ki maap.",
+            ],
+        },
+        "roman": {
+            "answer": "Geometry — Greek 'geo' (dharti) + "
+                      "'metria' (maap) se bana shabd",
+            "steps": [
+                "Geometry do Greek shabdon se bana: geo = "
+                "dharti (earth), metria = maap (measurement) "
+                "— matlab dharti ko naapne ka vigyaan, jisse "
+                "khet aur zameen naapi jaati thi.",
+                "Short me: geometry = dharti ki maap.",
+            ],
+        },
+        "dev": {
+            "answer": "ज्यामिति — यूनानी 'geo' (धरती) + "
+                      "'metria' (माप) से बना शब्द",
+            "steps": [
+                "Geometry दो यूनानी शब्दों से बना: geo = "
+                "धरती, metria = माप — मतलब धरती को मापने का "
+                "विज्ञान, जिससे खेत और ज़मीन मापी जाती थी।",
+                "संक्षेप में: geometry = धरती की माप।",
+            ],
+        },
+    },
+    {
+        "id": "algebra_origin",
+        "keywords": ("algebra", "बीजगणित", "beejganit",
+                     "bijganit"),
+        "ask": ("kaha se aaya", "kahan se aaya", "naam kaha",
+                "shabd kaha", "shabd ka", "origin", "al-jabr",
+                "word"),
+        "en": {
+            "answer": "Algebra — the word comes from Arabic "
+                      "'al-jabr', from al-Khwarizmi's book",
+            "steps": [
+                "Al-Khwarizmi ki kitab 'Al-Kitab "
+                "al-Mukhtasar fi Hisab al-Jabr' ke 'al-jabr' "
+                "shabd se 'algebra' bana; 'algorithm' shabd "
+                "bhi unke naam se aaya hai.",
+                "Short me: algebra naam Arabic 'al-jabr' "
+                "se aaya.",
+            ],
+        },
+        "roman": {
+            "answer": "Algebra — shabd Arabic 'al-jabr' se "
+                      "aaya, al-Khwarizmi ki kitab se",
+            "steps": [
+                "Al-Khwarizmi ki kitab 'Al-Kitab "
+                "al-Mukhtasar fi Hisab al-Jabr' ke 'al-jabr' "
+                "shabd se 'algebra' bana; 'algorithm' shabd "
+                "bhi unke naam se aaya hai.",
+                "Short me: algebra naam Arabic 'al-jabr' "
+                "se aaya.",
+            ],
+        },
+        "dev": {
+            "answer": "बीजगणित — 'algebra' शब्द अरबी "
+                      "'al-jabr' से आया, अल-ख्वारिज़्मी की "
+                      "पुस्तक से",
+            "steps": [
+                "अल-ख्वारिज़्मी की पुस्तक 'अल-किताब "
+                "अल-मुख्तसर फ़ी हिसाब अल-जब्र' के 'अल-जब्र' "
+                "शब्द से 'algebra' बना; 'algorithm' शब्द भी "
+                "उनके नाम से आया है।",
+                "संक्षेप में: algebra नाम अरबी 'al-jabr' से "
+                "आया।",
+            ],
+        },
+    },
+    {
+        "id": "trigonometry_origin",
+        "keywords": ("trigonometry", "त्रिकोणमिति",
+                     "trikonmiti"),
+        "ask": ("kaha se aaya", "naam kaha", "shabd",
+                "matlab", "origin", "word", "meaning",
+                "kya hota"),
+        "en": {
+            "answer": "Trigonometry — Greek 'trigonon' "
+                      "(triangle) + 'metron' (measure)",
+            "steps": [
+                "Trigonometry ka matlab hai tribhuj ki "
+                "bhujaon aur konon ko naapna — Greek "
+                "'trigonon' (tribhuj) + 'metron' (maap).",
+                "Short me: trigonometry = tribhuj ki maap "
+                "ka adhyayan.",
+            ],
+        },
+        "roman": {
+            "answer": "Trigonometry — Greek 'trigonon' "
+                      "(tribhuj) + 'metron' (maap)",
+            "steps": [
+                "Trigonometry ka matlab hai tribhuj ki "
+                "bhujaon aur konon ko naapna — Greek "
+                "'trigonon' (tribhuj) + 'metron' (maap).",
+                "Short me: trigonometry = tribhuj ki maap "
+                "ka adhyayan.",
+            ],
+        },
+        "dev": {
+            "answer": "त्रिकोणमिति — यूनानी 'trigonon' "
+                      "(त्रिभुज) + 'metron' (माप)",
+            "steps": [
+                "त्रिकोणमिति का मतलब है त्रिभुज की भुजाओं "
+                "और कोणों को मापना — यूनानी 'trigonon' "
+                "(त्रिभुज) + 'metron' (माप)।",
+                "संक्षेप में: trigonometry = त्रिभुज की माप "
+                "का अध्ययन।",
+            ],
+        },
+    },
+    {
+        "id": "golden_ratio",
+        "keywords": ("golden ratio", "golden anupat",
+                     "swarn anupat", "sunahra anupat",
+                     "स्वर्ण अनुपात"),
+        "ask": ("kya", "what", "value", "maan", "kitna",
+                "matlab"),
+        "en": {
+            "answer": "The golden ratio φ ≈ 1.618",
+            "steps": [
+                "Jab ek lambai ko is tarah baanta jaye ki "
+                "poora : bada hissa = bada hissa : chhota "
+                "hissa, to woh anupat golden ratio (φ ≈ "
+                "1.618) kehlata hai — prakriti aur kala me "
+                "baar-baar dikhta hai.",
+                "Short me: golden ratio ≈ 1.618.",
+            ],
+        },
+        "roman": {
+            "answer": "Golden ratio φ ≈ 1.618 hota hai",
+            "steps": [
+                "Jab ek lambai ko is tarah baanta jaye ki "
+                "poora : bada hissa = bada hissa : chhota "
+                "hissa, to woh anupat golden ratio (φ ≈ "
+                "1.618) kehlata hai — prakriti aur kala me "
+                "baar-baar dikhta hai.",
+                "Short me: golden ratio ≈ 1.618.",
+            ],
+        },
+        "dev": {
+            "answer": "स्वर्ण अनुपात φ ≈ 1.618 होता है",
+            "steps": [
+                "जब एक लंबाई को इस तरह बाँटा जाए कि पूरा : "
+                "बड़ा हिस्सा = बड़ा हिस्सा : छोटा हिस्सा, तो "
+                "वह अनुपात स्वर्ण अनुपात (φ ≈ 1.618) कहलाता "
+                "है — प्रकृति और कला में बार-बार दिखता है।",
+                "संक्षेप में: golden ratio ≈ 1.618।",
+            ],
+        },
+    },
+    {
+        "id": "maths_full_form",
+        "keywords": ("full form",),
+        "ask": ("maths", "math", "ganit", "गणित",
+                "mathematics"),
+        "en": {
+            "answer": "Maths has no full form — it is the "
+                      "short form of 'Mathematics'",
+            "steps": [
+                "'Mathematics' Greek shabd 'mathematika' "
+                "(seekhne ki cheezein) se aaya hai; 'maths' "
+                "usi ka chhota roop hai — iska koi alag full "
+                "form nahi hota.",
+                "Short me: Maths = Mathematics ka short form.",
+            ],
+        },
+        "roman": {
+            "answer": "Maths ka koi full form nahi hota — ye "
+                      "'Mathematics' ka short form hai",
+            "steps": [
+                "'Mathematics' Greek shabd 'mathematika' "
+                "(seekhne ki cheezein) se aaya hai; 'maths' "
+                "usi ka chhota roop hai — iska koi alag full "
+                "form nahi hota.",
+                "Short me: Maths = Mathematics ka short form.",
+            ],
+        },
+        "dev": {
+            "answer": "Maths का कोई full form नहीं होता — यह "
+                      "'Mathematics' का छोटा रूप है",
+            "steps": [
+                "'Mathematics' यूनानी शब्द 'mathematika' "
+                "(सीखने की चीज़ें) से आया है; 'maths' उसी का "
+                "छोटा रूप है — इसका कोई अलग full form नहीं "
+                "होता।",
+                "संक्षेप में: Maths = Mathematics का short "
+                "form।",
+            ],
+        },
+    },
+    {
+        "id": "equals_sign",
+        "keywords": ("barabar ka sign", "barabar ka chinh",
+                     "barabar wala sign", "equals sign",
+                     "equal sign", "बराबर का चिह्न",
+                     "बराबर का चिन्ह"),
+        "ask": ("kisne", "who", "kab", "banaya", "diya",
+                "invent"),
+        "en": {
+            "answer": "The equals sign (=) was given by "
+                      "Robert Recorde (1557)",
+            "steps": [
+                "Welsh mathematician Robert Recorde ne "
+                "apni kitab 'The Whetstone of Witte' (1557) "
+                "me = ka chinh sabse pehle istemal kiya — "
+                "do barabar lambai ki rekhaen, kyunki unke "
+                "liye barabar ki sabse sahi pehchan yahi thi.",
+                "Short me: = ka chinh Robert Recorde ki den "
+                "hai (1557).",
+            ],
+        },
+        "roman": {
+            "answer": "Barabar ka sign (=) Robert Recorde ne "
+                      "diya tha (1557)",
+            "steps": [
+                "Welsh ganitagya Robert Recorde ne apni "
+                "kitab 'The Whetstone of Witte' (1557) me = "
+                "ka chinh sabse pehle istemal kiya — do "
+                "barabar lambai ki rekhaen, kyunki unke liye "
+                "barabar ki sabse sahi pehchan yahi thi.",
+                "Short me: = ka chinh Robert Recorde ki den "
+                "hai (1557).",
+            ],
+        },
+        "dev": {
+            "answer": "बराबर का चिह्न (=) रॉबर्ट रेकॉर्ड ने "
+                      "दिया था (1557)",
+            "steps": [
+                "वेल्श गणितज्ञ रॉबर्ट रेकॉर्ड ने अपनी पुस्तक "
+                "'The Whetstone of Witte' (1557) में = का "
+                "चिह्न सबसे पहले इस्तेमाल किया — दो बराबर "
+                "लंबाई की रेखाएँ, क्योंकि उनके लिए बराबर की "
+                "सबसे सही पहचान यही थी।",
+                "संक्षेप में: = का चिह्न रॉबर्ट रेकॉर्ड की "
+                "देन है (1557)।",
+            ],
+        },
+    },
+    {
+        "id": "pi_day",
+        "keywords": ("pi day", "π day"),
+        "ask": ("kab", "when", "date", "manaya", "celebrat"),
+        "en": {
+            "answer": "Pi Day is celebrated on 14 March "
+                      "(3/14)",
+            "steps": [
+                "π ka maan 3.14… hai, isliye March (3rd "
+                "mahina) ki 14 taareekh ko Pi Day manaya "
+                "jata hai.",
+                "Short me: Pi Day = 14 March.",
+            ],
+        },
+        "roman": {
+            "answer": "Pi Day 14 March (3/14) ko manaya jata "
+                      "hai",
+            "steps": [
+                "π ka maan 3.14… hai, isliye March (3rd "
+                "mahina) ki 14 taareekh ko Pi Day manaya "
+                "jata hai.",
+                "Short me: Pi Day = 14 March.",
+            ],
+        },
+        "dev": {
+            "answer": "Pi Day 14 मार्च (3/14) को मनाया जाता "
+                      "है",
+            "steps": [
+                "π का मान 3.14… है, इसलिए मार्च (तीसरे "
+                "महीने) की 14 तारीख़ को Pi Day मनाया जाता "
+                "है।",
+                "संक्षेप में: Pi Day = 14 मार्च।",
+            ],
+        },
+    },
+    {
+        "id": "polygons",
+        "keywords": ("pentagon", "hexagon", "heptagon",
+                     "octagon", "nonagon", "decagon",
+                     "dodecagon", "panchbhuj", "shatbhuj",
+                     "अष्टभुज", "पंचभुज"),
+        # Ask must be about SIDES or the NAME — a bare
+        # "kitne / how many" also matches diagonals, area
+        # and angle computations that native schemas own
+        # (the wave55 hexagon-diagonals pin proved it).
+        "ask": ("side", "bhuja", "भुजा", "kya kehte",
+                "kise kehte", "called", "naam", "name"),
+        "en": {
+            "answer": "Pentagon 5, Hexagon 6, Heptagon 7, "
+                      "Octagon 8, Nonagon 9, Decagon 10, "
+                      "Dodecagon 12 sides",
+            "steps": [
+                "Aur yaad rakho: 3 bhujaon wali aakriti "
+                "triangle (tribhuj), 4 wali quadrilateral "
+                "(chaturbhuj) kehlati hai.",
+                "Short me: naam me hi bhujaon ki ginati "
+                "chhupi hai — penta = 5, hexa = 6, octa = 8, "
+                "deca = 10.",
+            ],
+        },
+        "roman": {
+            "answer": "Pentagon 5, Hexagon 6, Heptagon 7, "
+                      "Octagon 8, Nonagon 9, Decagon 10, "
+                      "Dodecagon 12 bhujaen",
+            "steps": [
+                "Aur yaad rakho: 3 bhujaon wali aakriti "
+                "triangle (tribhuj), 4 wali quadrilateral "
+                "(chaturbhuj) kehlati hai.",
+                "Short me: naam me hi bhujaon ki ginati "
+                "chhupi hai — penta = 5, hexa = 6, octa = 8, "
+                "deca = 10.",
+            ],
+        },
+        "dev": {
+            "answer": "पंचभुज 5, षट्भुज 6, सप्तभुज 7, "
+                      "अष्टभुज 8, नवभुज 9, दशभुज 10, "
+                      "द्वादशभुज 12 भुजाएँ",
+            "steps": [
+                "और याद रखो: 3 भुजाओं वाली आकृति त्रिभुज, "
+                "4 वाली चतुर्भुज कहलाती है।",
+                "संक्षेप में: नाम में ही भुजाओं की गिनती "
+                "छुपी है — penta = 5, hexa = 6, octa = 8, "
+                "deca = 10।",
+            ],
+        },
+    },
+    {
+        "id": "circumference_name",
+        "keywords": ("circumference", "paridhi", "परिधि"),
+        "ask": ("aur kya", "another name", "dusra naam",
+                "also called", "ko aur kya"),
+        "en": {
+            "answer": "A circle's circumference is also "
+                      "called its perimeter",
+            "steps": [
+                "Vritt ke chaaron or ki doori (paridhi) ko "
+                "hi uska perimeter (parimap) kehte hai — "
+                "formula bhi ek hi hai: 2πr.",
+                "Short me: circumference = circle ka "
+                "perimeter.",
+            ],
+        },
+        "roman": {
+            "answer": "Circle ki circumference (paridhi) ko "
+                      "uska perimeter (parimap) bhi kehte hai",
+            "steps": [
+                "Vritt ke chaaron or ki doori (paridhi) ko "
+                "hi uska perimeter (parimap) kehte hai — "
+                "formula bhi ek hi hai: 2πr.",
+                "Short me: circumference = circle ka "
+                "perimeter.",
+            ],
+        },
+        "dev": {
+            "answer": "वृत्त की परिधि को उसका परिमाप "
+                      "(perimeter) भी कहते हैं",
+            "steps": [
+                "वृत्त के चारों ओर की दूरी (परिधि) को ही "
+                "उसका परिमाप कहते हैं — सूत्र भी एक ही है: "
+                "2πr।",
+                "संक्षेप में: circumference = वृत्त का "
+                "perimeter।",
+            ],
+        },
+    },
+    {
+        "id": "largest_number",
+        "keywords": ("sankhya", "number", "संख्या"),
+        "ask": ("sabse badi sankhya", "sabse bada number",
+                "largest number", "biggest number"),
+        "max_literals": 1,
+        "en": {
+            "answer": "There is no largest number — numbers "
+                      "never end",
+            "steps": [
+                "Jitni badi sankhya socho, usme 1 jodte hi "
+                "usse badi mil jayegi — isliye sabse badi "
+                "sankhya hoti hi nahi.",
+                "Short me: sankhyayen anant hai, sabse badi "
+                "koi nahi.",
+            ],
+        },
+        "roman": {
+            "answer": "Koi sabse badi sankhya nahi hoti — "
+                      "sankhyayen kabhi khatm nahi hoti",
+            "steps": [
+                "Jitni badi sankhya socho, usme 1 jodte hi "
+                "usse badi mil jayegi — isliye sabse badi "
+                "sankhya hoti hi nahi.",
+                "Short me: sankhyayen anant hai, sabse badi "
+                "koi nahi.",
+            ],
+        },
+        "dev": {
+            "answer": "कोई सबसे बड़ी संख्या नहीं होती — "
+                      "संख्याएँ कभी ख़त्म नहीं होतीं",
+            "steps": [
+                "जितनी बड़ी संख्या सोचो, उसमें 1 जोड़ते ही "
+                "उससे बड़ी मिल जाएगी — इसलिए सबसे बड़ी "
+                "संख्या होती ही नहीं।",
+                "संक्षेप में: संख्याएँ अनंत हैं, सबसे बड़ी "
+                "कोई नहीं।",
+            ],
+        },
+    },
+    {
+        "id": "smallest_number",
+        "keywords": ("sankhya", "number", "संख्या"),
+        "ask": ("sabse chhoti sankhya", "sabse chhota number",
+                "smallest number"),
+        "max_literals": 1,
+        "en": {
+            "answer": "There is no smallest number either — "
+                      "negative numbers go on forever",
+            "steps": [
+                "Jitni chhoti sankhya socho, usme se 1 "
+                "ghatate hi aur chhoti mil jayegi: −1, −2, "
+                "−3, … bina ruke.",
+                "Short me: sabse chhoti sankhya bhi koi "
+                "nahi.",
+            ],
+        },
+        "roman": {
+            "answer": "Sabse chhoti sankhya bhi koi nahi — "
+                      "negative sankhyayen anant tak jaati hai",
+            "steps": [
+                "Jitni chhoti sankhya socho, usme se 1 "
+                "ghatate hi aur chhoti mil jayegi: −1, −2, "
+                "−3, … bina ruke.",
+                "Short me: sabse chhoti sankhya bhi koi "
+                "nahi.",
+            ],
+        },
+        "dev": {
+            "answer": "सबसे छोटी संख्या भी कोई नहीं — "
+                      "ऋणात्मक संख्याएँ अनंत तक जाती हैं",
+            "steps": [
+                "जितनी छोटी संख्या सोचो, उसमें से 1 घटाते "
+                "ही और छोटी मिल जाएगी: −1, −2, −3, … बिना "
+                "रुके।",
+                "संक्षेप में: सबसे छोटी संख्या भी कोई नहीं।",
             ],
         },
     },
@@ -1724,7 +3186,7 @@ _ADVICE_SHAPE_WORDS = (
 def _result(kind, entry, flavour):
     text = entry[flavour]
     return {
-        "type": "Maths fact" if kind == "history"
+        "type": "Maths fact" if kind in ("history", "fact")
                 else "Study advice",
         "op": f"{kind}_{entry['id']}",
         "answer": text["answer"],
@@ -1757,7 +3219,12 @@ def meta_result(question, flavour=None):
     # "en" flavour to "roman". Genuine English asks carry
     # none of these words, so they are untouched.
     if flavour == "en" and any(m in q for m in (
-            "kisne", "kaun tha", "kaun thi", "kaun the")):
+            "kisne", "kaun tha", "kaun thi", "kaun the",
+            # Wave 177: the FACT layer's Hinglish asks carry
+            # the same plain markers.
+            "sabse", "kitne", "kitna", "kaun sa", "kya hai",
+            "kya hota", "hote hai", "hota hai",
+            "kaha se", "kahan se", "shabd", "naam")):
         flavour = "roman"
     # History first: a who-shaped ask about a curated
     # topic/person is answered by the FACT layer, before
@@ -1766,6 +3233,14 @@ def meta_result(question, flavour=None):
         for entry in HISTORY:
             if _entry_hit(q, entry):
                 return _result("history", entry, flavour)
+    # Wave 177: the FACT layer — non-who maths GK
+    # (superlatives, counting facts, word origins). Same
+    # position for the same reason: these asks are not
+    # computations, and the layers below either fragment-
+    # solve them or collapse them to the not-found line.
+    for entry in FACTS:
+        if _fact_hit(q, entry):
+            return _result("fact", entry, flavour)
     # Advice: study-behaviour triggers, maths-gated. A
     # difference/comparison ask ("AP aur GP me fark") is a
     # concept ask owned by the topics library's difference
@@ -1813,4 +3288,1111 @@ def is_meta_shaped(question):
     return False
 
 
-__all__ = ["HISTORY", "ADVICE", "meta_result", "is_meta_shaped"]
+# Wave 177: the wider KNOWLEDGE net — the mirror of
+# is_meta_shaped for the whole maths-knowledge class (who /
+# when / why / what-is ABOUT mathematics: its history,
+# people, definitions, number facts, word origins).
+# fallback.py consults it at the same decision point: a
+# knowledge-shaped question the curated entries miss
+# ("abacus kya hota hai", "angle kya hota hai", "vedic
+# maths kya hota hai") is a genuine question for the AI
+# chain, not gibberish — while a computation shape (fresh
+# problem veto) and non-maths topics stay out, exactly as
+# in is_meta_shaped.
+_KNOWLEDGE_SHAPE_PHRASES = (
+    "kya hai", "kya hota", "kya hote", "kya hoti", "matlab",
+    "what is", "what does", "meaning", "kaha se aaya",
+    "kahan se aaya", "kab hua", "kab bana", "sabse",
+    "kitne", "kitna", "kaun", "kisne", "kab", "kyu",
+    "kyon", "किसने", "कौन", "कब", "क्यों", "क्या", "मतलब",
+    "सबसे", "कितने", "कितना",
+)
+_KNOWLEDGE_SHAPE_EN = re.compile(
+    r"\b(who|why|when|what|largest|smallest|biggest|"
+    r"how many|invent\w*|discover\w*|origin)\b")
+_KNOWLEDGE_TOPIC_WORDS = _MATHS_SIGNALS + (
+    "zero", "shunya", "शून्य", "prime", "composite",
+    "abhaajya", "अभाज्य", "infinity", "anant", "अनंत",
+    "roman", "crore", "lakh", "million", "billion",
+    "dozen", "gross", "decimal", "angle", "kon", "कोण",
+    "triangle", "tribhuj", "त्रिभुज", "fibonacci",
+    "calculator", "abacus", "vedic", "euler", "gauss",
+    "newton", "archimedes", "leibniz", "symbol", "sign",
+    "chinh", "bodmas", "pemdas", "sankhya", "संख्या",
+    "ank", "अंक", "digit", "number", "algebra",
+    "geometry", "trigonometry", "theorem", "factorial",
+    "fraction", "percent", "ratio", "anupat", "circle",
+    "vritt", "वृत्त", "square", "cube", "root", "power",
+    "ganitagya", "mathematician", "itihas", "history",
+    "janak", "जनक", "pita", "father",
+)
+
+
+def is_knowledge_shaped(question):
+    """True when the question is a maths-KNOWLEDGE question
+    (curated hit or not): a who/when/why/what-is shape about
+    a maths topic. fallback.py uses it alongside
+    is_meta_shaped for the gibberish-vs-guide decision, so
+    the class always reaches the AI chain when the curated
+    layers miss it."""
+    q = str(question or "").lower()
+    if not q.strip() or _has_fresh_problem(q):
+        return False
+    shape = _has_who_shape(q) \
+        or _KNOWLEDGE_SHAPE_EN.search(q) is not None \
+        or any(w in q for w in _KNOWLEDGE_SHAPE_PHRASES)
+    if not shape:
+        return False
+    return any(w in q for w in _KNOWLEDGE_TOPIC_WORDS) \
+        or any(_entry_hit(q, e) for e in HISTORY) \
+        or any(_fact_hit(q, e) for e in FACTS)
+
+
+__all__ = ["HISTORY", "FACTS", "ADVICE", "meta_result",
+           "is_meta_shaped", "is_knowledge_shaped",
+           "meta_variation"]
+
+
+# ---------------------------------------------------------------------------
+# Wave 178: repeat-ask VARIATIONS for the knowledge class
+# (Suraj's standing rule, 19 Nov 2026 ~09:52 IST — the
+# same ask again must never be the same copy-paste).
+#
+# repeat.py owns the counting and the warm opener; this
+# module owns the extra words, like the base cards:
+#   "again" (2nd ask): one fresh related detail.
+#   "third" (3rd+ ask): a deeper fact and/or a practice
+#       step the student can actually do.
+# Authored lines exist for the most-asked entries; every
+# other entry falls back to its KIND's generic pool —
+# lines written to stay true no matter which entry of
+# that kind they ride on (memory tricks, self-tests,
+# universal study tips — never a claim about the entry
+# itself). Rotation advances with the ask-count, so the
+# 3rd ask is not the 2nd ask's card and the 4th is not
+# the 3rd's either.
+# ---------------------------------------------------------------------------
+
+META_VARIATIONS = {
+    ("history", "zero"): {
+        "en": {
+            "again": [
+                "One more detail: zero travelled from India "
+                "through Arabic books to Europe — that is "
+                "why old European books call our numerals "
+                "'Arabic numerals', though the system is "
+                "Indian."],
+            "third": [
+                "Try this once: write 1005 without using 0 "
+                "at all, the way the Romans had to. In one "
+                "minute you will feel why zero changed "
+                "maths forever."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: zero India se Arabi kitabon ke "
+                "raaste Europe pahuncha — isiliye purani "
+                "European kitabein hamare ankon ko 'Arabic "
+                "numerals' kehti hai, halanki ye system "
+                "Indian hai."],
+            "third": [
+                "Ek baar ye karke dekho: 1005 ko bina 0 "
+                "istemal kiye likho, jaise Romans ko likhna "
+                "padta tha. Ek minute me samjhoge ki zero "
+                "ne maths hamesha ke liye kyun badal diya."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: zero India से Arabi किताबों के "
+                "रास्ते Europe पहुँचा — इसीलिए पुरानी European "
+                "किताबें हमारे अंकों को 'Arabic numerals' "
+                "कहती हैं, हालाँकि ये system Indian है।"],
+            "third": [
+                "एक बार ये करके देखो: 1005 को बिना 0 इस्तेमाल "
+                "किए लिखो, जैसे Romans को लिखना पड़ता था। "
+                "एक minute में समझोगे कि zero ने maths "
+                "हमेशा के लिए क्यों बदल दिया।"],
+        },
+    },
+    ("history", "pi"): {
+        "en": {
+            "again": [
+                "One more detail: Aryabhata's value 3.1416 "
+                "was so accurate that it stayed in use for "
+                "centuries — he found it by measuring "
+                "circles with great care."],
+            "third": [
+                "Now measure pi yourself: wrap a thread "
+                "around any round plate, measure the thread "
+                "and the plate's width (diameter), and "
+                "divide. You will land near 3.14 every "
+                "single time — that is pi, in your own "
+                "hands."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Aryabhata ki value 3.1416 itni "
+                "sateek thi ki sadion tak chalti rahi — "
+                "unhone golon ko bahut dhyaan se naap kar ye "
+                "nikali thi."],
+            "third": [
+                "Ab pi ko khud naapo: kisi gol thali ke "
+                "chaaron or dhaga lapeto, dhage ki lambai "
+                "aur thali ki chaudi (diameter) naapo, aur "
+                "bhaag do. Har baar 3.14 ke aas-paas hi "
+                "aayega — yahi pi hai, tumhare apne haathon "
+                "me."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: Aryabhata की value 3.1416 इतनी "
+                "सटीक थी कि सदियों तक चलती रही — उन्होंने "
+                "गोलों को बहुत ध्यान से नाप कर ये निकाली "
+                "थी।"],
+            "third": [
+                "अब pi को ख़ुद नापो: किसी गोल थाली के चारों "
+                "ओर धागा लपेटो, धागे की लंबाई और थाली की "
+                "चौड़ाई (diameter) नापो, और भाग दो। हर बार "
+                "3.14 के आस-पास ही आएगा — यही pi है, "
+                "तुम्हारे अपने हाथों में।"],
+        },
+    },
+    ("history", "algebra"): {
+        "en": {
+            "again": [
+                "One more detail: Al-Khwarizmi's book also "
+                "gave us the word 'algorithm' — it comes "
+                "from the Latin form of his own name."],
+            "third": [
+                "A small practice: 'al-jabr' meant restoring "
+                "— moving a minus term to the other side to "
+                "make it plus. Solve x − 4 = 10 by exactly "
+                "that move, and you have done al-jabr "
+                "yourself."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Al-Khwarizmi ki kitab se hi "
+                "hame 'algorithm' shabd bhi mila — ye unke "
+                "hi naam ke Latin roop se bana hai."],
+            "third": [
+                "Ek chhoti practice: 'al-jabr' ka matlab tha "
+                "— jodna, minus wale pad ko dusri taraf le "
+                "jakar plus banana. x − 4 = 10 ko bilkul "
+                "usi chaal se solve karo — tumne khud "
+                "al-jabr kar liya."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: Al-Khwarizmi की किताब से ही हमें "
+                "'algorithm' शब्द भी मिला — ये उनके ही नाम "
+                "के Latin रूप से बना है।"],
+            "third": [
+                "एक छोटी practice: 'al-jabr' का मतलब था — "
+                "जोड़ना, minus वाले पद को दूसरी तरफ़ ले जाकर "
+                "plus बनाना। x − 4 = 10 को बिल्कुल उसी चाल "
+                "से solve करो — तुमने ख़ुद al-jabr कर "
+                "लिया।"],
+        },
+    },
+    ("history", "euclid"): {
+        "en": {
+            "again": [
+                "One more detail: Euclid's book 'Elements' "
+                "stayed the world's geometry textbook for "
+                "about 2,000 years — among the most reprinted "
+                "books in history."],
+            "third": [
+                "Try Euclid's way once: state one geometry "
+                "fact you know, then ask 'why is it true?' "
+                "three times in a row. That chain of whys "
+                "is exactly how Elements is built."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Euclid ki kitab 'Elements' "
+                "lagbhag 2,000 saal tak duniya ki geometry "
+                "ki textbook rahi — itihaas ki sabse zyada "
+                "chhapi kitabon me se ek."],
+            "third": [
+                "Ek baar Euclid ke tareeke se socho: ek "
+                "geometry ki baat lo jo tumhe aati hai, "
+                "phir teen baar pucho 'ye sach kyun hai?' "
+                "Whyon ki yahi chain Elements ki buniyaad "
+                "hai."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: Euclid की किताब 'Elements' लगभग "
+                "2,000 साल तक दुनिया की geometry की textbook "
+                "रही — इतिहास की सबसे ज़्यादा छपी किताबों "
+                "में से एक।"],
+            "third": [
+                "एक बार Euclid के तरीके से सोचो: एक geometry "
+                "की बात लो जो तुम्हें आती है, फिर तीन बार "
+                "पूछो 'ये सच क्यों है?' क्यों की यही chain "
+                "Elements की बुनियाद है।"],
+        },
+    },
+    ("history", "calculus"): {
+        "en": {
+            "again": [
+                "One more detail: Newton and Leibniz even "
+                "fought over who was first — historians now "
+                "credit both, because they truly worked "
+                "independently, with different notations."],
+            "third": [
+                "A practice thought: calculus is the maths "
+                "of things that CHANGE — speed from a "
+                "speedometer, water filling a tank. Name "
+                "one changing thing around you right now; "
+                "that is a calculus question waiting."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Newton aur Leibniz me ispar "
+                "jhagda bhi hua ki pehle kisne banaya — aaj "
+                "itihaaskaar dono ko shrey dete hai, kyunki "
+                "dono ne sach me alag-alag, apne-apne "
+                "notation se kaam kiya tha."],
+            "third": [
+                "Ek practice soch: calculus BADALTI cheezon "
+                "ka maths hai — speedometer ki speed, tank "
+                "me bharta paani. Abhi apne aas-paas ki ek "
+                "badalti cheez ka naam lo; wahi ek calculus "
+                "sawal banne wala hai."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: Newton और Leibniz में इसपर झगड़ा "
+                "भी हुआ कि पहले किसने बनाया — आज इतिहासकार "
+                "दोनों को श्रेय देते हैं, क्योंकि दोनों ने "
+                "सच में अलग-अलग, अपने-अपने notation से काम "
+                "किया था।"],
+            "third": [
+                "एक practice सोच: calculus बदलती चीज़ों का "
+                "maths है — speedometer की speed, tank में "
+                "भरता पानी। अभी अपने आस-पास की एक बदलती "
+                "चीज़ का नाम लो; वही एक calculus सवाल बनने "
+                "वाला है।"],
+        },
+    },
+    ("history", "aryabhata"): {
+        "en": {
+            "again": [
+                "One more detail: Aryabhata also explained "
+                "that the Earth rotates on its axis — more "
+                "than a thousand years before it was "
+                "accepted in Europe."],
+            "third": [
+                "A fact to carry away: he wrote the "
+                "Aryabhatiya at just 23 years of age. Big "
+                "work does not wait for old age — it waits "
+                "for daily practice."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Aryabhata ne ye bhi bataya tha "
+                "ki Prithvi apni dhuri par ghoomti hai — "
+                "Europe me ye baat maanne se ek hazaar saal "
+                "se bhi pehle."],
+            "third": [
+                "Ek baat saath le jao: unhone Aryabhatiya "
+                "sirf 23 saal ki umar me likhi thi. Bada "
+                "kaam budhape ka intezaar nahi karta — roz "
+                "ki practice ka karta hai."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: Aryabhata ने ये भी बताया था कि "
+                "पृथ्वी अपनी धुरी पर घूमती है — Europe में "
+                "ये बात मानने से एक हज़ार साल से भी पहले।"],
+            "third": [
+                "एक बात साथ ले जाओ: उन्होंने Aryabhatiya "
+                "सिर्फ़ 23 साल की उम्र में लिखी थी। बड़ा "
+                "काम बुढ़ापे का इंतज़ार नहीं करता — रोज़ "
+                "की practice का करता है।"],
+        },
+    },
+    ("history", "brahmagupta"): {
+        "en": {
+            "again": [
+                "One more detail: Brahmagupta also worked on "
+                "quadratic equations and gave a famous rule "
+                "for the area of a cyclic quadrilateral — "
+                "Class 10's Heron-style area work has roots "
+                "in his writing."],
+            "third": [
+                "Try his zero rules yourself: what is 5 + 0, "
+                "5 − 0, 5 × 0? Easy — but notice that 5 ÷ 0 "
+                "still has no answer even today. Brahmagupta "
+                "wrestled with exactly that one."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Brahmagupta ne quadratic "
+                "equations par bhi kaam kiya aur chakriya "
+                "chaturbhuj ke kshetrafal ka mashhoor niyam "
+                "diya — Class 10 ke area wale kaam ki jadein "
+                "unke lekhan me hai."],
+            "third": [
+                "Unke zero-niyam khud aazmao: 5 + 0, 5 − 0, "
+                "5 × 0 kitna hota hai? Aasan hai — par dekho, "
+                "5 ÷ 0 ka jawab aaj bhi nahi hai. Brahmagupta "
+                "bilkul isi se jujhe the."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: Brahmagupta ने quadratic "
+                "equations पर भी काम किया और चक्रीय चतुर्भुज "
+                "के क्षेत्रफल का मशहूर नियम दिया — Class 10 "
+                "के area वाले काम की जड़ें उनके लेखन में "
+                "हैं।"],
+            "third": [
+                "उनके zero-नियम ख़ुद आज़माओ: 5 + 0, 5 − 0, "
+                "5 × 0 कितना होता है? आसान है — पर देखो, "
+                "5 ÷ 0 का जवाब आज भी नहीं है। Brahmagupta "
+                "बिल्कुल इसी से जूझे थे।"],
+        },
+    },
+    ("history", "bhaskara"): {
+        "en": {
+            "again": [
+                "One more detail: Lilavati is written as "
+                "poetry, and many problems are addressed to "
+                "a young girl — 'O beautiful one, tell me…' "
+                "Maths as a story, 900 years ago."],
+            "third": [
+                "A Lilavati-flavoured practice: a swarm of "
+                "bees — half of them on one flower, and 5 "
+                "left over. If the whole swarm is 15, how "
+                "many sit on the flower? (Answer: 10.) That "
+                "playful style is Bhaskara's gift."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Lilavati kavita me likhi gayi "
+                "hai, aur kai sawal ek ladki ko sambodhit "
+                "hai — 'O sundari, batao…' 900 saal pehle "
+                "maths ek kahani ki tarah."],
+            "third": [
+                "Lilavati ke andaaz ki ek practice: "
+                "madhumakhkhiyon ka jhund — aadhi ek phool "
+                "par baithi, 5 bachi rahi. Poora jhund 15 "
+                "hai toh phool par kitni hai? (Jawab: 10.) "
+                "Ye khel-bhara andaaz Bhaskara ki den hai."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: Lilavati कविता में लिखी गई है, "
+                "और कई सवाल एक लड़की को संबोधित हैं — 'O "
+                "सुंदरी, बताओ…' 900 साल पहले maths एक कहानी "
+                "की तरह।"],
+            "third": [
+                "Lilavati के अंदाज़ की एक practice: "
+                "मधुमक्खियों का झुंड — आधी एक फूल पर बैठीं, "
+                "5 बची रहीं। पूरा झुंड 15 है तो फूल पर "
+                "कितनी हैं? (जवाब: 10.) ये खेल-भरा अंदाज़ "
+                "Bhaskara की देन है।"],
+        },
+    },
+    ("history", "ramanujan"): {
+        "en": {
+            "again": [
+                "One more detail: Ramanujan filled notebooks "
+                "with thousands of results, many without "
+                "proofs — mathematicians are still proving "
+                "some of them today, a century later."],
+            "third": [
+                "A Ramanujan-style habit to copy: he played "
+                "with numbers daily, like friends. Try it — "
+                "take today's date and find two different "
+                "ways to build it from smaller numbers."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Ramanujan ne apni copies me "
+                "hazaaron parinaam bhare, kai bina proof ke "
+                "— ganitgya aaj, ek sadi baad bhi, unme se "
+                "kuch ko saabit kar rahe hai."],
+            "third": [
+                "Ramanujan jaisi ek aadat apnao: wo roz "
+                "ankon se doston ki tarah khelte the. "
+                "Aazmao — aaj ki tareekh lo aur use chhote "
+                "ankon se banane ke do alag tareeke dhundo."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: Ramanujan ने अपनी copies में "
+                "हज़ारों परिणाम भरे, कई बिना proof के — "
+                "गणितज्ञ आज, एक सदी बाद भी, उनमें से कुछ "
+                "को साबित कर रहे हैं।"],
+            "third": [
+                "Ramanujan जैसी एक आदत अपनाओ: वो रोज़ अंकों "
+                "से दोस्तों की तरह खेलते थे। आज़माओ — आज "
+                "की तारीख़ लो और उसे छोटे अंकों से बनाने "
+                "के दो अलग तरीके ढूँढो।"],
+        },
+    },
+    ("history", "shakuntala_devi"): {
+        "en": {
+            "again": [
+                "One more detail: in 1980 she multiplied "
+                "two 13-digit numbers in 28 seconds — a "
+                "world record at the time, done entirely in "
+                "her head."],
+            "third": [
+                "Her secret was practice, not magic: start "
+                "small like her — add today's two bus or "
+                "auto numbers in your head before checking. "
+                "Mental maths grows exactly like this."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: 1980 me unhone do 13-ankon "
+                "wali sankhyaon ka guna 28 second me kar "
+                "diya tha — us samay ka world record, poora "
+                "dimaag me."],
+            "third": [
+                "Unka raaz practice tha, jaadu nahi: unki "
+                "tarah chhota shuru karo — aaj bus ya auto "
+                "ke do number pehle dimaag me jodo, phir "
+                "mila kar dekho. Mental maths aise hi "
+                "badhta hai."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: 1980 में उन्होंने दो 13-अंकों "
+                "वाली संख्याओं का गुणा 28 second में कर "
+                "दिया था — उस समय का world record, पूरा "
+                "दिमाग़ में।"],
+            "third": [
+                "उनका राज़ practice था, जादू नहीं: उनकी तरह "
+                "छोटा शुरू करो — आज bus या auto के दो number "
+                "पहले दिमाग़ में जोड़ो, फिर मिला कर देखो। "
+                "Mental maths ऐसे ही बढ़ता है।"],
+        },
+    },
+    ("history", "archimedes"): {
+        "en": {
+            "again": [
+                "One more detail: Archimedes also gave the "
+                "famous shout 'Eureka!' — legend says he "
+                "ran from his bath when he saw how water "
+                "displacement measures volume."],
+            "third": [
+                "Try his idea at home: fill a mug to the "
+                "brim over a plate, drop in a stone, and "
+                "the water that spills IS the stone's "
+                "volume. You just did Archimedes' "
+                "experiment."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Archimedes ki mashhoor cheekh "
+                "'Eureka!' bhi unhi ki hai — kahaani hai ki "
+                "nahane ke tub me unhe samajh aaya ki paani "
+                "ka visthapan aayatan naapta hai."],
+            "third": [
+                "Unka vichaar ghar par aazmao: ek mug ko "
+                "kinaare tak bharo, ek patthar dalo — jo "
+                "paani bahar gira, wahi patthar ka aayatan "
+                "hai. Tumne Archimedes ka prayog kar liya."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: Archimedes की मशहूर चीख़ "
+                "'Eureka!' भी उन्हीं की है — कहानी है कि "
+                "नहाने के tub में उन्हें समझ आया कि पानी "
+                "का विस्थापन आयतन नापता है।"],
+            "third": [
+                "उनका विचार घर पर आज़माओ: एक mug को किनारे "
+                "तक भरो, एक पत्थर डालो — जो पानी बाहर गिरा, "
+                "वही पत्थर का आयतन है। तुमने Archimedes का "
+                "प्रयोग कर लिया।"],
+        },
+    },
+    ("history", "gauss"): {
+        "en": {
+            "again": [
+                "One more detail: as a small schoolboy Gauss "
+                "stunned his teacher by adding 1 to 100 in "
+                "seconds — he paired 1+100, 2+99, … into "
+                "fifty pairs of 101."],
+            "third": [
+                "Now use his trick yourself: add 1 to 50 "
+                "the pairing way (1+50, 2+49, … — 25 pairs "
+                "of 51). Answer: 1275. Once seen, this "
+                "trick is yours forever."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: chhote school-boy Gauss ne "
+                "apne teacher ko hairaan kar diya tha — 1 "
+                "se 100 tak ka jod kuch seconds me: 1+100, "
+                "2+99, … pachas jode, har joda 101."],
+            "third": [
+                "Ab unki trick khud aazmao: 1 se 50 tak "
+                "jodo jode bana kar (1+50, 2+49, … — 25 "
+                "jode, har joda 51). Jawab: 1275. Ek baar "
+                "dekh liya toh ye trick hamesha tumhari."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: छोटे school-boy Gauss ने अपने "
+                "teacher को हैरान कर दिया था — 1 से 100 "
+                "तक का जोड़ कुछ seconds में: 1+100, 2+99, "
+                "… पचास जोड़े, हर जोड़ा 101।"],
+            "third": [
+                "अब उनकी trick ख़ुद आज़माओ: 1 से 50 तक "
+                "जोड़ो जोड़े बना कर (1+50, 2+49, … — 25 "
+                "जोड़े, हर जोड़ा 51)। जवाब: 1275। एक बार "
+                "देख लिया तो ये trick हमेशा तुम्हारी।"],
+        },
+    },
+    ("history", "fibonacci"): {
+        "en": {
+            "again": [
+                "One more detail: Fibonacci learned the "
+                "Indian number system in North Africa and "
+                "carried it to Europe through his book "
+                "Liber Abaci (1202)."],
+            "third": [
+                "Spot it in nature: count the petals of a "
+                "flower near you, or the spirals on a "
+                "pinecone — 3, 5, 8, 13 turn up again and "
+                "again. Then continue the sequence to the "
+                "next two terms yourself: 21, 34."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Fibonacci ne Bharatiya ank "
+                "paddhati North Africa me seekhi aur apni "
+                "kitab Liber Abaci (1202) se use Europe "
+                "pahunchaya."],
+            "third": [
+                "Ise prakriti me dhundo: apne aas-paas ke "
+                "phool ki pankhudiyan gino, ya devdaar ke "
+                "shanku ke ghumav — 3, 5, 8, 13 baar-baar "
+                "milte hai. Phir sequence ko aage ke do pad "
+                "khud banao: 21, 34."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: Fibonacci ने भारतीय अंक पद्धति "
+                "North Africa में सीखी और अपनी किताब Liber "
+                "Abaci (1202) से उसे Europe पहुँचाया।"],
+            "third": [
+                "इसे प्रकृति में ढूँढो: अपने आस-पास के फूल "
+                "की पंखुड़ियाँ गिनो, या देवदार के शंकु के "
+                "घुमाव — 3, 5, 8, 13 बार-बार मिलते हैं। "
+                "फिर sequence को आगे के दो पद ख़ुद बनाओ: "
+                "21, 34।"],
+        },
+    },
+    ("history", "pythagoras"): {
+        "en": {
+            "again": [
+                "One more detail: the theorem was known in "
+                "India and Babylon long before Pythagoras — "
+                "Baudhayana's Sulba Sutras state it too. "
+                "Pythagoras' name stuck because his school "
+                "proved and taught it widely."],
+            "third": [
+                "Check the theorem with your hands: a 3-4-5 "
+                "triangle is always right-angled, because "
+                "9 + 16 = 25. Builders still use a 3-4-5 "
+                "rope to make perfect corners."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: ye pramey Pythagoras se bahut "
+                "pehle Bharat aur Babylon me jaani jaati "
+                "thi — Baudhayana ke Sulba Sutron me bhi ye "
+                "hai. Pythagoras ka naam isliye chipka "
+                "kyunki unke school ne ise saabit karke "
+                "door-door tak padhaya."],
+            "third": [
+                "Pramey ko haathon se parkho: 3-4-5 wala "
+                "tribhuj hamesha samkon hota hai, kyunki "
+                "9 + 16 = 25. Mistry aaj bhi 3-4-5 ki rassi "
+                "se perfect kona banate hai."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: ये प्रमेय Pythagoras से बहुत "
+                "पहले भारत और Babylon में जानी जाती थी — "
+                "Baudhayana के Sulba सूत्रों में भी ये है। "
+                "Pythagoras का नाम इसलिए चिपका क्योंकि "
+                "उनके school ने इसे साबित करके दूर-दूर तक "
+                "पढ़ाया।"],
+            "third": [
+                "प्रमेय को हाथों से परखो: 3-4-5 वाला त्रिभुज "
+                "हमेशा समकोण होता है, क्योंकि 9 + 16 = 25। "
+                "मिस्त्री आज भी 3-4-5 की रस्सी से perfect "
+                "कोना बनाते हैं।"],
+        },
+    },
+    ("fact", "hardy_ramanujan"): {
+        "en": {
+            "again": [
+                "One more detail: Hardy had come in a taxi "
+                "numbered 1729 and called it dull — "
+                "Ramanujan, ill in bed, answered at once "
+                "that it is the smallest number writable as "
+                "a sum of two cubes in two different ways."],
+            "third": [
+                "Verify the magic yourself: 1³ + 12³ = 1 + "
+                "1728 = 1729, and 9³ + 10³ = 729 + 1000 = "
+                "1729. Two roads, one number — now it is "
+                "yours too."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Hardy taxi number 1729 se aaye "
+                "the aur use 'boring' kaha tha — Ramanujan "
+                "ne bistar par lete-lete turant jawab diya "
+                "ki ye sabse chhoti sankhya hai jo do ghanon "
+                "ke jod ke roop me do alag tareekon se likhi "
+                "ja sakti hai."],
+            "third": [
+                "Jaadu khud jaancho: 1³ + 12³ = 1 + 1728 = "
+                "1729, aur 9³ + 10³ = 729 + 1000 = 1729. Do "
+                "raaste, ek number — ab ye tumhara bhi "
+                "hai."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: Hardy taxi number 1729 से आए थे "
+                "और उसे 'boring' कहा था — Ramanujan ने "
+                "बिस्तर पर लेटे-लेटे तुरंत जवाब दिया कि ये "
+                "सबसे छोटी संख्या है जो दो घनों के जोड़ के "
+                "रूप में दो अलग तरीकों से लिखी जा सकती "
+                "है।"],
+            "third": [
+                "जादू ख़ुद जाँचो: 1³ + 12³ = 1 + 1728 = "
+                "1729, और 9³ + 10³ = 729 + 1000 = 1729। दो "
+                "रास्ते, एक number — अब ये तुम्हारा भी "
+                "है।"],
+        },
+    },
+    ("fact", "infinity"): {
+        "en": {
+            "again": [
+                "One more detail: the ∞ symbol was "
+                "introduced by John Wallis in 1655 — its "
+                "loop shape itself suggests something that "
+                "never ends."],
+            "third": [
+                "A mind-bending practice: is the infinity "
+                "of even numbers (2, 4, 6, …) smaller than "
+                "the infinity of all numbers? Pair them — "
+                "1↔2, 2↔4, 3↔6 — every number gets a "
+                "partner, so the two infinities match. "
+                "Infinity plays by strange rules."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: ∞ ka chinh John Wallis ne 1655 "
+                "me diya tha — iski ghumavdaar aakriti khud "
+                "hi 'kabhi khatm na hone' ka ishara hai."],
+            "third": [
+                "Dimaag ghuma dene wali ek practice: kya "
+                "sam sankhyaon ki anant-ta (2, 4, 6, …) "
+                "sab sankhyaon ki anant-ta se chhoti hai? "
+                "Jode banao — 1↔2, 2↔4, 3↔6 — har sankhya "
+                "ko saathi mil jata hai, toh dono anant-ta "
+                "barabar nikli. Anant ke niyam ajeeb hai."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: ∞ का चिन्ह John Wallis ने 1655 "
+                "में दिया था — इसकी घुमावदार आकृति ख़ुद ही "
+                "'कभी ख़त्म न होने' का इशारा है।"],
+            "third": [
+                "दिमाग़ घुमा देने वाली एक practice: क्या सम "
+                "संख्याओं की अनंतता (2, 4, 6, …) सब "
+                "संख्याओं की अनंतता से छोटी है? जोड़े बनाओ "
+                "— 1↔2, 2↔4, 3↔6 — हर संख्या को साथी मिल "
+                "जाता है, तो दोनों अनंतता बराबर निकलीं। "
+                "अनंत के नियम अजीब हैं।"],
+        },
+    },
+    ("fact", "lakh_zeros"): {
+        "en": {
+            "again": [
+                "One more detail: the Indian system groups "
+                "digits as 3-2-2 (1,00,000) while the "
+                "international system groups by 3s "
+                "(100,000) — same number, different commas."],
+            "third": [
+                "Quick practice, say it without writing: "
+                "how many zeros in 10 lakh? (Answer: 6 — "
+                "10 lakh is 10,00,000, the same as one "
+                "million.)"],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: Bharatiya paddhati ankon ko "
+                "3-2-2 me baantti hai (1,00,000), jabki "
+                "antarrashtriya paddhati 3-3 me (100,000) — "
+                "number wahi, bas comma alag."],
+            "third": [
+                "Jhatpat practice, bina likhe batao: 10 "
+                "lakh me kitne zero? (Jawab: 6 — 10 lakh "
+                "matlab 10,00,000, yahi ek million hai.)"],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: भारतीय पद्धति अंकों को 3-2-2 में "
+                "बाँटती है (1,00,000), जबकि अंतरराष्ट्रीय "
+                "पद्धति 3-3 में (100,000) — number वही, बस "
+                "comma अलग।"],
+            "third": [
+                "झटपट practice, बिना लिखे बताओ: 10 lakh में "
+                "कितने zero? (जवाब: 6 — 10 lakh मतलब "
+                "10,00,000, यही एक million है।)"],
+        },
+    },
+    ("fact", "golden_ratio"): {
+        "en": {
+            "again": [
+                "One more detail: φ hides inside the "
+                "Fibonacci sequence — divide any term by "
+                "the one before it (8÷5, 13÷8, 21÷13) and "
+                "the answers creep closer and closer to "
+                "1.618."],
+            "third": [
+                "Try it: 21 ÷ 13 on paper — you get 1.615…, "
+                "then 34 ÷ 21 gives 1.619…. The ratio is "
+                "walking towards φ step by step. Two "
+                "divisions and you have met it yourself."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: φ Fibonacci sequence ke andar "
+                "chhupa hai — kisi pad ko uske pichle pad se "
+                "bhaag do (8÷5, 13÷8, 21÷13) aur jawab "
+                "1.618 ke aur aur paas jate hai."],
+            "third": [
+                "Aazmao: 21 ÷ 13 copy par karo — 1.615… "
+                "aayega, phir 34 ÷ 21 = 1.619… Anupat kadam "
+                "kadam φ ki or badh raha hai. Do bhaag aur "
+                "tum φ se khud mil liye."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: φ Fibonacci sequence के अंदर "
+                "छुपा है — किसी पद को उसके पिछले पद से भाग "
+                "दो (8÷5, 13÷8, 21÷13) और जवाब 1.618 के "
+                "और और पास जाते हैं।"],
+            "third": [
+                "आज़माओ: 21 ÷ 13 copy पर करो — 1.615… "
+                "आएगा, फिर 34 ÷ 21 = 1.619…। अनुपात कदम "
+                "कदम φ की ओर बढ़ रहा है। दो भाग और तुम φ "
+                "से ख़ुद मिल लिए।"],
+        },
+    },
+    ("fact", "one_neither"): {
+        "en": {
+            "again": [
+                "One more detail: 1 was treated as a prime "
+                "in many old books — mathematicians later "
+                "agreed to exclude it, because keeping 1 "
+                "out makes the prime rules (like unique "
+                "factorisation) work cleanly."],
+            "third": [
+                "Test the definition yourself: a prime must "
+                "have EXACTLY two factors. Count 1's factors "
+                "— only 1 itself, just one. That single "
+                "count is the whole reason."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: kai purani kitabon me 1 ko "
+                "prime mana jata tha — baad me ganitgyon ne "
+                "ise bahar rakhna tay kiya, kyunki 1 ko "
+                "bahar rakhne se prime ke niyam (jaise "
+                "unique factorisation) saaf chalte hai."],
+            "third": [
+                "Paribhasha khud parkho: prime ke THIK do "
+                "gunankhand hone chahiye. 1 ke gunankhand "
+                "gino — sirf 1, keval ek. Yahi ek ginti "
+                "poori wajah hai."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: कई पुरानी किताबों में 1 को prime "
+                "माना जाता था — बाद में गणितज्ञों ने इसे "
+                "बाहर रखना तय किया, क्योंकि 1 को बाहर रखने "
+                "से prime के नियम (जैसे unique factorisation) "
+                "साफ़ चलते हैं।"],
+            "third": [
+                "परिभाषा ख़ुद परखो: prime के ठीक दो गुणनखंड "
+                "होने चाहिए। 1 के गुणनखंड गिनो — सिर्फ़ 1, "
+                "केवल एक। यही एक गिनती पूरी वजह है।"],
+        },
+    },
+    ("fact", "prime_two"): {
+        "en": {
+            "again": [
+                "One more detail: every even number above 2 "
+                "is divisible by 2, so it can never be "
+                "prime — that one line is the whole proof "
+                "that 2 stands alone."],
+            "third": [
+                "Quick practice: is 51 prime? It looks "
+                "odd and tricky — but 5 + 1 = 6 is divisible "
+                "by 3, so 51 = 3 × 17, not prime. The "
+                "digit-sum trick catches it."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur baat: 2 se badi har sam sankhya 2 se "
+                "katti hai, toh wo prime ho hi nahi sakti — "
+                "yahi ek line poora saboot hai ki 2 akela "
+                "khada hai."],
+            "third": [
+                "Jhatpat practice: kya 51 prime hai? Odd "
+                "aur mushkil lagta hai — par 5 + 1 = 6, jo "
+                "3 se katta hai, toh 51 = 3 × 17, prime "
+                "nahi. Ankon ke jod wali trick ise pakad "
+                "leti hai."],
+        },
+        "dev": {
+            "again": [
+                "एक और बात: 2 से बड़ी हर सम संख्या 2 से "
+                "कटती है, तो वो prime हो ही नहीं सकती — "
+                "यही एक line पूरा सबूत है कि 2 अकेला खड़ा "
+                "है।"],
+            "third": [
+                "झटपट practice: क्या 51 prime है? Odd और "
+                "मुश्किल लगता है — पर 5 + 1 = 6, जो 3 से "
+                "कटता है, तो 51 = 3 × 17, prime नहीं। अंकों "
+                "के जोड़ वाली trick इसे पकड़ लेती है।"],
+        },
+    },
+}
+
+# Generic pools per kind — every line stays true for ANY
+# entry of its kind (no claim about the entry itself).
+_META_GENERIC = {
+    "history": {
+        "en": {
+            "again": [
+                "A memory trick for every 'who' question: "
+                "say the pair out loud once — the name with "
+                "the work, as one phrase. Exam who-questions "
+                "are answered by exactly that pair.",
+                "One more way to keep it: names fade, "
+                "stories stay — attach one small story to "
+                "the name and it will not leave you."],
+            "third": [
+                "Your turn, one line only: without looking, "
+                "say what this person gave to maths. If you "
+                "can say it, it is yours for good.",
+                "A small challenge: explain this person's "
+                "work to a friend in your own words "
+                "tomorrow. If they understand it, you have "
+                "understood it twice."],
+        },
+        "roman": {
+            "again": [
+                "Har 'kisne' wale sawal ki yaad-trick: jode "
+                "ko ek baar zor se bolo — naam ke saath "
+                "uska kaam, ek hi saans me. Exam ke "
+                "who-sawal bilkul isi jode se bante hai.",
+                "Yaad rakhne ka ek aur tareeka: naam bhul "
+                "jate hai, kahani nahi — naam ke saath ek "
+                "chhoti kahani jod do, phir ye nahi "
+                "chhutega."],
+            "third": [
+                "Ab tumhari baari, sirf ek line: bina dekhe "
+                "batao — is vyakti ne maths ko kya diya? "
+                "Bol sakte ho toh ye hamesha ke liye "
+                "tumhara ho gaya.",
+                "Ek chhota challenge: kal is vyakti ke kaam "
+                "ko apne shabdon me kisi dost ko samjhao. "
+                "Use samajh aa gaya toh tumhe do baar "
+                "samajh aa gaya."],
+        },
+        "dev": {
+            "again": [
+                "हर 'किसने' वाले सवाल की याद-trick: जोड़े "
+                "को एक बार ज़ोर से बोलो — नाम के साथ उसका "
+                "काम, एक ही साँस में। Exam के who-सवाल "
+                "बिल्कुल इसी जोड़े से बनते हैं।",
+                "याद रखने का एक और तरीका: नाम भूल जाते "
+                "हैं, कहानी नहीं — नाम के साथ एक छोटी "
+                "कहानी जोड़ दो, फिर ये नहीं छूटेगा।"],
+            "third": [
+                "अब तुम्हारी बारी, सिर्फ़ एक line: बिना "
+                "देखे बताओ — इस व्यक्ति ने maths को क्या "
+                "दिया? बोल सकते हो तो ये हमेशा के लिए "
+                "तुम्हारा हो गया।",
+                "एक छोटा challenge: कल इस व्यक्ति के काम "
+                "को अपने शब्दों में किसी दोस्त को समझाओ। "
+                "उसे समझ आ गया तो तुम्हें दो बार समझ आ "
+                "गया।"],
+        },
+    },
+    "fact": {
+        "en": {
+            "again": [
+                "A way to make facts stick: say the fact "
+                "once as a question and answer it yourself "
+                "— 'sabse chhota …?' Facts you ask yourself "
+                "stay far longer than facts you only read.",
+                "One more grip on it: connect the fact to "
+                "its neighbour — smallest with largest, "
+                "first with last. Pairs are remembered; "
+                "lonely facts are forgotten."],
+            "third": [
+                "Now the reverse practice: make the "
+                "opposite question from this fact (sabse "
+                "bada ↔ sabse chhota) and answer that too. "
+                "Both directions clear means the fact is "
+                "truly yours.",
+                "A 10-second test: close your eyes and "
+                "recall this fact once more, then check. "
+                "That one recall does more than five "
+                "re-readings."],
+        },
+        "roman": {
+            "again": [
+                "Facts pakke karne ka tareeka: fact ko ek "
+                "baar sawal bana kar khud se pucho aur khud "
+                "jawab do. Jo fact tum khud se puchte ho, "
+                "wo sirf padhe hue fact se kahin zyada "
+                "tikta hai.",
+                "Ise pakadne ka ek aur tareeka: fact ko "
+                "uske padosi se jodo — sabse chhota ke saath "
+                "sabse bada, pehla ke saath aakhiri. Jode "
+                "yaad rehte hai; akele fact bhul jate hai."],
+            "third": [
+                "Ab ulti practice: is fact ka ulta sawal "
+                "banao (sabse bada ↔ sabse chhota) aur uska "
+                "jawab bhi do. Dono disha saaf matlab fact "
+                "sach me tumhara.",
+                "10 second ka test: aankhein band karke is "
+                "fact ko ek baar aur yaad karo, phir mila "
+                "kar dekho. Wo ek yaad, paanch baar padhne "
+                "se zyada kaam karti hai."],
+        },
+        "dev": {
+            "again": [
+                "Facts पक्के करने का तरीका: fact को एक बार "
+                "सवाल बना कर ख़ुद से पूछो और ख़ुद जवाब दो। "
+                "जो fact तुम ख़ुद से पूछते हो, वो सिर्फ़ "
+                "पढ़े हुए fact से कहीं ज़्यादा टिकता है।",
+                "इसे पकड़ने का एक और तरीका: fact को उसके "
+                "पड़ोसी से जोड़ो — सबसे छोटा के साथ सबसे "
+                "बड़ा, पहला के साथ आख़िरी। जोड़े याद रहते "
+                "हैं; अकेले fact भूल जाते हैं।"],
+            "third": [
+                "अब उल्टी practice: इस fact का उल्टा सवाल "
+                "बनाओ (सबसे बड़ा ↔ सबसे छोटा) और उसका जवाब "
+                "भी दो। दोनों दिशा साफ़ मतलब fact सच में "
+                "तुम्हारा।",
+                "10 second का test: आँखें बंद करके इस fact "
+                "को एक बार और याद करो, फिर मिला कर देखो। "
+                "वो एक याद, पाँच बार पढ़ने से ज़्यादा काम "
+                "करती है।"],
+        },
+    },
+    "advice": {
+        "en": {
+            "again": [
+                "One more small habit that quietly works: "
+                "before starting, spend just 2 minutes "
+                "revising yesterday's work — those 2 minutes "
+                "join today's session to yesterday's.",
+                "And one more: keep your phone in another "
+                "room for the first 25 minutes. Willpower "
+                "tires; distance does not."],
+            "third": [
+                "A 7-day mini challenge: apply this advice "
+                "on just ONE chapter for a week, then judge "
+                "it. Advice tested on one chapter beats "
+                "advice collected for ten.",
+                "Your practice step: write today's smallest "
+                "possible version of this advice — so small "
+                "you cannot fail it — and do only that "
+                "today."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur chhoti aadat jo chup-chaap kaam "
+                "karti hai: shuru karne se pehle sirf 2 "
+                "minute kal ka kaam dohra lo — ye 2 minute "
+                "aaj ki baithak ko kal se jod dete hai.",
+                "Aur ek: pehle 25 minute phone dusre kamre "
+                "me rakho. Ichha-shakti thak jati hai, doori "
+                "nahi thakti."],
+            "third": [
+                "7 din ka mini challenge: is salah ko sirf "
+                "EK chapter par ek hafta aazmao, phir "
+                "parkho. Ek chapter par aazmai salah, das "
+                "ke liye ikatthi salah se behtar hai.",
+                "Tumhara practice step: is salah ka aaj ke "
+                "liye sabse chhota roop likho — itna chhota "
+                "ki fail ho hi na sako — aur aaj sirf wahi "
+                "karo."],
+        },
+        "dev": {
+            "again": [
+                "एक और छोटी आदत जो चुप-चाप काम करती है: "
+                "शुरू करने से पहले सिर्फ़ 2 minute कल का "
+                "काम दोहरा लो — ये 2 minute आज की बैठक को "
+                "कल से जोड़ देते हैं।",
+                "और एक: पहले 25 minute phone दूसरे कमरे में "
+                "रखो। इच्छा-शक्ति थक जाती है, दूरी नहीं "
+                "थकती।"],
+            "third": [
+                "7 दिन का mini challenge: इस सलाह को "
+                "सिर्फ़ एक chapter पर एक हफ़्ता आज़माओ, "
+                "फिर परखो। एक chapter पर आज़माई सलाह, दस "
+                "के लिए इकट्ठी सलाह से बेहतर है।",
+                "तुम्हारा practice step: इस सलाह का आज के "
+                "लिए सबसे छोटा रूप लिखो — इतना छोटा कि "
+                "fail हो ही न सको — और आज सिर्फ़ वही करो।"],
+        },
+    },
+}
+
+
+def _meta_stable_offset(text):
+    """A small stable offset per entry id, so two
+    different topics sharing a generic pool do not rotate
+    in lockstep for the same student."""
+    return sum((i + 1) * ord(ch) for i, ch in
+               enumerate(str(text))) % 7
+
+
+def meta_variation(kind, entry_id, flavour, count):
+    """The Wave 178 extra lines for one knowledge entry
+    (kind "history" / "fact" / "advice") at one
+    ask-count: count 2 -> "again" (a fresh related
+    detail / tip); count >= 3 -> "third" (deeper fact /
+    practice). Authored lines win; the kind's generic
+    pool covers the rest. Rotates with the count so
+    consecutive repeats keep differing. [] only when
+    nothing honest can be added (unknown kind)."""
+    if count < 2:
+        return []
+    if flavour not in ("en", "roman", "dev"):
+        flavour = "en"
+    level = "again" if count == 2 else "third"
+    table = META_VARIATIONS.get((kind, entry_id)) or {}
+    lines = list(((table.get(flavour) or {}).get(level))
+                 or ((table.get("en") or {}).get(level))
+                 or [])
+    if not lines:
+        pool = ((_META_GENERIC.get(kind) or {})
+                .get(flavour) or {})
+        lines = list(pool.get(level) or [])
+    if not lines:
+        return []
+    start = (count - 2 + _meta_stable_offset(entry_id)) \
+        % len(lines)
+    return lines[start:] + lines[:start]

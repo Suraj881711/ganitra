@@ -180,7 +180,7 @@ check("scene3d.js does not define the 3D writer hook",
       "__ganitraBoyWriter3D" not in s3d)
 check("sprite writer paths intact in index.html",
       'boyWriter.src = "/static/scene-boy.webp?v=29"' in index
-      and 'boy.src = "/static/scene-boy.webp?v=29"' in index)
+      and 'boy.src = "/static/scene-boy.webp' not in index)
 
 # --- 5. Pins ----------------------------------------------------------
 print("== 5. Pins (merge-4 reconciled) ==")

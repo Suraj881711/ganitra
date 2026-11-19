@@ -464,7 +464,14 @@ def attempt_view(paper, q_lines, has_figure):
     for index, q in enumerate(paper["questions"]):
         by_section.setdefault(q["section"], []).append((index, q))
     sections = []
-    for section in papers_data.PAPER_STRUCTURE:
+    # Wave 179: same section-order rule as the paper sheet —
+    # stored sections beyond the CBSE A-E pattern (CGBSE F,
+    # WBBSE A-P) follow the standard ones in stored order
+    # instead of being dropped from exam mode.
+    _order = [s for s in papers_data.PAPER_STRUCTURE
+              if s in by_section]
+    _order += [s for s in by_section if s not in _order]
+    for section in _order:
         items = by_section.get(section)
         if not items:
             continue

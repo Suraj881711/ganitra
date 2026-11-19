@@ -1660,3 +1660,647 @@ def wave154_result(question, flavour=None):
     if result is not None:
         return result
     return baat_result(question, flavour)
+
+
+# ---------------------------------------------------------------------------
+# Wave 178: repeat-ask VARIATIONS (Suraj's standing rule,
+# 19 Nov 2026 ~09:52 IST: "agar student ek hi sawal baar-baar
+# puche, to har baar kuch ALAG ya SPECIAL mile — same jawab
+# copy-paste kabhi nahi").
+#
+# The tables below are the extra authored lines repeat.py
+# appends when the SAME student asks the same guidance /
+# small-talk topic again inside one chat:
+#   "again" (2nd ask): one FRESH example or one extra tip —
+#       never a line the base card or its detail block
+#       already carries.
+#   "third" (3rd and later asks): more depth — a related
+#       fact and/or a small practice step for the student.
+# repeat.py owns the counting and the warm opener line;
+# this module only owns the words, exactly like the base
+# cards. Standing guidance rules hold for every line here
+# too: no salary / ₹ / % promises, no false guarantees,
+# pyar-se-baat tone, short by default.
+# ---------------------------------------------------------------------------
+
+GUIDANCE_VARIATIONS = {
+    "scope_career": {
+        "en": {
+            "again": [
+                "A concrete example: a Class 12 student who "
+                "loves patterns often finds the Statistics "
+                "route natural — B.Sc. Statistics, then ISI's "
+                "own tests or data work later. Your favourite "
+                "chapter is usually a hint about your route."],
+            "third": [
+                "A fact to remember: maths is one of the few "
+                "subjects that keeps BOTH doors open — a Maths "
+                "student can later move towards computers, "
+                "commerce-side courses or pure science, but "
+                "the reverse moves are much harder.",
+                "A small practice step: write the names of "
+                "two routes from this list that excite you, "
+                "and one line on why. Send me that line — we "
+                "will plan backwards from it."],
+        },
+        "roman": {
+            "again": [
+                "Ek pakka example: Class 12 me jise patterns "
+                "pasand hai, uske liye Statistics wala rasta "
+                "aksar natural hota hai — B.Sc. Statistics, "
+                "phir ISI ke test ya data wali jobs. Tumhara "
+                "favourite chapter hi aksar tumhare route ka "
+                "ishara hota hai."],
+            "third": [
+                "Ek yaad rakhne wali baat: maths un gine-chune "
+                "subjects me se hai jo DONO darwaze khule "
+                "rakhta hai — maths wala student baad me "
+                "computers, commerce-side courses ya pure "
+                "science, kahi bhi ja sakta hai; ulta aana "
+                "mushkil hota hai.",
+                "Ek chhota practice step: is list se do routes "
+                "ke naam likho jo tumhe khinchte hai, aur ek "
+                "line me kyun. Wo line mujhe bhejo — hum wahi "
+                "se peeche ki planning karenge."],
+        },
+        "dev": {
+            "again": [
+                "एक पक्का उदाहरण: Class 12 में जिसे patterns "
+                "पसंद हैं, उसके लिए Statistics वाला रास्ता "
+                "अक्सर natural होता है — B.Sc. Statistics, "
+                "फिर ISI के test या data वाली jobs। तुम्हारा "
+                "favourite chapter ही अक्सर तुम्हारे route का "
+                "इशारा होता है।"],
+            "third": [
+                "एक याद रखने वाली बात: maths उन गिने-चुने "
+                "subjects में से है जो दोनों दरवाज़े खुले "
+                "रखता है — maths वाला छात्र बाद में computers, "
+                "commerce-side courses या pure science, कहीं "
+                "भी जा सकता है; उल्टा आना मुश्किल होता है।",
+                "एक छोटा practice step: इस list से दो routes "
+                "के नाम लिखो जो तुम्हें खींचते हैं, और एक "
+                "line में क्यों। वो line मुझे भेजो — हम वहीं "
+                "से पीछे की planning करेंगे।"],
+        },
+    },
+    "after_12th": {
+        "en": {
+            "again": [
+                "An extra tip most students miss: keep one "
+                "backup route warm. If JEE is your main "
+                "target, still fill the CUET form — the same "
+                "Class 11–12 syllabus covers both, so the "
+                "backup costs almost nothing."],
+            "third": [
+                "A related fact: JEE Main is held in two "
+                "sessions a year and your better score counts "
+                "— so the first attempt is also a free "
+                "practice run for the second.",
+                "Practice step: make a one-page list today — "
+                "main route, backup route, and the month each "
+                "form opens. Stick it above your desk; most "
+                "students lose routes by missing dates, not "
+                "by failing tests."],
+        },
+        "roman": {
+            "again": [
+                "Ek extra tip jo zyadaatar students miss kar "
+                "dete hai: ek backup route hamesha garam "
+                "rakho. JEE main target hai toh bhi CUET ka "
+                "form bhar do — syllabus wahi Class 11–12 ka "
+                "hai, backup lagbhag muft padta hai."],
+            "third": [
+                "Ek sambandhit baat: JEE Main saal me do "
+                "sessions me hota hai aur behtar score gina "
+                "jata hai — matlab pehla attempt dusre ke "
+                "liye muft ki practice bhi hai.",
+                "Practice step: aaj ek page ki list banao — "
+                "main route, backup route, aur har form "
+                "khulne ka mahina. Desk ke upar chipka do; "
+                "zyadaatar students routes test me fail hokar "
+                "nahi, dates bhool kar haarte hai."],
+        },
+        "dev": {
+            "again": [
+                "एक extra tip जो ज़्यादातर छात्र miss कर देते "
+                "हैं: एक backup route हमेशा तैयार रखो। JEE "
+                "main target है तो भी CUET का form भर दो — "
+                "syllabus वही Class 11–12 का है, backup लगभग "
+                "मुफ़्त पड़ता है।"],
+            "third": [
+                "एक संबंधित बात: JEE Main साल में दो sessions "
+                "में होता है और बेहतर score गिना जाता है — "
+                "मतलब पहला attempt दूसरे के लिए मुफ़्त की "
+                "practice भी है।",
+                "Practice step: आज एक page की list बनाओ — "
+                "main route, backup route, और हर form खुलने "
+                "का महीना। Desk के ऊपर चिपका दो; ज़्यादातर "
+                "छात्र routes test में fail होकर नहीं, dates "
+                "भूल कर हारते हैं।"],
+        },
+    },
+    "subject_choice": {
+        "en": {
+            "again": [
+                "A real-life example: students who pick Maths "
+                "'just for safety' but dislike it often switch "
+                "their effort off by Class 12 — interest "
+                "matters as much as the door count. Pick the "
+                "subject you can study on a bad day too."],
+            "third": [
+                "A fact worth knowing: NEET asks for Biology "
+                "but not for school-level Maths — while JEE "
+                "asks for Maths and no Biology. The two doors "
+                "really do open with different keys.",
+                "A practice question for you: if both doors "
+                "closed tomorrow except one, which day would "
+                "you miss more — a day of solving problems, "
+                "or a day of reading about living things? "
+                "Your honest answer is your subject."],
+        },
+        "roman": {
+            "again": [
+                "Ek asal example: jo students maths sirf "
+                "'safety ke liye' lete hai par use pasand "
+                "nahi karte, ve aksar Class 12 tak mehnat "
+                "band kar dete hai — darwazon ki ginti jitni "
+                "hi dilchaspi bhi matter karti hai. Wo "
+                "subject lo jo bure din me bhi padh sako."],
+            "third": [
+                "Ek jaanne wali baat: NEET ke liye Biology "
+                "chahiye, par school-level Maths nahi — aur "
+                "JEE ke liye Maths chahiye, Biology nahi. "
+                "Dono darwaze sach me alag chaabiyon se "
+                "khulte hai.",
+                "Tumhare liye ek practice sawal: agar kal "
+                "dono darwaze band ho jaye ek ke siwa, toh "
+                "kis din ki zyada yaad aayegi — problems "
+                "solve karne wale din ki, ya jeev-jantuon ke "
+                "baare me padhne wale din ki? Tumhara sachha "
+                "jawab hi tumhara subject hai."],
+        },
+        "dev": {
+            "again": [
+                "एक असल उदाहरण: जो छात्र maths सिर्फ़ 'safety "
+                "के लिए' लेते हैं पर उसे पसंद नहीं करते, वे "
+                "अक्सर Class 12 तक मेहनत बंद कर देते हैं — "
+                "दरवाज़ों की गिनती जितनी ही दिलचस्पी भी "
+                "matter करती है। वो subject लो जो बुरे दिन "
+                "में भी पढ़ सको।"],
+            "third": [
+                "एक जानने वाली बात: NEET के लिए Biology "
+                "चाहिए, पर school-level Maths नहीं — और JEE "
+                "के लिए Maths चाहिए, Biology नहीं। दोनों "
+                "दरवाज़े सच में अलग चाबियों से खुलते हैं।",
+                "तुम्हारे लिए एक practice सवाल: अगर कल दोनों "
+                "दरवाज़े बंद हो जाएँ एक के सिवा, तो किस दिन "
+                "की ज़्यादा याद आएगी — problems solve करने "
+                "वाले दिन की, या जीव-जंतुओं के बारे में "
+                "पढ़ने वाले दिन की? तुम्हारा सच्चा जवाब ही "
+                "तुम्हारा subject है।"],
+        },
+    },
+    "entrance_exams": {
+        "en": {
+            "again": [
+                "An extra tip: these exams share one syllabus "
+                "— your school Class 11–12 course. A student "
+                "preparing honestly for boards is already "
+                "halfway prepared for JEE Main and CUET; only "
+                "the question style differs."],
+            "third": [
+                "A related fact: JEE Advanced papers are set "
+                "by one of the IITs in rotation each year, "
+                "which is why its style feels a little "
+                "different every time — past papers are the "
+                "best guide.",
+                "Practice step: pick ONE exam from this list "
+                "and find its last date and syllabus on the "
+                "official site today. Knowing one exam fully "
+                "beats vaguely knowing five."],
+        },
+        "roman": {
+            "again": [
+                "Ek extra tip: in sab exams ka syllabus ek hi "
+                "hai — tumhara school ka Class 11–12 course. "
+                "Jo student boards ki imaandari se taiyari "
+                "karta hai, wo JEE Main aur CUET ke liye aadha "
+                "taiyar pehle se hota hai; bas sawalon ka "
+                "style alag hota hai."],
+            "third": [
+                "Ek sambandhit baat: JEE Advanced ka paper "
+                "har saal baari-baari se ek IIT banata hai, "
+                "isiliye uska style har baar thoda alag lagta "
+                "hai — pichle papers hi sabse achhe guide "
+                "hai.",
+                "Practice step: is list se EK exam chuno aur "
+                "aaj hi uski last date aur syllabus official "
+                "site par dekho. Ek exam ko pura jaanna, "
+                "paanch ko aadha jaanne se behtar hai."],
+        },
+        "dev": {
+            "again": [
+                "एक extra tip: इन सब exams का syllabus एक ही "
+                "है — तुम्हारा school का Class 11–12 course। "
+                "जो छात्र boards की ईमानदारी से तैयारी करता "
+                "है, वो JEE Main और CUET के लिए आधा तैयार "
+                "पहले से होता है; बस सवालों का style अलग "
+                "होता है।"],
+            "third": [
+                "एक संबंधित बात: JEE Advanced का paper हर साल "
+                "बारी-बारी से एक IIT बनाता है, इसीलिए उसका "
+                "style हर बार थोड़ा अलग लगता है — पिछले "
+                "papers ही सबसे अच्छे guide हैं।",
+                "Practice step: इस list से एक exam चुनो और "
+                "आज ही उसकी last date और syllabus official "
+                "site पर देखो। एक exam को पूरा जानना, पाँच "
+                "को आधा जानने से बेहतर है।"],
+        },
+    },
+    "improve": {
+        "en": {
+            "again": [
+                "A fresh example of the repair method: "
+                "suppose fractions feel hard. Do not restart "
+                "the whole chapter — first master just the "
+                "LCM of denominators for one day, then "
+                "addition of fractions the next. Small bricks, "
+                "one wall."],
+            "third": [
+                "A related fact from how memory works: a "
+                "question you redo after 2–3 days sticks far "
+                "longer than one you redo the same evening — "
+                "that gap is exactly why the mistake copy "
+                "works.",
+                "A practice challenge for this week: pick "
+                "your weakest chapter and solve only its "
+                "first five exercise questions in writing. "
+                "Send me the one that stops you — we start "
+                "there."],
+        },
+        "roman": {
+            "again": [
+                "Repair ka ek taza example: maan lo fractions "
+                "mushkil lagte hai. Poora chapter dobara "
+                "shuru mat karo — pehle ek din sirf "
+                "denominators ka LCM pakka karo, agle din "
+                "fractions ka jod. Chhoti-chhoti eentein, ek "
+                "diwaar."],
+            "third": [
+                "Yaaddasht kaise kaam karti hai, usse judi ek "
+                "baat: jo sawal tum 2–3 din baad dobara karte "
+                "ho, wo usi shaam dobara kiye sawal se kahin "
+                "zyada der tak yaad rehta hai — mistake copy "
+                "isiliye kaam karti hai.",
+                "Is hafte ka practice challenge: apna sabse "
+                "kamzor chapter chuno aur uske sirf pehle "
+                "paanch exercise sawal likh kar solve karo. "
+                "Jo sawal roke, wo mujhe bhejo — hum wahi se "
+                "shuru karenge."],
+        },
+        "dev": {
+            "again": [
+                "Repair का एक ताज़ा उदाहरण: मान लो fractions "
+                "मुश्किल लगते हैं। पूरा chapter दोबारा शुरू "
+                "मत करो — पहले एक दिन सिर्फ़ denominators का "
+                "LCM पक्का करो, अगले दिन fractions का जोड़। "
+                "छोटी-छोटी ईंटें, एक दीवार।"],
+            "third": [
+                "याददाश्त कैसे काम करती है, उससे जुड़ी एक "
+                "बात: जो सवाल तुम 2–3 दिन बाद दोबारा करते "
+                "हो, वो उसी शाम दोबारा किए सवाल से कहीं "
+                "ज़्यादा देर तक याद रहता है — mistake copy "
+                "इसीलिए काम करती है।",
+                "इस हफ़्ते का practice challenge: अपना सबसे "
+                "कमज़ोर chapter चुनो और उसके सिर्फ़ पहले "
+                "पाँच exercise सवाल लिख कर solve करो। जो "
+                "सवाल रोके, वो मुझे भेजो — हम वहीं से शुरू "
+                "करेंगे।"],
+        },
+    },
+    "exam_prep": {
+        "en": {
+            "again": [
+                "An extra tip for the paper-solving step: "
+                "when you finish a mock paper, mark each lost "
+                "mark with its reason — concept, silly "
+                "mistake, or time. Three different diseases, "
+                "three different medicines; most students "
+                "find one reason dominates."],
+            "third": [
+                "A related fact: in most board papers, the "
+                "first half of the questions are deliberately "
+                "gentler — securing them fully before "
+                "touching the hard ones is how toppers "
+                "protect their score.",
+                "A practice step for today: take one old "
+                "paper and solve ONLY its first five "
+                "questions with a timer. Speed on easy "
+                "questions is free marks."],
+        },
+        "roman": {
+            "again": [
+                "Paper solve karne ke liye ek extra tip: "
+                "mock paper khatm karke har kate hue number "
+                "ke saamne wajah likho — concept, silly "
+                "mistake, ya time. Teen alag bimariyan, teen "
+                "alag dawaaiyan; zyadaatar students ko ek hi "
+                "wajah sabse zyada milti hai."],
+            "third": [
+                "Ek sambandhit baat: zyadaatar board papers "
+                "me pehle aadhe sawal jaan-bujh kar aasan "
+                "rakhe jate hai — mushkil sawalon se pehle "
+                "unhe pura pakka karna hi toppers ka score "
+                "bachata hai.",
+                "Aaj ka practice step: ek purana paper lo aur "
+                "ghadi laga kar sirf uske pehle paanch sawal "
+                "solve karo. Aasan sawalon ki speed muft ke "
+                "number hoti hai."],
+        },
+        "dev": {
+            "again": [
+                "Paper solve करने के लिए एक extra tip: mock "
+                "paper ख़त्म करके हर कटे हुए number के सामने "
+                "वजह लिखो — concept, silly mistake, या time। "
+                "तीन अलग बीमारियाँ, तीन अलग दवाइयाँ; "
+                "ज़्यादातर छात्रों को एक ही वजह सबसे ज़्यादा "
+                "मिलती है।"],
+            "third": [
+                "एक संबंधित बात: ज़्यादातर board papers में "
+                "पहले आधे सवाल जान-बूझ कर आसान रखे जाते हैं "
+                "— मुश्किल सवालों से पहले उन्हें पूरा पक्का "
+                "करना ही toppers का score बचाता है।",
+                "आज का practice step: एक पुराना paper लो और "
+                "घड़ी लगा कर सिर्फ़ उसके पहले पाँच सवाल "
+                "solve करो। आसान सवालों की speed मुफ़्त के "
+                "number होती है।"],
+        },
+    },
+    "motivation": {
+        "en": {
+            "again": [
+                "One more true thing: toppers are not people "
+                "who never feel like this — they are people "
+                "who had this same evening and still solved "
+                "five questions. You only need today's five."],
+            "third": [
+                "A related fact: your brain files a chapter "
+                "as 'hard' mostly when its FIRST questions "
+                "went badly. Restart the chapter from its "
+                "easiest question and the label often changes "
+                "within a week.",
+                "A tiny practice step, right now: tell me one "
+                "chapter name — just the name. I will give "
+                "you its easiest first question, and we begin "
+                "with a win."],
+        },
+        "roman": {
+            "again": [
+                "Ek aur sachhi baat: toppers wo log nahi hote "
+                "jinhe kabhi aisa feel nahi hota — wo wahi "
+                "log hai jinhe yahi shaam aayi thi aur phir "
+                "bhi unhone paanch sawal solve kiye the. "
+                "Tumhe sirf aaj ke paanch chahiye."],
+            "third": [
+                "Ek sambandhit baat: tumhara dimaag kisi "
+                "chapter ko 'hard' zyadaatar tab kehta hai "
+                "jab uske PEHLE sawal bigde ho. Chapter ko "
+                "uske sabse aasan sawal se dobara shuru karo "
+                "— label aksar ek hafte me badal jata hai.",
+                "Ek chhota practice step, abhi: mujhe ek "
+                "chapter ka naam batao — sirf naam. Main uska "
+                "sabse aasan pehla sawal dunga, aur hum jeet "
+                "se shuru karenge."],
+        },
+        "dev": {
+            "again": [
+                "एक और सच्ची बात: toppers वो लोग नहीं होते "
+                "जिन्हें कभी ऐसा feel नहीं होता — वो वही लोग "
+                "हैं जिन्हें यही शाम आई थी और फिर भी "
+                "उन्होंने पाँच सवाल solve किए थे। तुम्हें "
+                "सिर्फ़ आज के पाँच चाहिए।"],
+            "third": [
+                "एक संबंधित बात: तुम्हारा दिमाग़ किसी chapter "
+                "को 'hard' ज़्यादातर तब कहता है जब उसके "
+                "पहले सवाल बिगड़े हों। Chapter को उसके सबसे "
+                "आसान सवाल से दोबारा शुरू करो — label अक्सर "
+                "एक हफ़्ते में बदल जाता है।",
+                "एक छोटा practice step, अभी: मुझे एक chapter "
+                "का नाम बताओ — सिर्फ़ नाम। मैं उसका सबसे "
+                "आसान पहला सवाल दूँगा, और हम जीत से शुरू "
+                "करेंगे।"],
+        },
+    },
+}
+
+
+def guidance_variation(entry_id, flavour, count):
+    """The Wave 178 extra lines for one guidance entry at
+    one ask-count: count 2 -> the "again" lines (a fresh
+    example / extra tip); count >= 3 -> the "third" lines
+    (depth / related fact / practice). [] when the entry
+    has no authored variation — repeat.py then varies only
+    the opener, which still keeps the card from being a
+    copy-paste. Rotation: with several lines authored, the
+    pick advances with the count so consecutive repeats
+    keep differing."""
+    if flavour not in ("en", "roman", "dev"):
+        flavour = "en"
+    table = GUIDANCE_VARIATIONS.get(entry_id) or {}
+    entry = table.get(flavour) or table.get("en") or {}
+    level = "again" if count <= 2 else "third"
+    lines = list(entry.get(level) or [])
+    if not lines:
+        return []
+    start = (count - 2) % len(lines)
+    return lines[start:] + lines[:start]
+
+
+# Alternate small-talk lines for repeat asks of the same
+# baat topic (the base line lives in BAAT above; these are
+# SECOND wordings, served from the 2nd ask on, rotated by
+# count). A baat reply is one plain line, so the variation
+# replaces the line instead of appending to it.
+BAAT_AGAIN = {
+    "haal": {
+        "en": "Still all good on my side! 😊 And still "
+              "ready — send a maths question and we begin.",
+        "roman": "Meri taraf se phir wahi — sab badhiya! "
+                 "😊 Tum ek maths sawal bhejo, phir asli "
+                 "baat shuru.",
+        "dev": "मेरी तरफ़ से फिर वही — सब बढ़िया! 😊 तुम "
+               "एक maths सवाल भेजो, फिर असली बात शुरू।",
+    },
+    "doing": {
+        "en": "Same favourite work — waiting for your next "
+              "maths question. 😊 Send one!",
+        "roman": "Wahi pasandeeda kaam — tumhare agle maths "
+                 "sawal ka intezaar. 😊 Ek bhej hi do!",
+        "dev": "वही पसंदीदा काम — तुम्हारे अगले maths सवाल "
+               "का इंतज़ार। 😊 एक भेज ही दो!",
+    },
+    "can_do": {
+        "en": "Dobara pucha, dobara jawab: solve karna, har "
+              "step samjhana aur practice dena — yahi mera "
+              "kaam hai. 😊 Ek sawal bhej kar dekho.",
+        "roman": "Dobara pucha, dobara jawab: sawal solve "
+                 "karna, har step samjhana aur practice dena "
+                 "— yahi mera kaam hai. 😊 Ek sawal bhej kar "
+                 "dekho.",
+        "dev": "दोबारा पूछा, दोबारा जवाब: सवाल solve करना, "
+               "हर step समझाना और practice देना — यही मेरा "
+               "काम है। 😊 एक सवाल भेज कर देखो।",
+    },
+    "robot": {
+        "en": "Phir wahi sach: I am Ganitra, an app-wala "
+              "maths dost — insaan nahi, par sawaalon ke "
+              "liye hamesha haazir. 😊",
+        "roman": "Phir wahi sach: main Ganitra hu, app-wala "
+                 "maths dost — insaan nahi, par sawaalon ke "
+                 "liye hamesha haazir. 😊",
+        "dev": "फिर वही सच: मैं Ganitra हूँ, app-वाला maths "
+               "दोस्त — इंसान नहीं, पर सवालों के लिए हमेशा "
+               "हाज़िर। 😊",
+    },
+    "creator": {
+        "en": "Phir se wahi: I was made so that no student "
+              "feels alone with a maths doubt. Tum sawal "
+              "bhejo, main saath deta hu. 😊",
+        "roman": "Phir se wahi: mujhe isliye banaya gaya ki "
+                 "koi student maths ke doubt me akela na "
+                 "rahe. Tum sawal bhejo, main saath deta hu. "
+                 "😊",
+        "dev": "फिर से वही: मुझे इसलिए बनाया गया कि कोई "
+               "छात्र maths के doubt में अकेला न रहे। तुम "
+               "सवाल भेजो, मैं साथ देता हूँ। 😊",
+    },
+    "age_place": {
+        "en": "Same answer, still true: no age, no address "
+              "— I live in this app. Ab tum batao, aaj ka "
+              "sawal kya hai? 😊",
+        "roman": "Wahi jawab, ab bhi sach: na umar, na pata "
+                 "— main isi app me rehta hu. Ab tum batao, "
+                 "aaj ka sawal kya hai? 😊",
+        "dev": "वही जवाब, अब भी सच: न उम्र, न पता — मैं "
+               "इसी app में रहता हूँ। अब तुम बताओ, आज का "
+               "सवाल क्या है? 😊",
+    },
+    "compliment": {
+        "en": "Phir se shukriya! 😊 Tumhari mehnat hi asli "
+              "hero hai — main toh bas saath hu. Ek sawal "
+              "aur ho jaye?",
+        "roman": "Phir se shukriya! 😊 Tumhari mehnat hi "
+                 "asli hero hai — main toh bas saath hu. Ek "
+                 "sawal aur ho jaye?",
+        "dev": "फिर से शुक्रिया! 😊 तुम्हारी मेहनत ही असली "
+               "hero है — मैं तो बस साथ हूँ। एक सवाल और हो "
+               "जाए?",
+    },
+    "dost": {
+        "en": "Pakka dost, phir se pakka. 🤝 Jab atko, "
+              "bhejna — dost isiliye hota hai.",
+        "roman": "Pakka dost, phir se pakka. 🤝 Jab atko, "
+                 "bhej dena — dost isiliye hota hai.",
+        "dev": "पक्का दोस्त, फिर से पक्का। 🤝 जब अटको, भेज "
+               "देना — दोस्त इसीलिए होता है।",
+    },
+    "love": {
+        "en": "Haha, phir se wahi pyaar! 😊 Chalo is pyaar "
+              "ko ek maths sawal me badalte hai — bhejo "
+              "ek.",
+        "roman": "Haha, phir se wahi pyaar! 😊 Chalo is "
+                 "pyaar ko ek maths sawal me badalte hai — "
+                 "bhejo ek.",
+        "dev": "हाहा, फिर से वही प्यार! 😊 चलो इस प्यार को "
+               "एक maths सवाल में बदलते हैं — भेजो एक।",
+    },
+    "bore": {
+        "en": "Phir bore? 😊 Toh ek mazedaar chhota sawal "
+              "ho jaye: 99 + 9 kitna hota hai? Bina copy "
+              "ke, dimaag se!",
+        "roman": "Phir bore? 😊 Toh ek mazedaar chhota "
+                 "sawal ho jaye: 99 + 9 kitna hota hai? "
+                 "Bina copy ke, dimaag se!",
+        "dev": "फिर bore? 😊 तो एक मज़ेदार छोटा सवाल हो "
+               "जाए: 99 + 9 कितना होता है? बिना copy के, "
+               "दिमाग़ से!",
+    },
+    "tired": {
+        "en": "Phir thakan? Sach me aaram kar lo — maths "
+              "kahin nahi bhagega, main bhi yahi hu. 😊 "
+              "Paani piyo, phir aana.",
+        "roman": "Phir thakan? Sach me aaram kar lo — "
+                 "maths kahin nahi bhagega, main bhi yahi "
+                 "hu. 😊 Paani piyo, phir aana.",
+        "dev": "फिर थकान? सच में आराम कर लो — maths कहीं "
+               "नहीं भागेगा, मैं भी यहीं हूँ। 😊 पानी पियो, "
+               "फिर आना।",
+    },
+    "fun": {
+        "en": "Phir mazaa! 😊 Yahi toh asli jeet hai. Ek "
+              "aur sawal bhej do — silsila chalne do.",
+        "roman": "Phir mazaa! 😊 Yahi toh asli jeet hai. "
+                 "Ek aur sawal bhej do — silsila chalne do.",
+        "dev": "फिर मज़ा! 😊 यही तो असली जीत है। एक और "
+               "सवाल भेज दो — सिलसिला चलने दो।",
+    },
+    "mood": {
+        "en": "Aaj phir mood off hai? Koi baat nahi. 😊 "
+              "Chaaho toh bas baat karte hai, ya ek bahut "
+              "easy sawal — zabardasti bilkul nahi.",
+        "roman": "Aaj phir mood off hai? Koi baat nahi. 😊 "
+                 "Chaaho toh bas baat karte hai, ya ek "
+                 "bahut easy sawal — zabardasti bilkul "
+                 "nahi.",
+        "dev": "आज फिर mood off है? कोई बात नहीं। 😊 चाहो "
+               "तो बस बात करते हैं, या एक बहुत easy सवाल — "
+               "ज़बरदस्ती बिल्कुल नहीं।",
+    },
+}
+
+# Generic second wordings for any baat topic without an
+# authored alternate (future entries), rotated by count.
+_BAAT_AGAIN_GENERIC = {
+    "en": [
+        "Phir se wahi pyaar-bhari baat! 😊 Main yahi hu — "
+        "maths ka sawal ho toh bhej dena.",
+        "Dobara wahi sawal, dobara wahi dost. 😊 Kuch "
+        "maths ho jaye?",
+        "Tum phir aa gaye, achha laga! 😊 Ek sawal bhej "
+        "do, shuru karte hai."],
+    "roman": [
+        "Phir se wahi pyaar-bhari baat! 😊 Main yahi hu — "
+        "maths ka sawal ho toh bhej dena.",
+        "Dobara wahi sawal, dobara wahi dost. 😊 Kuch "
+        "maths ho jaye?",
+        "Tum phir aa gaye, achha laga! 😊 Ek sawal bhej "
+        "do, shuru karte hai."],
+    "dev": [
+        "फिर से वही प्यार-भरी बात! 😊 मैं यहीं हूँ — maths "
+        "का सवाल हो तो भेज देना।",
+        "दोबारा वही सवाल, दोबारा वही दोस्त। 😊 कुछ maths "
+        "हो जाए?",
+        "तुम फिर आ गए, अच्छा लगा! 😊 एक सवाल भेज दो, शुरू "
+        "करते हैं।"],
+}
+
+
+def baat_variation(entry_id, flavour, count):
+    """The alternate small-talk LINE for a repeat ask of
+    one baat topic (2nd ask onward), or None at count 1.
+    The topic's authored alternate serves the 2nd ask;
+    from the 3rd ask on, the generic pool rotates, so no
+    two consecutive repeats ever show the same line. The
+    generic pool also covers any topic without an
+    authored alternate, from its 2nd ask on."""
+    if count < 2:
+        return None
+    if flavour not in ("en", "roman", "dev"):
+        flavour = "en"
+    authored = (BAAT_AGAIN.get(entry_id) or {}).get(flavour)
+    pool = _BAAT_AGAIN_GENERIC[flavour]
+    if authored and count == 2:
+        return authored
+    if authored:
+        return pool[(count - 3) % len(pool)]
+    return pool[(count - 2) % len(pool)]

@@ -78,6 +78,10 @@ _NOT_SOLVED_KINDS = {
     # bubble, never a solved card (its escape / completion
     # serve carries the real result and counts normally).
     "guided",
+    # Wave 174: a served board paper (or its honest
+    # availability line) is library content, not a solve —
+    # no answer box, no follow-up chips.
+    "paper",
 }
 _NOT_SOLVED_OPS = {"error", "explain_step", "check_steps",
                    "not_found"}

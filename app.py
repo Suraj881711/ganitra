@@ -129,6 +129,31 @@ def _short_greeting(strings, name):
     return line
 
 
+def _w178_shown_page(question, result, lang_request=None,
+                     lang=None):
+    """Wave 178: the repeat-varied copy of a finished
+    classic-page answer for DISPLAY, or None (first ask /
+    uncountable / any failure — the base result renders
+    exactly as before). The classic pages share one
+    session history, so they share one counting bucket
+    ("page"); the chat API counts per chat instead. The
+    session's stored result stays the base — only the
+    rendered copy varies (the Wave-138 pattern). An
+    explicit language request is a presentation channel,
+    never a repeat (see api._w178_shown)."""
+    if lang_request:
+        return None
+    try:
+        from repeat import flavour_for, session_variation
+        flavour = flavour_for(question, result,
+                              lang_request=lang_request,
+                              lang=lang)
+        return session_variation(session, "page", question,
+                                 result, flavour)
+    except Exception:
+        return None
+
+
 def _ask_again(question):
     """Wave 5b: re-ask the same question with a gentle pre-filled hint
     appended. The hint is plain English (the router understands plain
@@ -1202,13 +1227,21 @@ def create_app():
         # api.trimmed_history_entry.
         history.insert(0, trimmed_history_entry(question, result))
         session["history"] = history[:_HISTORY_LIMIT]
+        # Wave 178: a repeat ask renders a varied copy of the
+        # answer (see _w178_shown_page) — the session's
+        # stored result above stays the base, exactly like
+        # the Wave-138 display annotation below.
+        shown178 = _w178_shown_page(
+            solve_text, result, lang_request=lang_request,
+            lang=_lang())
         return render_template("answer.html", question=question,
                                # Wave 138: typeset variants are a
                                # display concern — annotated on a
                                # copy for the template only; the
                                # session's stored result (print,
                                # history) stays the solver's own.
-                               result=annotate_result(dict(result)),
+                               result=annotate_result(
+                                   dict(shown178 or result)),
                                explanation=(None if quiet
                                             else explanation_for(result,
                                                                  _lang())),
@@ -1663,9 +1696,15 @@ def create_app():
         # api.trimmed_history_entry.
         history.insert(0, trimmed_history_entry(question, result))
         session["history"] = history[:_HISTORY_LIMIT]
+        # Wave 178: repeat-ask variation, as in /solve above
+        # (the photo route shares the "page" counting
+        # bucket; the session keeps the base result).
+        shown178 = _w178_shown_page(question, result,
+                                    lang=_lang())
         return render_template("answer.html", question=question,
                                # Wave 138: as in /solve above.
-                               result=annotate_result(dict(result)),
+                               result=annotate_result(
+                                   dict(shown178 or result)),
                                photo_text=question,
                                source=source,
                                explanation=(None if quiet
@@ -2265,7 +2304,16 @@ def create_app():
         sections = []
         full_marks = 0
         full_count = 0
-        for section in papers_data.PAPER_STRUCTURE:
+        # Wave 179: sections beyond the CBSE A-E pattern
+        # (stored by boards with more groups — CGBSE F,
+        # WBBSE A-P) render after the standard ones, in
+        # stored order; previously they were silently
+        # dropped from the sheet.
+        _section_order = [s for s in papers_data.PAPER_STRUCTURE
+                          if s in by_section]
+        _section_order += [s for s in by_section
+                           if s not in _section_order]
+        for section in _section_order:
             qs = by_section.get(section)
             if not qs:
                 continue
@@ -2285,7 +2333,8 @@ def create_app():
             # span; they show only as a deficit against the
             # standard pattern, and only where the section's
             # marks match that pattern exactly.
-            std_count, std_marks = papers_data.PAPER_STRUCTURE[section]
+            std_count, std_marks = papers_data.PAPER_STRUCTURE.get(
+                section, (0, 0))
             if marks_set == {std_marks} and sec_count < std_count:
                 sec_marks += (std_count - sec_count) * std_marks
                 sec_count = std_count
@@ -2304,11 +2353,12 @@ def create_app():
                 subtitle = title[len(f"Section {section} "):]
             heading = f"SECTION {section}"
             if hindi:
-                heading = f"खण्ड {hi_letters[section]}"
+                heading = f"खण्ड {hi_letters.get(section, section)}"
                 if section in paper.get("section_titles_hindi", {}):
                     subtitle = paper["section_titles_hindi"][section]
                 else:
-                    std = papers_data.PAPER_STRUCTURE[section]
+                    std = papers_data.PAPER_STRUCTURE.get(
+                        section, (0, 0))
                     if (sec_count, qs[0]["marks"]) == std \
                             and len(marks_set) == 1:
                         subtitle = _HI_SUBTITLES[section]
@@ -2350,7 +2400,8 @@ def create_app():
                 "सभी प्रश्न अनिवार्य हैं।",
             ]
             for sec in sections:
-                name = hi_letters[sec["section"]]
+                name = hi_letters.get(sec["section"],
+                                      sec["section"])
                 if sec["marks_each"] is not None:
                     instructions.append(
                         f"खण्ड {name} में {sec['full_count']} प्रश्न "

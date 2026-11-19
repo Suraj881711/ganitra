@@ -146,7 +146,7 @@ for _name, _want in (("logo-full-t.png",
 check("boy writer functions present",
       all(s in _idx for s in (
           "function showBoyWriter", "function hideBoyWriter",
-          "function scheduleBoyWriterHide", "function addTypingBoy")))
+          "function scheduleBoyWriterHide")))
 check("boy writer needs the steps board",
       "if (boyBroken || !stepsDet) return;" in _idx)
 _teach0 = _idx.index("function startTeachPlayback")
@@ -157,12 +157,12 @@ _stop = _idx[_idx.index("function stopTeachPlayback"): _teach0]
 check("Teach stop schedules the boy's exit",
       "scheduleBoyWriterHide();" in _stop)
 _typ0 = _idx.index("function addTyping()")
-check("thinking indicator carries the boy",
-      "addTypingBoy(node)" in _idx[_typ0:_typ0 + 1000]
-      and "addTypingBoy(fb)" in _idx[_typ0:_typ0 + 1000])
-check("boy writer CSS (board rail + typing post)",
+check("thinking indicator carries NO boy (Wave 176)",
+      "addTypingBoy" not in _idx
+      and "boy-writer" not in _idx[_typ0:_typ0 + 1000])
+check("boy writer CSS (board rail only since Wave 176)",
       ".boy-host > ol.steps" in _css
-      and ".boy-writer.in-typing" in _css
+      and ".boy-writer.in-typing" not in _css
       and ".boy-writer.at-board" in _css)
 
 # --- 5. Scene-director logic under node --------------------------------

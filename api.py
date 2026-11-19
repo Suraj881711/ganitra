@@ -1062,9 +1062,50 @@ def api_solve():
     # the payload in _solve_response_payload, shared with the
     # streaming endpoint so both paths serve identical bytes.)
     _commit_solve_session(question, result, chat_key=chat_key)
-    return jsonify(_solve_response_payload(
+    payload = _solve_response_payload(
         question, solve_text, result, lang, strings, fields,
-        lang_request=lang_request))
+        lang_request=lang_request)
+    # Wave 178: a REPEAT ask of the same topic / question in
+    # this chat is shown a varied copy of the answer (never
+    # the same copy-paste twice — Suraj's standing rule).
+    # The payload's chrome (intro, explanation, methods,
+    # w122) was built from the base result above and the
+    # session keeps the base result too; only the displayed
+    # card body is swapped. An explicit detail ask is the
+    # student's own follow-up channel (Wave 136), never a
+    # repeat, so it is neither counted nor varied.
+    if not detail:
+        shown = _w178_shown(solve_text, result, chat_key,
+                            lang_request=lang_request,
+                            lang=lang)
+        if shown is not None:
+            payload["result"] = annotate_result(dict(shown))
+    return jsonify(payload)
+
+
+def _w178_shown(question, result, chat_key, lang_request=None,
+                lang=None):
+    """Wave 178: the repeat-varied copy of a finished
+    answer for DISPLAY, or None — a first ask, an
+    uncountable outcome, or any failure, in which case the
+    base result is served exactly as before this wave.
+    Counting + wording live in repeat.py (the session
+    store rides the cookie like the Wave-127 turn log).
+    An explicit language request (Wave 107/130) is the
+    student's own presentation channel, like the detail
+    ask: the same question re-asked in another language
+    is served exactly, never counted and never varied."""
+    if lang_request:
+        return None
+    try:
+        from repeat import flavour_for, session_variation
+        flavour = flavour_for(question, result,
+                              lang_request=lang_request,
+                              lang=lang)
+        return session_variation(session, chat_key, question,
+                                 result, flavour)
+    except Exception:
+        return None
 
 
 def _commit_solve_session(question, result, chat_key=None):
@@ -1418,6 +1459,17 @@ def api_solve_stream():
         payload = _solve_response_payload(
             question, solve_text, result, lang, strings, fields,
             lang_request=lang_request)
+        # Wave 178: same repeat-variation swap as /api/solve
+        # (see api_solve) — the deterministic outcomes that
+        # finish here are exactly the countable ones; the
+        # deferred-AI path below never carries a guidance /
+        # knowledge / solved-deterministic card.
+        shown = _w178_shown(solve_text, result,
+                            _chat_key(data),
+                            lang_request=lang_request,
+                            lang=lang)
+        if shown is not None:
+            payload["result"] = annotate_result(dict(shown))
         return _sse_response(sse_event(
             {"type": "final", "payload": payload}))
 

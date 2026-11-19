@@ -197,11 +197,11 @@ check("scene3d.js does NOT define the 3D writer hook (62B)",
 check("Teach writer preference code still falls back to the sprite",
       index.count("__ganitraBoyWriter3D") >= 2
       and "boy-writer at-board boy-writer-3d" in index)
-check("thinking writer preference code still in place",
-      "boy-writer in-typing on boy-writer-3d" in index)
+check("thinking writer removed (Wave 176)",
+      "boy-writer in-typing on boy-writer-3d" not in index)
 check("sprite writer fallback intact",
       'boyWriter.src = "/static/scene-boy.webp?v=29"' in index
-      and 'boy.src = "/static/scene-boy.webp?v=29"' in index)
+      and 'boy.src = "/static/scene-boy.webp' not in index)
 check("CSS: .boy-writer-3d kills the element-level rock only",
       ".boy-writer-3d { animation: none !important; }" in css
       and "@keyframes boy-write" in css)

@@ -273,6 +273,8 @@ def _is_real(question, result):
         return False
     if _w151c_veto(question, result):
         return False
+    if _w177_veto(question, result):
+        return False
     return True
 
 
@@ -2808,6 +2810,114 @@ def _w151c_veto(question, result):
         return False
 
 
+# ---------------------------------------------------------------------------
+# Wave 177: serve-time RELEVANCE veto (Suraj's live test,
+# 19 Nov 2026). "0 ki khoj kisne ki hai" (who discovered
+# zero?) was served chip "arithmetic · evaluate", body
+# "Evaluate: 0 = 0", answer "0": SymPy's implicit
+# multiplication read the sentence's words as letter
+# factors and the literal 0 annihilated the product, so
+# the solver returned a bare-token "evaluate" that every
+# existing layer mistook for success — the AI legs are
+# failure-only, so they never saw the question, and the
+# Wave 133 verification only ever checks AI answers for
+# ARITHMETIC correctness ("0 = 0" is arithmetically true);
+# nothing anywhere checked RELEVANCE — does this serve
+# answer what was asked? This veto is that check, for the
+# fragment-evaluate shape: it fires only when ALL of these
+# hold —
+#   * the candidate is an op-"evaluate" serve whose
+#     expression is a BARE number and whose answer equals
+#     that same number (the "Evaluate: N = N" self-echo);
+#   * that number is a literal token of the question (the
+#     serve merely restates a fragment of the ask);
+#   * the question is a sentence / knowledge question
+#     (solver.arithmetic._w177_sentence_question: kisne /
+#     kab / kya hai / khoj / avishkar / who / invented /
+#     what is ..., EN + Hinglish + Devanagari);
+#   * the question carries NO computation shape of its own
+#     (digit-operator-digit, "% of", or an explicit compute
+#     request — solve / evaluate / calculate / hisab /
+#     nikalo / kitna / jod / guna / "value of" / "ka maan").
+# A genuine computation phrased as a sentence ("5 aur 3
+# ka jod kitna hoga" -> 8, a value that is NOT a token of
+# the question; "0/5 kitna hota hai" -> a digit-op-digit
+# ask) therefore never trips it. The vetoed message
+# continues down the chain — maths_meta / guidance /
+# concept layers, then the AI legs — instead of serving
+# the fragment. (The solver-side twin of this guard, in
+# solver/arithmetic.py, refuses the annihilation parse
+# itself; this veto is the serve-time net for any
+# fragment that still reaches the chain, e.g. via the
+# router's Wave 77 core pass.)
+# ---------------------------------------------------------------------------
+
+_W177_COMPUTATION = re.compile(
+    r"\d\s*[-+*/=×÷−–—^]\s*\d|\d\s*%\s*of|\d\s*/\s*\d\s+of")
+_W177_COMPUTE_PHRASES = (
+    "value of", "ka maan", "ki value", "ka value", "maan kya",
+    "kitna", "kitne", "kitni", "solve", "evaluate",
+    "calculate", "compute", "hisab", "nikalo", "nikale",
+    "jod", "ghatana", "ghatane", "ghataye", "guna",
+    "gunakar", "bhag", "jama", "sum", "add", "subtract",
+    "multiply", "divide", "plus", "minus", "total",
+    "कितना", "कितने", "कितनी", "मान क्या", "हिसाब",
+    "निकालो", "जोड़", "घटाना", "गुणा", "भाग",
+)
+
+
+def _w177_compute_shaped(question):
+    """Wave 177: True when the message itself asks for a
+    computation — a digit-operator-digit shape, a "% of" /
+    fraction-of shape, or an explicit compute request in
+    any of Ganitra's languages."""
+    q = str(question or "").lower().translate(_W159_DEV)
+    if _W177_COMPUTATION.search(q):
+        return True
+    return any(p in q for p in _W177_COMPUTE_PHRASES)
+
+
+def _w177_veto(question, result):
+    try:
+        return _w177_veto_inner(question, result)
+    except Exception:
+        return False
+
+
+def _w177_veto_inner(question, result):
+    if not isinstance(result, dict):
+        return False
+    if str(result.get("op") or "") != "evaluate":
+        return False
+    expr = str(result.get("expression") or "").strip()
+    if not re.fullmatch(r"-?\d+(?:\.\d+)?", expr):
+        return False
+    ans = result.get("numeric")
+    if ans is None:
+        try:
+            ans = float(str(result.get("answer") or "").strip())
+        except (TypeError, ValueError):
+            return False
+    if float(expr) != float(ans):
+        return False
+    q = str(question or "")
+    literals = set()
+    for tok in re.findall(r"\d+(?:\.\d+)?",
+                          q.translate(_W159_DEV)):
+        try:
+            literals.add(float(tok))
+        except ValueError:
+            pass
+    if float(expr) not in literals:
+        return False
+    from solver.arithmetic import _w177_sentence_question
+    if not _w177_sentence_question(q):
+        return False
+    if _w177_compute_shaped(q):
+        return False
+    return True
+
+
 def _w151c_part_value(text):
     """Tolerant numeric value of a multipart part's answer
     text: a leading fraction (\"3/8 ≈ 0.3750\") or the
@@ -4155,6 +4265,35 @@ def _with_fallback_chain(question, result, lang=None,
     if _is_nonmaths(question):
         return _nonmaths_result(question, hindi, req_flavour)
 
+    # Wave 174: the PAPER-REQUEST layer (paper_requests.py).
+    # A student asking for a board paper ("Mp board ka maths
+    # ka paper chahiye 12th class ka 2025") is asking for an
+    # artefact the Previous Papers library already holds —
+    # not a computation. It sits here, after the greeting and
+    # non-maths guards and before the meta/guidance layers,
+    # because those layers must not steal it (the exam-
+    # preparation advice is not a paper) and because the
+    # solver result must never outrank it: the solver parses
+    # the request sentence as an expression and errors, and
+    # before this wave the ask fell through every layer to
+    # the bare not-found line even when the exact paper was
+    # in the library. The layer's own gate (paper word +
+    # board or class + a problem-payload veto + maths-only
+    # subject check) returns None for every real problem —
+    # including one that merely mentions a board paper — and
+    # for every non-paper message, so the flow below is then
+    # exactly the pre-Wave-174 one. A paper request answered
+    # here never reaches the solver's answer, the concept
+    # layers or the AI legs.
+    try:
+        from paper_requests import paper_result
+        w174 = paper_result(question,
+                            req_flavour or _flavour(question))
+    except Exception:
+        w174 = None
+    if w174 is not None:
+        return w174
+
     # Wave 111: the maths-META layer (maths_meta.py) — maths
     # history/creator facts and study/practice/exam advice.
     # It sits here, after the greeting and non-maths guards
@@ -4754,9 +4893,17 @@ def _with_fallback_chain(question, result, lang=None,
             # so in production the AI chain gets its chance
             # at the student's actual question first. Genuine
             # gibberish (no meta shape) is untouched.
+            # Wave 177: the same rescue for the whole
+            # maths-KNOWLEDGE class — a who/when/why/
+            # what-is question ABOUT mathematics that the
+            # curated meta/fact entries miss ("abacus kya
+            # hota hai", "angle kya hota hai") is a genuine
+            # question for the AI chain, not gibberish.
             try:
-                from maths_meta import is_meta_shaped
-                meta_shaped = is_meta_shaped(question)
+                from maths_meta import is_knowledge_shaped, \
+                    is_meta_shaped
+                meta_shaped = is_meta_shaped(question) \
+                    or is_knowledge_shaped(question)
             except Exception:
                 meta_shaped = False
             result_out = _guide_result(
