@@ -795,9 +795,156 @@ def solve_trigonometry(question: str):
                 }
 
     # --- Wave 32: inverse trig evaluations ----------------------
+    # Wave 196: dress normalisation for the inverse-trig
+    # family ONLY (a local copy; qlow itself is untouched).
+    # Students type the Unicode root sign, the word dress
+    # ("sin inverse (1/2)", "inverse sin (1/2)") and the
+    # arc dress ("arcsin(1/2)", "asin(1/2)") — none of
+    # these reached any schema below: the word dress was
+    # fragment-served as the bare argument ("1/2") and the
+    # root dress parse-errored or truncated its argument
+    # (sin^-1(1/sqrt(2)) served pi/2, i.e. asin(1)).
+    _inv_q = qlow.replace("√", "sqrt")
+    _inv_q = re.sub(
+        r"\barc\s*(sin|cos|tan|sec|cosec|csc|cot)\b",
+        r"\1^-1", _inv_q)
+    _inv_q = re.sub(
+        r"\b(sin|cos|tan|sec|cosec|csc|cot)\s+inverse\b",
+        r"\1^-1", _inv_q)
+    _inv_q = re.sub(
+        r"\binverse\s+(sin|cos|tan|sec|cosec|csc|cot)\b",
+        r"\1^-1", _inv_q)
+    _inv_q = re.sub(r"\ba(sin|cos|tan)\s*\(", r"\1^-1(",
+                    _inv_q)
+
+    # Wave 196: strict whole-expression evaluator for
+    # inverse-trig values and signed sums/differences.
+    # Fires ONLY when, after the lead-in words, the whole
+    # question is a sum/difference of fn^-1(number) terms
+    # (an optional coefficient per term, e.g. "2 sin^-1").
+    # Every term is evaluated on its NCERT principal
+    # branch and the total is served only when it is a
+    # standard value (a multiple of 15 degrees). This
+    # replaces three fragment/wrong serves: the Wave 32
+    # pair shortcut below dropped any extra term
+    # (tan^-1(1) + cos^-1(-1/2) + sin^-1(-1/2) served
+    # pi/2; the true value is 3pi/4), the single-term
+    # schema truncated sqrt arguments, and mixed sums
+    # were served as their first term alone. Pure tan^-1
+    # chains stay with the Wave 47 fold below (it also
+    # serves non-standard totals as atan(...) forms).
+    _w196_num = r"\d+(?:\.\d+)?"
+    _w196_part = (r"(?:sqrt\s*\(?\s*" + _w196_num +
+                  r"\s*\)?|" + _w196_num + r")")
+    _w196_arg = (r"-?\s*" + _w196_part +
+                 r"(?:\s*/\s*" + _w196_part + r")?")
+    _w196_term = (r"(?:(" + _w196_num + r")\s*\*?\s*)?"
+                  r"(sec|cosec|csc|cot|sin|cos|tan)"
+                  r"\^-1\s*\(\s*(" + _w196_arg +
+                  r")\s*\)")
+    _w196_expr = _inv_q.strip().rstrip("?. ").strip()
+    for _w196_lead in ("find the principal value of",
+                       "find the value of", "principal "
+                       "value of", "value of", "find",
+                       "evaluate", "calculate", "what is"):
+        if _w196_expr.startswith(_w196_lead):
+            _w196_expr = _w196_expr[len(_w196_lead):].strip()
+            break
+    _w196_full = re.fullmatch(
+        r"[+-]?\s*" + _w196_term +
+        r"(?:\s*[+-]\s*" + _w196_term + r")*", _w196_expr)
+    if _w196_full and "=" not in _w196_expr:
+        _w196_terms = list(re.finditer(
+            r"([+-]?)\s*(?:(" + _w196_num + r")\s*\*?\s*)?"
+            r"(sec|cosec|csc|cot|sin|cos|tan)\^-1\s*"
+            r"\(\s*(" + _w196_arg + r")\s*\)", _w196_expr))
+
+        def _w196_argval(_s):
+            _s = _s.replace(" ", "").lstrip("+")
+            _neg = _s.startswith("-")
+            _s = _s.lstrip("-")
+            _vals = []
+            for _p in _s.split("/"):
+                _m = re.fullmatch(
+                    r"sqrt\(?(\d+(?:\.\d+)?)\)?", _p)
+                _vals.append(
+                    sp.sqrt(sp.Rational(_m.group(1)))
+                    if _m else sp.Rational(_p))
+            _v = _vals[0]
+            if len(_vals) == 2:
+                _v = _v / _vals[1]
+            return -_v if _neg else _v
+
+        def _w196_pval(_fn, _a):
+            if _fn == "sin":
+                return sp.asin(_a)
+            if _fn == "cos":
+                return sp.acos(_a)
+            if _fn == "tan":
+                return sp.atan(_a)
+            if _fn == "sec":
+                return sp.acos(1 / _a)
+            if _fn in ("cosec", "csc"):
+                return sp.asin(1 / _a)
+            if _a == 0:
+                return sp.pi / 2
+            return sp.atan(1 / _a) if _a > 0 else \
+                sp.pi + sp.atan(1 / _a)
+
+        _w196_all_tan = all(
+            _t.group(3) == "tan" for _t in _w196_terms)
+        if _w196_terms and not (
+                len(_w196_terms) >= 2 and _w196_all_tan):
+            try:
+                _w196_total = sp.Integer(0)
+                _w196_steps = []
+                for _t in _w196_terms:
+                    _coef = sp.Rational(_t.group(2)) \
+                        if _t.group(2) else sp.Integer(1)
+                    _aval = _w196_argval(_t.group(4))
+                    _pv = _coef * _w196_pval(
+                        _t.group(3), _aval)
+                    _w196_steps.append(
+                        f"{_t.group(3)}^-1"
+                        f"({fmt(_aval)}) = {fmt(_pv)}")
+                    if _t.group(1) == "-":
+                        _pv = -_pv
+                    _w196_total += _pv
+                _w196_degf = float(sp.deg(_w196_total))
+                if abs(_w196_degf - round(
+                        _w196_degf / 15) * 15) < 1e-6:
+                    if len(_w196_terms) >= 2:
+                        _w196_steps.append(
+                            "Adding the principal values "
+                            "term by term:")
+                    return {
+                        "type": "trigonometry",
+                        "op": "inverse_trig_value"
+                        if len(_w196_terms) == 1
+                        else "inverse_trig_sum",
+                        "answer": f"{fmt(_w196_total)} "
+                        f"({_w196_degf:.0f} degrees)",
+                        "steps": _w196_steps + [
+                            f"= {fmt(_w196_total)} = "
+                            f"{_w196_degf:.0f} degrees"],
+                        "value": float(_w196_total),
+                    }
+            except Exception:
+                pass
     _inv_sum = re.search(
         r"(sin|cos)\^-1\s*\(\s*([^()]+?)\s*\)\s*\+\s*"
-        r"(sin|cos)\^-1\s*\(\s*([^()]+?)\s*\)", qlow)
+        r"(sin|cos)\^-1\s*\(\s*([^()]+?)\s*\)", _inv_q)
+    # Wave 196 guard: the pair shortcut may fire only
+    # when the pair is the WHOLE question — otherwise it
+    # silently drops the remaining terms (see above).
+    if _inv_sum:
+        _w196_rest = _inv_q[:_inv_sum.start()] + \
+            _inv_q[_inv_sum.end():]
+        _w196_rest = re.sub(
+            r"\b(find|the|principal|value|of|evaluate|"
+            r"calculate|what|is)\b", "", _w196_rest)
+        if _w196_rest.strip(" +?.="):
+            _inv_sum = None
     if _inv_sum and _inv_sum.group(1) != _inv_sum.group(3) \
             and _inv_sum.group(2) == _inv_sum.group(4):
         steps = [
@@ -848,13 +995,19 @@ def solve_trigonometry(question: str):
     # first pair alone; the full sum is pi (audit #180).
     _tan_terms = re.findall(
         r"tan\^-1\s*\(\s*(-?\d+(?:\.\d+)?(?:\s*/\s*"
-        r"\d+(?:\.\d+)?)?)\s*\)", qlow)
+        r"\d+(?:\.\d+)?)?)\s*\)", _inv_q)
     if len(_tan_terms) >= 2:
         _rest = re.sub(
             r"tan\^-1\s*\(\s*-?\d+(?:\.\d+)?(?:\s*/\s*"
-            r"\d+(?:\.\d+)?)?\s*\)", "", qlow)
+            r"\d+(?:\.\d+)?)?\s*\)", "", _inv_q)
+        # Wave 196: "the" / "principal" join the filler
+        # words — "Find the value of tan^-1(1) + ..." left
+        # "the" behind, the rest-check failed, and the
+        # single-term schema below fragment-served the
+        # first term alone.
         _rest = re.sub(
-            r"\b(evaluate|find|value of|calculate)\b", "",
+            r"\b(evaluate|find|value of|calculate|the|"
+            r"principal)\b", "",
             _rest).strip(" +?.=")
         if not _rest:
             _rats = [sp.Rational(t.replace(" ", ""))
@@ -889,7 +1042,18 @@ def solve_trigonometry(question: str):
     _inv = re.search(
         r"(sec|cosec|csc|cot|sin|cos|tan)\^-1\s*\(?\s*"
         r"(-?\d+(?:\.\d+)?(?:\s*/\s*\d+(?:\.\d+)?)?"
-        r"|sqrt\s*\(?\s*\d+(?:\.\d+)?\s*\)?)\s*\)?", qlow)
+        r"|sqrt\s*\(?\s*\d+(?:\.\d+)?\s*\)?)\s*\)?", _inv_q)
+    # Wave 196 guards on the single-term schema: it must
+    # never fire on one term of a larger expression (the
+    # fragment serves documented above), on an equation
+    # dress, or when its loose argument match stopped
+    # early (a "/" or word character follows the match —
+    # the argument continues past what was parsed).
+    if _inv and (_inv_q.count("^-1") != 1
+                 or "=" in _inv_q
+                 or (_inv.end() < len(_inv_q)
+                     and _inv_q[_inv.end()] in "/*")):
+        _inv = None
     if _inv:
         _fn = _inv.group(1)
         _arg_raw = _inv.group(2).replace(" ", "")

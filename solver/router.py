@@ -3083,6 +3083,19 @@ def route_intent(question: str) -> str:
             r"(function\s+)?f\s*\(\s*x\s*\)", q):
         return "calculus"
 
+    # Wave 196: inverse-TRIG dress ("sin inverse (1/2)",
+    # "inverse sin (1/2)", "tan inverse (1)") carries the
+    # word "inverse" but is trigonometry, not a matrix
+    # inverse — the linear-algebra gate below claimed it
+    # and the question fragment-served its argument or
+    # errored demanding a matrix.
+    if re.search(
+            r"\b(sin|cos|tan|sec|cosec|csc|cot)\s+inverse\b",
+            q) or re.search(
+            r"\binverse\s+(sin|cos|tan|sec|cosec|csc|cot)\b",
+            q):
+        return "trigonometry"
+
     # Linear algebra
     if "[[" in q or re.search(
             r"\b(matrix|determinant|eigen|inverse|transpose|rank|trace)\b",
@@ -3538,6 +3551,15 @@ _W115_LOCAL = threading.local()
 _W142_LOCAL = threading.local()
 _W169_LOCAL = threading.local()
 _W175_LOCAL = threading.local()
+_W187_LOCAL = threading.local()
+_W188_LOCAL = threading.local()
+_W189_LOCAL = threading.local()
+_W190_LOCAL = threading.local()
+_W191_LOCAL = threading.local()
+_W192_LOCAL = threading.local()
+_W193_LOCAL = threading.local()
+_W194_LOCAL = threading.local()
+_W195_LOCAL = threading.local()
 _W125_LOCAL = threading.local()
 
 _W77_FILLER_WORDS = {
@@ -4217,6 +4239,41 @@ def _solve_question_uncached(question: str):
                 out["interpreted_as"] = translated
             return out
 
+    # Wave 186: implicit + logarithmic differentiation in
+    # the "Find dy/dx if ..." dress (solver/dydx186.py) —
+    # an EARLY gate, unlike the failure-only gates at the
+    # end of this function, because for this family the
+    # primary path cannot reach those gates in time:
+    # route_intent sends the relation to calculus, whose
+    # dsolve attempt burns ~10.2 s (measured, Wave 186),
+    # so the Wave 46 budget discards the correct Wave 142
+    # late-gate answer and serves the too-big error. The
+    # pre-check is strictly the dy/dx dress (a literal
+    # dy/dx, or differentiate / derivative ... w.r.t. x);
+    # dydx186 returns None unless the body is a pure
+    # implicit relation in x and y or a variable-power
+    # explicit form, every served derivative verified at
+    # solve time — parametric, second-order, at-a-point
+    # and plain explicit asks decline and route exactly
+    # as before.
+    if re.search(r"dy\s*/\s*dx", original) or \
+            re.search(r"dy\s*/\s*dx", working) or \
+            (re.search(r"\bdifferentiat\w*\b", working, re.I)
+             and re.search(r"w\.?\s*r\.?\s*t\.?\s*x\b"
+                           r"|with\s+respect\s+to\s+x\b",
+                           working, re.I)):
+        try:
+            from .dydx186 import solve_dydx186
+            w186 = solve_dydx186(original)
+            if w186 is None and working != original:
+                w186 = solve_dydx186(working)
+        except Exception:
+            w186 = None
+        if w186 is not None:
+            if was_translated:
+                w186.setdefault("interpreted_as", translated)
+            return w186
+
     # Wave 140: "1024 perfect square hai ya nahi?" — a
     # haan-nahi number-theory ask no solver owned, so it fell
     # to the expression parser's error and then to the slow
@@ -4372,6 +4429,34 @@ def _solve_question_uncached(question: str):
                         "w169_sector") and \
                         _w171_fragment_hijack(working, out, w172):
                     out = w172
+            # Wave 187: a second measured exception inside
+            # this block, same pattern as Wave 172 above.
+            # The "magnitude of vector" / "unit vector" /
+            # "dot product" triggers claim phone-typed ASCII
+            # vector questions (`2i + 3j - k`) for geometry,
+            # which serves fragments — the magnitude of
+            # 2i + 3j - k as 3.60555 (sqrt(13), a component
+            # dropped), its unit vector as a 2D decimal pair,
+            # the dot product of -i + 2j and 3i - j as 0 —
+            # and this block returns before the tail gates
+            # can repair anything.  When the strict Wave 187
+            # schema settles the same ask completely AND the
+            # served answer verifiably differs
+            # (repair_vectors187), serve its answer instead;
+            # a correct geometry serve is never displaced.
+            if out.get("op") in ("vector magnitude",
+                                 "unit vector",
+                                 "dot product") and \
+                    out.get("type") == "geometry":
+                try:
+                    from .vectors187 import repair_vectors187
+                    w187p = repair_vectors187(original, out)
+                    if w187p is None and working != original:
+                        w187p = repair_vectors187(working, out)
+                except Exception:
+                    w187p = None
+                if w187p is not None:
+                    out = w187p
             if was_translated:
                 out["interpreted_as"] = translated
             return out
@@ -4951,6 +5036,123 @@ def _solve_question_uncached(question: str):
                     if was_translated:
                         w171.setdefault("interpreted_as", translated)
                     return w171
+                # Wave 187: the same in-block pattern for one
+                # measured wrong-FORM core serve.  An explicit
+                # "vector projection of ..." ask is compressed
+                # by the core pass to "vector projection ..."
+                # and the Wave 142 projection schema answers
+                # the core with the SCALAR projection — a real
+                # answer to a different ask, returned here
+                # before any tail gate can see it.  When the
+                # ORIGINAL text explicitly asks the vector
+                # form and the strict Wave 187 schema settles
+                # it completely, serve that instead; the
+                # scalar-projection core serve for plain
+                # "projection of the vector ..." asks (whose
+                # compression is "projection vector ...") is
+                # untouched.
+                try:
+                    from .vectors187 import solve_vectors187
+                    _wl187c = original.lower()
+                    w187c = None
+                    if "vector projection of" in _wl187c or \
+                            "projection vector of" in _wl187c:
+                        w187c = solve_vectors187(original)
+                except Exception:
+                    w187c = None
+                if w187c is not None and \
+                        w187c.get("op") == "vector_projection" \
+                        and core.get("op") == "projection":
+                    if was_translated:
+                        w187c.setdefault("interpreted_as",
+                                          translated)
+                    return w187c
+                # Wave 190: the same hijack exists for the
+                # matrix-method family — the core pass carves
+                # one equation out of a system asked by
+                # matrix method and returns its simplification
+                # ("2*x + 4" for "x + y = 2, 2x + 2y = 4")
+                # before the Wave 190 tail gate is reached.
+                # When the strict matrix190 schema settles
+                # the whole question and the core is only a
+                # simplify / evaluate fragment with a
+                # different answer, the schema's verified
+                # answer stands instead; every other core
+                # result is returned exactly as before.
+                try:
+                    from .matrix190 import solve_matrix190
+                    w190c = solve_matrix190(original)
+                    if w190c is None and working != original:
+                        w190c = solve_matrix190(working)
+                except Exception:
+                    w190c = None
+                if w190c is not None and \
+                        core.get("op") in ("simplify",
+                                           "evaluate") and \
+                        str(w190c.get("answer", "")).strip() != \
+                        str(core.get("answer", "")).strip():
+                    if was_translated:
+                        w190c.setdefault("interpreted_as",
+                                         translated)
+                    return w190c
+                # Wave 194: the verify-the-solution repair
+                # at this same seam (audit probe 15).  The
+                # primary solver errors on "Verify that
+                # y = e^x + 1 is a solution of the
+                # differential equation y'' - y' = 0", so
+                # this pass extracts the core "y = e^x + 1"
+                # and would return algebra's solve-for-e
+                # nonsense "e = (y - 1)^(1/x)" before any
+                # late gate runs.  When the strict Wave 194
+                # verify schema (the question must carry
+                # the verify dress itself) settles the
+                # whole question with a computed verdict
+                # the core did not serve, the verdict
+                # stands instead; every other core result
+                # is returned exactly as before.
+                try:
+                    from .diffeq194 import \
+                        verify_solution_result
+                    w194v = verify_solution_result(original)
+                    if w194v is None and working != original:
+                        w194v = verify_solution_result(working)
+                except Exception:
+                    w194v = None
+                if w194v is not None and \
+                        str(w194v.get("answer", "")).strip() != \
+                        str(core.get("answer", "")).strip():
+                    if was_translated:
+                        w194v.setdefault("interpreted_as",
+                                           translated)
+                    return w194v
+                # Wave 195: the same seam — a strict Class 10
+                # special-form schema (solver/c10pack195.py)
+                # settles the whole question while the core is
+                # only its fragment: the echoed given ratio
+                # ("Given sec theta = 13/5, calculate all
+                # other trigonometric ratios" -> core "13/5"),
+                # the wrapper equation ("If sin A = 3/4,
+                # calculate cos A and tan A" -> core
+                # "A = 3/4"), the bare fraction of the
+                # AP = 3/7 AB dress, or the "a = 5" of an AP
+                # table ask.  Under w195_displaces the
+                # schema's verified answer stands instead;
+                # every other core result is returned exactly
+                # as before.
+                try:
+                    from .c10pack195 import (solve_c10pack195,
+                                             w195_displaces)
+                    w195c = solve_c10pack195(original)
+                    if w195c is None and working != original:
+                        w195c = solve_c10pack195(working)
+                except Exception:
+                    w195c = None
+                if w195c is not None and \
+                        w195_displaces(original, core, w195c):
+                    if was_translated:
+                        w195c.setdefault("interpreted_as",
+                                         translated)
+                    return w195c
                 if was_translated:
                     core.setdefault("interpreted_as", translated)
                 return core
@@ -5030,6 +5232,30 @@ def _solve_question_uncached(question: str):
             finally:
                 _W115_LOCAL.depth = 0
             if w115 is not None:
+                # Wave 189 repair: rekha's 2D intercept form
+                # also matches a 3D PLANE intercepts question
+                # and drops the z term ("x/2 + y/3 = 1" for
+                # intercepts 2, 3, 4 on the x, y, z axes).
+                # When the strict Wave 189 plane schema
+                # settles the same question differently, its
+                # answer stands instead.
+                if w115.get("op") == "w115_eq_intercepts":
+                    try:
+                        from .threed189 import (
+                            solve_threed189,
+                            threed189_should_displace)
+                        w189x = solve_threed189(original)
+                        if w189x is None and working != original:
+                            w189x = solve_threed189(working)
+                        if w189x is not None and \
+                                threed189_should_displace(
+                                    original, w115, w189x):
+                            if was_translated:
+                                w189x.setdefault(
+                                    "interpreted_as", translated)
+                            return w189x
+                    except Exception:
+                        pass
                 if was_translated:
                     w115.setdefault("interpreted_as", translated)
                 return w115
@@ -5059,6 +5285,40 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     w125.setdefault("interpreted_as", translated)
                 return w125
+        # Wave 187: scoped precedence for TWO explicit
+        # ASCII vector dresses the Wave 142 gate below
+        # serves in the wrong FORM (its gate returns before
+        # the Wave 187 tail gate is reached): an explicit
+        # "vector projection" / "projection vector" ask,
+        # which Wave 142 answers with the SCALAR projection,
+        # and a combined "direction ratios and direction
+        # cosines" ask, which it answers with the cosines
+        # alone.  Failure-only like every gate here, and
+        # vectors187 returns None unless its strict schema
+        # settles the whole ask — every other dress keeps
+        # Wave 142's precedence exactly as before.
+        if getattr(_W187_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _wl187 = original.lower()
+            if "vector projection of" in _wl187 or \
+                    "projection vector of" in _wl187 or \
+                    ("direction ratios" in _wl187 and
+                     "direction cosines" in _wl187):
+                _W187_LOCAL.depth = 1
+                try:
+                    from .vectors187 import solve_vectors187
+                    w187q = solve_vectors187(original)
+                    if w187q is None and working != original:
+                        w187q = solve_vectors187(working)
+                except Exception:
+                    w187q = None
+                finally:
+                    _W187_LOCAL.depth = 0
+                if w187q is not None:
+                    if was_translated:
+                        w187q.setdefault("interpreted_as",
+                                          translated)
+                    return w187q
         # Wave 142: Class 12 book-gap method families
         # (solver/c12gaps142.py) — the same failure-only
         # gate as Waves 77/94/103/115: inverse-trig
@@ -5096,6 +5356,32 @@ def _solve_question_uncached(question: str):
             finally:
                 _W142_LOCAL.depth = 0
             if w142 is not None:
+                # Wave 189 repair: c12gaps142's angle-between-
+                # lines schema pairs the first r = line's
+                # POINT vector with its direction, so for
+                # "angle between the lines r = ... and
+                # r = ..." it serves the wrong angle (33.6
+                # degrees where the lines' angle is 60).
+                # When the strict Wave 189 schema settles
+                # the same question differently, its answer
+                # stands instead.
+                if w142.get("op") == "angle_between_lines":
+                    try:
+                        from .threed189 import (
+                            solve_threed189,
+                            threed189_should_displace)
+                        w189x = solve_threed189(original)
+                        if w189x is None and working != original:
+                            w189x = solve_threed189(working)
+                        if w189x is not None and \
+                                threed189_should_displace(
+                                    original, w142, w189x):
+                            if was_translated:
+                                w189x.setdefault(
+                                    "interpreted_as", translated)
+                            return w189x
+                    except Exception:
+                        pass
                 if was_translated:
                     w142.setdefault("interpreted_as", translated)
                 return w142
@@ -5160,6 +5446,43 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     w171.setdefault("interpreted_as", translated)
                 return w171
+        # Wave 187: fragment repair for the ASCII vector
+        # family (solver/vectors187.py) — the Wave 171
+        # pattern.  The geometry intent "answers" plain
+        # phone-typed vector questions with fragments (the
+        # magnitude of 2i + 3j - k served as 3.60555 =
+        # sqrt(13), a component dropped; its unit vector
+        # served as a 2D decimal pair; the dot product of
+        # -i + 2j and 3i - j served as 0), the projection
+        # schema serves the SCALAR projection when the
+        # student explicitly asked for the vector
+        # projection, and the direction-cosines schema
+        # serves cosines alone when ratios were also asked.
+        # repair_vectors187 displaces ONLY those measured
+        # ops, only when its strict schema settles the same
+        # ask completely AND the served answer verifiably
+        # differs; every other real primary answer stands.
+        if getattr(_W187_LOCAL, "depth", 0) == 0 and \
+                not _w77_needs_core(original, result) and \
+                result.get("op") in (
+                    "vector magnitude", "unit vector",
+                    "dot product", "projection",
+                    "direction_cosines_vector"):
+            _W187_LOCAL.depth = 1
+            try:
+                from .vectors187 import repair_vectors187
+                w187r = repair_vectors187(original, result)
+                if w187r is None and working != original:
+                    w187r = repair_vectors187(working, result)
+            except Exception:
+                w187r = None
+            finally:
+                _W187_LOCAL.depth = 0
+            if w187r is not None:
+                if was_translated:
+                    w187r.setdefault("interpreted_as",
+                                      translated)
+                return w187r
         # Wave 175: matrix equality (solver/matrixeq175.py)
         # — the same failure-only gate as Waves 169/171.
         # The primary linear_algebra solver's matrix parser
@@ -5190,6 +5513,421 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     w175.setdefault("interpreted_as", translated)
                 return w175
+        # Wave 187: vector algebra in plain ASCII notation
+        # (solver/vectors187.py) — the same failure-only
+        # gate as Waves 169/171/175.  The Wave 80 gate only
+        # fires on Unicode glyphs / a few ask words, so
+        # phone-typed `2i + 3j - k` questions died as
+        # complex-parse errors (bare i read as I): angle
+        # between vectors (form-audit probe 16), dot /
+        # cross / scalar / vector product, direction
+        # ratios, lambda-perpendicular / parallel in the
+        # bare-literal dresses, a + b with named definitions,
+        # |a| / |literal| magnitudes.  vectors187 requires
+        # real vector evidence (a j or k component, or an
+        # explicit vector word) — a lone Ni term never
+        # fires it, so complex-number questions are never
+        # hijacked — and returns None unless a strict schema
+        # settles the question completely with SymPy-exact,
+        # substitution-verified values.
+        if getattr(_W187_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W187_LOCAL.depth = 1
+            try:
+                from .vectors187 import solve_vectors187
+                w187 = solve_vectors187(original)
+                if w187 is None and working != original:
+                    w187 = solve_vectors187(working)
+            except Exception:
+                w187 = None
+            finally:
+                _W187_LOCAL.depth = 0
+            if w187 is not None:
+                if was_translated:
+                    w187.setdefault("interpreted_as", translated)
+                return w187
+        # Wave 188: probability-distribution hijack repair
+        # (solver/probwords188.py) — the sentence dress
+        # "X = 0, 1, 2 with P(X) = 0.2, 0.5, 0.3, find the
+        # mean of X" is served by statistics' PLAIN mean of
+        # the value list (1 instead of Σx·P(x) = 1.1): a
+        # real-looking answer, so the failure-only gates
+        # never fire.  This block runs the strict
+        # distribution schema ONLY for statistics
+        # mean / variance / std serves and displaces ONLY
+        # on a verified difference (or a fragment of a
+        # combined ask) — the Wave 187 verified-difference
+        # precedent.  A correct primary answer stands.
+        if getattr(_W188_LOCAL, "depth", 0) == 0 and \
+                not _w77_needs_core(original, result):
+            _W188_LOCAL.depth = 1
+            try:
+                from .probwords188 import repair_probwords188
+                w188r = repair_probwords188(original, result)
+                if w188r is None and working != original:
+                    w188r = repair_probwords188(working,
+                                                result)
+            except Exception:
+                w188r = None
+            finally:
+                _W188_LOCAL.depth = 0
+            if w188r is not None:
+                if was_translated:
+                    w188r.setdefault("interpreted_as",
+                                     translated)
+                return w188r
+        # Wave 188: probability word-dress layer
+        # (solver/probwords188.py) — the same failure-only
+        # gate as Waves 169/175: spelled-out relations
+        # ("P(A intersection B)"), Bayes in sentence dress
+        # (hosteller / day-scholar, factories, bags) and
+        # the distribution sentence dress all fell to a
+        # statistics guide.  probwords188 returns None
+        # unless a strict schema settles the question
+        # completely with exact rational arithmetic, so a
+        # real primary answer is never displaced.
+        if getattr(_W188_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W188_LOCAL.depth = 1
+            try:
+                from .probwords188 import solve_probwords188
+                w188 = solve_probwords188(original)
+                if w188 is None and working != original:
+                    w188 = solve_probwords188(working)
+            except Exception:
+                w188 = None
+            finally:
+                _W188_LOCAL.depth = 0
+            if w188 is not None:
+                if was_translated:
+                    w188.setdefault("interpreted_as",
+                                    translated)
+                return w188
+        # Wave 189: Three Dimensional Geometry
+        # (solver/threed189.py) — the same failure-only gate
+        # as Waves 169/175: shortest distance between two
+        # lines (vector + cartesian dress, parallel and
+        # intersecting cases included), angle between lines
+        # in the r = dress and the cartesian dress, line
+        # equations (two points; point + direction in the
+        # dresses tierA169 misses), and plane basics
+        # (point + normal, three points, intercepts,
+        # point-to-plane distance in the r.n = d dress,
+        # angle between planes).  threed189 returns None
+        # unless a strict schema settles the question
+        # completely with an exactly verified answer, so a
+        # real primary answer is never displaced.
+        if getattr(_W189_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W189_LOCAL.depth = 1
+            try:
+                from .threed189 import solve_threed189
+                w189 = solve_threed189(original)
+                if w189 is None and working != original:
+                    w189 = solve_threed189(working)
+            except Exception:
+                w189 = None
+            finally:
+                _W189_LOCAL.depth = 0
+            if w189 is not None:
+                if was_translated:
+                    w189.setdefault("interpreted_as", translated)
+                return w189
+        # Wave 190: matrix family completion
+        # (solver/matrix190.py) — the same failure-only gate
+        # as Waves 169/175: systems of equations stated as
+        # equations and asked by matrix method (plus the
+        # consistency verdicts for a singular A), A'A = I /
+        # AA' = I find-the-unknowns in plain dress, the
+        # hence-find-A^-1 chain, and the NCERT matrix word
+        # templates (trust-fund bonds, manufacturer markets).
+        # matrix190 returns None unless a strict schema
+        # settles the question completely with a verified
+        # answer, so a real primary answer is never
+        # displaced.
+        if getattr(_W190_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W190_LOCAL.depth = 1
+            try:
+                from .matrix190 import solve_matrix190
+                w190 = solve_matrix190(original)
+                if w190 is None and working != original:
+                    w190 = solve_matrix190(working)
+            except Exception:
+                w190 = None
+            finally:
+                _W190_LOCAL.depth = 0
+            if w190 is not None:
+                if was_translated:
+                    w190.setdefault("interpreted_as", translated)
+                return w190
+        # Wave 190 hijack repair (Wave 171 pattern): some
+        # Wave 190 dresses are answered by the primary
+        # solver with a FRAGMENT of the question — the bare
+        # product AB for a "(AB)' = B'A'" verify, 5A for a
+        # hence-find-A^-1 ask, a stray simplification for a
+        # singular matrix-method system — a "real" result
+        # the failure-only gate above can never see.
+        # Displacement is allowed only when the strict
+        # matrix190 schema settles the whole question with
+        # a w190 op, the primary op is one of the measured
+        # fragment ops, and the answers verifiably differ;
+        # every other real primary answer stands untouched.
+        if getattr(_W190_LOCAL, "depth", 0) == 0 and \
+                not _w77_needs_core(original, result) and \
+                result.get("op") in ("multiply",
+                                     "scalar_multiply", "add",
+                                     "subtract", "simplify",
+                                     "evaluate", "transpose",
+                                     "system"):
+            _W190_LOCAL.depth = 1
+            try:
+                from .matrix190 import solve_matrix190
+                w190h = solve_matrix190(original)
+                if w190h is None and working != original:
+                    w190h = solve_matrix190(working)
+            except Exception:
+                w190h = None
+            finally:
+                _W190_LOCAL.depth = 0
+            if w190h is not None and str(
+                    w190h.get("op", "")).startswith(
+                    "w190_") and \
+                    str(w190h.get("answer", "")).strip() != \
+                    str(result.get("answer", "")).strip():
+                if was_translated:
+                    w190h.setdefault("interpreted_as",
+                                       translated)
+                return w190h
+        # Wave 191: Relations & Functions proof /
+        # classification engine (solver/relations191.py)
+        # — the same failure-only gate as Waves 169/175.
+        # The form audit's probes 05/06 missed natively:
+        # relation property questions ("Show that R ...
+        # is reflexive but neither symmetric nor
+        # transitive") parse-errored, and the one-one /
+        # onto classification of f(x) = x^4 fell to a
+        # statistics guide.  relations191 returns None
+        # unless a strict schema settles the question
+        # completely with a mechanically computed verdict
+        # (exhaustive roster checks with witnesses,
+        # catalogue classification with verified
+        # witnesses, exact counting formulas), so a real
+        # primary answer is never displaced.
+        if getattr(_W191_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W191_LOCAL.depth = 1
+            try:
+                from .relations191 import solve_relations191
+                w191 = solve_relations191(original)
+                if w191 is None and working != original:
+                    w191 = solve_relations191(working)
+            except Exception:
+                w191 = None
+            finally:
+                _W191_LOCAL.depth = 0
+            if w191 is not None:
+                if was_translated:
+                    w191.setdefault("interpreted_as", translated)
+                return w191
+        # Wave 192: P&C counting WORD forms
+        # (solver/pnc192.py) — the same failure-only gate as
+        # Waves 169/171/175.  statistics.py computes nPr /
+        # nCr only from the explicit "nPr" dress, so the
+        # NCERT Ex 6.1-6.4 word forms (team of 3 boys and
+        # 3 girls from 5 boys and 4 girls; committee of 7
+        # with exactly / at least / at most 3 girls; letter
+        # arrangements incl. repeats and vowels-together;
+        # digit numbers with conditions; chords /
+        # handshakes / diagonals) parse-errored (form
+        # audit probes 25-26).  pnc192 returns None unless
+        # a strict schema settles the question completely
+        # with an exact integer count (math.comb / perm /
+        # factorial or an exact subset DP), so a real
+        # primary answer is never displaced and an
+        # uncertain parse never serves a wrong count.
+        if getattr(_W192_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W192_LOCAL.depth = 1
+            try:
+                from .pnc192 import solve_pnc_word
+                w192 = solve_pnc_word(original)
+                if w192 is None and working != original:
+                    w192 = solve_pnc_word(working)
+            except Exception:
+                w192 = None
+            finally:
+                _W192_LOCAL.depth = 0
+            if w192 is not None:
+                if was_translated:
+                    w192.setdefault("interpreted_as", translated)
+                return w192
+        # Wave 193: Sets & Cartesian-product forms
+        # (solver/sets193.py) — the failure-only gate as
+        # Waves 169/175, PLUS a scoped wrong-serve
+        # displacement.  The form audit's probe 23 is the
+        # measured wrong serve: "U = {1..9}, A = {2,4,6,8},
+        # B = {2,3,5,7}, verify that (A union B)' = A'
+        # intersection B'" came back from solve_sets as the
+        # fragment {2,4,6,8} (it read U and A as its two
+        # sets and intersected them) instead of the computed
+        # verification {1, 9} = {1, 9}.  A failure-only gate
+        # can never see that serve, so: when the primary
+        # result is a sets-typed serve and sets193 settles
+        # the same question completely (named sets parsed,
+        # both sides of an identity computed, the whole
+        # question accounted for) with a verifiably
+        # DIFFERENT answer, the computed answer stands
+        # (Wave 171/187 displacement precedent).  Every
+        # other real primary answer — plain union /
+        # intersection controls included — is untouched:
+        # sets193 declines plain set operations entirely.
+        if getattr(_W193_LOCAL, "depth", 0) == 0:
+            _need193 = _w77_needs_core(original, result)
+            _disp193 = (not _need193) and \
+                isinstance(result, dict) and \
+                result.get("type") == "sets"
+            if _need193 or _disp193:
+                _W193_LOCAL.depth = 1
+                try:
+                    from .sets193 import solve_sets193
+                    w193 = solve_sets193(original)
+                    if w193 is None and working != original:
+                        w193 = solve_sets193(working)
+                except Exception:
+                    w193 = None
+                finally:
+                    _W193_LOCAL.depth = 0
+                if w193 is not None and (_need193 or str(
+                        w193.get("answer", "")).strip() != str(
+                        result.get("answer", "")).strip()):
+                    if was_translated:
+                        w193.setdefault("interpreted_as",
+                                        translated)
+                    return w193
+        # Wave 194: differential equations in NCERT dress
+        # (solver/diffeq194.py) — the same failure-only
+        # gate as Waves 169/175: the bracketed "(…) dy =
+        # (…) dx" homogeneous / separable forms (Ex
+        # 9.3/9.4, audit probe 14: parse error), the dy/dx
+        # dress of the separable and linear (Ex 9.5) forms
+        # whose primary serve was letter-soup, and the
+        # verify-the-solution schema (Ex 9.2).  diffeq194
+        # returns None unless a strict schema settles the
+        # question completely with a result verified by
+        # differentiating it back, so a real primary
+        # answer is never displaced.
+        if getattr(_W194_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W194_LOCAL.depth = 1
+            try:
+                from .diffeq194 import solve_diffeq194
+                w194 = solve_diffeq194(original)
+                if w194 is None and working != original:
+                    w194 = solve_diffeq194(working)
+            except Exception:
+                w194 = None
+            finally:
+                _W194_LOCAL.depth = 0
+            if w194 is not None:
+                if was_translated:
+                    w194.setdefault("interpreted_as", translated)
+                return w194
+        # Wave 194: verify-the-solution wrong-serve repair
+        # (audit probe 15).  "Verify that y = e^x + 1 is a
+        # solution of the differential equation y'' - y'
+        # = 0" leaves the primary solver as op "equation"
+        # with the nonsense answer "e = (y - 1)^(1/x)" —
+        # the equation "solved" for the letter e — a real
+        # op, so the failure-only gate above can never see
+        # it.  This block runs ONLY the strict verify
+        # schema (the question must carry the verify dress
+        # itself) and displaces only when the schema
+        # settles the question with a computed verdict the
+        # primary did not serve; every other real primary
+        # answer stands untouched.
+        if getattr(_W194_LOCAL, "depth", 0) == 0 and \
+                not _w77_needs_core(original, result) and \
+                result.get("op") != "de_verification":
+            _W194_LOCAL.depth = 1
+            try:
+                from .diffeq194 import verify_solution_result
+                w194v = verify_solution_result(original)
+                if w194v is None and working != original:
+                    w194v = verify_solution_result(working)
+            except Exception:
+                w194v = None
+            finally:
+                _W194_LOCAL.depth = 0
+            if w194v is not None and \
+                    str(w194v.get("answer", "")).strip() != \
+                    str(result.get("answer", "")).strip():
+                if was_translated:
+                    w194v.setdefault("interpreted_as",
+                                       translated)
+                return w194v
+        # Wave 195: Class 10 special-form pack
+        # (solver/c10pack195.py) — the same failure-only gate
+        # as Waves 169/171/175: coordinate-geometry specials
+        # (parallelogram vertices, equidistant-on-axis,
+        # distance-equals, trisection / equal parts,
+        # quadrilateral classification, AP = m/n AB), the
+        # given-one-trig-ratio-find-all-others family, and
+        # the AP word dresses (penalty / savings / prizes /
+        # houses / logs / reverse-S_n / missing terms / AP
+        # table).  c10pack195 returns None unless a strict
+        # schema settles the question completely with exactly
+        # verified values, so a real primary answer is never
+        # displaced.
+        if getattr(_W195_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W195_LOCAL.depth = 1
+            try:
+                from .c10pack195 import solve_c10pack195
+                w195 = solve_c10pack195(original)
+                if w195 is None and working != original:
+                    w195 = solve_c10pack195(working)
+            except Exception:
+                w195 = None
+            finally:
+                _W195_LOCAL.depth = 0
+            if w195 is not None:
+                if was_translated:
+                    w195.setdefault("interpreted_as", translated)
+                return w195
+        # Wave 195 fragment repair: the given-one-ratio dress
+        # FRAGMENT-serves in the primary layer (probe 28:
+        # "Given sec theta = 13/5, calculate all other
+        # trigonometric ratios" came back as the bare echo
+        # "13/5"; "15 cot A = 8" served sqrt(65) values from
+        # a dropped coefficient), and the AP = m/n AB and AP
+        # table dresses echo likewise — all real-looking
+        # answers the failure-only gate above can never see.
+        # This block runs the strict Wave 195 schemas ONLY
+        # for the measured fragment ops and displaces ONLY
+        # under w195_displaces (strict complete match +
+        # verifiably different / incomplete primary); every
+        # other real primary answer stands untouched.
+        if getattr(_W195_LOCAL, "depth", 0) == 0 and \
+                not _w77_needs_core(original, result) and \
+                result.get("op") in ("evaluate", "equation",
+                                     "ratio_from_ratio"):
+            _W195_LOCAL.depth = 1
+            try:
+                from .c10pack195 import (solve_c10pack195,
+                                         w195_displaces)
+                w195f = solve_c10pack195(original)
+                if w195f is None and working != original:
+                    w195f = solve_c10pack195(working)
+            except Exception:
+                w195f = None
+            finally:
+                _W195_LOCAL.depth = 0
+            if w195f is not None and \
+                    w195_displaces(original, result, w195f):
+                if was_translated:
+                    w195f.setdefault("interpreted_as", translated)
+                return w195f
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])
