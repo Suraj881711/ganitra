@@ -64,6 +64,23 @@
        of small icons for every extra. The old explanation
        filler block is gone: it only restated the answer. #}
 
+    {#- Wave 211: that removal also deleted the ONLY classic-
+       page surface that visibly answered in the language of
+       an explicit in-message request (Wave 107) — the route
+       still computes the explanation in the requested
+       language, the template just never showed it, so a
+       Hindi question with "answer in English" got a page
+       whose summary line stayed Hindi-shaped (the English
+       line never appeared at all). For an explicit-request
+       serve ONLY, the one-line explanation is back, in its
+       pre-208 position; the whitespace control keeps a
+       no-request page byte-identical to the Wave 208 page.
+       -#}
+    {%- if lang_requested and explanation %}
+      <h2>{{ t.explanation_heading }}</h2>
+      <p class="explain">{{ explanation }}</p>
+    {%- endif %}
+
     {% if result.steps %}
       {# Wave 120 (Suraj, 17 Nov 2026): the "Step-by-step
          solution" heading is REMOVED — the solving lines
