@@ -32,7 +32,7 @@ and this wave does not touch it. The card hides with
 .empty-robot-top the moment a chat starts
 (body.chat-active), when the header buddy takes over.
 
-Pins moved with the CSS: ?v=60 / ganitra-static-v37.
+Pins moved with the CSS: ?v=60 / ganitra-static-v38.
 
 Wave 181 update (19 Nov 2026): Suraj replaced the robot
 and its card with the new rendered mascot in a WHITE
@@ -184,8 +184,8 @@ def test_circle_hides_with_top_wrapper_on_chat_active():
 # --- 6. Pins ------------------------------------------------------------
 
 def test_pins_v58_v35():
-    assert "filename='style.css', v='60'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
-    assert '"/static/style.css?v=60"' in SW
+    assert "filename='style.css', v='61'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in SW
+    assert '"/static/style.css?v=61"' in SW
     assert "v='53'" not in BASE
     assert "ganitra-static-v30" not in SW

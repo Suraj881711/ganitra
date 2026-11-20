@@ -18,7 +18,7 @@ exactly and is what this file pins now:
     body.chat-active hides the home one;
   * the palette pins of the old SVG are retired with the
     artwork (a photograph carries its own colours);
-  * pins moved with the CSS: ?v=60 / ganitra-static-v37.
+  * pins moved with the CSS: ?v=60 / ganitra-static-v38.
 """
 from pathlib import Path
 
@@ -104,6 +104,6 @@ def test_home_circle_holds_only_the_wave_pose_still():
 # --- Pins -----------------------------------------------------------
 
 def test_pins_current():
-    assert "v='60'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
-    assert '"/static/style.css?v=60"' in SW
+    assert "v='61'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in SW
+    assert '"/static/style.css?v=61"' in SW

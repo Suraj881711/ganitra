@@ -19,7 +19,7 @@ What this wave changed:
   mirrored to the far RIGHT (right: 7px, the bar reserves
   padding-right instead of padding-left).
 - Pins bumped for the CSS change: stylesheet ?v=43,
-  service-worker cache ganitra-static-v37.
+  service-worker cache ganitra-static-v38.
 The full-page menu panel, the item list and its order are
 untouched.
 """
@@ -153,6 +153,6 @@ def test_menu_items_and_order_untouched():
 
 
 def test_pins_bumped_for_this_css_change():
-    assert "filename='style.css', v='60'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
-    assert '"/static/style.css?v=60"' in SW
+    assert "filename='style.css', v='61'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in SW
+    assert '"/static/style.css?v=61"' in SW

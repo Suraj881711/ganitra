@@ -66,14 +66,14 @@ def test_box_slimmer_but_length_untouched():
 
 def test_all_four_signs_still_in_the_bar():
     for marker in ('id="file-btn"', 'id="mic-btn"',
-                   'for="photo-input"', 'class="send-btn icon-btn"'):
+                   'id="gallery-input"', 'class="send-btn icon-btn"'):
         assert marker in INDEX
 
 
 def test_pins_bumped_to_v58_v35():
-    assert "v='60'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
-    assert '"/static/style.css?v=60"' in SW
+    assert "v='61'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in SW
+    assert '"/static/style.css?v=61"' in SW
 
 
 def test_answer_row_icons_closer():
