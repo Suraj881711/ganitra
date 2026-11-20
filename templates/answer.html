@@ -59,30 +59,75 @@
       <p class="muted">{{ t.understood_as }} <code>{{ result.interpreted_as }}</code></p>
     {% endif %}
 
-    {# Wave 24: ONE reading sequence, same as the chat —
-       steps first, then the final-answer box, then the
-       Teacher's Advice, then the other methods. #}
-    {% if explanation %}
-      <h2>{{ t.explanation_heading }}</h2>
-      <p class="explain">{{ explanation }}</p>
-    {% endif %}
+    {# Wave 208 (Suraj, 20 Nov 2026): ONE reading sequence —
+       question, steps, the final-answer box ONCE, then a row
+       of small icons for every extra. The old explanation
+       filler block is gone: it only restated the answer. #}
 
     {% if result.steps %}
       {# Wave 120 (Suraj, 17 Nov 2026): the "Step-by-step
          solution" heading is REMOVED — the solving lines
          stand on their own, no label. #}
-      <div class="steps-tools">
-        <button type="button" class="hw-toggle" id="hw-toggle"
-          aria-pressed="true">{{ t.handwriting_btn }}</button>
-        <a class="back" href="/solution/print?style=hand" target="_blank"
-          rel="noopener">{{ t.print_copy_link }}</a>
-      </div>
       <ol class="steps notebook handwriting-on" id="steps-list">
         {# Wave 138: the typeset variant of each step when the
            server provided one (MathJax, loaded by base.html,
            typesets it on page load); the plain step otherwise. #}
         {% for step in result.steps %}<li>{{ result.steps_tex[loop.index0] if result.steps_tex else step }}</li>{% endfor %}
       </ol>
+    {% endif %}
+
+    {% if result.image %}
+      <img class="graph" src="{{ url_for('static', filename=result.image) }}"
+           alt="Graph of the function" />
+    {% endif %}
+
+    {# Wave 86: the labelled diagram for a mensuration solve
+       (figures.py) — server-generated SVG from the question's
+       own numbers, with a text caption naming the shape and
+       dimensions. #}
+    {% if result.figure %}
+      <figure class="answer-figure">{{ result.figure.svg | safe }}
+        <figcaption>{{ result.figure.caption }}</figcaption>
+      </figure>
+    {% endif %}
+
+    <h2>{{ t.answer_heading }}</h2>
+    <div class="final-answer">
+      <p class="answer-big">
+        {% if result.latex %}\[ {{ result.latex }} \]{% elif result.answer_tex %}{{ result.answer_tex }}{% else %}{{ result.answer }}{% endif %}
+      </p>
+    </div>
+    {# Wave 208: every extra lives in these icons below the
+       answer — Listen, Teacher's Advice, Teach me, Copy Style,
+       Print, Download, PDF. Nothing else stacks on the page. #}
+    <div class="ans-icons" role="group" aria-label="Answer options">
+      <button type="button" id="listen-btn" class="ans-icon"
+              aria-label="{{ t.listen_btn }}" title="{{ t.listen_btn }}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg></button>
+      {% if advice %}
+      <button type="button" id="advice-toggle" class="ans-icon" aria-expanded="false"
+              aria-label="{{ t.advice_heading }}" title="{{ t.advice_heading }}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 00-4 12.7c.6.5 1 1.4 1 2.3h6c0-.9.4-1.8 1-2.3A7 7 0 0012 2z"/></svg></button>
+      {% endif %}
+      {% if teach %}
+      <button type="button" id="teach-toggle" class="ans-icon" aria-expanded="false"
+              aria-label="{{ t.mm_teach_btn }}" title="{{ t.mm_teach_btn }}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></button>
+      {% endif %}
+      {% if result.steps %}
+      <button type="button" class="ans-icon hw-toggle" id="hw-toggle" aria-pressed="true"
+              aria-label="{{ t.handwriting_btn }}" title="{{ t.handwriting_btn }}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
+      {% endif %}
+      <a class="ans-icon" href="/solution/print?style=hand" target="_blank" rel="noopener"
+         aria-label="{{ t.print_copy_link }}" title="{{ t.print_copy_link }}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></a>
+      <a class="ans-icon" href="/download"
+         aria-label="{{ t.download_link }}" title="{{ t.download_link }}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
+      <a class="ans-icon" href="/solution/print" target="_blank" rel="noopener"
+         aria-label="{{ t.pdf_link }}" title="{{ t.pdf_link }}"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></a>
+    </div>
+    {% if advice %}
+      <div class="advice-card" id="advice-card" hidden>
+        <h3>{{ t.advice_heading }}</h3>
+        <p>{{ advice }}</p>
+      </div>
+    {% endif %}
       <script>
         (function () {
           var KEY = "ganitra-handwriting";
@@ -109,39 +154,7 @@
           });
         })();
       </script>
-    {% endif %}
 
-    {% if result.image %}
-      <img class="graph" src="{{ url_for('static', filename=result.image) }}"
-           alt="Graph of the function" />
-    {% endif %}
-
-    {# Wave 86: the labelled diagram for a mensuration solve
-       (figures.py) — server-generated SVG from the question's
-       own numbers, with a text caption naming the shape and
-       dimensions. #}
-    {% if result.figure %}
-      <figure class="answer-figure">{{ result.figure.svg | safe }}
-        <figcaption>{{ result.figure.caption }}</figcaption>
-      </figure>
-    {% endif %}
-
-    <h2>{{ t.answer_heading }} <span class="badge">{{ result.type }}{% if result.op %} · {{ result.op }}{% endif %}</span></h2>
-    <div class="final-answer">
-      <p class="answer-big">
-        {% if result.latex %}\[ {{ result.latex }} \]{% elif result.answer_tex %}{{ result.answer_tex }}{% else %}{{ result.answer }}{% endif %}
-      </p>
-      {% if result.latex and result.answer %}<p class="muted">{{ result.answer }}</p>{% endif %}
-    </div>
-    {% if advice %}
-      <div class="advice-card">
-        <h3>{{ t.advice_heading }}</h3>
-        <p>{{ advice }}</p>
-      </div>
-    {% endif %}
-
-    {% if advice %}
-      <button type="button" id="listen-btn" class="listen-btn">{{ t.listen_btn }}</button>
       <script>
         (function () {
           var btn = document.getElementById("listen-btn");
@@ -416,7 +429,10 @@
           var speaking = false;
           var speakId = 0;
           function paint() {
-            btn.textContent = speaking ? STOP_LABEL : LISTEN_LABEL;
+            btn.setAttribute("aria-label",
+              speaking ? STOP_LABEL : LISTEN_LABEL);
+            btn.title = speaking ? STOP_LABEL : LISTEN_LABEL;
+            btn.classList.toggle("speaking", speaking);
           }
           function stop() {
             speakId += 1;
@@ -448,7 +464,6 @@
           });
         })();
       </script>
-    {% endif %}
 
     {% if methods %}
       {# Wave 12: the same multi-method idea as the chat — the
@@ -469,7 +484,7 @@
     {% endif %}
 
     {% if teach %}
-      <div class="teach-block">
+      <div class="teach-block" id="teach-block" hidden>
         <h2>👩‍🏫 {{ t.mm_teach_btn }}</h2>
         <ul class="teach-lines">
           {% for line in teach %}<li>{{ line }}</li>{% endfor %}
@@ -477,8 +492,23 @@
       </div>
     {% endif %}
 
-    <a class="back" href="/download">{{ t.download_link }}</a>
-    <a class="back" href="/solution/print" target="_blank" rel="noopener">{{ t.pdf_link }}</a>
+    <script>
+      (function () {
+        function wire(btnId, cardId) {
+          var b = document.getElementById(btnId);
+          var c = document.getElementById(cardId);
+          if (!b || !c) return;
+          b.addEventListener("click", function () {
+            c.hidden = !c.hidden;
+            b.classList.toggle("on", !c.hidden);
+            b.setAttribute("aria-expanded",
+              c.hidden ? "false" : "true");
+          });
+        }
+        wire("advice-toggle", "advice-card");
+        wire("teach-toggle", "teach-block");
+      })();
+    </script>
     <a class="back" href="/">{{ t.ask_another }}</a>
     <a class="back" href="/history">{{ t.nav_history }}</a>
     {% endif %}

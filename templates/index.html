@@ -360,15 +360,26 @@
             <button type="button" id="mic-btn" class="composer-btn icon-btn"
                     aria-label="{{ t.voice_btn }}"
                     title="{{ t.voice_btn }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
-            <label class="composer-btn icon-btn" for="photo-input"
+            <button type="button" id="attach-btn" class="composer-btn icon-btn"
                    aria-label="{{ t.photo_btn }}"
-                   title="{{ t.photo_btn }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></label>
+                   title="{{ t.photo_btn }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
             {# Wave 27 (Suraj): NO accept restriction — the
                picker must offer EVERY file type ("koi si bhi
                file ho, all file ko select karane kaa option
                hona chahiye"). The change handler sorts out
                what Ganitra can actually read. #}
             <input type="file" id="photo-input" hidden />
+            {# Wave 208 (Suraj, 20 Nov 2026): a second input
+               that opens the GALLERY directly (accept=image/*)
+               — the unrestricted input above stays for every
+               file type (Wave 27). The camera / paperclip
+               buttons open the small chooser below; both inputs
+               feed the same change handler. #}
+            <input type="file" id="gallery-input" accept="image/*" hidden />
+            <div id="attach-menu" class="attach-menu" hidden>
+              <button type="button" class="attach-opt" id="attach-gallery">{{ t.attach_gallery }}</button>
+              <button type="button" class="attach-opt" id="attach-file">{{ t.attach_file }}</button>
+            </div>
             <button type="submit" class="send-btn icon-btn"
                     aria-label="{{ t.solve_btn }}"
                     title="{{ t.solve_btn }}"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
@@ -2727,7 +2738,7 @@
         }
         if (ui.photo_btn) {
           var photoLabel = document.querySelector(
-            'label[for="photo-input"]');
+            '#attach-btn');
           if (photoLabel) {
             photoLabel.setAttribute("aria-label", ui.photo_btn);
             photoLabel.title = ui.photo_btn;
@@ -3287,12 +3298,44 @@
          Ganitra cannot read gets an honest note, never a
          dead end and never a made-up solve. */
       var photoInput = document.getElementById("photo-input");
+      var galleryInput = document.getElementById("gallery-input");
       var fileBtn = document.getElementById("file-btn");
-      if (fileBtn && photoInput) {
-        fileBtn.addEventListener("click", function () {
+      var attachBtn = document.getElementById("attach-btn");
+      var attachMenu = document.getElementById("attach-menu");
+      function closeAttachMenu() {
+        if (attachMenu) attachMenu.hidden = true;
+      }
+      function toggleAttachMenu(ev) {
+        if (ev) ev.stopPropagation();
+        if (!attachMenu) { photoInput.click(); return; }
+        attachMenu.hidden = !attachMenu.hidden;
+      }
+      if (fileBtn) {
+        fileBtn.addEventListener("click", toggleAttachMenu);
+      }
+      if (attachBtn) {
+        attachBtn.addEventListener("click", toggleAttachMenu);
+      }
+      var attachGallery = document.getElementById("attach-gallery");
+      var attachFile = document.getElementById("attach-file");
+      if (attachGallery && galleryInput) {
+        attachGallery.addEventListener("click", function () {
+          closeAttachMenu();
+          galleryInput.click();
+        });
+      }
+      if (attachFile) {
+        attachFile.addEventListener("click", function () {
+          closeAttachMenu();
           photoInput.click();
         });
       }
+      document.addEventListener("click", function (ev) {
+        if (attachMenu && !attachMenu.hidden &&
+            !attachMenu.contains(ev.target)) {
+          closeAttachMenu();
+        }
+      });
       var photoForm = document.getElementById("photo-form");
       var photoQuestion = document.getElementById("photo-question");
       var photoSource = document.getElementById("photo-source");
@@ -3960,8 +4003,8 @@
         };
         reader.readAsText(file);
       }
-      photoInput.addEventListener("change", function () {
-        var file = photoInput.files && photoInput.files[0];
+      function onPickedFile(input) {
+        var file = input.files && input.files[0];
         if (!file) return;
         var name = (file.name || "").toLowerCase();
         var isImage = (file.type &&
@@ -3975,8 +4018,16 @@
         else if (isPdf) extractPdfClient(file);
         else if (isTxt) readTxtClient(file);
         else extractFileOnServer(file);
-        photoInput.value = "";
+        input.value = "";
+      }
+      photoInput.addEventListener("change", function () {
+        onPickedFile(photoInput);
       });
+      if (galleryInput) {
+        galleryInput.addEventListener("change", function () {
+          onPickedFile(galleryInput);
+        });
+      }
 
       /* Wave 12: fill the full-page menu's stats lines with the
          signed-in student's real counts (questions asked across
