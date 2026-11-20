@@ -3561,6 +3561,7 @@ _W193_LOCAL = threading.local()
 _W194_LOCAL = threading.local()
 _W195_LOCAL = threading.local()
 _W125_LOCAL = threading.local()
+_W207_LOCAL = threading.local()
 
 _W77_FILLER_WORDS = {
     "please", "plz", "batao", "bata", "samjhao", "samjha", "do",
@@ -3604,6 +3605,38 @@ def _w77_single_letter_factors(ans):
     return out
 
 
+def _w207_symbol_soup(ans):
+    """Wave 207: unresolved-symbol-algebra detection — the
+    shapes the Wave 58/68 letter counting structurally
+    missed (mirror in fallback._is_junk; keep the two in
+    step).  The pre-launch audit's worst serves were
+    percent questions in Marathi / Telugu whose words the
+    simplify op parsed as SymPy symbols: the answers carry
+    an unresolved "Mod(" call, and their factors are single
+    letters / combining marks of the question's own script
+    multiplied together.  Two signals, both impossible in a
+    genuine final answer (real symbolic answers use Latin
+    symbols, and a vowel sign is never a standalone
+    factor):
+      * the text "Mod(" — an unevaluated SymPy function;
+      * a * / · product whose single letter/mark factors
+        include combining marks (category M): two or more
+        marks, or one mark among three or more factors."""
+    a = str(ans or "")
+    if "Mod(" in a:
+        return True
+    if "*" not in a and "·" not in a:
+        return False
+    import unicodedata
+    factors = _w77_single_letter_factors(a)
+    if not factors:
+        return False
+    marks = {f for f in factors
+             if unicodedata.category(f).startswith("M")}
+    return len(marks) >= 2 or \
+        (len(marks) >= 1 and len(factors) >= 3)
+
+
 def _w77_is_soup(question, result):
     """Mirror of fallback._is_junk: letter-soup detection —
     sympy turned the question's words into a product of single
@@ -3612,6 +3645,8 @@ def _w77_is_soup(question, result):
     if any(cmd in q for cmd in _W77_SYMBOLIC_COMMANDS):
         return False
     ans = str((result or {}).get("answer", "") or "")
+    if _w207_symbol_soup(ans):
+        return True
     letters = set(re.findall(r"(?<![A-Za-z])[a-z](?![A-Za-z])",
                              ans))
     factors = _w77_single_letter_factors(ans)
@@ -5978,6 +6013,58 @@ def _solve_question_uncached(question: str):
                 if was_translated:
                     w195f.setdefault("interpreted_as", translated)
                 return w195f
+        # Wave 207: the pre-launch audit pack
+        # (solver/wave207.py) — the same failure-only gate
+        # as Waves 169/175/195.  Three strict, self-
+        # verifying schemas the audit found ownerless in
+        # the chat path: percent-of in Bengali / Marathi /
+        # Tamil / Telugu dresses (whose primary serves were
+        # the simplify op's symbol garbage — now soup under
+        # _w207_symbol_soup, so this gate is reached), and
+        # the split-sentence AOD dresses (sum-S cubes
+        # minimum; sphere dV/dr) whose c12gaps142 patterns
+        # are narrower than the phrasing students type.
+        # Plus the typo retry: a digit-bearing question
+        # whose only defect is an attested Roman-Hinglish
+        # misspelling (aru / jodd / btao / kaa / kyaa) is
+        # re-solved under its respelled text, and the retry
+        # is accepted ONLY as a clean basic-arithmetic
+        # result (_w77_core_ok, type arithmetic) — the
+        # respelling can never manufacture an answer the
+        # plain question did not already earn.  The retry
+        # re-enters _solve_question_uncached under this
+        # gate's own depth guard, inside the caller's
+        # budget thread.
+        if getattr(_W207_LOCAL, "depth", 0) == 0 and \
+                _w77_needs_core(original, result):
+            _W207_LOCAL.depth = 1
+            try:
+                from .wave207 import solve_wave207, typo_variant
+                w207 = solve_wave207(original)
+                if w207 is None and working != original:
+                    w207 = solve_wave207(working)
+                if w207 is None and any(
+                        ch.isdigit() for ch in original):
+                    variant = typo_variant(original)
+                    if variant is not None:
+                        retry207 = _solve_question_uncached(
+                            variant)
+                        if isinstance(retry207, dict) and \
+                                retry207.get("type") == \
+                                "arithmetic" and \
+                                _w77_core_ok(variant, retry207):
+                            retry207.setdefault(
+                                "interpreted_as", variant)
+                            w207 = retry207
+            except Exception:
+                w207 = None
+            finally:
+                _W207_LOCAL.depth = 0
+            if w207 is not None:
+                if was_translated:
+                    w207.setdefault("interpreted_as",
+                                    translated)
+                return w207
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])

@@ -143,12 +143,25 @@ def _parse_system(q):
                 continue
         widened.append(f)
     eqs = []
+    intended = 0
     for f in widened:
         if "=" not in f:
             continue
         f = f.rsplit(":", 1)[-1].strip()
         if "=" not in f:
             continue
+        # Wave 207: count every fragment that carries an
+        # x/y/z equation, extracted or not.  The audit's
+        # consistency item glued its first equation to the
+        # preamble ("...linear equations x - y + z = -9"),
+        # the fragment failed the strict LHS pattern, and
+        # the schema went on to solve the remaining 3x3
+        # subsystem and serve values the dropped equation
+        # contradicts — verified only against the subset.
+        # A strict schema that cannot see the whole system
+        # declines; it never solves part of it.
+        if re.search(r"[xyz]", f.split("=", 1)[0]):
+            intended += 1
         lhs_t, rhs_t = f.split("=", 1)
         lhs_t, rhs_t = lhs_t.strip(), \
             rhs_t.strip().rstrip(".?")
@@ -171,6 +184,8 @@ def _parse_system(q):
                 sp.Symbol(v) for v in _VARS}:
             continue
         eqs.append((lhs, rhs))
+    if intended != len(eqs):
+        return None
     if len(eqs) not in (2, 3):
         return None
     present = []

@@ -48,6 +48,15 @@ Accepted shapes (all strict):
      entry's position cannot be determined, and different
      positions give different values for the same unknowns
      (x = 6 vs x = 14), so any serve would be a guess.
+     Wave 207: the one-short stream is now DETECTED
+     (matrixeq_near_miss below) so the fallback layer can
+     say so at once — Suraj's rule (20 Nov 2026): a
+     question that is itself defective earns a kind "ye
+     sawal galat hai" line naming the missing entry, never
+     the slow AI chain or the generic clarification.  The
+     flat path's literal "matrix"/"find" word gates are
+     also loosened: when the stream's shape is unambiguous
+     on its own, the words are no longer required.
 
 Entries may be numbers or LINEAR expressions in up to 4
 distinct unknowns drawn from {x, y, z, w, a, b} (capitals
@@ -295,17 +304,25 @@ def _segment_flat(stream):
 def _path_flat(q):
     if "[" in q or "]" in q:
         return None
-    ql = q.lower()
-    if "matrix" not in ql and "matrices" not in ql:
-        return None
-    if "find" not in ql:
-        return None
     if ":" not in q:
         return None
     stream = q.rsplit(":", 1)[1].strip().rstrip("?.")
     entries = _segment_flat(stream)
     if entries is None:
         return None
+    ql = q.lower()
+    # Wave 207: the literal word gates ("matrix" AND "find")
+    # used to be required before the shape was even looked
+    # at, so a perfectly unambiguous flattened paste that
+    # happened to name neither word was declined unread.
+    # The words now only waive the extra shape proof: when
+    # they are absent, the stream itself must prove the
+    # shape — exactly 2n^2 entries, the last n^2 plain
+    # numbers, and the first n^2 linear cells carrying at
+    # least two distinct unknowns — and _solve_pair still
+    # verifies the full system before anything is served.
+    strict_words = ("matrix" in ql or "matrices" in ql) \
+        and "find" in ql
     for n in (2, 3):
         if len(entries) != 2 * n * n:
             continue
@@ -344,7 +361,68 @@ def _path_flat(q):
                     return None
                 row.append(e)
             lhs_rows.append(row)
+        if not strict_words:
+            unknowns = set()
+            for row in lhs_rows:
+                for e in row:
+                    unknowns |= {str(s) for s in e.free_symbols}
+            if len(unknowns) < 2:
+                return None
         return _solve_pair(lhs_rows, rhs_rows)
+    return None
+
+
+def matrixeq_near_miss(question):
+    """Wave 207: detect the DEFECTIVE flattened paste — a
+    bracket-free, colon-led entry stream that segments to
+    exactly ONE entry short of a square matrix equality
+    (2n^2 - 1 entries for n = 2 or 3), with matrix-equality
+    intent in the text.  The missing entry's position
+    cannot be determined, so the values cannot be solved
+    (shape C's documented ambiguity) — but the question is
+    recognisably a real matrix question with a piece
+    missing, which is exactly what the fallback layer's
+    Wave 207 'ye sawal galat hai' serve reports.  Returns
+    {"n": n, "entries": count} or None.  Strict shape: at
+    least two entries must be allowed linear expressions
+    and at least three plain numbers, over at least two
+    distinct unknowns; anything else is not this shape."""
+    try:
+        q = _prep(question)
+    except Exception:
+        return None
+    if not q or "[" in q or "]" in q:
+        return None
+    ql = q.lower()
+    if "matrix" not in ql and "matrices" not in ql:
+        return None
+    if ":" not in q:
+        return None
+    stream = q.rsplit(":", 1)[1].strip().rstrip("?.")
+    entries = _segment_flat(stream)
+    if not entries:
+        return None
+    for n in (2, 3):
+        if len(entries) not in (2 * n * n - 1, 2 * n * n - 2):
+            continue
+        nums = 0
+        exprs = 0
+        unknowns = set()
+        for cell in entries:
+            try:
+                e = _cell_expr(cell)
+            except Exception:
+                return None
+            if not _check_cell(e):
+                return None
+            if e.free_symbols:
+                exprs += 1
+                unknowns |= {str(s) for s in e.free_symbols}
+            else:
+                nums += 1
+        if exprs >= 2 and nums >= 3 and len(unknowns) >= 2:
+            return {"n": n, "entries": len(entries)}
+        return None
     return None
 
 

@@ -375,17 +375,104 @@ def _identity_value(q: str):
     return None
 
 
+def _strip_prose_run(part: str):
+    """Wave 207: drop a LEADING run of prose words from
+    one equation part.  _solve_system receives the whole
+    question ("Test the consistency of the following
+    system of linear equations x - y + z = -9, ..."), and
+    the split leaves the preamble glued to the first
+    equation — parse_expression then reads the English as
+    a degree-56 monomial in 21 letter-symbols and the
+    generic solver grinds on it (the audit's 47 s
+    bk12_15).  A prose run is two or more consecutive
+    plain word tokens (letters only, length >= 2); an
+    equation never opens with such a run (its first
+    tokens are variables, numbers, operators or glued
+    forms like "2x" / "sin(x)"), so the trim cannot eat
+    real maths.  A single remnant word of a trimmed run
+    goes too; an untrimmed edge word ("xy = 12") is never
+    touched.  Only the leading edge is trimmed, on
+    purpose: a TRAILING phrase is usually the student's
+    method ask ("... = 6 graphical method se solve
+    karo"), whose dresses belong to their own layers
+    (the graph layer serves those, figure and all) —
+    trimming the tail would let this solver swallow
+    them, which the Wave 143 pair tests caught."""
+    toks = part.split()
+
+    def _word(t):
+        t = t.strip("()[]{}")
+        return len(t) >= 2 and t.isalpha()
+
+    i = 0
+    while i + 1 < len(toks) and _word(toks[i]) \
+            and _word(toks[i + 1]):
+        i += 1
+    if 0 < i < len(toks) and _word(toks[i]) \
+            and (i + 1 >= len(toks) or not _word(toks[i + 1])):
+        i += 1
+    return " ".join(toks[i:])
+
+
 def _solve_system(eq_text: str):
-    parts = [p for p in re.split(r";|\band\b|,", eq_text) if "=" in p]
+    parts = [_strip_prose_run(p)
+             for p in re.split(r";|\band\b|,", eq_text)
+             if "=" in p]
+    parts = [p for p in parts if "=" in p]
     eqs, syms = [], set()
     for p in parts:
         l, r = p.split("=", 1)
         e = parse_expression(l) - parse_expression(r)
         eqs.append(e)
         syms |= e.free_symbols
+    # Wave 207: a "system" in more than six symbols is
+    # prose the trim could not separate, not a student
+    # system (real ones carry at most four unknowns).
+    # Refuse fast — the dispatch turns the raise into the
+    # ordinary error result — instead of feeding the
+    # letter-product to the generic solver's Gröbner
+    # machinery for the full budget.
+    if len(syms) > 6:
+        raise ValueError(
+            "system carries %d symbols — prose, not a system"
+            % len(syms))
     syms = sorted(syms, key=lambda s: s.name)
     steps = [f"Equations: " + "; ".join(f"{fmt(e)} = 0" for e in eqs)]
-    sol = sp.solve(eqs, list(syms), dict=True)
+    sol = None
+    # Wave 207: a purely LINEAR system must not go to the
+    # generic polynomial solver.  Measured (pre-launch
+    # audit, book bk12_15): the 4-equation / 3-unknown
+    # consistency system sent sp.solve into its Gröbner
+    # machinery for the full 10 s budget — twice over with
+    # the chat retry, 47 s end to end — and still answered
+    # nothing.  linsolve settles a linear system exactly
+    # and instantly: a unique solution becomes the same
+    # dict sp.solve would return, an empty set becomes the
+    # same "no solution" outcome, and a parametric set
+    # (free symbols riding in the tuple) declines to the
+    # generic path below, whose behaviour is unchanged.
+    # Non-linear systems never take this branch.
+    if syms:
+        try:
+            linear = all(
+                sp.Poly(e, *syms).total_degree() <= 1
+                for e in eqs)
+        except Exception:
+            linear = False
+        if linear:
+            try:
+                solset = sp.linsolve(eqs, syms)
+            except Exception:
+                solset = None
+            if isinstance(solset, sp.FiniteSet):
+                if len(solset) == 0:
+                    sol = []
+                elif len(solset) == 1:
+                    tup = next(iter(solset))
+                    if all(not v.free_symbols for v in tup):
+                        sol = [dict(zip(syms, tup))]
+    if sol is None:
+        sol = sp.solve(eqs, list(syms), dict=True)
     if not sol:
         return {
             "type": "algebra",
