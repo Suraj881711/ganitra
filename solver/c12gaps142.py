@@ -1737,6 +1737,21 @@ def _differentiation142(question):
     # partial non-answer.
     if "prove" in low_raw or "show that" in low_raw:
         return None
+    # Wave 210: a dy/dx that sits INSIDE an equation —
+    # an operator or "=" adjacent to it ("dy/dx + y =
+    # e^x", "x dy/dx + 2y = x^2") — is a differential
+    # equation to SOLVE, not a differentiation ask.
+    # _clean_diff strips a leading dy/dx as boilerplate,
+    # so the bare DE was misread as the implicit
+    # relation y = e^x and its "derivative" exp(x) even
+    # displaced the correct DE serve via the upgrade
+    # below.  In this family's genuine dresses the
+    # dy/dx is a noun phrase ("find dy/dx if ..."),
+    # never an operand.  Decline; the DE layers own it.
+    if re.search(r"[-+*/=^]\s*dy\s*/\s*dx", low_raw) \
+            or re.search(r"dy\s*/\s*dx\s*[-+*/=^)]",
+                         low_raw):
+        return None
     if not any(k in low_raw for k in (
             "dy", "differentiat", "derivative", "अवकल")) \
             and "w.r.t" not in low_raw:

@@ -3562,6 +3562,7 @@ _W194_LOCAL = threading.local()
 _W195_LOCAL = threading.local()
 _W125_LOCAL = threading.local()
 _W207_LOCAL = threading.local()
+_W210_LOCAL = threading.local()
 
 _W77_FILLER_WORDS = {
     "please", "plz", "batao", "bata", "samjhao", "samjha", "do",
@@ -5238,6 +5239,33 @@ def _solve_question_uncached(question: str):
                         w195c.setdefault("interpreted_as",
                                          translated)
                     return w195c
+                # Wave 210: the same seam — the core pass
+                # strips "dy/dx" out of a differential-
+                # equation ask (it cannot parse the token)
+                # and solves the remaining fragment as an
+                # equation: "Find the general solution of
+                # dy/dx + y/x = x^2" -> core "+ y/x = x^2"
+                # -> "x = y^(1/3), ...".  When the strict
+                # Wave 210 gate settles the WHOLE question
+                # with a verified DE result (diffeq194 /
+                # depth125 machinery), that result stands
+                # instead of the fragment solve; every
+                # other core result is returned exactly as
+                # before.  (The matching repair for results
+                # that never enter this branch is at the
+                # tail of this function.)
+                try:
+                    from .wave210 import solve_wave210
+                    w210c = solve_wave210(original, core)
+                    if w210c is None and working != original:
+                        w210c = solve_wave210(working, core)
+                except Exception:
+                    w210c = None
+                if w210c is not None:
+                    if was_translated:
+                        w210c.setdefault("interpreted_as",
+                                         translated)
+                    return w210c
                 if was_translated:
                     core.setdefault("interpreted_as", translated)
                 return core
@@ -6065,6 +6093,41 @@ def _solve_question_uncached(question: str):
                     w207.setdefault("interpreted_as",
                                     translated)
                 return w207
+        # Wave 210: differential-equation ROUTING repair
+        # (solver/wave210.py) — a repair gate at the same
+        # seam as the Wave 194 verify block, NOT a
+        # failure-only gate, because the results it
+        # repairs wear "real" ops the failure gate calls
+        # genuine: "Find the general solution of
+        # dy/dx + y/x = x^2" served op=equation (the
+        # dy/dx-stripped fragment solved FOR x), and the
+        # initial-condition dresses ("... given y(0) =
+        # 0", "... where y = 1 when x = 0") served
+        # op=equation fragments on their way to
+        # not_found, although diffeq194 / depth125 settle
+        # every one directly.  solve_wave210 fires only
+        # on a strict dy/dx-equation shape, never
+        # displaces a standing differential_equation
+        # serve that is not Piecewise garbage, and
+        # serves only a checkodesol-verified candidate
+        # whose answer differs from the standing one;
+        # every other result stands exactly as before.
+        if getattr(_W210_LOCAL, "depth", 0) == 0:
+            _W210_LOCAL.depth = 1
+            try:
+                from .wave210 import solve_wave210
+                w210 = solve_wave210(original, result)
+                if w210 is None and working != original:
+                    w210 = solve_wave210(working, result)
+            except Exception:
+                w210 = None
+            finally:
+                _W210_LOCAL.depth = 0
+            if w210 is not None:
+                if was_translated:
+                    w210.setdefault("interpreted_as",
+                                      translated)
+                return w210
         if was_translated:
             result.setdefault("interpreted_as", translated)
         result.setdefault("steps", [])

@@ -290,6 +290,28 @@ def _integral_steps(expr, var, bounds=None):
     ]
 
 
+_E_SYM = symbols("e")
+
+
+def _fold_euler(expr):
+    """Wave 210: parse_expression reads a bare 'e' as a free
+    symbol, not Euler's number — but inside a differential
+    equation 'e' is always Euler's number (the diffeq194
+    _parse precedent).  Fold it to E at _ode's parse sites,
+    before dsolve ever sees it: with e left a symbol,
+    dsolve treats it as a parameter and serves Piecewise
+    forms conditioned on Eq(e, exp(-1)) / Ne(log(e), 0)
+    for textbook asks like dy/dx = e^(x+y) and
+    dy/dx + y = e^x.  Scoped to this DE parser only —
+    algebra keeps 'e' as an ordinary letter."""
+    try:
+        if _E_SYM in expr.free_symbols:
+            return expr.subs(_E_SYM, sp.E)
+    except Exception:
+        pass
+    return expr
+
+
 def _ode(q: str):
     """ODEs via dsolve: separable, linear, second-order, with simple
     initial conditions. Accepts dy/dx = ..., y' = ..., y'' + y = 0,
@@ -362,11 +384,11 @@ def _ode(q: str):
         return expr.subs(y_sym, yx) if y_sym in expr.free_symbols else expr
 
     if left_c == "d2y/dx2":
-        rhs = as_yx(parse_expression(right))
+        rhs = as_yx(_fold_euler(parse_expression(right)))
         sol_eq = sp.Eq(yx.diff(_x, 2), rhs)
         ode_text = f"y'' = {fmt(rhs)}"
     elif left_c == "dy/dx":
-        rhs = as_yx(parse_expression(right))
+        rhs = as_yx(_fold_euler(parse_expression(right)))
         sol_eq = sp.Eq(yx.diff(_x), rhs)
         ode_text = f"dy/dx = {fmt(rhs)}"
     elif "d2y/dx2" in text.replace(" ", "") or "dy/dx" in text:
@@ -399,8 +421,8 @@ def _ode(q: str):
         joined = rebuild(tokens)
         l2, r2 = joined.split("=", 1)
         w_sym, v_sym = symbols("w v")
-        lexpr = parse_expression(l2)
-        rexpr = parse_expression(r2)
+        lexpr = _fold_euler(parse_expression(l2))
+        rexpr = _fold_euler(parse_expression(r2))
         subs_map = {v_sym: yx.diff(_x, 2), w_sym: yx.diff(_x),
                     y_sym: yx}
         sol_eq = sp.Eq(lexpr.subs(subs_map), rexpr.subs(subs_map))

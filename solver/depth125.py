@@ -943,10 +943,13 @@ def _de_extract(q):
                   sp.Rational(mic.group(1)))
             rhs = rhs[:mic.start()] + " " + rhs[mic.end():]
     # cut trailing wrapper text at the first sentence word
-    # that cannot belong to an expression
+    # that cannot belong to an expression (Wave 210 added
+    # "where" / "with": "dy/dx = xy where y = 1 when x = 0"
+    # left the rhs reading "xy where", whose letter symbols
+    # then failed the free-symbol gate in _de_solve)
     rhs = re.split(
         r"\b(given|find|solve|show|hal|nikalo|batao|ko|is|"
-        r"and|homogeneous|the)\b|"
+        r"and|homogeneous|the|where|with)\b|"
         r"(हल|दीजिए|कीजिए|को)", rhs)[0]
     rhs = rhs.strip(" .,;")
     if not rhs:

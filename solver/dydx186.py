@@ -176,6 +176,21 @@ def _extract_body(question):
             or re.search(r"(sin|cos|tan|sec|cosec|cot)"
                          r"\s*\^\s*-\s*1", low):
         return None
+    # Wave 210: a dy/dx that sits INSIDE an equation — an
+    # operator or "=" adjacent to it on either side
+    # ("dy/dx + y = e^x", "x dy/dx + 2y = x^2",
+    # "... = dy/dx") — is a differential equation to
+    # SOLVE, not a "find dy/dx" ask.  The strip below
+    # eats the dy/dx token as dress, so the bare DE
+    # "dy/dx + y = e^x" was misread as the implicit
+    # relation y = e^x and served dy/dx = exp(x) — the
+    # derivative of a different question.  In this
+    # family's genuine dresses ("find dy/dx if ...",
+    # "dy/dx of ...") the token is a noun phrase, never
+    # an operand.  Decline; the DE layers own it.
+    if re.search(r"[-+*/=^]\s*dy\s*/\s*dx", low) \
+            or re.search(r"dy\s*/\s*dx\s*[-+*/=^)]", low):
+        return None
     # Dress: a literal dy/dx, or differentiate ... w.r.t. x.
     has_dydx = "dy/dx" in low
     has_diff_wrt = ("differentiate" in low
