@@ -4601,6 +4601,34 @@ def _solve_question_uncached(question: str):
                 out["interpreted_as"] = translated
             return out
 
+    # Wave 206: the test-loop fix-queue families (solver/
+    # wave206.py) — messy student-dress forms whose maths is
+    # elementary but which no existing solver owned: story
+    # add/sub chains and backward stories, fraction stories,
+    # integer walks, verbal equations, roots from area /
+    # volume, polynomials buried in noisy text, dressed
+    # quadratics, trig value atoms, determinant-with-unknown
+    # matrices, junior multiply/divide stories, and the
+    # series shapes the Wave-202 engine cannot see (an
+    # nth-term ask, an AP sum in words, then/fir-separated
+    # terms). Every schema is strict — it extracts the
+    # complete maths and verifies its answer deterministically
+    # before serving — and returns None on any doubt, so the
+    # flow below is then exactly the pre-Wave-206 one. The
+    # gate sits BEFORE the Wave-202 hook because the
+    # nth-term ask is one the next-term engine mis-serves.
+    try:
+        from .wave206 import solve_wave206
+        out = solve_wave206(working)
+        if out is None and working != original:
+            out = solve_wave206(original)
+    except Exception:
+        out = None
+    if out is not None:
+        if was_translated:
+            out["interpreted_as"] = translated
+        return out
+
     # Wave 202: a series-bearing NEXT-TERM ask in any
     # phrasing ("predict the next number: 3, 6, 11, 18, 27",
     # "pattern batao: 7, 14, 21, 28, ?", a bare "2, 4, 8,
