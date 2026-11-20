@@ -186,7 +186,7 @@ def test_pins_bumped_for_wave64():
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()
     css = (ROOT / "static" / "style.css").read_text()
-    assert "v='60'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in sw
+    assert "v='61'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in sw
     assert ".paper-medium" in css
     assert "Noto Serif Devanagari" in css

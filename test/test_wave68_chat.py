@@ -293,8 +293,8 @@ def test_sample_questions_all_solve():
 
 
 def test_wave68_pins_and_css():
-    assert "v='60'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
+    assert "v='61'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in SW
     assert ".example-chip" not in CSS
     assert ".plain-reply" in CSS
     assert ".answer-intro" in CSS

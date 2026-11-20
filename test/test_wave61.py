@@ -161,8 +161,8 @@ def test_css_swap_rules():
 def test_delivery_pins_wave61():
     base = (ROOT / "templates" / "base.html").read_text(encoding="utf-8")
     sw = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
-    assert "v='60'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in sw
+    assert "v='61'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in sw
     assert '"/static/models/"' in sw   # models bypass the worker cache
 
 
@@ -183,7 +183,7 @@ def test_served_chat_page_carries_3d_layer(client):
     assert 'id="scene-3d"' not in page
     assert 'id="scene-stage"' not in page
     assert "vendor/three.module.js" in page
-    assert "style.css?v=60" in page
+    assert "style.css?v=61" in page
 
 
 @pytest.mark.parametrize("url", [

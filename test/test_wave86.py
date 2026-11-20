@@ -223,5 +223,5 @@ def test_figure_css_and_pins():
     assert ".answer-figure" in CSS
     assert ".answer-figure svg" in CSS
     assert "max-width: 100%" in CSS
-    assert "v='60'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
+    assert "v='61'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in SW

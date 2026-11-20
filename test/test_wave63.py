@@ -347,8 +347,8 @@ def test_generated_print_flow_unchanged(client):
 def test_pins_bumped():
     base = (ROOT / "templates" / "base.html").read_text()
     sw = (ROOT / "static" / "sw.js").read_text()
-    assert "v='60'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in sw
+    assert "v='61'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in sw
 
 
 def test_sheet_css_present():

@@ -153,8 +153,8 @@ def test_height_fallback_and_safe_area_sides():
 # --- 7. Delivery pins ---------------------------------------------
 
 def test_delivery_versions_wave49():
-    assert "v='60'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
+    assert "v='61'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in SW
     # Sprites did not change, so their pins do not move.
     assert "filename='scene-eagle.webp', v='29'" in INDEX
     assert '"/static/scene-boy.webp?v=29"' in INDEX

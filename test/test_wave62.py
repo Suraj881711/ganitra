@@ -175,6 +175,6 @@ def test_served_page_wave62(client):
     assert 'id="scene-3d"' not in page and 'id="scene-stage"' not in page
     assert "__ganitraBoyWriter3D" in page
     # Merge-4: pins reconciled to ?v=43 / ganitra-static-v37.
-    assert "style.css?v=60" in page
+    assert "style.css?v=61" in page
     for n in ("eagle", "tiger", "boy"):
         assert f'id="scene-{n}"' not in page

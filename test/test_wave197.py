@@ -98,9 +98,9 @@ def test_header_buddy_still_present():
 # --- Pins --------------------------------------------------------------
 
 def test_pins_current():
-    assert "v='60'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
-    assert '"/static/style.css?v=60"' in SW
+    assert "v='61'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in SW
+    assert '"/static/style.css?v=61"' in SW
 
 
 # --- The rendered home page ---------------------------------------------
