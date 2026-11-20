@@ -2819,3 +2819,34 @@ body.chat-page .chat-bar .send-btn::after { inset: -6px; }
 body.chat-page .answer-actions { gap: 2px; }
 body.chat-page .answer-actions .act-btn { padding: 13px 8px; }
 .chat-empty { margin: 0; margin-top: -16px; padding-top: 8px; }
+
+/* --- Wave 208 (Suraj, 20 Nov 2026): gallery/file chooser in
+   the composer + the answer page's icon row (the answer shows
+   ONCE; every extra is a small icon below it) ---------------- */
+.chat-form { position: relative; }
+.attach-menu {
+  position: absolute; right: 10px; bottom: 72px; z-index: 40;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 14px; box-shadow: 0 12px 32px rgba(101, 84, 40, .18);
+  padding: 6px; display: flex; flex-direction: column; min-width: 216px;
+}
+.attach-menu[hidden] { display: none; }
+.attach-opt {
+  display: flex; align-items: center; gap: 8px; padding: 11px 12px;
+  border: 0; background: transparent; font: inherit;
+  text-align: left; border-radius: 10px; cursor: pointer; color: var(--ink);
+}
+.attach-opt:hover { background: #f6ead0; }
+.ans-icons { display: flex; gap: 10px; flex-wrap: wrap; margin: 16px 0 6px; }
+.ans-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: #fff; color: #7a5a10; border: 1.5px solid #e3d9c2;
+  cursor: pointer; box-shadow: 0 6px 16px rgba(101, 84, 40, .08);
+  padding: 0; text-decoration: none;
+}
+.ans-icon:hover { border-color: #c9a24b; }
+.ans-icon.on, .ans-icon.speaking, .ans-icon.hw-off {
+  background: #fdf6e0; border-color: #c9a24b;
+}
+.advice-card[hidden], .teach-block[hidden] { display: none; }
