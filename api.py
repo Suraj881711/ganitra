@@ -136,6 +136,43 @@ def _solve_friendly(question, lang=None, student_class=None,
         if "result" in _tone:
             return _tone["result"]
         question = _tone["question"]
+    # Wave 207: the PRACTICE-REQUEST intent (Wave 201) is
+    # owned by the chat route (api_solve), which runs
+    # practice_req.handle_message on the real session
+    # before this function is ever called — that path is
+    # unchanged.  But callers WITHOUT a chat session (the
+    # audit harness, the test loop, any direct caller)
+    # reach _solve_friendly straight, and a class-named
+    # request ("class 10 ke practice questions do") fell
+    # through to the practice-ADVICE card although the
+    # matcher already parses it (live evidence: the route
+    # serves op=practice_req in ~0.2 s).  A request that
+    # NAMES its class needs no parked state, so it is
+    # served here too — one-shot, through practice_req's
+    # own handler on an ephemeral session, vetoes and all.
+    # A request without a class still belongs to the
+    # route's parked ask-which-class flow alone, and in
+    # the route flow this block is unreachable (the route
+    # returns the intent's payload first).
+    try:
+        import practice_req as _practice207
+        _req207 = _practice207.parse_practice_request(
+            question)
+    except Exception:
+        _req207 = None
+    if _req207 is not None \
+            and _req207.get("class_num") is not None:
+        try:
+            _pay207 = _practice207.handle_message(
+                {}, None, None, question,
+                lang=lang or "en",
+                lang_request=lang_request,
+                student_class=student_class)
+        except Exception:
+            _pay207 = None
+        if _pay207 is not None \
+                and _pay207.get("result") is not None:
+            return _pay207["result"]
     # Wave 107: when the message carried an explicit language
     # request, the negative cache is keyed per request — a
     # fallback outcome's one-line texts are shaped by it, so

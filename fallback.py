@@ -192,6 +192,38 @@ def _single_letter_factors(ans):
     return out
 
 
+def _w207_symbol_soup(ans):
+    """Wave 207: unresolved-symbol-algebra detection — the
+    shapes the Wave 58/68 letter counting structurally
+    missed (mirror in router._w77_is_soup; keep the two in
+    step).  The pre-launch audit's worst serves were
+    percent questions in Marathi / Telugu whose words the
+    simplify op parsed as SymPy symbols: the answers carry
+    an unresolved "Mod(" call, and their factors are single
+    letters / combining marks of the question's own script
+    multiplied together.  Two signals, both impossible in a
+    genuine final answer (real symbolic answers use Latin
+    symbols, and a vowel sign is never a standalone
+    factor):
+      * the text "Mod(" — an unevaluated SymPy function;
+      * a * / · product whose single letter/mark factors
+        include combining marks (category M): two or more
+        marks, or one mark among three or more factors."""
+    a = str(ans or "")
+    if "Mod(" in a:
+        return True
+    if "*" not in a and "·" not in a:
+        return False
+    import unicodedata
+    factors = _single_letter_factors(a)
+    if not factors:
+        return False
+    marks = {f for f in factors
+             if unicodedata.category(f).startswith("M")}
+    return len(marks) >= 2 or \
+        (len(marks) >= 1 and len(factors) >= 3)
+
+
 def _is_junk(question, result):
     """Letter-soup detection: sympy turned the question's words
     into a product of single letters ("what is pythagoras
@@ -220,6 +252,8 @@ def _is_junk(question, result):
             "reasoning_quantifier", "reasoning_negation"):
         return False
     ans = _answer_text(result)
+    if _w207_symbol_soup(ans):
+        return True
     letters = set(re.findall(r"(?<![A-Za-z])[a-z](?![A-Za-z])", ans))
     factors = _single_letter_factors(ans)
     if any(mark in ans for mark in ("**", "·", "^")):
@@ -2067,6 +2101,17 @@ def _greeting_kind(question):
 _NONMATHS_KEYWORDS = (
     "capital of", "capital kya", "rajdhaani", "prime minister",
     "pradhan mantri", "president of", "cricket", "football",
+    # Wave 207: the abbreviated office ask — "who is the PM
+    # of India" carried neither "prime minister" nor any
+    # other keyword and fell to the generic clarification
+    # (pre-launch audit, edge_nonmaths_pm), while the
+    # cricket ask beside it hit this guard.  The shapes are
+    # phrase-anchored ("pm of india" / "who is the pm" /
+    # "pm kaun" / पीएम) so a maths question that merely
+    # carries a clock time ("5 pm ko train...") never trips
+    # them — and the digit/operator and problem-bearing
+    # guards above run first regardless.
+    "pm of india", "who is the pm", "pm kaun", "पीएम",
     "movie", "film", "song", "gaana", "weather", "mausam",
     "photosynthesis", "prakash sanshleshan", "sky blue",
     "aasmaan neela", "news", "khabar", "meaning of love",
@@ -2365,6 +2410,115 @@ def nonmaths_line_for(text):
     read question's own flavour), never the photo not-found
     line. Empty text falls back to the English line."""
     return _NONMATHS_LINES[_flavour(text)]
+
+
+# ---------------------------------------------------------------------------
+# Wave 207: a question that is itself DEFECTIVE — Suraj's
+# rule (20 Nov 2026): "agar question galat hai toh wo bole
+# question galat hai".  The measured case is his own live
+# paste of the Class 12 matrix-equality question, flattened
+# by the source PDF to 7 of the 8 entries: the solver
+# rightly declines (the missing entry's position is
+# unknowable, so any values would be a guess), but the
+# decline then walked the whole AI chain past the browser's
+# patience and the chat showed "Server is slow".  The
+# detector (solver/matrixeq175.matrixeq_near_miss) proves
+# the defective shape deterministically; this layer serves
+# the verdict NATIVELY and at once, in the student's own
+# language, before any AI leg is consulted: the question
+# has a problem, one matrix entry is missing, the values
+# cannot be found from it — send the matrices row by row
+# or a photo.  Kind, never blaming: the defect is in the
+# pasted question, not in the student.
+# ---------------------------------------------------------------------------
+
+_W207_WRONG_QUESTION_LINES = {
+    "en": "This question has a small problem: an entry "
+          "of the matrix is missing, so the values cannot "
+          "be found from it. Please send both matrices row "
+          "by row, or a photo of the question — I will "
+          "solve it right away. 😊",
+    "roman": "Is sawal me ek chhoti si gadbad hai: matrix "
+             "ki entry missing hai, isliye isse values "
+             "nahi nikal sakte. Dono matrix ko row ke "
+             "hisaab se likh kar bhejo, ya sawal ki photo "
+             "bhej do — main turant solve kar dunga. 😊",
+    "hi": "इस सवाल में एक छोटी-सी गड़बड़ है: matrix की "
+          "entry missing है, इसलिए इससे मान नहीं निकल "
+          "सकते। दोनों matrix को row के हिसाब से लिखकर "
+          "भेजिए, या सवाल की photo भेज दीजिए — मैं तुरंत "
+          "हल कर दूँगा। 😊",
+    "bn": "এই প্রশ্নটিতে একটি ছোট্ট সমস্যা আছে: "
+          "matrix-এর entry missing আছে, তাই এ থেকে "
+          "মানগুলো বের করা যাবে না। দুটি matrix সারি "
+          "অনুযায়ী লিখে পাঠাও, অথবা প্রশ্নের ছবি পাঠাও "
+          "— আমি সঙ্গে সঙ্গে সমাধান করে দেব। 😊",
+    "mr": "या प्रश्नात एक छोटीशी चूक आहे: matrix मधील "
+          "entry missing आहे, त्यामुळे यावरून किंमती "
+          "काढता येत नाहीत. दोन्ही matrix ओळीनुसार लिहून "
+          "पाठवा, किंवा प्रश्नाचा photo पाठवा — मी लगेच "
+          "सोडवून देईन. 😊",
+    "ta": "இந்தக் கேள்வியில் ஒரு சிறிய சிக்கல் உள்ளது: "
+          "matrix-இல் entry missing ஆக உள்ளது, எனவே "
+          "இதிலிருந்து மதிப்புகளைக் கண்டறிய முடியாது. "
+          "இரண்டு matrix-களையும் வரிசை வாரியாக எழுதி "
+          "அனுப்புங்கள், அல்லது கேள்வியின் photo "
+          "அனுப்புங்கள் — நான் உடனே தீர்த்து தருகிறேன். 😊",
+    "te": "ఈ ప్రశ్నలో ఒక చిన్న సమస్య ఉంది: matrix లో "
+          "entry missing అయింది, కాబట్టి దీని నుండి "
+          "విలువలు కనుగొనలేము. రెండు matrix లను వరుసల "
+          "వారీగా రాసి పంపండి, లేదా ప్రశ్న photo పంపండి "
+          "— నేను వెంటనే పరిష్కరిస్తాను. 😊",
+}
+
+
+def _w207_wrong_question_line(question, hindi, lang=None,
+                              lang_request=None):
+    """The defective-question line in the student's own
+    language — the selection mirrors _not_found_line
+    exactly (an explicit Wave-107 request first, then the
+    question's script, then the UI language)."""
+    lines = _W207_WRONG_QUESTION_LINES
+    if lang_request == "hi":
+        return lines["hi"]
+    if lang_request == "hinglish":
+        return lines["roman"]
+    if lang_request == "en":
+        return lines["en"]
+    q = str(question or "")
+    if any("ऀ" <= ch <= "ॿ" for ch in q):
+        if lang == "mr":
+            return lines["mr"]
+        return lines["hi"]
+    if hindi:
+        return lines["roman"]
+    if lang in ("bn", "mr", "ta", "te"):
+        return lines[lang]
+    if lang == "hi":
+        return lines["roman"]
+    return lines["en"]
+
+
+def _w207_wrong_question_result(question, hindi, lang=None,
+                                lang_request=None):
+    """The native 'ye sawal galat hai' serve for a proven
+    defective question (today: the one-entry-short
+    flattened matrix-equality paste), or None.  A plain
+    one-line result in the nonmaths tradition — and plain
+    results are refused by the Live Bank's own classifier,
+    so the line is never stored as an answer."""
+    try:
+        from solver.matrixeq175 import matrixeq_near_miss
+        miss = matrixeq_near_miss(question)
+    except Exception:
+        miss = None
+    if miss is None:
+        return None
+    return _plain_result(
+        "wrong_question",
+        _w207_wrong_question_line(question, hindi, lang=lang,
+                                  lang_request=lang_request),
+        hindi)
 
 
 # ---------------------------------------------------------------------------
@@ -4501,6 +4655,24 @@ def _with_fallback_chain(question, result, lang=None,
         return result
     if _is_nonmaths(question):
         return _nonmaths_result(question, hindi, req_flavour)
+
+    # Wave 207: a question proven DEFECTIVE by a strict
+    # detector (the one-entry-short flattened matrix-
+    # equality paste) earns its verdict here — natively,
+    # in the student's language, before the paper / meta /
+    # concept layers and long before the AI legs: Suraj's
+    # rule is that Ganitra says "ye sawal galat hai" with
+    # the reason, instead of guessing, clarifying vaguely,
+    # or burning the slow chain into a "Server is slow".
+    # The gate is failure-only (a real solver result is
+    # never displaced) and the detector itself declines
+    # every shape it cannot prove defective.
+    if not _is_real(question, result):
+        w207q = _w207_wrong_question_result(
+            question, hindi, lang=lang,
+            lang_request=lang_request)
+        if w207q is not None:
+            return w207q
 
     # Wave 174: the PAPER-REQUEST layer (paper_requests.py).
     # A student asking for a board paper ("Mp board ka maths
