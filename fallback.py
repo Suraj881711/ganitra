@@ -5651,6 +5651,30 @@ def with_fallback(question, result, lang=None, student_class=None,
                                student_class=student_class,
                                lang_request=lang_request,
                                defer_ai=defer_ai, detail=detail)
+    # Wave 209: real step-by-step working for differential
+    # equations.  The DE producers (depth125's dsolve
+    # fallback, calculus's dsolve path) serve verified
+    # answers with SUMMARY steps — the full solution page
+    # showed the one line "Solving the differential
+    # equation ... gives the general solution:" instead
+    # of working.  enrich_de_steps re-derives the
+    # textbook method from the question (direct /
+    # homogeneous / separable / linear / x±y
+    # substitution), verifies the working AND that it
+    # lands exactly on the served answer, and only then
+    # swaps the steps — the answer and every other field
+    # stay byte-identical; on any doubt it returns None
+    # and the serve stands untouched.  The pass runs
+    # BEFORE the Wave-130 relanguage below, like every
+    # other step-producing layer, so the recorded Live
+    # Bank copy is the answer the student actually saw.
+    try:
+        from solver.wave209 import enrich_de_steps
+        enriched = enrich_de_steps(question, out)
+        if enriched is not None:
+            out = enriched
+    except Exception:
+        pass
     if lang_request in ("hi", "en", "hinglish"):
         try:
             from steplang import relanguage_result

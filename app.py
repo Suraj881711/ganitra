@@ -1277,6 +1277,14 @@ def create_app():
             solve_text, result, lang_request=lang_request,
             lang=_lang())
         return render_template("answer.html", question=question,
+                               # Wave 211: the template brings
+                               # back the one-line explanation
+                               # ONLY for an explicit language
+                               # request serve (see answer.html);
+                               # a no-request page renders exactly
+                               # as Wave 208 left it.
+                               lang_requested=(
+                                   lang_request is not None),
                                # Wave 138: typeset variants are a
                                # display concern — annotated on a
                                # copy for the template only; the
