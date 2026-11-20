@@ -282,6 +282,6 @@ def test_pins_v58_v35():
     base = (ROOT / "templates" / "base.html").read_text(
         encoding="utf-8")
     sw = (ROOT / "static" / "sw.js").read_text(encoding="utf-8")
-    assert "filename='style.css', v='60'" in base
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in sw
-    assert '"/static/style.css?v=60"' in sw
+    assert "filename='style.css', v='61'" in base
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in sw
+    assert '"/static/style.css?v=61"' in sw

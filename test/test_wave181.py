@@ -203,9 +203,9 @@ def test_reduced_motion_rests_on_wave():
 # --- Pins and precache -----------------------------------------------------
 
 def test_pins_and_precache():
-    assert "v='60'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
-    assert '"/static/style.css?v=60"' in SW
+    assert "v='61'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in SW
+    assert '"/static/style.css?v=61"' in SW
     for pose in POSES:
         assert '"/static/robot-%s.webp"' % pose in SW
 

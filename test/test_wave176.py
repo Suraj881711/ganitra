@@ -159,8 +159,8 @@ def test_served_page_bubble_has_no_figures(client):
 # --- delivery pins --------------------------------------------------------
 
 def test_delivery_versions_wave176():
-    assert "v='60'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
-    assert '"/static/style.css?v=60"' in SW
+    assert "v='61'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in SW
+    assert '"/static/style.css?v=61"' in SW
     assert "v='54'" not in BASE
     assert "ganitra-static-v31" not in SW

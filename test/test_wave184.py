@@ -121,6 +121,6 @@ def test_served_chat_page_keeps_mic(client):
 # --- Pins --------------------------------------------------------------
 
 def test_wave184_pins():
-    assert "v='60'" in BASE
-    assert 'GANITRA_CACHE = "ganitra-static-v37"' in SW
-    assert '"/static/style.css?v=60"' in SW
+    assert "v='61'" in BASE
+    assert 'GANITRA_CACHE = "ganitra-static-v38"' in SW
+    assert '"/static/style.css?v=61"' in SW
