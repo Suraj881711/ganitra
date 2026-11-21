@@ -2850,3 +2850,54 @@ body.chat-page .answer-actions .act-btn { padding: 13px 8px; }
   background: #fdf6e0; border-color: #c9a24b;
 }
 .advice-card[hidden], .teach-block[hidden] { display: none; }
+
+/* --- Wave 212 (Suraj, 21 Nov 2026): phone photo fixes ----
+   (a) The attach chooser's fixed bottom:72px offset landed
+   INSIDE the grown composer on phones (the textarea grows
+   to 128px), so the menu rendered over/behind the bar and
+   its taps were swallowed. The menu now anchors just above
+   the composer form itself, whatever height the bar is.
+   (b) The two file inputs are visually hidden instead of
+   display:none — several mobile browsers/WebViews refuse
+   to open a picker for a display:none input triggered
+   from script, which is why the gallery never opened on
+   the phone even though the menu showed. */
+.attach-menu { bottom: calc(100% + 6px); right: 0; }
+.visually-hidden-input {
+  position: absolute; width: 1px; height: 1px;
+  opacity: 0; overflow: hidden;
+  clip: rect(0 0 0 0); clip-path: inset(50%);
+  white-space: nowrap; border: 0; padding: 0; margin: -1px;
+}
+/* Wave 212 (items 9 + 10): the question-edit pencil, the
+   per-step reply arrows, and the composer context strip.
+   All quiet, icon-only, in the chat's existing palette. */
+.msg-edit-btn {
+  background: none; border: none; cursor: pointer;
+  color: inherit; opacity: 0.65; padding: 2px;
+  margin-left: 6px; vertical-align: middle;
+}
+.msg-edit-btn:hover { opacity: 1; }
+.step-reply-btn {
+  background: none; border: none; cursor: pointer;
+  color: inherit; opacity: 0.45; padding: 0 2px;
+  float: right;
+}
+.step-reply-btn:hover { opacity: 1; }
+.composer-context {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; margin-bottom: 6px;
+  border-radius: 10px;
+  background: rgba(13, 110, 110, 0.10);
+}
+.composer-context[hidden] { display: none; }
+#composer-context-text {
+  flex: 1; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.composer-context-clear {
+  background: none; border: none; cursor: pointer;
+  color: inherit; opacity: 0.7; padding: 2px;
+  display: inline-flex;
+}
+.composer-context-clear:hover { opacity: 1; }

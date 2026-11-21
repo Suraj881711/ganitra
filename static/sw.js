@@ -105,7 +105,7 @@
 /* Wave 197: the home mascot circle is completely still
    and the "Ganitra" name plate under it is removed
    (Suraj's order) — cache v37, stylesheet ?v=60. */
-var GANITRA_CACHE = "ganitra-static-v38";
+var GANITRA_CACHE = "ganitra-static-v40";
 
 /* Wave 98: the chat shell, precached on install. Each URL
    is added on its own so one failure (e.g. a sprite the
@@ -116,7 +116,7 @@ var GANITRA_CACHE = "ganitra-static-v38";
    (which keys on the full URL) hits it offline. */
 var GANITRA_SHELL = [
   "/",
-  "/static/style.css?v=61",
+  "/static/style.css?v=63",
   "/static/offline.js",
   "/static/logo-mark-t.png",
   "/static/logo-full-t.png",
