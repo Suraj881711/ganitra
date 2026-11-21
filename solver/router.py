@@ -4665,6 +4665,34 @@ def _solve_question_uncached(question: str):
             out["interpreted_as"] = translated
         return out
 
+    # Wave 212: prediction-by-structure schemas (solver/
+    # wave212.py) — the fix-queue families whose maths is
+    # elementary but whose DRESS defeated every word-pattern
+    # layer: decimal story arithmetic, ratio parts and
+    # proportions, the percentage family in terse dress,
+    # AP story/inverse forms, verbal complex numbers,
+    # caret-free factorisation, exact coordinate distance,
+    # area under/between curves, time/calendar/clock, and
+    # prime facts.  Each schema keys on the question's
+    # STRUCTURE (its numbers, ratio pair, clock times,
+    # series shape) and verifies its answer deterministically
+    # before serving; on any doubt it returns None and the
+    # flow below is exactly the pre-Wave-212 one.  The gate
+    # sits after Wave 206 (which keeps its own families) and
+    # before the Wave-202 next-term hook, whose pure
+    # next-term shapes carry none of these signatures.
+    try:
+        from .wave212 import solve_wave212
+        out = solve_wave212(working)
+        if out is None and working != original:
+            out = solve_wave212(original)
+    except Exception:
+        out = None
+    if out is not None:
+        if was_translated:
+            out["interpreted_as"] = translated
+        return out
+
     # Wave 202: a series-bearing NEXT-TERM ask in any
     # phrasing ("predict the next number: 3, 6, 11, 18, 27",
     # "pattern batao: 7, 14, 21, 28, ?", a bare "2, 4, 8,
