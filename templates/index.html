@@ -338,6 +338,18 @@
     <div class="composer-wrap">
       <form method="post" action="/solve" class="chat-form" id="chat-form">
         <label class="sr-only" for="q">{{ t.enter_question }}</label>
+        {# Wave 212 (items 9 + 10): the composer context strip
+           — one quiet line above the pill, shown only while
+           an edit or a select-and-reply is armed ("Editing: …"
+           / "Replying to: …"), with a ✕ that disarms it. It is
+           composer furniture, never a chat section. #}
+        <div id="composer-context" class="composer-context" hidden>
+          <span id="composer-context-text"></span>
+          <button type="button" id="composer-context-clear"
+                  class="composer-context-clear"
+                  aria-label="Cancel"
+                  title="Cancel"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+        </div>
         <div class="chat-bar">
           {# Wave 11 composer: everything INSIDE the pill — LEFT a
              📎 file-select button (opens the SAME picker/input as
@@ -368,14 +380,22 @@
                file ho, all file ko select karane kaa option
                hona chahiye"). The change handler sorts out
                what Ganitra can actually read. #}
-            <input type="file" id="photo-input" hidden />
+            {# Wave 212 (Suraj, 21 Nov 2026): NOT the hidden
+               attribute — display:none file inputs are
+               refused by several mobile browsers/WebViews
+               when opened programmatically, which is why
+               the gallery never opened on his phone. The
+               visually-hidden class keeps the input rendered
+               (1px, transparent) so .click() works
+               everywhere. #}
+            <input type="file" id="photo-input" class="visually-hidden-input" />
             {# Wave 208 (Suraj, 20 Nov 2026): a second input
                that opens the GALLERY directly (accept=image/*)
                — the unrestricted input above stays for every
                file type (Wave 27). The camera / paperclip
                buttons open the small chooser below; both inputs
                feed the same change handler. #}
-            <input type="file" id="gallery-input" accept="image/*" hidden />
+            <input type="file" id="gallery-input" accept="image/*" class="visually-hidden-input" />
             <div id="attach-menu" class="attach-menu" hidden>
               <button type="button" class="attach-opt" id="attach-gallery">{{ t.attach_gallery }}</button>
               <button type="button" class="attach-opt" id="attach-file">{{ t.attach_file }}</button>
@@ -1139,12 +1159,97 @@
          The classic answer page keeps its own toggle and
          the shared localStorage key, untouched. */
 
+      /* Wave 212 (items 9 + 10): question EDIT and
+         SELECT-AND-REPLY state. One composer context strip
+         serves both: arming one disarms the other. The
+         pencil lives only on the student's LATEST question
+         bubble; resubmitting an armed edit replaces the old
+         pair (submit handler). A reply arms hidden context
+         (the selected answer's steps + the step index) that
+         rides the /api/solve payload — the server answers
+         scoped to the selection. */
+      var ICON_EDIT = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"/></svg>';
+      var ICON_REPLY = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>';
+      var lastEditBtn = null;
+      var pendingEditBubble = null;
+      var replyContextState = null;
+
+      function showComposerContext(label) {
+        var strip = document.getElementById("composer-context");
+        var txt = document.getElementById("composer-context-text");
+        if (!strip || !txt) return;
+        txt.textContent = label.length > 90
+          ? label.slice(0, 90) + "…" : label;
+        strip.hidden = false;
+      }
+
+      function clearComposerContext() {
+        var strip = document.getElementById("composer-context");
+        if (strip) strip.hidden = true;
+        pendingEditBubble = null;
+        replyContextState = null;
+        var q = document.getElementById("q");
+        if (q) q.required = true;
+      }
+
+      function startEditQuestion(bubbleEl, text) {
+        replyContextState = null;
+        pendingEditBubble = bubbleEl;
+        box.value = text;
+        showComposerContext("Editing: " + text);
+        box.focus();
+        box.style.height = "auto";
+        box.style.height =
+          Math.min(box.scrollHeight, 128) + "px";
+      }
+
+      function startReplyContext(ctx, label) {
+        pendingEditBubble = null;
+        replyContextState = ctx;
+        showComposerContext("Replying to: " + label);
+        if (ctx.step_index !== null &&
+            ctx.step_index !== undefined) {
+          /* An empty-box submit must stay possible: it is
+             the teach ask about this step. */
+          box.removeAttribute("required");
+        }
+        box.focus();
+      }
+
+      (function () {
+        var clearBtn = document.getElementById(
+          "composer-context-clear");
+        if (clearBtn) {
+          clearBtn.addEventListener("click",
+                                    clearComposerContext);
+        }
+      })();
+
       function addBubble(cls, text) {
         var div = document.createElement("div");
         div.className = "bubble " + cls;
         var p = document.createElement("p");
         p.textContent = text;
         div.appendChild(p);
+        if (cls === "user") {
+          /* Wave 212 (item 9): the pencil on the student's
+             own latest question. */
+          if (lastEditBtn) {
+            lastEditBtn.remove();
+            lastEditBtn = null;
+          }
+          var editBtn = document.createElement("button");
+          editBtn.type = "button";
+          editBtn.className = "msg-edit-btn";
+          editBtn.setAttribute("aria-label", "Edit question");
+          editBtn.title = "Edit question";
+          editBtn.innerHTML = ICON_EDIT;
+          editBtn.addEventListener("click", function () {
+            startEditQuestion(div, text);
+          });
+          div.appendChild(editBtn);
+          lastEditBtn = editBtn;
+        }
         log.appendChild(div);
         scrollLog();
         return div;
@@ -1734,11 +1839,12 @@
         var figureEl = null;
         var stepsSection = null;
 
-        var badge = document.createElement("span");
-        badge.className = "badge";
-        badge.textContent = result.type
-          ? result.type + (result.op ? " · " + result.op : "")
-          : "Ganitra";
+        /* Wave 212 (Suraj, 21 Nov 2026): the internal
+           type · op badge chip is GONE from the chat card —
+           it showed solver internals ("word_problem ·
+           w206_...") to the student.  The card now opens
+           directly with the intro/steps.  Nothing else in
+           the card's assembly changes. */
 
         var ans = document.createElement("p");
         ans.className = "answer-big";
@@ -1837,6 +1943,7 @@
            same thin style — opens the Teacher's Advice on
            demand (see the advice button below). */
         var ICON_ADVICE = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>';
+        var ICON_REPLY20 = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 00-4-4H4"/></svg>';
 
         var actions = document.createElement("div");
         actions.className = "answer-actions";
@@ -1915,6 +2022,29 @@
           }
         }
         if (listenBtn) actions.appendChild(listenBtn);
+
+        /* -- Wave 212 (item 10): Reply to this answer --
+           Select-and-reply: the whole answer becomes the
+           composer's quoted context (its steps ride the
+           payload); a teach-like follow-up is answered
+           scoped to this answer. Icon-only, same row. */
+        var replyBtn = document.createElement("button");
+        replyBtn.type = "button";
+        replyBtn.className = "method-chip act-btn util-btn";
+        replyBtn.dataset.action = "reply";
+        replyBtn.innerHTML = ICON_REPLY20;
+        replyBtn.setAttribute("aria-label",
+                              "Reply to this answer");
+        replyBtn.title = "Reply to this answer";
+        replyBtn.addEventListener("click", function () {
+          startReplyContext({
+            question: question || "",
+            answer: result.answer || "",
+            steps: displaySteps.slice(),
+            step_index: null
+          }, question || "this answer");
+        });
+        actions.appendChild(replyBtn);
 
         /* -- 3. Teach: the step-video playback --
            The steps list itself is the board: at playback start
@@ -2486,6 +2616,30 @@
                 .test(step)) {
               li.className = "step-verify";
             }
+            /* Wave 212 (item 10): a reply affordance on
+               every step — tapping it quotes THIS step in
+               the composer, and the follow-up is explained
+               scoped to this step alone (the step's index
+               and the answer's steps ride the payload). */
+            var stepReplyBtn = document.createElement(
+              "button");
+            stepReplyBtn.type = "button";
+            stepReplyBtn.className = "step-reply-btn";
+            stepReplyBtn.setAttribute(
+              "aria-label", "Reply to this step");
+            stepReplyBtn.title = "Reply to this step";
+            stepReplyBtn.innerHTML = ICON_REPLY;
+            stepReplyBtn.addEventListener(
+              "click", function (ev) {
+                ev.stopPropagation();
+                startReplyContext({
+                  question: question || "",
+                  answer: result.answer || "",
+                  steps: boardSteps.slice(),
+                  step_index: w122Idx
+                }, "Step " + (w122Idx + 1) + ": " + step);
+              });
+            li.appendChild(stepReplyBtn);
             ol.appendChild(li);
           });
           var det = document.createElement("details");
@@ -2540,16 +2694,17 @@
 
         /* Wave 24: THE reading sequence — the only place the
            pieces enter the DOM, in exactly this order. The
-           CARD (the bubble) holds ONLY the solve: badge →
-           intro → steps → graph → the plain answer
+           CARD (the bubble) holds ONLY the solve: intro →
+           steps → graph → the plain answer
            line. Everything else lives OUTSIDE the card, in
            the wrap directly beneath it (Suraj, 13 Nov 2026
            ~00:15 IST: "uske neeche karna hai"): the icon row
            first, then the on-demand panels (Teacher's
            Advice — hidden until its bulb sign is tapped —
            and the ••• panel, whose first item is the Full
-           Solution page since Wave 120). */
-        div.appendChild(badge);
+           Solution page since Wave 120). Wave 212: the
+           badge chip that used to head the card is removed
+           (internal op names are not student content). */
         if (introEl) div.appendChild(introEl);
         if (stepsSection) div.appendChild(stepsSection);
         if (graphImg) div.appendChild(graphImg);
@@ -2782,6 +2937,15 @@
       form.addEventListener("submit", function (ev) {
         if (!window.fetch || solving) return;  // classic submit
         var question = box.value.trim();
+        /* Wave 212 (item 10): an armed STEP reply with an
+           empty box is a teach ask about the selected step
+           — the label mirrors the follow-up chips (the
+           selection itself rides as hidden context). */
+        if (!question && replyContextState &&
+            replyContextState.step_index !== null &&
+            replyContextState.step_index !== undefined) {
+          question = "samjhao ise";
+        }
         if (!question) return;               // let HTML validation run
         ev.preventDefault();
         solving = true;
@@ -2796,6 +2960,34 @@
            running on it. */
         if (w122Reveal) w122Reveal.finish();
         clearFollowupChips();
+        /* Wave 212 (item 9): an armed EDIT replaces the old
+           pair — the old question bubble, everything the
+           log holds after it (its answer card, its chips),
+           and the thread's tail records (the last user
+           record and everything after it) are removed
+           BEFORE the new pair is appended, so the edited
+           question is solved fresh and never duplicated. */
+        if (pendingEditBubble) {
+          var oldBubble = pendingEditBubble;
+          pendingEditBubble = null;
+          clearComposerContext();
+          for (var ti = thread.length - 1; ti >= 0; ti--) {
+            if (thread[ti].role === "user") {
+              thread.length = ti;
+              break;
+            }
+          }
+          if (oldBubble.isConnected) {
+            var sib = oldBubble.nextElementSibling;
+            while (sib) {
+              var nxtSib = sib.nextElementSibling;
+              sib.remove();
+              sib = nxtSib;
+            }
+            oldBubble.remove();
+          }
+          scheduleSave();
+        }
         addBubble("user", question);
         // Wave 11: the user turn joins the account thread now;
         // the bot turn is appended when the answer lands.
@@ -2825,8 +3017,14 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ question: question,
-                                 chat_id: chatId })
+                                 chat_id: chatId,
+                                 reply_context:
+                                   replyContextState
+                                   || undefined })
         };
+        /* Wave 212 (item 10): the selection is consumed by
+           this submission — the strip disarms. */
+        if (replyContextState) clearComposerContext();
         if (window.AbortController) {
           solveCtl = new AbortController();
           fetchOpts.signal = solveCtl.signal;
@@ -4003,8 +4201,11 @@
         };
         reader.readAsText(file);
       }
-      function onPickedFile(input) {
-        var file = input.files && input.files[0];
+      /* Wave 212: the dispatch core, shared by the two file
+         inputs and the composer paste handler below — a
+         pasted photo takes EXACTLY the gallery-pick path
+         (same vision read, same confirm-before-solve). */
+      function handlePickedFile(file) {
         if (!file) return;
         var name = (file.name || "").toLowerCase();
         var isImage = (file.type &&
@@ -4018,6 +4219,10 @@
         else if (isPdf) extractPdfClient(file);
         else if (isTxt) readTxtClient(file);
         else extractFileOnServer(file);
+      }
+      function onPickedFile(input) {
+        var file = input.files && input.files[0];
+        handlePickedFile(file);
         input.value = "";
       }
       photoInput.addEventListener("change", function () {
@@ -4026,6 +4231,39 @@
       if (galleryInput) {
         galleryInput.addEventListener("change", function () {
           onPickedFile(galleryInput);
+        });
+      }
+      /* Wave 212 (Suraj, 21 Nov 2026): pasting a copied
+         photo into the composer did nothing. An image on
+         the clipboard now goes through handlePickedFile —
+         the same photo flow as a gallery pick. Plain text
+         paste is untouched (no files -> no preventDefault,
+         the text lands in the box as always). */
+      var qBox212 = document.getElementById("q");
+      if (qBox212) {
+        qBox212.addEventListener("paste", function (ev) {
+          var cd = ev.clipboardData;
+          if (!cd) return;
+          var files = [];
+          var items = cd.items || [];
+          for (var i = 0; i < items.length; i++) {
+            if (items[i].kind === "file" &&
+                items[i].type.indexOf("image/") === 0) {
+              var f = items[i].getAsFile();
+              if (f) files.push(f);
+            }
+          }
+          if (!files.length && cd.files) {
+            for (var j = 0; j < cd.files.length; j++) {
+              if (cd.files[j].type.indexOf("image/") === 0) {
+                files.push(cd.files[j]);
+              }
+            }
+          }
+          if (files.length) {
+            ev.preventDefault();
+            handlePickedFile(files[0]);
+          }
         });
       }
 
