@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+{# Wave 213: owner dashboard — every group, its members and
+   recent activity, all reports, with close / remove actions.
+   Only the owner account (id 1) ever renders this page. #}
+<div class="acct-wrap">
+  <a class="back" href="/">← {{ t.nav_solve }}</a>
+  <h2 class="acct-heading">Group Study — Owner</h2>
+
+  {% if error %}<p class="auth-error" role="alert">{{ error }}</p>{% endif %}
+  {% if notice %}<p class="acct-saved" role="status">{{ notice }}</p>{% endif %}
+
+  <h3>Reports ({{ reports|length }})</h3>
+  {% for r in reports %}
+    <p>#{{ r.id }} — group <strong>{{ r.group_name }}</strong>,
+       report by {{ r.reporter_name }}:
+       “{{ r.post_body }}”
+       {% if r.reason %}— wajah: {{ r.reason }}{% endif %}</p>
+  {% else %}
+    <p>Koi report nahi hai.</p>
+  {% endfor %}
+
+  <h3>Saare groups ({{ all_groups|length }})</h3>
+  {% for g in all_groups %}
+    <div>
+      <p><strong>{{ g.name }}</strong> (id {{ g.id }},
+         admin id {{ g.admin_id }})
+         {% if g.closed_at %} — <em>band hai</em>{% endif %}</p>
+      <ul>
+        {% for m in g.members %}
+          <li>{{ m.name }} — {{ m.phone or 'no number' }}
+            {% if m.id != g.admin_id %}
+              <form method="post"
+                    action="/owner/groups/{{ g.id }}/remove">
+                <input type="hidden" name="user_id" value="{{ m.id }}">
+                <button type="submit">Hatao</button>
+              </form>
+            {% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+      {% if g.recent %}
+        <p>Recent activity:</p>
+        <ul>
+          {% for p in g.recent %}
+            <li>[{{ p.kind }}] {{ p.author_name or 'Ganitra' }}:
+                {{ p.body[:120] }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% if not g.closed_at %}
+        <form method="post" action="/owner/groups/{{ g.id }}/close">
+          <button type="submit">Group band karo</button>
+        </form>
+      {% endif %}
+    </div>
+  {% else %}
+    <p>Abhi koi group nahi bana hai.</p>
+  {% endfor %}
+</div>
+{% endblock %}

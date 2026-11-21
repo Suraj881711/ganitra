@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block head_extra %}
+<style>
+  .gs-post { margin: 0 0 10px; padding: 8px 10px; border-radius: 10px;
+             background: var(--hatch-widget-surface, #f4f1ea); }
+  .gs-post.ganitra { background: #eef6ee; }
+  .gs-post .gs-meta { font-size: 0.8em; opacity: 0.75; margin-bottom: 2px; }
+  .gs-post .gs-body { white-space: pre-wrap; word-break: break-word; }
+  .gs-post form { display: inline; }
+  .gs-mini { font-size: 0.8em; }
+</style>
+{% endblock %}
+{% block content %}
+{# Wave 213: one group — simple bubbles, a post box, an
+   "answer this" form under each maths question, report
+   buttons, and admin tools when the viewer is the admin. #}
+<div class="acct-wrap">
+  <a class="back" href="/groups">← Group Study</a>
+  <h2 class="acct-heading">{{ group.name }}</h2>
+
+  {% if error %}<p class="auth-error" role="alert">{{ error }}</p>{% endif %}
+  {% if notice %}<p class="acct-saved" role="status">{{ notice }}</p>{% endif %}
+  {% if group.closed_at %}
+    <p class="auth-error">Ye group band ho chuka hai — naye
+       message nahi bheje ja sakte.</p>
+  {% endif %}
+
+  <h3>Members ({{ members|length }})</h3>
+  <ul>
+    {% for m in members %}
+      <li>{{ m.name }}{% if m.id == group.admin_id %} (admin){% endif %}
+        {% if is_admin and m.phone %} — {{ m.phone }}{% endif %}
+        {% if is_admin and m.id != group.admin_id and not group.closed_at %}
+          <form method="post" action="/groups/{{ group.id }}/remove">
+            <input type="hidden" name="user_id" value="{{ m.id }}">
+            <button type="submit" class="gs-mini">Hatao</button>
+          </form>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  {% if is_admin and not group.closed_at %}
+    <form method="post" action="/groups/{{ group.id }}/add" class="acct-list">
+      <label>Member add karo — mobile number
+        <input type="tel" name="phone" inputmode="numeric" required>
+      </label>
+      <button type="submit" class="acct-mini-btn">Add karo</button>
+    </form>
+    <form method="post" action="/groups/{{ group.id }}/close">
+      <button type="submit" class="gs-mini">Group band karo</button>
+    </form>
+  {% endif %}
+
+  <h3>Chat</h3>
+  <div class="gs-feed">
+    {% for p in posts %}
+      <div class="gs-post{% if p.author_id is none %} ganitra{% endif %}">
+        <div class="gs-meta">
+          {% if p.author_id is none %}Ganitra{% else %}{{ p.author_name }}{% endif %}
+          {% if p.kind == 'question' %} · sawal{% endif %}
+          {% if p.kind == 'peer_answer' %} · jawab{% endif %}
+        </div>
+        <div class="gs-body">{{ p.body }}</div>
+        {% if p.kind == 'question' and not group.closed_at %}
+          <form method="post" action="/groups/{{ group.id }}/post">
+            <input type="hidden" name="reply_to" value="{{ p.id }}">
+            <input type="text" name="text" placeholder="Is sawal ka jawab likho">
+            <button type="submit" class="gs-mini">Jawab bhejo</button>
+          </form>
+        {% endif %}
+        {% if p.author_id is not none and p.author_id != user_id %}
+          <form method="post" action="/groups/{{ group.id }}/report">
+            <input type="hidden" name="post_id" value="{{ p.id }}">
+            <button type="submit" class="gs-mini">Report</button>
+          </form>
+        {% endif %}
+      </div>
+    {% else %}
+      <p>Abhi koi message nahi. Pehla message likho — maths ka
+         sawal puchega to Ganitra khud jawab de dega.</p>
+    {% endfor %}
+  </div>
+
+  {% if not group.closed_at %}
+    <form method="post" action="/groups/{{ group.id }}/post" class="acct-list">
+      <label>Message likho
+        <input type="text" name="text" maxlength="1000" required>
+      </label>
+      <button type="submit" class="acct-mini-btn">Bhejo</button>
+    </form>
+  {% endif %}
+</div>
+{% endblock %}
