@@ -527,7 +527,13 @@ def _w146_veto(question, result):
     if m:
         var = m.group(1)
         if not re.search(r"\b" + var + r"\s*=", ans):
-            others = set(re.findall(r"[a-z]", ans.lower())) \
+            # Wave 212 precision fix: the "other free
+            # variables" must be single-letter TOKENS —
+            # counting every letter inside ordinary words
+            # ("10 terms" -> t, e, r, m, s) vetoed a
+            # legitimate count answer to "find n".
+            others = set(re.findall(r"\b[a-z]\b",
+                                    ans.lower())) \
                 - {var}
             if num is None and others:
                 return True
@@ -1756,7 +1762,13 @@ def _w151_veto_inner(question, result):
     # idx 280: 8⁴ "in base 2" served 4096; idx 555 likewise;
     # idx 292's standard-form mean also dies here).
     if num is not None and _w151_form_ask(q, ql):
-        return True
+        # Wave 212 precision fix: for a RATIONAL number,
+        # "standard form" IS the reduced fraction p/q —
+        # a fraction answer to a fraction-bearing ask is
+        # the correct form, not a bare evaluated number.
+        if "/" not in ans or not re.search(
+                r"-?\d+\s*/\s*-?\d+", q):
+            return True
 
     # W42 — an algebraic-expression operation ask served
     # a bare number (Board 8 idx 489: subtract-the-
@@ -2149,6 +2161,27 @@ def _is_nonmaths(question):
     if any(ch.isdigit() for ch in q) and (
             "play both" in q or "play neither" in q
             or "power set" in q):
+        return False
+    # Wave 212: two maths shapes in scene dress slipped
+    # past every exemption above and were refused as
+    # non-maths (test-loop rows 117/121).  (a) Clock-time
+    # arithmetic — a "H:MM" time plus a duration / start /
+    # end signal is a Class-4 time problem whatever scene
+    # (movie, train, school) wraps it.  (b) A prime-number
+    # ask with a digit/size signal ("2 digit ki sabse badi
+    # prime number") is a number question, not the cricket
+    # chat around it.
+    if re.search(r"\d{1,2}:\d{2}", q) and any(
+            w in q for w in (
+                "hour", "min", "long", "khatam", "end",
+                "start", "baje", "बजे", "घंटे", "ghante",
+                "late", "duration", "kab")):
+        return False
+    if ("prime" in q or "अभाज्य" in q) and any(
+            w in q for w in (
+                "digit", "अंक", "number", "sankhya",
+                "संख्या", "sabse", "biggest", "largest",
+                "smallest", "badi", "chhoti")):
         return False
     # Wave 59: Hinglish story dressing — sets/ages/geometry
     # word problems mention cricket or football as scene
@@ -4341,6 +4374,160 @@ def _openrouter_answer(question, hindi, detail=False):
         return None
 
 
+# ---------------------------------------------------------------------------
+# Wave 212 (Suraj, 21 Nov 2026): the fallback chain is
+# TIME-BOUNDED.  His phone test: some questions spun ~1
+# minute and died on the browser's 45-second abort ("Server
+# is slow").  The chain's stages were individually polite
+# (a 10 s solver budget here, a 15 s leg timeout there) but
+# NOTHING bounded their SUM: native solve (10 s) + the hint
+# re-ask (10 s) + deep_solve's reformulations (10 s each) +
+# Gemini's two models (15 s each) + Groq (15 s) +
+# OpenRouter (12 s) + consensus re-calls + method-transfer
+# deep solves could pass 120 s.  Now one monotonic deadline
+# governs the whole request: api.py sets it (38 s, a margin
+# under the browser's 45 s); when no caller sets one, the
+# chain installs its own (CHAIN_BUDGET_SECONDS from chain
+# entry).  Expensive stages run through _w212_run_bounded
+# and are SKIPPED when the budget is nearly spent — the
+# chain then serves exactly what it would have served
+# anyway (its kind clarification / honest line), just in
+# time.  A stage that overruns is abandoned, never awaited.
+# ---------------------------------------------------------------------------
+import threading as _w212_threading
+import time as _w212_time
+
+_W212_LOCAL = _w212_threading.local()
+CHAIN_BUDGET_SECONDS = 30.0
+
+
+def set_solve_deadline(ts):
+    """Called by api.py at the start of a solve request:
+    the absolute monotonic deadline for the whole request,
+    plus when it was set (the chain honours a deadline set
+    moments ago and ignores a stale one left on a pooled
+    thread by an earlier request)."""
+    try:
+        _W212_LOCAL.deadline = float(ts)
+        _W212_LOCAL.deadline_set_at = _w212_time.monotonic()
+    except Exception:
+        pass
+
+
+def _w212_time_left():
+    """Seconds left on the active deadline; installs the
+    chain's own budget when no fresh caller deadline is
+    in force."""
+    now = _w212_time.monotonic()
+    dl = getattr(_W212_LOCAL, "deadline", None)
+    set_at = getattr(_W212_LOCAL, "deadline_set_at", 0)
+    if dl is None or now - set_at > 10.0:
+        dl = now + CHAIN_BUDGET_SECONDS
+        _W212_LOCAL.deadline = dl
+        _W212_LOCAL.deadline_set_at = now
+    return dl - now
+
+
+def _w212_stage_budget(cap):
+    """Budget for one expensive stage: at most `cap`
+    seconds, never eating the last 2 s (the collapse /
+    honest-line bookkeeping still has to run)."""
+    left = _w212_time_left() - 2.0
+    if left <= 0:
+        return 0.0
+    return min(cap, left)
+
+
+def _w212_run_bounded(fn, seconds):
+    """Run fn() in a daemon worker thread, waiting at most
+    `seconds`.  Returns (True, value) or (False, None) on
+    timeout / exception — the router's own budget pattern
+    (solver/router.py's _solve_with_budget), applied to the
+    chain's stages.  An abandoned worker is a daemon: it
+    can finish into the void but never blocks the serve."""
+    if seconds <= 0:
+        return False, None
+    box = {}
+
+    def _work():
+        try:
+            box["value"] = fn()
+        except Exception:
+            box["value"] = None
+
+    worker = _w212_threading.Thread(target=_work,
+                                    daemon=True)
+    worker.start()
+    worker.join(seconds)
+    if worker.is_alive():
+        return False, None
+    return True, box.get("value")
+
+
+def _w212_wrong_question_result(question, hindi, lang=None,
+                                  lang_request=None):
+    """Wave 212's addition to the Wave-207 wrong-question
+    family: a TRIANGLE whose longest stated side is >= the
+    sum of the other two cannot exist (triangle inequality)
+    — deterministically defective, so the student hears
+    exactly that, kindly, instead of a guessed area or a
+    vague decline.  Strict shape: a triangle word + exactly
+    three side numbers (near a side word when one is
+    present).  Anything else returns None."""
+    q = str(question or "").lower()
+    if not any(w in q for w in ("triangle", "त्रिभुज",
+                                "tribhuj")):
+        return None
+    # The three numbers must be THE SIDES: a side word is
+    # required, and the perimeter / third-side dresses —
+    # where a third number is not a side at all — decline.
+    if not any(w in q for w in ("side", "sides", "भुजा",
+                                "bhuj")):
+        return None
+    if any(w in q for w in ("perimeter", "परिमाप",
+                            "parimap", "third side",
+                            "teesri bhuja")):
+        return None
+    nums = [float(x) for x in re.findall(
+        r"\d+(?:\.\d+)?", q)]
+    if len(nums) != 3:
+        return None
+    a, b, c = sorted(nums)
+    if c < a + b:
+        return None
+    fmt = lambda v: str(int(v)) if v == int(v) else str(v)
+    lines = {
+        "en": "This question has a mistake: a triangle with "
+              f"sides {fmt(a)}, {fmt(b)} and {fmt(c)} cannot "
+              f"exist — the longest side ({fmt(c)}) must be "
+              f"smaller than the other two sides added "
+              f"together ({fmt(a)} + {fmt(b)} = "
+              f"{fmt(a + b)}). Please check the side "
+              "lengths and ask again. 😊",
+        "roman": "Is sawal me ek galti hai: "
+                 f"{fmt(a)}, {fmt(b)} aur {fmt(c)} sides wala "
+                 "triangle ban hi nahi sakta — sabse lambi "
+                 f"side ({fmt(c)}) baaki do sides ke yog "
+                 f"({fmt(a)} + {fmt(b)} = {fmt(a + b)}) se "
+                 "chhoti honi chahiye. Side lengths check "
+                 "karke phir bhejo. 😊",
+        "dev": "इस सवाल में एक गलती है: "
+               f"{fmt(a)}, {fmt(b)} और {fmt(c)} भुजाओं वाला "
+               "त्रिभुज बन ही नहीं सकता — सबसे लंबी भुजा "
+               f"({fmt(c)}) बाकी दो भुजाओं के योग "
+               f"({fmt(a)} + {fmt(b)} = {fmt(a + b)}) से "
+               "छोटी होनी चाहिए। भुजाएँ जाँचकर फिर भेजिए। "
+               "😊",
+    }
+    flavour = {"en": "en", "hi": "dev",
+               "hinglish": "roman"}.get(lang_request)
+    if flavour is None:
+        flavour = _flavour(question)
+    return _plain_result("wrong_question",
+                         lines.get(flavour, lines["en"]),
+                         hindi)
+
+
 def _verified_ai_answer(question, hindi, lang_request,
                         rejected_sink=None, detail=False):
     """Wave 133: the AI chain behind aiverify's verification
@@ -4667,6 +4854,18 @@ def _with_fallback_chain(question, result, lang=None,
     # The gate is failure-only (a real solver result is
     # never displaced) and the detector itself declines
     # every shape it cannot prove defective.
+    # Wave 212: the impossible-triangle verdict is NOT
+    # failure-gated — the native Heron path fake-solves
+    # an impossible triangle as "0.0000 cm²", a "real"
+    # result no failure gate can see.  A proven defect
+    # outranks the fake serve; the detector's own gate
+    # (triangle + side word + exactly three numbers, no
+    # perimeter/third-side dress) is the proof.
+    w212q = _w212_wrong_question_result(
+        question, hindi, lang=lang,
+        lang_request=lang_request)
+    if w212q is not None:
+        return w212q
     if not _is_real(question, result):
         w207q = _w207_wrong_question_result(
             question, hindi, lang=lang,
@@ -4882,6 +5081,22 @@ def _with_fallback_chain(question, result, lang=None,
         try:
             from solver.c12gaps142 import c12gaps142_upgrade
             upgraded = c12gaps142_upgrade(question, result)
+        except Exception:
+            upgraded = None
+        if upgraded is not None:
+            return _with_figure(question, upgraded)
+        # Wave 212: the mixed plot + distance ask. The
+        # native origin-distance serve answers in decimals
+        # ("7.2111") where the exact surd is the taught
+        # form, and the Wave 128 graph layer could steal
+        # the whole ask into a bare plot. w212_upgrade
+        # fires only when the strict Wave 212 coordinate
+        # schema settles the same distance (the values
+        # must agree numerically) — the exact form then
+        # stands.
+        try:
+            from solver.wave212 import w212_upgrade
+            upgraded = w212_upgrade(question, result)
         except Exception:
             upgraded = None
         if upgraded is not None:
@@ -5365,12 +5580,22 @@ def _with_fallback_chain(question, result, lang=None,
     # through untouched, at the cost of a few regex passes.)
     if result_out.get("fallback_kind") in _GEMINI_KINDS + (
             "gibberish",):
-        try:
+        # Wave 212: the deep stage is budget-bounded (see
+        # the deadline block above _verified_ai_answer) —
+        # its reformulation retries each carry the solver's
+        # own 10 s budget, so unbounded it alone could eat
+        # the student's 45 s.  Skipped or abandoned, the
+        # chain continues exactly as if it had returned
+        # None.
+        def _w212_deep_first():
             from deep_solve import deep_solve
-            deep = deep_solve(question, hindi=hindi, lang=lang,
-                              lang_request=lang_request,
-                              student_class=student_class)
-        except Exception:
+            return deep_solve(
+                question, hindi=hindi, lang=lang,
+                lang_request=lang_request,
+                student_class=student_class)
+        _w212_ok, deep = _w212_run_bounded(
+            _w212_deep_first, _w212_stage_budget(12.0))
+        if not _w212_ok:
             deep = None
         # Wave 159: a deep serve that merely echoes one of
         # the question's stated literals on an expression-
@@ -5431,10 +5656,25 @@ def _with_fallback_chain(question, result, lang=None,
                 question, result_out, hindi, lang, lang_request,
                 student_class=student_class, log=False)
             return deferred
-        rejected_sink = []
-        ai_result = _verified_ai_answer(
-            question, hindi, lang_request, rejected_sink,
-            detail=detail)
+        # Wave 212: the verified-AI stage is budget-bounded
+        # like the deep stage — the legs' own timeouts
+        # (Gemini 2 models × 15 s, Groq 15 s, OpenRouter
+        # 12 s, plus consensus re-calls) stack far past the
+        # student's 45 s.  The sink lives inside the bounded
+        # call, so an abandoned stage parks nothing: the
+        # chain collapses honestly, in time.
+        def _w212_ai_call():
+            sink = []
+            res = _verified_ai_answer(
+                question, hindi, lang_request, sink,
+                detail=detail)
+            return res, sink
+        _w212_ok, _w212_pair = _w212_run_bounded(
+            _w212_ai_call, _w212_stage_budget(20.0))
+        if _w212_ok and _w212_pair is not None:
+            ai_result, rejected_sink = _w212_pair
+        else:
+            ai_result, rejected_sink = None, []
         if ai_result is not None:
             # Wave 134: method transfer at the accept seam —
             # when the AI's demonstrated METHOD recomputes
@@ -5454,14 +5694,18 @@ def _with_fallback_chain(question, result, lang=None,
             # the answers nobody has recomputed yet.
             if ai_result.get("ai_verification") != \
                     "deterministic":
-                try:
+                # Wave 212: method transfer is budget-
+                # bounded like every other expensive stage.
+                def _w212_transfer():
                     from deep_solve import deep_solve
-                    own = deep_solve(
+                    return deep_solve(
                         question, hindi=hindi, lang=lang,
                         lang_request=lang_request,
                         ai_result=ai_result,
                         student_class=student_class)
-                except Exception:
+                _w212_ok, own = _w212_run_bounded(
+                    _w212_transfer, _w212_stage_budget(6.0))
+                if not _w212_ok:
                     own = None
                 if own is not None:
                     return _with_figure(question, own)
@@ -5482,14 +5726,22 @@ def _with_fallback_chain(question, result, lang=None,
                 _rej = _rec.get("result")
                 if not isinstance(_rej, dict):
                     continue
-                try:
+                # Wave 212: budget-bounded transfer, and the
+                # loop stops when the budget is spent.
+                if _w212_time_left() < 3.0:
+                    break
+
+                def _w212_transfer_rej(_rej=_rej):
                     from deep_solve import deep_solve
-                    own = deep_solve(
+                    return deep_solve(
                         question, hindi=hindi, lang=lang,
                         lang_request=lang_request,
                         ai_result=_rej,
                         student_class=student_class)
-                except Exception:
+                _w212_ok, own = _w212_run_bounded(
+                    _w212_transfer_rej,
+                    _w212_stage_budget(6.0))
+                if not _w212_ok:
                     own = None
                 if own is not None:
                     return _with_figure(question, own)

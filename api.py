@@ -1,4 +1,5 @@
 import re
+import time
 
 from flask import Blueprint, Response, request, jsonify, \
     session, stream_with_context
@@ -97,6 +98,14 @@ def _solve_friendly(question, lang=None, student_class=None,
     finished answer (see api_solve_stream)."""
     # Wave 85: the step checker ("meri galti kahan hai"). A
     # message carrying the student's own working after a
+    # Wave 212: the request clock starts here.  The whole
+    # solve (native attempts + the fallback chain) is
+    # bounded by one deadline — 38 s, a safety margin under
+    # the browser's 45 s abort — so no question can spin
+    # into a "Server is slow" any more (Suraj's phone test,
+    # 21 Nov 2026).  The deadline is handed to the fallback
+    # layer below via fallback.set_solve_deadline.
+    _w212_t0 = time.monotonic()
     # "my solution:" marker is CHECKED against the solver's
     # solution instead of being solved as a question. The
     # gate is strict — marker + reference solve + checkable
@@ -173,6 +182,32 @@ def _solve_friendly(question, lang=None, student_class=None,
         if _pay207 is not None \
                 and _pay207.get("result") is not None:
             return _pay207["result"]
+    # Wave 212: the NOTES-REQUEST intent (notes_req.py),
+    # session-less path — mirrors the Wave-207 practice
+    # hook above.  A request that NAMES its topic
+    # ("trigonometry ke notes do") needs no parked state,
+    # so direct callers (the audit harness, the test loop)
+    # are served here too; a topic-less notes ask belongs
+    # to the route's flow alone (it can fall back to the
+    # chat's last topic there).
+    try:
+        import notes_req as _notes212
+        _parsed212 = _notes212.parse_notes_request(question)
+    except Exception:
+        _parsed212 = None
+    if _parsed212 is not None \
+            and _parsed212.get("topic_query"):
+        try:
+            _pay212 = _notes212.handle_message(
+                {}, None, None, question,
+                lang=lang or "en",
+                lang_request=lang_request,
+                student_class=student_class)
+        except Exception:
+            _pay212 = None
+        if _pay212 is not None \
+                and _pay212.get("result") is not None:
+            return _pay212["result"]
     # Wave 107: when the message carried an explicit language
     # request, the negative cache is keyed per request — a
     # fallback outcome's one-line texts are shaped by it, so
@@ -194,9 +229,15 @@ def _solve_friendly(question, lang=None, student_class=None,
         return cached
     result = solve_question(question)
     if solve_failed(question, result):
-        retry = solve_question(f"{question} find the value")
-        if not solve_failed(question, retry):
-            result = retry
+        # Wave 212: the hint re-ask is a second full solver
+        # budget (10 s) — it is skipped when the first
+        # attempt already ate most of the request budget,
+        # so the fallback chain keeps its share.
+        if time.monotonic() - _w212_t0 < 12.0:
+            retry = solve_question(
+                f"{question} find the value")
+            if not solve_failed(question, retry):
+                result = retry
     # Wave 136: the detail flag rides along ONLY when it is
     # on, so with detail off this call is byte-identical to
     # before the wave — the pre-136 test doubles for
@@ -211,6 +252,16 @@ def _solve_friendly(question, lang=None, student_class=None,
         extra["detail"] = True
     if defer_ai:
         extra["defer_ai"] = True
+    # Wave 212: hand the chain the request deadline (38 s
+    # from the request start).  Set via the fallback
+    # module's own setter so the with_fallback call below
+    # keeps its exact pre-Wave-212 signature for every
+    # existing test double.
+    try:
+        import fallback as _fallback212
+        _fallback212.set_solve_deadline(_w212_t0 + 38.0)
+    except Exception:
+        pass
     result = with_fallback(question, result, lang=lang,
                            student_class=student_class,
                            lang_request=lang_request,
@@ -789,6 +840,42 @@ def api_solve():
             **fields,
         })
 
+    # Wave 212: the NOTES-REQUEST intent (notes_req.py) —
+    # "trigonometry ke notes do" / "notes chahiye" asks for
+    # revision notes and used to fall through to the
+    # not-found line: no layer recognised a request FOR
+    # notes.  Runs right after the practice-request block
+    # (the two intents are disjoint — questions vs notes)
+    # and before the Wave-129 galti block (a notes request
+    # is a fresh intent, never a step doubt).  The module
+    # claims only its own messages; its vetoes keep
+    # concrete problems on their existing path.  Its turns
+    # never carry chips.
+    import notes_req
+    nr_payload = notes_req.handle_message(
+        session, session.get("user_id"), chat_id, question,
+        lang=lang, lang_request=lang_request,
+        student_class=session.get("saathi_class"))
+    if nr_payload is not None:
+        nr_result = nr_payload["result"]
+        history = session.get("history", [])
+        history.insert(0, trimmed_history_entry(question,
+                                                nr_result))
+        session["history"] = history[:_HISTORY_LIMIT]
+        nr_w122 = w122_payload(nr_result, lang=lang,
+                               lang_request=lang_request,
+                               question=question)
+        nr_w122["chips"] = []
+        return jsonify({
+            **nr_payload,
+            "explanation": explanation_for(nr_result, lang),
+            "advice": None,
+            "methods": [],
+            "teach": teach_for(nr_result, lang),
+            "w122": nr_w122,
+            **fields,
+        })
+
     # Wave 129: "meri galti kahan hai" — the two-turn flow
     # around the Wave 85 step checker.
     # (a) A parked "apne steps bhejo" prompt is waiting: this
@@ -1073,6 +1160,149 @@ def api_solve():
                 # Wave 138 annotation on a copy, like every
                 # re-serve boundary (the session's stored
                 # dict stays pristine).
+                "result": annotate_result(dict(result)),
+                "intro": None,
+                "explanation": explanation_for(result, lang),
+                "advice": advice_for(_prev_r, lang),
+                "methods": [],
+                "teach": teach_for(_prev_r, lang),
+                "w122": w122_payload(
+                    result, lang=lang,
+                    lang_request=lang_request,
+                    question=_prev_q or question,
+                    ask_text=question),
+                **fields,
+            })
+
+    # Wave 212 (item 10): SELECT-AND-REPLY.  The student
+    # tapped the reply affordance on ONE step of an earlier
+    # answer (or on the whole answer) and typed a follow-up
+    # about exactly that selection; the client rides the
+    # selection as hidden context (the chip pattern): the
+    # answer's question, its answer and its steps, plus the
+    # step index when a single step was selected.  A
+    # teach-like follow-up ("ye samajh nahi aaya",
+    # "samjhao", or an empty text on a step selection) is
+    # answered SCOPED to the selection — a step selection
+    # through Wave 96's doubt machinery run on the
+    # SELECTED answer (which need not be the session's
+    # last), a whole-answer selection through the teach
+    # expansion of that answer.  A follow-up carrying a
+    # fresh computation is NOT scoped: it falls through
+    # to the normal solve below, untouched.
+    _rc = data.get("reply_context")
+    if isinstance(_rc, dict) and _rc.get("steps"):
+        from followups import parse_bare_teach_request \
+            as _rc_teach_parse
+        _rc_steps = [str(s) for s in
+                     (_rc.get("steps") or [])][:40]
+        _rc_prev = {
+            "answer": str(_rc.get("answer") or ""),
+            "steps": _rc_steps,
+            "op": "reply_context",
+            "type": "word_problem",
+        }
+        _rc_idx = _rc.get("step_index")
+        _rc_teachlike = bool(
+            _rc_teach_parse(question)
+            or parse_followup(question) is not None
+            or not question.strip())
+        _rc_built = None
+        if isinstance(_rc_idx, int) and _rc_teachlike:
+            _rc_built = build_doubt_response(
+                question, {"index": _rc_idx}, _rc_prev,
+                lang=lang)
+            if _rc_built is not None:
+                result, _rc_step = _rc_built
+                history = session.get("history", [])
+                history.insert(
+                    0, trimmed_history_entry(question,
+                                             result))
+                session["history"] = \
+                    history[:_HISTORY_LIMIT]
+                return jsonify({
+                    "ok": True,
+                    "result": annotate_result(dict(result)),
+                    "intro": None,
+                    "explanation": explanation_for(
+                        result, lang),
+                    "advice": advice_for(_rc_prev, lang),
+                    "methods": [],
+                    "teach": teach_for(_rc_prev, lang),
+                    "w122": w122_payload(
+                        result, lang=lang,
+                        question=question),
+                    **fields,
+                })
+        elif _rc_idx is None and _rc_teachlike:
+            result = expand_detail(
+                str(_rc.get("question") or "") or question,
+                _rc_prev, lang=lang,
+                lang_request=lang_request) or _rc_prev
+            _rc_lines = teach_for(_rc_prev, lang)
+            if _rc_lines:
+                result = dict(result)
+                result["steps"] = list(_rc_lines) + [
+                    s for s in (result.get("steps") or [])
+                    if s not in _rc_lines]
+            history = session.get("history", [])
+            history.insert(
+                0, trimmed_history_entry(question, result))
+            session["history"] = history[:_HISTORY_LIMIT]
+            return jsonify({
+                "ok": True,
+                "result": annotate_result(dict(result)),
+                "intro": None,
+                "explanation": explanation_for(result, lang),
+                "advice": advice_for(_rc_prev, lang),
+                "methods": [],
+                "teach": teach_for(_rc_prev, lang),
+                "w122": w122_payload(
+                    result, lang=lang,
+                    lang_request=lang_request,
+                    question=str(_rc.get("question") or "")
+                    or question,
+                    ask_text=question),
+                **fields,
+            })
+
+    # Wave 212: a BARE teach-me ask ("teach me", "samjhao
+    # ise", "mujhe samajhna hai", "इसे समझाओ") sent ALONE
+    # right after an answer is a request to be TAUGHT that
+    # answer — before this wave it fell through to the
+    # solver and earned the not-found line.  The serve is
+    # the stored answer in teaching form: the Wave-12 teach
+    # lines lead, then the detail expansion (why + worked
+    # example) of the SAME verified answer — nothing is
+    # re-solved and nothing is invented.  The detector's
+    # discipline keeps the neighbours intact: "samajh nahi
+    # aaya" is not a teach form (Wave 96 / 166 keep it), a
+    # step ask stays with Wave 148 / doubt, and a teach ask
+    # carrying a question is not bare.  With no solved last
+    # answer the message falls through to the normal path.
+    # The stored last solution is NOT overwritten, exactly
+    # like the Wave-148/166 blocks above.
+    from followups import parse_bare_teach_request
+    if parse_bare_teach_request(question):
+        _prev_r = session.get("last_result")
+        _prev_q = session.get("last_question")
+        if _is_solved_166(_prev_r) \
+                and (_prev_r.get("steps") or []):
+            result = expand_detail(
+                _prev_q or question, _prev_r, lang=lang,
+                lang_request=lang_request) or _prev_r
+            _teach_lines = teach_for(_prev_r, lang)
+            if _teach_lines:
+                result = dict(result)
+                result["steps"] = list(_teach_lines) + [
+                    s for s in (result.get("steps") or [])
+                    if s not in _teach_lines]
+            history = session.get("history", [])
+            history.insert(0, trimmed_history_entry(question,
+                                                    result))
+            session["history"] = history[:_HISTORY_LIMIT]
+            return jsonify({
+                "ok": True,
                 "result": annotate_result(dict(result)),
                 "intro": None,
                 "explanation": explanation_for(result, lang),

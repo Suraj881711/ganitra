@@ -657,3 +657,53 @@ def parse_bare_view_request(text):
     if any(w not in _VIEW_FILLER for w in words):
         return None
     return "detail" if wants_detail else "steps"
+
+
+# ---------------------------------------------------------------------------
+# Wave 212: bare TEACH-ME requests.  A message that is ONLY
+# a teach ask ("teach me", "samjhao ise", "isko samjhao",
+# "mujhe samajhna hai", "इसे समझाओ") refers to the answer
+# just served — the api layer re-serves that answer in
+# teaching form.  Discipline mirrors the other bare
+# detectors: any digit / "=" / "%" means the message
+# carries its own question and is never bare; "samajh nahi
+# aaya" is NOT a teach form (it stays with the Wave-96
+# doubt block / Wave-166 simpler path); a teach ask WITH a
+# topic ("teach me fractions") is not bare either — the
+# concept layers own it.
+# ---------------------------------------------------------------------------
+
+_TEACH_EXACT = {
+    "teach me", "teach me this", "teach this",
+    "explain this", "explain it",
+    "make me understand",
+    "samjhao ise", "ise samjhao", "isko samjhao",
+    "isey samjhao", "ye samjhao", "yeh samjhao",
+    "ise samjha do", "isko samjha do",
+    "samajhna hai", "samjhana hai",
+    "mujhe samajhna hai", "mujhe samjhana hai",
+    "इसे समझाओ", "समझाओ इसे",
+    "मुझे समझना है", "मुझे समझाओ",
+}
+
+_TEACH_FILLER = {"please", "pls", "bhai", "sir", "na",
+                 "toh", "zara", "जरा", "ab", "अब", "ek",
+                 "bar", "baar", "एक", "बार"}
+
+
+def parse_bare_teach_request(text):
+    """True when the message is ONLY a teach-me ask about
+    the previous answer.  Never raises."""
+    raw = str(text or "")
+    if not raw.strip():
+        return False
+    if any(ch.isdigit() for ch in raw) or "=" in raw \
+            or "%" in raw:
+        return False
+    normalised = re.sub(
+        r"\s+", " ", raw.lower().replace("-", " ")).strip(
+            " .,;:!?\"'()।/")
+    words = [w for w in re.split(r"[\s.,;:!?\"'()।/]+",
+                                  normalised)
+             if w and w not in _TEACH_FILLER]
+    return " ".join(words) in _TEACH_EXACT

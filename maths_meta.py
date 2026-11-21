@@ -1586,7 +1586,13 @@ _FACT_BOUND_RE = re.compile(
     r"(?<![a-zA-Z])se (?:chhota|chhoti|kam|bada|badi|pehle)\b"
     r"|(?<![ऀ-ॿ])से (?:छोटा|छोटी|कम|बड़ा|बड़ी)"
     r"|\b(?:below|under|less than|greater than|between)\b"
-    r"|ke beech")
+    r"|ke beech"
+    # Wave 212: an N-digit bound ("2 digit ki sabse badi
+    # prime number") bounds the ask just as surely — the
+    # unbounded fact card must decline it (the solver's
+    # N-digit schema owns the bounded ask).
+    r"|\b\d+\s*(?:digit|digits|अंक)\b"
+    r"|\b(?:single|double|two|three)\s+digit\b")
 
 
 def _fact_hit(q, entry):

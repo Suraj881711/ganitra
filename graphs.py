@@ -113,6 +113,11 @@ _SOLVE_VERBS = {
     "simplify", "factorise", "factorize", "expand",
     "differentiate", "integrate", "prove", "verify",
     "हल", "निकालो", "निकाल", "ज्ञात", "मान",
+    # Wave 212: a distance ask riding along with the plot
+    # ("plot point (-4,6) and tell me its distance from
+    # origin") is a MIXED ask, not a pure picture request
+    # — the plot alone is not the answer.
+    "distance", "दूरी", "doori",
 }
 
 # Compute-words that veto the CHART builder: "the bar
