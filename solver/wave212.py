@@ -584,29 +584,39 @@ _ASK_WORDS = ("kitne", "kitna", "how many", "how much", "find",
               "होगा", "निकालो", "कितनी होगी")
 
 
-def _side_names(t, span):
-    """Best-effort entity names for the two ratio sides,
-    from the dress patterns students actually use."""
+def _side_names_detailed(t, span):
+    """Entity names for the two ratio sides AND the spans
+    of the exact occurrences the naming pattern matched.
+    The spans matter: those two occurrences ARE the ratio
+    declaration ("ratio of boys to girls") — they state
+    the ratio, they never ask for a side — so _ask_side
+    sets them aside and listens to the occurrences that
+    remain."""
     m = re.search(r"ratio of\s+([a-z\u0900-\u097F]+)\s+to\s+"
                   r"([a-z\u0900-\u097F]+)", t)
     if m:
-        return m.group(1), m.group(2)
+        return m.group(1), m.group(2), \
+            (m.span(1), m.span(2))
     m = re.search(r"([a-z\u0900-\u097F]+)\s+to\s+"
                   r"([a-z\u0900-\u097F]+)\s+ratio", t)
     if m:
-        return m.group(1), m.group(2)
+        return m.group(1), m.group(2), \
+            (m.span(1), m.span(2))
     m = re.search(r"([a-z\u0900-\u097F]+)\s*:\s*"
                   r"([a-z\u0900-\u097F]+)", t)
     if m and not m.group(1).isdigit() \
             and not m.group(2).isdigit():
-        return m.group(1), m.group(2)
+        return m.group(1), m.group(2), \
+            (m.span(1), m.span(2))
     m = re.search(r"([a-z]+)\s+([a-z])\s+is\s+to\s+"
                   r"([a-z]+)\s+([a-z])\b", t)
     if m:
-        return m.group(2), m.group(4)
+        return m.group(2), m.group(4), \
+            (m.span(2), m.span(4))
     m = re.search(r"\b([a-z])\s+is\s+to\s+([a-z])\b", t)
     if m:
-        return m.group(1), m.group(2)
+        return m.group(1), m.group(2), \
+            (m.span(1), m.span(2))
     m = re.search(r"([a-z\u0900-\u097F]+)\s+(?:and|aur|और|&)\s+"
                   r"([a-z\u0900-\u097F]+)", t[:span[0] + 30])
     if m:
@@ -614,36 +624,165 @@ def _side_names(t, span):
         if m.group(1) not in stop and m.group(2) not in stop \
                 and any(ch.isalpha() for ch in m.group(1)) \
                 and any(ch.isalpha() for ch in m.group(2)):
-            return m.group(1), m.group(2)
-    return None, None
+            return m.group(1), m.group(2), \
+                (m.span(1), m.span(2))
+    return None, None, ()
 
 
-def _ask_side(t, n1, n2):
-    """Which ratio side is being ASKED for: the side name
-    sitting next to an ask word (kitne / how many / find),
-    on either side of it, matched on word boundaries so a
-    one-letter name cannot hide inside another word."""
+def _side_names(t, span):
+    """Best-effort entity names for the two ratio sides,
+    from the dress patterns students actually use."""
+    n1, n2, _spans = _side_names_detailed(t, span)
+    return n1, n2
+
+
+_FEM_ENDINGS = ("ियों", "ियाँ", "यों", "याँ", "ी")
+_MASC_ENDINGS = ("ों", "ो", "े", "ा")
+
+
+def _name_forms(name):
+    """Surface forms a side name can take in the ask.
+    Latin names get a plural/singular twin (boys/boy).
+    A Devanagari name gets the other endings of its OWN
+    gender class, because Hindi changes the ending
+    between the statement and the ask (लड़कियों का
+    अनुपात ... लड़कियाँ कितनी) — but the gender never
+    changes, and लड़के/लड़कियाँ share the stem लड़क, so
+    a bare stem would cross the two sides."""
+    forms = [name]
+    if re.fullmatch(r"[a-z]+", name or ""):
+        if len(name) > 3 and name.endswith("s"):
+            forms.append(name[:-1])
+        elif len(name) > 1:
+            forms.append(name + "s")
+    elif name and any("\u0900" <= ch <= "\u097F"
+                      for ch in name):
+        for endings in (_FEM_ENDINGS, _MASC_ENDINGS):
+            stem = None
+            for suf in endings:
+                if name.endswith(suf) \
+                        and len(name) - len(suf) >= 3:
+                    stem = name[:-len(suf)]
+                    break
+            if stem is not None:
+                forms.extend(stem + e for e in endings)
+                break
+    return list(dict.fromkeys(forms))
+
+
+def _name_occurrences(t, name):
+    """All (start, end) occurrences of a side name in
+    any of its surface forms, on letter boundaries (a
+    Devanagari matra is not a regex word char, so
+    lookarounds, not \\b)."""
+    if not name:
+        return []
+    occ = set()
+    for form in _name_forms(name):
+        for m in re.finditer(
+                r"(?<![a-z\u0900-\u097F])"
+                + re.escape(form)
+                + r"(?![a-z\u0900-\u097F])", t):
+            occ.add((m.start(), m.end()))
+    return sorted(occ)
+
+
+_UNIT_FILLER = {"cup", "cups", "kg", "g", "gram", "grams",
+           "litre", "litres", "liter", "liters", "ml",
+           "rs", "rupee", "rupees", "metre", "metres",
+           "meter", "meters", "cm", "mm", "km", "of",
+           "item", "items", "piece", "pieces",
+           "कप", "लीटर", "किलो", "ग्राम", "रुपया",
+           "रुपये", "का", "की", "के"}
+
+
+def _tied_to_number(t, num_span, occ):
+    """A name occurrence glued to a stated number ("12
+    cups of water", "पानी 12 कप है") names the side whose
+    count is GIVEN — the known side, not the asked one.
+    Only unit/of filler may intervene: if the gap holds
+    a sentence break or any real word, the name belongs
+    to the next clause's ask, not to this number."""
+    if occ[0] >= num_span[1]:
+        between = t[num_span[1]:occ[0]]
+        limit = 18
+    elif occ[1] <= num_span[0]:
+        between = t[occ[1]:num_span[0]]
+        limit = 10
+    else:
+        return True
+    if len(between) > limit or any(
+            ch.isdigit() or ch in ".?!"
+            for ch in between):
+        return False
+    toks = [w for w in re.split(r"[\s,]+", between) if w]
+    return all(w in _UNIT_FILLER for w in toks)
+
+
+_ASK_RE = (r"(kitne|kitna|kitni|kitno|कितने|कितना|कितनी|"
+           r"how many|how much|how far|find|nikaal|"
+           r"बताओ|batao)")
+
+
+def _ask_side(t, n1, n2, span=None, third=None):
+    """Which ratio side is being ASKED for, resolved by
+    meaning: set aside the two occurrences that form the
+    ratio DECLARATION and any occurrence glued to the
+    GIVEN number (that side is known, not asked); of the
+    occurrences that remain, the asked side is the name
+    sitting CLOSEST to an ask word (kitne / how many /
+    find), on either side of it.  The old serve scanned a
+    fixed window and let the LAST name checked win, so a
+    declaration inside the window ("...ratio of boys to
+    girls 3:2, how many girls?") always answered for the
+    FIRST side — boys — even when girls were asked."""
+    if not n1 and not n2:
+        return None
+    decl = ()
+    if span is not None:
+        _n1, _n2, decl = _side_names_detailed(t, span)
+    occ = {1: _name_occurrences(t, n1),
+           2: _name_occurrences(t, n2)}
+    for side in (1, 2):
+        occ[side] = [o for o in occ[side]
+                     if not any(o[0] < d[1] and d[0] < o[1]
+                                for d in decl)]
+    if third is not None:
+        for m in re.finditer(r"\d+(?:\.\d+)?", t):
+            if span is not None and span[0] <= m.start() \
+                    and m.end() <= span[1]:
+                continue
+            try:
+                if Fraction(m.group()) != third:
+                    continue
+            except Exception:
+                continue
+            for side in (1, 2):
+                occ[side] = [o for o in occ[side]
+                             if not _tied_to_number(
+                                 t, (m.start(), m.end()), o)]
     best = None
-    for m in re.finditer(
-            r"(kitne|kitna|kitni|kitno|कितने|कितना|कितनी|"
-            r"how many|how much|how far|find|nikaal|"
-            r"बताओ|batao)", t):
-        window = t[max(0, m.start() - 20):m.start() + 30]
-        for name, side in ((n2, 2), (n1, 1)):
-            # Letter-boundary lookarounds, not \b: a
-            # Devanagari matra is not a regex word char, so
-            # \b after e.g. जौ never matches.
-            if name and re.search(
-                    r"(?<![a-z\u0900-\u097F])"
-                    + re.escape(name)
-                    + r"(?![a-z\u0900-\u097F])", window):
-                best = side
+    for m in re.finditer(_ASK_RE, t):
+        cand = []
+        for side in (1, 2):
+            for o in occ[side]:
+                if o[1] < m.start() - 25 \
+                        or o[0] > m.end() + 35:
+                    continue
+                d = max(m.start() - o[1], o[0] - m.end(), 0)
+                cand.append((d, side))
+        if cand:
+            cand.sort()
+            best = cand[0][1]
     return best
+
 
 
 _COLLECTIVES = ("students", "people", "persons", "members",
                 "children", "pupils", "residents",
-                "passengers", "villagers", "employees")
+                "passengers", "villagers", "employees",
+                "छात्र", "छात्रा", "छात्रों", "विद्यार्थी",
+                "लोग", "बच्चे", "बच्चों", "सदस्य", "व्यक्ति")
 
 
 def _third_is_total(t, span, third, n1, n2):
@@ -697,7 +836,7 @@ def _ratio_part(q, t):
     if not any(w in t for w in _ASK_WORDS):
         return None
     n1, n2 = _side_names(t, span)
-    ask_side = _ask_side(t, n1, n2)
+    ask_side = _ask_side(t, n1, n2, span=span, third=third)
     total_words = _has(t, "total", "कुल", "kul", "altogether",
                        "mila kar", "मिलाकर") \
         or _third_is_total(t, span, third, n1, n2)
