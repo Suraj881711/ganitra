@@ -43,6 +43,7 @@ from notation import annotate_method, annotate_result
 from langdetect_local import detect_language_confident, \
     detect_language_request
 import accounts
+import groups as study_groups
 import ocr
 import photofix
 import gemini_vision
@@ -1171,6 +1172,210 @@ def create_app():
             return jsonify({"ok": False, "error": "login-required"}), 401
         removed = chats.delete_all_chats(uid)
         return jsonify({"ok": True, "deleted": removed})
+
+    # -- Wave 213: Group Study (menu-only entry; see groups.py).
+    # Chat + study groups keyed to mobile numbers. The base
+    # login is untouched; only these routes ask for a number.
+
+    def _groups_page(user, error=None, notice=None, failures=None):
+        return render_template(
+            "groups.html", user_id=user["id"],
+            my_phone=study_groups.get_phone(user["id"]),
+            my_groups=study_groups.list_groups_for(user["id"]),
+            error=error, notice=notice, failures=failures or [])
+
+    @app.get("/groups")
+    def groups_view():
+        user = _account_user()
+        if user is None:
+            return redirect(url_for("index"))
+        return _groups_page(user)
+
+    @app.post("/groups/phone")
+    def groups_phone():
+        user = _account_user()
+        if user is None:
+            return redirect(url_for("index"))
+        phone, error = study_groups.set_phone(
+            user["id"], request.form.get("phone", ""))
+        if error:
+            return _groups_page(user, error=error)
+        return _groups_page(
+            user, notice=f"Mobile number {phone} add ho gaya.")
+
+    @app.post("/account/phone")
+    def account_phone():
+        # The same number, settable from the profile side too;
+        # it only ever feeds Group Study (groups.py owns it).
+        user = _account_user()
+        if user is None:
+            return redirect(url_for("index"))
+        phone, error = study_groups.set_phone(
+            user["id"], request.form.get("phone", ""))
+        if error:
+            return _groups_page(user, error=error)
+        return _groups_page(
+            user, notice=f"Mobile number {phone} add ho gaya.")
+
+    @app.post("/groups/create")
+    def groups_create():
+        user = _account_user()
+        if user is None:
+            return redirect(url_for("index"))
+        raw = request.form.get("member_phones", "")
+        texts = [p for p in re.split(r"[\s,;]+", raw) if p]
+        group, failures, error = study_groups.create_group(
+            user["id"], request.form.get("name", ""), texts)
+        if error:
+            return _groups_page(user, error=error, failures=failures)
+        if failures:
+            # The group exists, but some numbers could not be
+            # added (Suraj's rule: no number, no membership) —
+            # say exactly which and why instead of hiding it.
+            return _groups_page(
+                user, failures=failures,
+                notice=f"Group '{group['name']}' ban gaya, lekin "
+                       "kuch number add nahi ho paye:")
+        return redirect(url_for("group_view", group_id=group["id"]))
+
+    def _group_page(user, group, error=None, notice=None):
+        members = study_groups.list_members(group["id"])
+        viewer_is_admin = group["admin_id"] == user["id"]
+        if not viewer_is_admin:
+            for m in members:
+                m.pop("phone", None)
+        return render_template(
+            "group.html", user_id=user["id"], group=group,
+            members=members, is_admin=viewer_is_admin,
+            posts=study_groups.list_posts(group["id"]),
+            error=error, notice=notice)
+
+    @app.get("/groups/<int:group_id>")
+    def group_view(group_id):
+        user = _account_user()
+        if user is None:
+            return redirect(url_for("index"))
+        group = study_groups.get_group(group_id)
+        if group is None or not study_groups.is_member(
+                group_id, user["id"]):
+            return _groups_page(
+                user, error="Group nahi mila, ya tum iske member "
+                            "nahi ho.")
+        return _group_page(user, group)
+
+    @app.post("/groups/<int:group_id>/post")
+    def group_post(group_id):
+        user = _account_user()
+        if user is None:
+            return redirect(url_for("index"))
+        reply_raw = request.form.get("reply_to", "")
+        reply_to = int(reply_raw) if reply_raw.isdigit() else None
+        _post, _ganitra, error = study_groups.post_message(
+            group_id, user["id"], request.form.get("text", ""),
+            reply_to=reply_to)
+        group = study_groups.get_group(group_id)
+        if group is None:
+            return redirect(url_for("groups_view"))
+        return _group_page(user, group, error=error)
+
+    @app.post("/groups/<int:group_id>/add")
+    def group_add(group_id):
+        user = _account_user()
+        if user is None:
+            return redirect(url_for("index"))
+        ok, error = study_groups.add_member(
+            group_id, user["id"], request.form.get("phone", ""))
+        group = study_groups.get_group(group_id)
+        if group is None:
+            return redirect(url_for("groups_view"))
+        return _group_page(
+            user, group, error=error,
+            notice="Member add ho gaya." if ok else None)
+
+    @app.post("/groups/<int:group_id>/remove")
+    def group_remove(group_id):
+        user = _account_user()
+        if user is None:
+            return redirect(url_for("index"))
+        target = request.form.get("user_id", "")
+        ok, error = study_groups.remove_member(
+            group_id, user["id"],
+            int(target) if target.isdigit() else -1)
+        group = study_groups.get_group(group_id)
+        if group is None:
+            return redirect(url_for("groups_view"))
+        return _group_page(
+            user, group, error=error,
+            notice="Member hata diya gaya." if ok else None)
+
+    @app.post("/groups/<int:group_id>/close")
+    def group_close(group_id):
+        user = _account_user()
+        if user is None:
+            return redirect(url_for("index"))
+        ok, error = study_groups.close_group(group_id, user["id"])
+        group = study_groups.get_group(group_id)
+        if group is None:
+            return redirect(url_for("groups_view"))
+        return _group_page(
+            user, group, error=error,
+            notice="Group band kar diya gaya." if ok else None)
+
+    @app.post("/groups/<int:group_id>/report")
+    def group_report(group_id):
+        user = _account_user()
+        if user is None:
+            return redirect(url_for("index"))
+        post_raw = request.form.get("post_id", "")
+        ok, error = study_groups.report_post(
+            group_id, user["id"],
+            int(post_raw) if post_raw.isdigit() else -1,
+            request.form.get("reason", ""))
+        group = study_groups.get_group(group_id)
+        if group is None:
+            return redirect(url_for("groups_view"))
+        return _group_page(
+            user, group, error=error,
+            notice="Report bhej di gayi. Dhanyavaad!" if ok else None)
+
+    # -- Wave 213: owner dashboard (Suraj's account, id 1 only).
+
+    def _owner_page(error=None, notice=None):
+        all_groups, reports = study_groups.owner_overview()
+        return render_template(
+            "owner_groups.html", all_groups=all_groups,
+            reports=reports, error=error, notice=notice)
+
+    @app.get("/owner/groups")
+    def owner_groups_view():
+        user = _account_user()
+        if user is None or user["id"] != study_groups.OWNER_ID:
+            return redirect(url_for("index"))
+        return _owner_page()
+
+    @app.post("/owner/groups/<int:group_id>/close")
+    def owner_group_close(group_id):
+        user = _account_user()
+        if user is None or user["id"] != study_groups.OWNER_ID:
+            return redirect(url_for("index"))
+        ok, error = study_groups.close_group(
+            group_id, user["id"], owner=True)
+        return _owner_page(
+            error=error,
+            notice="Group band kar diya gaya." if ok else None)
+
+    @app.post("/owner/groups/<int:group_id>/remove")
+    def owner_group_remove(group_id):
+        user = _account_user()
+        if user is None or user["id"] != study_groups.OWNER_ID:
+            return redirect(url_for("index"))
+        target = request.form.get("user_id", "")
+        ok, error = study_groups.remove_member(
+            group_id, user["id"],
+            int(target) if target.isdigit() else -1, owner=True)
+        return _owner_page(
+            error=error,
+            notice="Member hata diya gaya." if ok else None)
 
     @app.get("/topics")
     def topics():
