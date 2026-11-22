@@ -719,7 +719,13 @@ body.chat-page:not(.chat-active) {
 }
 .mascot-circle {
   position: relative; flex: none;
-  width: 118px; height: 118px; border-radius: 50%;
+  /* Wave 214 (Suraj, 22 Nov 2026): the circle DOUBLES —
+     118px → 236px — and the wave portrait inside now
+     fits whole (see .mascot-pose-wave), so the FULL
+     robot is the home view instead of a face crop.
+     Same white circle, ring and shadow; still no name
+     under it (Wave 197) and still completely still. */
+  width: 236px; height: 236px; border-radius: 50%;
   background: #ffffff;
   border: 2px solid rgba(10, 122, 100, .45);
   box-shadow: 0 12px 30px rgba(101, 84, 40, .14);
@@ -731,8 +737,15 @@ body.chat-page:not(.chat-active) {
   object-fit: cover; opacity: 1;
 }
 .mascot-pose-wave {
-  opacity: 1; object-position: 50% 4%;
-  animation-delay: -0.96s;
+  /* Wave 214 (Suraj, 22 Nov 2026): FULL robot — the
+     portrait (320×640, white backdrop) fits INSIDE the
+     circle with object-fit: contain, centred, so the
+     whole wave pose shows head-to-feet; its white
+     backdrop meets the white circle seamlessly. The
+     leftover crossfade delay from the removed pose
+     rotation is gone — the home mascot is completely
+     still, as ordered in Wave 197. */
+  opacity: 1; object-fit: contain; object-position: 50% 50%;
 }
 .mascot-pose-think {
   animation-delay: 5.04s; transform: scale(1.05);
@@ -976,7 +989,16 @@ body.auth-page main.auth-main {
   margin-left: auto; flex: none; align-self: center;
   font-size: 34px; line-height: 1; font-weight: 400;
   color: var(--accent); text-decoration: none;
-  padding: 2px 2px 6px 12px; min-width: 44px; min-height: 44px;
+  /* Wave 214 (Suraj, 22 Nov 2026): on his phone the "+"
+     sat higher than the ☰ beside it. Cause: the ☰ is a
+     fixed 44×44 box with the glyph dead-centred, but the
+     + centred its glyph inside an unevenly padded box
+     (padding 2px top / 6px bottom), which lifted the
+     glyph ~2px above the header's centre line. The +
+     now carries the SAME fixed square box as
+     .nav-menu-btn (44×44, no padding), so the brand,
+     the + and the ☰ all centre on one line. */
+  padding: 0; width: 44px; height: 44px;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .chats-plus:hover { filter: brightness(1.15); }
@@ -1589,6 +1611,8 @@ body.account-page main.account-main {
     font-size: .85rem;
   }
   .nav-menu-btn { width: 42px; height: 42px; }
+  /* Wave 214: the "+" shrinks with the ☰ (see .chats-plus). */
+  .chats-plus { width: 42px; height: 42px; }
   /* Wave 116: the 42px button centres on a -21px margin. */
   .chat-header:has(.nav-menu) .nav-menu { margin-top: -21px; }
 }
