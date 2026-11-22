@@ -6,7 +6,9 @@
    three original pages include this same file, so
    there is exactly one menu everywhere. Items and
    their order are Suraj's approved Wave-12 list —
-   do not reorder. #}
+   do not reorder. (One Suraj-ordered exception,
+   Wave 214, 22 Nov 2026: Group Study moved to the
+   very top of the list, above Your chats.) #}
 <details class="nav-menu">
   <summary class="nav-menu-btn" aria-label="{{ t.menu_label }}"
            title="{{ t.menu_label }}">☰</summary>
@@ -50,6 +52,13 @@
       </div>
       {% endif %}
       <div class="menu-items">
+        {# Wave 214 (Suraj, 22 Nov 2026): Group Study moved
+           to the VERY TOP of the item list, above Your
+           chats. It still lives ONLY here in the menu —
+           no button anywhere else. (Added in Wave 213,
+           21 Nov 2026, at the bottom; moved up on his
+           order today.) #}
+        <a href="/groups">Group Study</a>
         <a href="/chats">{{ t.menu_your_chats }}</a>
         <a href="/board">{{ t.nav_board }}</a>
         <a href="/papers">{{ t.menu_papers }}</a>
@@ -65,7 +74,3 @@
         {# Wave 89: My Progress goes LAST in the item list —
            the approved order above is untouched. #}
         <a href="/progress">{{ t.nav_progress }}</a>
-        {# Wave 213: Group Study — Suraj's order (21 Nov 2026):
-           the entry lives ONLY here in the menu, appended after
-           every approved item; the home page is untouched. #}
-        <a href="/groups">Group Study</a>
