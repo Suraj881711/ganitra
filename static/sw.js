@@ -116,7 +116,7 @@ var GANITRA_CACHE = "ganitra-static-v40";
    (which keys on the full URL) hits it offline. */
 var GANITRA_SHELL = [
   "/",
-  "/static/style.css?v=63",
+  "/static/style.css?v=64",
   "/static/offline.js",
   "/static/logo-mark-t.png",
   "/static/logo-full-t.png",

@@ -673,7 +673,7 @@ body.chat-page .chat-log {
    the two never show together. */
 .empty-robot-top {
   display: flex; justify-content: center;
-  padding-top: 10px; flex: none;
+  padding-top: 2px; flex: none;
 }
 body.chat-active .empty-robot-top { display: none; }
 /* Wave 170 (Suraj, 19 Nov 2026): the home/empty-state
@@ -719,13 +719,7 @@ body.chat-page:not(.chat-active) {
 }
 .mascot-circle {
   position: relative; flex: none;
-  /* Wave 214 (Suraj, 22 Nov 2026): the circle DOUBLES —
-     118px → 236px — and the wave portrait inside now
-     fits whole (see .mascot-pose-wave), so the FULL
-     robot is the home view instead of a face crop.
-     Same white circle, ring and shadow; still no name
-     under it (Wave 197) and still completely still. */
-  width: 236px; height: 236px; border-radius: 50%;
+  width: 92px; height: 92px; border-radius: 50%;
   background: #ffffff;
   border: 2px solid rgba(10, 122, 100, .45);
   box-shadow: 0 12px 30px rgba(101, 84, 40, .14);
@@ -737,15 +731,21 @@ body.chat-page:not(.chat-active) {
   object-fit: cover; opacity: 1;
 }
 .mascot-pose-wave {
-  /* Wave 214 (Suraj, 22 Nov 2026): FULL robot — the
-     portrait (320×640, white backdrop) fits INSIDE the
-     circle with object-fit: contain, centred, so the
-     whole wave pose shows head-to-feet; its white
-     backdrop meets the white circle seamlessly. The
-     leftover crossfade delay from the removed pose
-     rotation is gone — the home mascot is completely
-     still, as ordered in Wave 197. */
+  /* Wave 217 (Suraj, 23 Nov 2026): the wave portrait is a
+     tall full-body shot; "cover" in the round frame cropped
+     its raised hand and feet. "contain" keeps the WHOLE
+     robot — head to feet, both hands — inside the circle,
+     and a slow gentle bob answers his "photo jaisa hai,
+     movement nahi hai" — the circle itself stays put. */
   opacity: 1; object-fit: contain; object-position: 50% 50%;
+  animation: mascot-bob 3.2s ease-in-out infinite;
+}
+@keyframes mascot-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mascot-pose-wave { animation: none; }
 }
 .mascot-pose-think {
   animation-delay: 5.04s; transform: scale(1.05);
@@ -989,16 +989,7 @@ body.auth-page main.auth-main {
   margin-left: auto; flex: none; align-self: center;
   font-size: 34px; line-height: 1; font-weight: 400;
   color: var(--accent); text-decoration: none;
-  /* Wave 214 (Suraj, 22 Nov 2026): on his phone the "+"
-     sat higher than the ☰ beside it. Cause: the ☰ is a
-     fixed 44×44 box with the glyph dead-centred, but the
-     + centred its glyph inside an unevenly padded box
-     (padding 2px top / 6px bottom), which lifted the
-     glyph ~2px above the header's centre line. The +
-     now carries the SAME fixed square box as
-     .nav-menu-btn (44×44, no padding), so the brand,
-     the + and the ☰ all centre on one line. */
-  padding: 0; width: 44px; height: 44px;
+  padding: 2px 2px 6px 12px; min-width: 44px; min-height: 44px;
   display: inline-flex; align-items: center; justify-content: center;
 }
 .chats-plus:hover { filter: brightness(1.15); }
@@ -1604,6 +1595,24 @@ body.account-page main.account-main {
        the open menu inside the button's 42×44px box. */
     margin: -22px 0 0;
   }
+  /* Wave 217 (Suraj, 23 Nov 2026): on the chat page the "+"
+     (new chat) and the ☰ must sit side by side as one close
+     pair at the right edge — in flow they landed far apart.
+     The "+" takes the same absolute seat as the menu, just
+     to its left, and the bar reserves room for both. The
+     empty state also shrinks (smaller robot circle, smaller
+     logo) so a phone screen fits it WITHOUT scrolling. */
+  body.chat-page .chat-header:has(.nav-menu) {
+    padding-right: 108px;
+  }
+  body.chat-page .chat-header .chats-plus {
+    position: absolute; right: 54px; top: 50%;
+    margin: -22px 0 0; padding: 2px 4px 6px;
+  }
+  body.chat-page .mascot-circle { width: 80px; height: 80px; }
+  body.chat-page .empty-logo-img {
+    max-width: min(228px, 58vw);
+  }
 }
 @media (max-width: 480px) {
   .header-tools .lang-switch select {
@@ -1611,8 +1620,6 @@ body.account-page main.account-main {
     font-size: .85rem;
   }
   .nav-menu-btn { width: 42px; height: 42px; }
-  /* Wave 214: the "+" shrinks with the ☰ (see .chats-plus). */
-  .chats-plus { width: 42px; height: 42px; }
   /* Wave 116: the 42px button centres on a -21px margin. */
   .chat-header:has(.nav-menu) .nav-menu { margin-top: -21px; }
 }
