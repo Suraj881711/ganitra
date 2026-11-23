@@ -618,6 +618,17 @@ def api_solve():
             switched = True
     fields = _lang_fields(lang, strings, switched)
 
+    # Wave 214 (human brain, phase 1): meaning-first
+    # normalisation of the text that gets solved — the word
+    # "degree" becomes "°" and conversational filler tails
+    # ("ka value kya hai", "kitna hoga") are stripped, so a
+    # question asked the way a student SPEAKS it reaches the
+    # solver the way a human listener would hand it over. The
+    # student's original message (history, echoes) is untouched;
+    # texts without those patterns come back byte-identical.
+    from human_brain import normalize_human_text
+    solve_text = normalize_human_text(solve_text)
+
     # Wave 124: chat-based test / exam (chat_test.py). A test
     # request starts a per-chat test; while one is active in
     # THIS chat, every later message belongs to the test flow
@@ -1358,6 +1369,55 @@ def api_solve():
                                      question=question),
                 **fields,
             })
+
+    # Wave 214 (human brain, phase 1): bare conversational
+    # follow-ups a human teacher would never fail on — "galat
+    # hai, phir se karo" (redo) and a bare "samjhao" (explain).
+    # A real-student test (22 Nov 2026) showed both falling
+    # through every layer to the generic line. ORDER (fixed
+    # 23 Nov 2026 after the route-level regression pass): this
+    # block sits AFTER the Wave-96 doubt block on purpose —
+    # when the doubt layer can explain a step of the last
+    # answer, its pinned behaviour keeps first claim on a bare
+    # "samjhao"; Wave 214 is the safety net for when doubt
+    # declines (a previous answer with nothing it can explain)
+    # and for "redo", which no earlier layer claims. The
+    # detector (human_brain.parse_human_followup) is
+    # deliberately narrow: no fresh payload, no step reference
+    # (Wave 96 owns those), short messages only. Service = the
+    # SAME previous question re-solved with detail on, opened
+    # by one kind line in the student's language; the turn is
+    # recorded in history but last_question/last_result keep
+    # pointing at the real solve, exactly like the context
+    # replies above. With no real previous answer, the message
+    # falls through untouched.
+    from human_brain import parse_human_followup, intro_line
+    _hb_kind = parse_human_followup(question)
+    if _hb_kind is not None:
+        _hb_prev_q = session.get("last_question")
+        _hb_prev_r = session.get("last_result")
+        if _hb_prev_q and isinstance(_hb_prev_r, dict) \
+                and _hb_prev_r.get("answer") \
+                and not result_is_plain(_hb_prev_r) \
+                and not result_unsolvable(_hb_prev_r):
+            _hb_result = _solve_friendly(
+                _hb_prev_q, lang=lang, lang_request=lang_request,
+                detail=True)
+            if _hb_result is not None and _hb_result.get("answer"):
+                history = session.get("history", [])
+                history.insert(0, trimmed_history_entry(
+                    question, _hb_result))
+                session["history"] = history[:_HISTORY_LIMIT]
+                return jsonify({
+                    "ok": True,
+                    "result": _hb_result,
+                    "intro": intro_line(_hb_kind, lang),
+                    "explanation": explanation_for(_hb_result, lang),
+                    "advice": advice_for(_hb_result, lang),
+                    "methods": [],
+                    "teach": teach_for(_hb_result, lang),
+                    **fields,
+                })
 
     result = _solve_friendly(
         solve_text, lang=lang,
