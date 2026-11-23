@@ -25,34 +25,35 @@
        message nahi bheje ja sakte.</p>
   {% endif %}
 
-  <h3>Members ({{ members|length }})</h3>
-  <ul>
-    {% for m in members %}
-      <li>{{ m.name }}{% if m.id == group.admin_id %} (admin){% endif %}
-        {% if is_admin and m.phone %} — {{ m.phone }}{% endif %}
-        {% if is_admin and m.id != group.admin_id and not group.closed_at %}
-          <form method="post" action="/groups/{{ group.id }}/remove">
-            <input type="hidden" name="user_id" value="{{ m.id }}">
-            <button type="submit" class="gs-mini">Hatao</button>
-          </form>
-        {% endif %}
-      </li>
-    {% endfor %}
-  </ul>
-
-  {% if is_admin and not group.closed_at %}
-    <form method="post" action="/groups/{{ group.id }}/add" class="acct-list">
-      <label>Member add karo — mobile number
-        <input type="tel" name="phone" inputmode="numeric" required>
-      </label>
-      <button type="submit" class="acct-mini-btn">Add karo</button>
-    </form>
-    <form method="post" action="/groups/{{ group.id }}/close">
-      <button type="submit" class="gs-mini">Group band karo</button>
-    </form>
-  {% endif %}
-
-  <h3>Chat</h3>
+  {# Wave 218: members live in a band (collapsed) section —
+     WhatsApp ki tarah chat page saaf rehta hai. #}
+  <details>
+    <summary>Members ({{ members|length }})</summary>
+    <ul>
+      {% for m in members %}
+        <li>{{ m.name }}{% if m.id == group.admin_id %} (admin){% endif %}
+          {% if is_admin and m.phone %} — {{ m.phone }}{% endif %}
+          {% if is_admin and m.id != group.admin_id and not group.closed_at %}
+            <form method="post" action="/groups/{{ group.id }}/remove">
+              <input type="hidden" name="user_id" value="{{ m.id }}">
+              <button type="submit" class="gs-mini">Hatao</button>
+            </form>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+    {% if is_admin and not group.closed_at %}
+      <form method="post" action="/groups/{{ group.id }}/add" class="acct-list">
+        <label>Number se add karo
+          <input type="tel" name="phone" inputmode="numeric" required>
+        </label>
+        <button type="submit" class="acct-mini-btn">Add karo</button>
+      </form>
+      <form method="post" action="/groups/{{ group.id }}/close">
+        <button type="submit" class="gs-mini">Group band karo</button>
+      </form>
+    {% endif %}
+  </details>
   <div class="gs-feed">
     {% for p in posts %}
       <div class="gs-post{% if p.author_id is none %} ganitra{% endif %}">
@@ -88,6 +89,9 @@
         <input type="text" name="text" maxlength="1000" required>
       </label>
       <button type="submit" class="acct-mini-btn">Bhejo</button>
+    </form>
+    <form method="post" action="/groups/{{ group.id }}/leave">
+      <button type="submit" class="gs-mini">Group chhodo (Leave)</button>
     </form>
   {% endif %}
 </div>

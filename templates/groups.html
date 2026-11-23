@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-{# Wave 213: Group Study — chat + study groups, entered only
-   from the menu. Membership is by mobile number (see
-   groups.py); without a number on the account, groups stay
-   locked and this page says so plainly. #}
+{# Wave 218 (Suraj, 23 Nov 2026): Group Study creation is
+   now WhatsApp-simple — naam, numbers, Group banao. The
+   long explanation paragraphs he objected to ("itna saara
+   likha hua hai") are gone; the backend (groups.py) and
+   every form field are unchanged. #}
 <div class="acct-wrap">
   <a class="back" href="/">← {{ t.nav_solve }}</a>
   <h2 class="acct-heading">Group Study</h2>
@@ -19,58 +20,53 @@
   {% endif %}
 
   {% if not my_phone %}
-    <p>Group Study ke liye tumhare account par ek mobile number
-       chahiye — group me log ek dusre ko unke number se add
-       karte hain (WhatsApp ki tarah). Bina number ke tum kisi
-       group me add nahi ho sakte.</p>
+    <p>Group ke liye pehle apna mobile number add karo.</p>
     <form method="post" action="/groups/phone" class="acct-list">
-      <label>Mobile number (10 digit)
+      <label>Mobile number
         <input type="tel" name="phone" inputmode="numeric"
-               autocomplete="tel" required>
+               autocomplete="tel" placeholder="10 digit number"
+               required>
       </label>
       <button type="submit" class="acct-mini-btn">Number add karo</button>
     </form>
   {% else %}
-    <p>Tumhara mobile number: <strong>{{ my_phone }}</strong> —
-       doston ko ye number do, wahi tumhe group me add karenge.</p>
-    <form method="post" action="/groups/phone" class="acct-list">
-      <label>Number badalna hai? Naya number likho
-        <input type="tel" name="phone" inputmode="numeric"
-               autocomplete="tel">
-      </label>
-      <button type="submit" class="acct-mini-btn">Number badlo</button>
-    </form>
-
-    <h3>Tumhare groups</h3>
     {% if my_groups %}
+      <h3>Tumhare groups</h3>
       <ul>
         {% for g in my_groups %}
           <li><a href="/groups/{{ g.id }}">{{ g.name }}</a>
             — {{ g.member_count }} members
-            {% if g.admin_id == user_id %}(tum admin ho){% endif %}
+            {% if g.admin_id == user_id %}(admin){% endif %}
             {% if g.closed_at %} — <em>band hai</em>{% endif %}
           </li>
         {% endfor %}
       </ul>
-    {% else %}
-      <p>Abhi tum kisi group me nahi ho. Naya group banao ya
-         doston se apna number dekar add karwao.</p>
     {% endif %}
 
     <h3>Naya group banao</h3>
     <form method="post" action="/groups/create" class="acct-list">
       <label>Group ka naam
-        <input type="text" name="name" maxlength="60" required>
+        <input type="text" name="name" maxlength="60"
+               placeholder="Jaise: Class 10 Maths" required>
       </label>
-      <label>Members ke mobile numbers (ek line me ek number,
-             ya comma se alag karke)
-        <textarea name="member_phones" rows="3" required></textarea>
+      <label>Doston ke numbers (har line me ek)
+        <textarea name="member_phones" rows="4" required
+          placeholder="98765 43210&#10;98765 43211"></textarea>
       </label>
       <button type="submit" class="acct-mini-btn">Group banao</button>
     </form>
-    <p>Group me 2 se 30 log ho sakte hain. Jiska number account
-       me nahi milega, wo add nahi hoga — uski wajah upar dikh
-       jayegi.</p>
+    <p class="muted">Sirf wahi dost add honge jinka number
+       Ganitra par hai. Group me 2 se 30 log ho sakte hain.</p>
+
+    <p class="muted">Tumhara number: <strong>{{ my_phone }}</strong>
+       — doston ko ye number do, wahi tumhe add karenge.</p>
+    <form method="post" action="/groups/phone" class="acct-list">
+      <label>Number badalna hai?
+        <input type="tel" name="phone" inputmode="numeric"
+               autocomplete="tel" placeholder="Naya number">
+      </label>
+      <button type="submit" class="acct-mini-btn">Number badlo</button>
+    </form>
   {% endif %}
 </div>
 {% endblock %}
