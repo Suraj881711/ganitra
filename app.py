@@ -493,12 +493,23 @@ def create_app():
     # pages (/history, /mistakes, /parent-report) render the
     # visitor's own state and are likewise left out.
     SITE_ORIGIN = "https://suraj881711.pythonanywhere.com"
-    SITEMAP_PATHS = ["/", "/topics", "/board", "/practice", "/test"]
+    SITEMAP_PATHS = ["/", "/welcome", "/topics", "/board",
+                     "/practice", "/test"]
 
     @app.route("/robots.txt")
     def ganitra_robots():
         body = ("User-agent: *\n"
                 "Allow: /\n"
+                "Disallow: /api/\n"
+                "Disallow: /account\n"
+                "Disallow: /chats\n"
+                "Disallow: /history\n"
+                "Disallow: /logout\n"
+                "Disallow: /practice/start\n"
+                "Disallow: /practice/submit\n"
+                "Disallow: /test/start\n"
+                "Disallow: /test/submit\n"
+                "Disallow: /solve\n"
                 "\n"
                 f"Sitemap: {SITE_ORIGIN}/sitemap.xml\n")
         return Response(body, mimetype="text/plain")
@@ -2016,6 +2027,15 @@ def create_app():
                                teach=([] if quiet
                                       else teach_for(result, _lang())),
                                unsolvable=failed)
+
+    # Public identity page (Suraj, 23 Nov 2026): anyone arriving
+    # from Google sees what Ganitra is — Classes 1–12 maths, free,
+    # step-by-step answers, the robot, and one clear button into
+    # the app. A separate page on purpose: the app's own pages
+    # and flow are untouched.
+    @app.get("/welcome")
+    def welcome():
+        return render_template("welcome.html")
 
     @app.get("/download")
     def download():
