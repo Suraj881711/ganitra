@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ganitra — Free Maths Solver App for Classes 1–12</title>
+    <meta name="description"
+          content="Ganitra is a free maths solver app for Classes 1–12: type or photograph any maths question and get a step-by-step solution. Papers, practice and chapter tests included." />
+    <link rel="icon" type="image/png"
+          href="{{ url_for('static', filename='favicon.png') }}" />
+    <meta name="theme-color" content="#2f7d6e" />
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: #fdfaf3; color: #21312c; line-height: 1.55;
+      }
+      .wrap { max-width: 680px; margin: 0 auto; padding: 28px 20px 48px; }
+      .logo { display: block; width: 190px; margin: 6px auto 4px; }
+      h1 {
+        text-align: center; font-size: 1.65rem; line-height: 1.3;
+        color: #20584c; margin: 10px 0 6px;
+      }
+      .sub { text-align: center; font-size: 1.05rem; color: #43655c; }
+      .hero {
+        display: block; width: 100%; max-height: 430px; object-fit: cover;
+        object-position: top; border-radius: 18px; margin: 20px 0 8px;
+        box-shadow: 0 8px 28px rgba(32, 88, 76, .18);
+      }
+      .cta {
+        display: block; text-align: center; text-decoration: none;
+        background: #2f7d6e; color: #fff; font-weight: 700;
+        font-size: 1.15rem; padding: 15px 20px; border-radius: 999px;
+        margin: 18px 0 6px;
+      }
+      .cta:active { background: #256355; }
+      .free-note { text-align: center; color: #43655c; font-size: .95rem; }
+      .cards { margin-top: 26px; display: grid; gap: 12px; }
+      .card {
+        background: #fff; border: 1px solid #e7dfcd; border-radius: 14px;
+        padding: 14px 16px;
+      }
+      .card b { color: #20584c; }
+      .foot {
+        text-align: center; color: #7a8a84; font-size: .88rem;
+        margin-top: 30px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <img class="logo"
+           src="{{ url_for('static', filename='logo-full-t.png') }}"
+           alt="Ganitra" />
+      <h1>Maths ka har sawal,<br />step-by-step jawab — bilkul FREE</h1>
+      <p class="sub">Ganitra ek maths seekhne ka app hai Class 1 se 12 tak ke
+        students ke liye. Sawal likho ya photo kheench kar bhejo — Ganitra
+        use pyaar se, aasan shabdon me samjha kar hal karta hai.</p>
+
+      <img class="hero"
+           src="{{ url_for('static', filename='robot-hero.png') }}"
+           alt="Ganitra robot — aapka maths dost" />
+
+      <a class="cta" href="/">Ganitra App Kholo →</a>
+      <p class="free-note">Koi fees nahi · Download karne ki zaroorat nahi ·
+        Browser me hi chalta hai</p>
+
+      <div class="cards">
+        <div class="card"><b>✍️ Step-by-step hal</b> — sirf answer nahi,
+          poora tareeka, taaki exam me khud kar sako.</div>
+        <div class="card"><b>📷 Photo se sawal</b> — copy ya book ki photo
+          bhejo, Ganitra padh kar hal kar dega.</div>
+        <div class="card"><b>📚 Papers aur practice</b> — pichhle saalon ke
+          board papers, practice questions aur chapter tests.</div>
+        <div class="card"><b>👥 Group Study</b> — doston ke saath group
+          banao, saath padho, Ganitra madad ke liye wahin hai.</div>
+        <div class="card"><b>🤖 Hamesha pyaar se</b> — galti ho to dobara
+          samjhata hai, bina daante, ek achhe teacher ki tarah.</div>
+      </div>
+
+      <a class="cta" href="/">Abhi Shuru Karo →</a>
+      <p class="foot">Ganitra — Maths, pyaar se samjhaya gaya.</p>
+    </div>
+  </body>
+</html>
