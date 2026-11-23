@@ -351,6 +351,41 @@ def remove_member(group_id, actor_id, user_id, owner=False):
         conn.close()
 
 
+def leave_group(group_id, user_id):
+    """Wave 218: a member leaves on their own (Suraj's spec,
+    22 Nov 2026 — har member ko leave ka option). If the
+    admin leaves, admin passes to the earliest-joined
+    remaining member; if nobody remains, the group closes."""
+    conn = _connect()
+    try:
+        group = _group_row(conn, group_id)
+        if group is None:
+            return False, "Group nahi mila."
+        cur = conn.execute(
+            "DELETE FROM group_members WHERE group_id = ? AND "
+            "user_id = ?", (group_id, user_id))
+        if cur.rowcount == 0:
+            conn.commit()
+            return False, "Tum is group me ho hi nahi."
+        if group["admin_id"] == user_id:
+            nxt = conn.execute(
+                "SELECT user_id FROM group_members WHERE "
+                "group_id = ? ORDER BY joined_at, user_id "
+                "LIMIT 1", (group_id,)).fetchone()
+            if nxt is None:
+                conn.execute(
+                    "UPDATE study_groups SET closed_at = ? "
+                    "WHERE id = ?", (int(time.time()), group_id))
+            else:
+                conn.execute(
+                    "UPDATE study_groups SET admin_id = ? "
+                    "WHERE id = ?", (nxt[0], group_id))
+        conn.commit()
+        return True, None
+    finally:
+        conn.close()
+
+
 def close_group(group_id, actor_id, owner=False):
     conn = _connect()
     try:

@@ -1319,6 +1319,19 @@ def create_app():
             user, group, error=error,
             notice="Member hata diya gaya." if ok else None)
 
+    @app.post("/groups/<int:group_id>/leave")
+    def group_leave(group_id):
+        user = _account_user()
+        if user is None:
+            return redirect(url_for("index"))
+        ok, error = study_groups.leave_group(group_id, user["id"])
+        if ok:
+            return redirect(url_for("groups_view"))
+        group = study_groups.get_group(group_id)
+        if group is None:
+            return redirect(url_for("groups_view"))
+        return _group_page(user, group, error=error)
+
     @app.post("/groups/<int:group_id>/close")
     def group_close(group_id):
         user = _account_user()

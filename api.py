@@ -514,6 +514,35 @@ def api_solve():
                         "message": strings["flash_too_long"],
                         **_lang_fields(lang, strings, False)})
 
+    # Wave 216: per-chat follow-up anchoring. If the session's
+    # last_result belongs to a DIFFERENT chat than this request,
+    # restore this chat's anchor (silently re-solve its last
+    # question) or clear the slot when this chat has solved
+    # nothing yet — a follow-up must never point at another
+    # chat's answer. Runs before every layer that reads
+    # last_result (chips, doubt, context, human brain).
+    _w216_key = _chat_key(data)
+    if _w216_key != session.get("last_result_chat"):
+        _w216_q = (session.get("anchor_by_chat") or {}).get(
+            _w216_key)
+        _w216_restored = None
+        if _w216_q:
+            try:
+                _w216_restored = _solve_friendly(
+                    _w216_q, lang=lang,
+                    student_class=session.get("saathi_class"))
+            except Exception:
+                _w216_restored = None
+        if isinstance(_w216_restored, dict) and \
+                _w216_restored.get("answer"):
+            session["last_question"] = _w216_q
+            session["last_result"] = _w216_restored
+        else:
+            session.pop("last_question", None)
+            session.pop("last_result", None)
+        session.pop("doubt_step", None)
+        session["last_result_chat"] = _w216_key
+
     # Wave 122: a follow-up chip tap (see followups.py). The
     # visible message is only the chip's label; the kind and
     # the ORIGINAL question ride as hidden context fields, and
@@ -546,6 +575,7 @@ def api_solve():
                 # example, exactly as after a typed question.
                 session["last_question"] = fu_new_question
                 session["last_result"] = result
+                _note_anchor(_chat_key(data), fu_new_question)
                 session.pop("doubt_step", None)
             history = session.get("history", [])
             history.insert(0, trimmed_history_entry(question,
@@ -663,6 +693,8 @@ def api_solve():
             session["last_question"] = ct_payload.pop(
                 "w124_solved_question", question)
             session["last_result"] = ct_result
+            _note_anchor(_chat_key(data),
+                         session["last_question"])
             session.pop("doubt_step", None)
         else:
             ct_payload.pop("w124_solved_question", None)
@@ -722,6 +754,8 @@ def api_solve():
             session["last_question"] = g_payload.pop(
                 "w163_question", question)
             session["last_result"] = g_result
+            _note_anchor(_chat_key(data),
+                         session["last_question"])
             session.pop("doubt_step", None)
         else:
             g_payload.pop("w163_question", None)
@@ -1478,6 +1512,28 @@ def _w178_shown(question, result, chat_key, lang_request=None,
         return None
 
 
+def _note_anchor(chat_key, question):
+    """Wave 216: remember THIS chat's last solved question.
+    session["last_result"] is a single slot shared by every
+    chat in the session, so a solve in chat B used to hijack
+    follow-ups ("phir se karo", "samjhao") typed in chat A —
+    they re-solved or explained B's answer (live Deploy-58
+    check: chat A's percent follow-up re-solved chat B's 350).
+    Only the question is kept per chat (small); api_solve
+    restores the full result by re-solving it (solver answers
+    are deterministic) when the student returns to the chat."""
+    if not chat_key or not question:
+        return
+    anchors = session.get("anchor_by_chat")
+    if not isinstance(anchors, dict):
+        anchors = {}
+    anchors[chat_key] = question
+    while len(anchors) > _CTX_CHATS_KEPT:
+        anchors.pop(next(iter(anchors)))
+    session["anchor_by_chat"] = anchors
+    session["last_result_chat"] = chat_key
+
+
 def _commit_solve_session(question, result, chat_key=None):
     """The session writes of a finished chat solve (Wave 5 +
     Wave 96 + Wave 46): the question and its full result
@@ -1487,6 +1543,7 @@ def _commit_solve_session(question, result, chat_key=None):
     the session history."""
     session["last_question"] = question
     session["last_result"] = result
+    _note_anchor(chat_key or "default", question)
     # Wave 127: the fresh solve joins THIS chat's turn log —
     # the log later references ("uska...", "usi ka...") point
     # into. (Filtered inside: plain/fallback outcomes are not
