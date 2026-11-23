@@ -1547,10 +1547,13 @@ def _commit_solve_session(question, result, chat_key=None):
     # Wave 127: the fresh solve joins THIS chat's turn log —
     # the log later references ("uska...", "usi ka...") point
     # into. (Filtered inside: plain/fallback outcomes are not
-    # recorded.) The streaming callers pass no chat key (their
-    # commit body carries no chat id), so a streamed solve is
-    # not turn-logged — the flag-gated path is inert in
-    # production (GANITRA_AI_STREAM off).
+    # recorded.) (Wave 219: the streaming callers pass their
+    # chat key too — the stream request and the stream-commit
+    # body both carry chat_id since Wave 219 — so a streamed
+    # solve anchors and turn-logs under its own chat exactly
+    # like a classic one. The older note here claimed the
+    # stream path was inert in production; it is not —
+    # GANITRA_AI_STREAM is on in production.)
     if chat_key is not None:
         _ctx_record(chat_key, question, result)
     # Wave 96: a fresh solve replaces the answer any follow-up
@@ -1790,6 +1793,34 @@ def api_solve_stream():
             switched = True
     fields = _lang_fields(lang, strings, switched)
 
+    # Wave 219: the Wave 216 per-chat anchor restore,
+    # mirrored from api_solve (see there) — this endpoint
+    # predates Wave 216 and never received it, so its
+    # follow-up layers (Wave 148 / doubt / Wave 214 below)
+    # read a last_result that could belong to another chat,
+    # or none at all once the classic path had cleared it.
+    _w216_key = _chat_key(data)
+    if _w216_key != session.get("last_result_chat"):
+        _w216_q = (session.get("anchor_by_chat") or {}).get(
+            _w216_key)
+        _w216_restored = None
+        if _w216_q:
+            try:
+                _w216_restored = _solve_friendly(
+                    _w216_q, lang=lang,
+                    student_class=session.get("saathi_class"))
+            except Exception:
+                _w216_restored = None
+        if isinstance(_w216_restored, dict) and \
+                _w216_restored.get("answer"):
+            session["last_question"] = _w216_q
+            session["last_result"] = _w216_restored
+        else:
+            session.pop("last_question", None)
+            session.pop("last_result", None)
+        session.pop("doubt_step", None)
+        session["last_result_chat"] = _w216_key
+
     # Wave 148: a BARE steps / detail request re-serves the
     # session's last answer (see api_solve) — one final
     # event with the classic payload, never the AI legs.
@@ -1870,6 +1901,44 @@ def api_solve_stream():
             return _sse_response(sse_event(
                 {"type": "final", "payload": payload}))
 
+    # Wave 219: the Wave 214 human-brain follow-up block,
+    # mirrored from api_solve (see there) — this endpoint
+    # predates Wave 214 and never received it, so on the
+    # live site a typed "galat hai, phir se karo" or a bare
+    # "samjhao" fell through to the generic clarify line
+    # while the classic path answered both. Served as one
+    # final event; the session writes happen here, before
+    # the response starts, exactly like the doubt block.
+    from human_brain import parse_human_followup, intro_line
+    _hb_kind = parse_human_followup(question)
+    if _hb_kind is not None:
+        _hb_prev_q = session.get("last_question")
+        _hb_prev_r = session.get("last_result")
+        if _hb_prev_q and isinstance(_hb_prev_r, dict) \
+                and _hb_prev_r.get("answer") \
+                and not result_is_plain(_hb_prev_r) \
+                and not result_unsolvable(_hb_prev_r):
+            _hb_result = _solve_friendly(
+                _hb_prev_q, lang=lang, lang_request=lang_request,
+                detail=True)
+            if _hb_result is not None and _hb_result.get("answer"):
+                history = session.get("history", [])
+                history.insert(0, trimmed_history_entry(
+                    question, _hb_result))
+                session["history"] = history[:_HISTORY_LIMIT]
+                payload = {
+                    "ok": True,
+                    "result": _hb_result,
+                    "intro": intro_line(_hb_kind, lang),
+                    "explanation": explanation_for(_hb_result, lang),
+                    "advice": advice_for(_hb_result, lang),
+                    "methods": [],
+                    "teach": teach_for(_hb_result, lang),
+                    **fields,
+                }
+                return _sse_response(sse_event(
+                    {"type": "final", "payload": payload}))
+
     student_class = session.get("saathi_class")
     result = _solve_friendly(
         solve_text, lang=lang, student_class=student_class,
@@ -1882,7 +1951,8 @@ def api_solve_stream():
         # happen now, before the response starts, exactly as
         # api_solve does them, and the payload rides as the
         # single final event.
-        _commit_solve_session(question, result)
+        _commit_solve_session(question, result,
+                              chat_key=_chat_key(data))
         payload = _solve_response_payload(
             question, solve_text, result, lang, strings, fields,
             lang_request=lang_request)
@@ -1990,7 +2060,8 @@ def api_solve_stream_commit():
             or "answer" not in result:
         return jsonify({"ok": False,
                         "message": "bad request"}), 400
-    _commit_solve_session(question.strip(), result)
+    _commit_solve_session(question.strip(), result,
+                          chat_key=_chat_key(data))
     return jsonify({"ok": True})
 
 
