@@ -1536,6 +1536,31 @@ def _w151_veto_inner(question, result):
             if _m and _m.group(1).strip() == _m.group(2).strip() \
                     and _m.group(1).strip() == ans.strip():
                 _ident = True
+        if not _ident and steps:
+            # Wave 221: the plain evaluator now writes genuine
+            # working (column working / BODMAS reduction from
+            # the original text) instead of the "Evaluate:
+            # N = N" echo, so a fragment harvested from a
+            # risky-shaped page no longer carries the echo.
+            # The same evaluator serve is recognised by its
+            # shape: the working ENDS with a pure numeric
+            # evaluation "{expr} = {answer}" (or is the bare
+            # single-number serve). Other op="evaluate"
+            # producers (exponents/logs, complex, number
+            # theory) never end a step that way — their last
+            # lines are "= X" summaries or echo-less text —
+            # so they stay spared, exactly as before.
+            _last = steps[-1].strip()
+            _m = re.fullmatch(r"(.+?)\s*=\s*(.+?)", _last)
+            if _m and _m.group(2).strip() == ans.strip() \
+                    and re.fullmatch(
+                        r"[\d\s+\-×x*/÷().^]+",
+                        _m.group(1).strip()):
+                _ident = True
+            _m = re.fullmatch(
+                r"This is a single number:\s*(.+)", _last)
+            if _m and _m.group(1).strip() == ans.strip():
+                _ident = True
         if _ident and (_w151_form_ask(q, ql)
                        or len(markers) >= 2
                        or _w151_expr_op_ask(q, ql)
