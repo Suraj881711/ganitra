@@ -3152,7 +3152,11 @@
           var streamOpts = {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question: question })
+            body: JSON.stringify({ question: question,
+                                   chat_id: chatId,
+                                   reply_context:
+                                     replyContextState
+                                     || undefined })
           };
           if (window.AbortController) {
             streamCtl = new AbortController();
@@ -3200,7 +3204,8 @@
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
-                    question: question, result: data.result })
+                    question: question, result: data.result,
+                    chat_id: chatId })
                 }).catch(function () {});
               }
             }
