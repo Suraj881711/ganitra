@@ -335,6 +335,205 @@ def reduction_steps(expr_text):
     return steps
 
 
+# ---------------------------------------------------------------- Wave 221
+# Real column working for the plain evaluate path. ROOT CAUSE of
+# the fake "Evaluate: N = N" serve: parse_expression EVALUATES a
+# numeric expression while parsing ("347+258" -> Integer 605), so
+# reduction_steps(str(expr)) received the bare answer "605", had
+# nothing to reduce, and the call site fell back to the self-echo
+# "Evaluate: 605 = 605" (Suraj's Deploy-62 live retest, 23 Nov
+# 2026). The fix works from the ORIGINAL expression text: a
+# single +, - or x between two whole numbers gets school column
+# working (digit by digit, right to left, with carry / borrow
+# lines — DeepSeek Job 7's verified spec); anything else gets
+# genuine BODMAS reduction steps from the original text.
+_PLACE221 = [
+    "Ones", "Tens", "Hundreds", "Thousands", "Ten-thousands",
+    "Hundred-thousands", "Millions", "Ten-millions",
+    "Hundred-millions", "Billions", "Ten-billions",
+    "Hundred-billions",
+]
+
+
+def _add_steps221(a, b):
+    """Column addition steps for non-negative ints a, b.
+    Returns (steps, result)."""
+    da = [int(d) for d in str(a)][::-1]
+    db = [int(d) for d in str(b)][::-1]
+    steps = [f"Write the expression: {a} + {b}"]
+    carry = 0
+    res = []
+    for i in range(max(len(da), len(db))):
+        x = da[i] if i < len(da) else 0
+        y = db[i] if i < len(db) else 0
+        total = x + y + carry
+        digit, new_carry = total % 10, total // 10
+        if carry:
+            line = (f"{_PLACE221[i]} column: {x} + {y} + {carry} "
+                    f"(carry) = {total}")
+        else:
+            line = f"{_PLACE221[i]} column: {x} + {y} = {total}"
+        line += f" — write {digit}"
+        if new_carry:
+            line += f", carry {new_carry}"
+        steps.append(line)
+        res.append(digit)
+        carry = new_carry
+    if carry:
+        steps.append(
+            f"The final carry {carry} becomes the new first digit.")
+        res.append(carry)
+    result = sum(d * 10 ** i for i, d in enumerate(res))
+    steps.append(f"{a} + {b} = {result}")
+    return steps, result
+
+
+def _sub_steps221(a, b):
+    """Column subtraction steps for non-negative ints a >= b,
+    with borrow lines (including borrowing across zeros).
+    Returns (steps, result)."""
+    da = [int(d) for d in str(a)][::-1]
+    db = [int(d) for d in str(b)][::-1]
+    n = max(len(da), len(db))
+    da += [0] * (n - len(da))
+    db += [0] * (n - len(db))
+    steps = [f"Write the expression: {a} - {b}"]
+    res = []
+    for i in range(n):
+        x, y = da[i], db[i]
+        if x < y:
+            j = i + 1
+            while j < n and da[j] == 0:
+                j += 1
+            if j >= n:
+                return None
+            orig = x
+            da[j] -= 1
+            for k in range(i + 1, j):
+                da[k] = 9
+            da[i] += 10
+            x = da[i]
+            if j == i + 1:
+                steps.append(
+                    f"{_PLACE221[i]} column: {orig} - {y} cannot be "
+                    f"done, so borrow 1 from the {_PLACE221[j]} "
+                    f"column — {_PLACE221[j]} digit becomes "
+                    f"{da[j]}, and {_PLACE221[i]} becomes {x}.")
+            else:
+                steps.append(
+                    f"{_PLACE221[i]} column: {orig} - {y} cannot be "
+                    f"done, and the {_PLACE221[i + 1]} column is 0, "
+                    f"so borrow from the {_PLACE221[j]} column — "
+                    f"{_PLACE221[j]} digit becomes {da[j]}, the "
+                    f"columns in between become 9, and "
+                    f"{_PLACE221[i]} becomes {x}.")
+        if i == n - 1 and x == 0 and y == 0:
+            # Leading zero column (e.g. the thousands of
+            # 1000 - 645 after borrowing): it contributes
+            # nothing — never emit a "0 - 0 = 0" step.
+            res.append(0)
+            continue
+        steps.append(f"{_PLACE221[i]} column: {x} - {y} = {x - y}")
+        res.append(x - y)
+    result = sum(d * 10 ** i for i, d in enumerate(res))
+    steps.append(f"{a} - {b} = {result}")
+    return steps, result
+
+
+def _mul_steps221(a, b):
+    """Multiplication working for non-negative ints a, b: column
+    working with carry lines for a single-digit multiplier,
+    partial products for a multi-digit multiplier.
+    Returns (steps, result)."""
+    steps = [f"Write the expression: {a} × {b}"]
+    if b < 10:
+        da = [int(d) for d in str(a)][::-1]
+        carry = 0
+        res = []
+        for i, x in enumerate(da):
+            total = x * b + carry
+            if carry:
+                line = (f"{_PLACE221[i]} column: {x} × {b} + "
+                        f"{carry} (carry) = {total}")
+            else:
+                line = f"{_PLACE221[i]} column: {x} × {b} = {total}"
+            if i == len(da) - 1:
+                line += f" — write {total}"
+                res.append(total)
+            else:
+                digit, carry = total % 10, total // 10
+                line += f" — write {digit}"
+                if carry:
+                    line += f", carry {carry}"
+                res.append(digit)
+            steps.append(line)
+        result = sum(d * 10 ** i for i, d in enumerate(res))
+    else:
+        parts = []
+        for i, d in enumerate(
+                [int(c) for c in str(b)][::-1]):
+            if d == 0:
+                continue
+            p = a * d * 10 ** i
+            steps.append(f"{a} × {d * 10 ** i} = {p}")
+            parts.append(p)
+        if len(parts) > 1:
+            steps.append(
+                f"Add the parts: "
+                f"{' + '.join(str(p) for p in parts)} = {sum(parts)}")
+        result = a * b
+    steps.append(f"{a} × {b} = {result}")
+    return steps, result
+
+
+def _column_steps221(a, op, b):
+    """Column working for one +, - or x between whole numbers,
+    or None when the shape is not covered (negative result,
+    too many digits)."""
+    if len(str(a)) > len(_PLACE221) or len(str(b)) > len(_PLACE221):
+        return None
+    if op == "+":
+        return _add_steps221(a, b)
+    if op == "-":
+        if a < b:
+            return None
+        return _sub_steps221(a, b)
+    if op == "*":
+        return _mul_steps221(a, b)
+    return None
+
+
+def _evaluate_steps221(expr_text, expr, value):
+    """Genuine steps for the plain evaluate result — never the
+    old "Evaluate: N = N" self-echo."""
+    raw = (expr_text or "").strip()
+    norm = raw.replace("×", "*").replace("÷", "/").replace("−", "-")
+    m = re.fullmatch(r"(\d+)\s*([+\-*])\s*(\d+)",
+                     norm.replace(" ", ""))
+    if m:
+        col = _column_steps221(
+            int(m.group(1)), m.group(2), int(m.group(3)))
+        if col is not None:
+            steps, got = col
+            if sp.nsimplify(got, rational=True) == value:
+                return steps
+    if "**" not in norm:
+        try:
+            steps = reduction_steps(norm.replace(" ", ""))
+            if steps:
+                return steps
+        except Exception:
+            pass
+    disp = raw if raw else str(expr)
+    if disp.replace(" ", "") != fmt_num(value).replace(" ", ""):
+        return [
+            "Follow BODMAS: brackets, orders (powers), division and "
+            "multiplication, then addition and subtraction.",
+            f"{disp} = {fmt_num(value)}",
+        ]
+    return [f"This is a single number: {fmt_num(value)}"]
+
+
 # ---------------------------------------------------------------- percentages
 _UNIT56 = {"hour": 3600.0, "hours": 3600.0, "minute": 60.0,
            "minutes": 60.0, "second": 1.0, "seconds": 1.0,
@@ -905,6 +1104,10 @@ def solve_arithmetic(question):
     # digit-x-digit form is rewritten — algebraic "3x" and
     # "x + 2" are untouched.
     text = re.sub(r"(?<=\d)\s+x\s+(?=\d)", " * ", text)
+    # Wave 221: remember the text that actually parses — the
+    # parsed expr is already EVALUATED by SymPy, so the original
+    # text is the only place the real working survives.
+    expr_text = text
     try:
         expr = parse_expression(text)
     except Exception:
@@ -921,6 +1124,7 @@ def solve_arithmetic(question):
         if _bare == text:
             raise
         expr = parse_expression(_bare)
+        expr_text = _bare
     # Wave 30 defence-in-depth: parse_expression now rejects tuples
     # itself, but never call .free_symbols on a non-expression.
     if not hasattr(expr, "free_symbols"):
@@ -972,16 +1176,13 @@ def solve_arithmetic(question):
             f"Could not parse expression: {question!r}")
 
     value = sp.nsimplify(expr, rational=True)
-    try:
-        steps = reduction_steps(str(expr).replace(" ", ""))
-        if not steps:
-            steps = [f"Evaluate: {expr} = {fmt_num(value)}"]
-    except Exception:
-        steps = [
-            "Follow BODMAS: brackets, orders (powers), division and "
-            "multiplication, then addition and subtraction.",
-            f"{expr} = {fmt_num(value)}",
-        ]
+    # Wave 221: genuine working from the ORIGINAL text (column
+    # working for a single +, - or x; BODMAS reduction steps
+    # otherwise) — never the "Evaluate: N = N" self-echo this
+    # site used to serve, which came from running
+    # reduction_steps over str(expr) AFTER SymPy had already
+    # evaluated the expression to a bare number.
+    steps = _evaluate_steps221(expr_text, expr, value)
     result = {
         "type": "arithmetic",
         "op": "evaluate",
