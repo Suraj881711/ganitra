@@ -543,6 +543,16 @@ def api_solve():
         session.pop("doubt_step", None)
         session["last_result_chat"] = _w216_key
 
+    # Wave 220: if the session still holds no usable anchor
+    # for this chat (the browser dropped the cookie state —
+    # see _restore_anchor_from_db), rebuild it from the chat's
+    # saved thread before any follow-up layer reads it.
+    _w220_lr = session.get("last_result")
+    if not (session.get("last_question")
+            and isinstance(_w220_lr, dict)
+            and _w220_lr.get("answer")):
+        _restore_anchor_from_db(_w216_key)
+
     # Wave 122: a follow-up chip tap (see followups.py). The
     # visible message is only the chip's label; the kind and
     # the ORIGINAL question ride as hidden context fields, and
@@ -1534,6 +1544,74 @@ def _note_anchor(chat_key, question):
     session["last_result_chat"] = chat_key
 
 
+def _restore_anchor_from_db(chat_key):
+    """Wave 220: rebuild this chat's last_question/last_result
+    from its SAVED THREAD (chats table) when the session cookie
+    no longer holds them.
+
+    Root cause (live, 23 Nov 2026): every cookie-based check
+    passed (curl, test client), yet in a real browser the
+    follow-ups "galat hai, phir se karo" / "samjhao" fell to
+    the generic lines even inside a single chat that was never
+    left — the browser had silently stopped carrying the
+    session state the follow-up layers read (the Wave-46 audit
+    already met this family: a session cookie that outgrows
+    the browser's ~4,096 B limit is dropped without a word).
+    The chat thread itself is saved server-side on every turn
+    (recordTurn -> PUT /api/chats/<id>), so the honest anchor
+    for a follow-up is the thread, not the fragile cookie.
+    Only the signed-in owner's own chat is read (chats.get_chat
+    enforces ownership); anything unexpected returns False and
+    the caller continues exactly as before this wave."""
+    try:
+        uid = session.get("user_id")
+        if not uid or not chat_key or not chat_key.startswith("c"):
+            return False
+        chat_id = int(chat_key[1:])
+        if chat_id <= 0:
+            return False
+        import chats as _chats
+        chat = _chats.get_chat(uid, chat_id)
+        if not chat:
+            return False
+        messages = chat.get("messages") or []
+        for i in range(len(messages) - 1, -1, -1):
+            msg = messages[i]
+            if not isinstance(msg, dict) \
+                    or msg.get("role") != "bot":
+                continue
+            data = msg.get("data") or {}
+            result = data.get("result")
+            if not isinstance(result, dict):
+                # A bot bubble with no result payload (a plain
+                # message line) — not a turn a follow-up can
+                # point at; keep walking to the last real solve.
+                continue
+            if not result.get("answer") \
+                    or result_is_plain(result) \
+                    or result_unsolvable(result):
+                # The last real solve is not explainable —
+                # nothing honest to anchor to.
+                return False
+            q = data.get("_q") or data.get("question")
+            if not q:
+                for j in range(i - 1, -1, -1):
+                    prev = messages[j]
+                    if isinstance(prev, dict) \
+                            and prev.get("role") == "user":
+                        q = prev.get("text")
+                        break
+            if not q:
+                return False
+            session["last_question"] = q
+            session["last_result"] = result
+            _note_anchor(chat_key, q)
+            return True
+        return False
+    except Exception:
+        return False
+
+
 def _commit_solve_session(question, result, chat_key=None):
     """The session writes of a finished chat solve (Wave 5 +
     Wave 96 + Wave 46): the question and its full result
@@ -1820,6 +1898,15 @@ def api_solve_stream():
             session.pop("last_result", None)
         session.pop("doubt_step", None)
         session["last_result_chat"] = _w216_key
+
+    # Wave 220: same saved-thread anchor restore as api_solve
+    # (see there) — the stream path's follow-up layers read the
+    # same last_result slot.
+    _w220_lr = session.get("last_result")
+    if not (session.get("last_question")
+            and isinstance(_w220_lr, dict)
+            and _w220_lr.get("answer")):
+        _restore_anchor_from_db(_w216_key)
 
     # Wave 148: a BARE steps / detail request re-serves the
     # session's last answer (see api_solve) — one final
