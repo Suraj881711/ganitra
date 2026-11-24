@@ -4665,18 +4665,40 @@ def _solve_question_uncached(question: str):
             out["interpreted_as"] = translated
         return out
 
-    # 
-    # Wave 223: multipart splitter (J9, solver/multipart223.py) -- a question that asks TWO things about ONE shape ("Find the area and perimeter of a rectangle with length 8 cm and breadth 5 cm", "Find the circumference and area of a circle with radius 7 cm") was served as ONE of them only: the geometry solver answers the first ask word it sees. The splitter returns both answers, with a working line for each, or None on any doubt, so the flow below is then exactly the pre-Wave-223 one. The gate sits BEFORE the Wave 222 gate so a multipart ask is never handed to a single-measure solver first.
+    # Wave 223: multi-part questions (DeepSeek Job 9, solver/
+    # multipart223.py) — a question carrying TWO genuine asks
+    # ("area and perimeter of a rectangle ...", "3 ghante..."
+    # ki tarah "kshetrafal aur parimap batao") was served by
+    # whichever single-ask layer fired first, and the second
+    # ask silently vanished: geometry's rectangle branch is
+    # `if "perimeter" in q: return perimeter; return area`,
+    # and the Hinglish translator is first-match-wins, so a
+    # two-ask question collapses to one ask before any solver
+    # runs.  The splitter therefore reads the student's OWN
+    # text (folded, then original) BEFORE the translated
+    # working text, splits only on a provable two-ask
+    # structure, solves each part through the ordinary
+    # pipeline, verifies each part's op against its ask, and
+    # assembles the Wave 100 multipart format.  On any doubt
+    # it returns None and the flow below is exactly the
+    # pre-Wave-223 one.  The gate sits before Wave 222
+    # because a two-ask question must never be claimed by a
+    # single-ask gate first; single-ask questions (the
+    # Wave 221/222 regression shapes included) carry no ask
+    # pair and pass through untouched.
     try:
         from .multipart223 import solve_multipart223
-        out = solve_multipart223(working)
-        if out is None and working != original:
+        out = solve_multipart223(folded)
+        if out is None and original != folded:
             out = solve_multipart223(original)
+        if out is None and working != original:
+            out = solve_multipart223(working)
     except Exception:
         out = None
     if out is not None:
         if was_translated:
-            out["interpreted_as"] = translated
+            out["interpreted_as"] = "; ".join(
+                out.get("parts") or [translated])
         return out
 
     # Wave 222: unit conversion (DeepSeek Job 3, solver/
