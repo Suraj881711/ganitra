@@ -4665,6 +4665,31 @@ def _solve_question_uncached(question: str):
             out["interpreted_as"] = translated
         return out
 
+    # Wave 222: unit conversion (DeepSeek Job 3, solver/
+    # unitconvert.py) — a quantity glued to its source unit
+    # plus exactly one other unit of the same category is
+    # the whole signature, in English or Hinglish dress
+    # ("3 ghante me kitne minute", "2.5 kg ko gram me
+    # badlo", "2 hours in minutes").  The gate sits BEFORE
+    # Wave 212 because its time/calendar schema used to
+    # guess the direction of an hour<->minute ask from the
+    # mere presence of both words and served "3 ghante me
+    # kitne minute" as "0 hours 3 minutes"; the converter
+    # reads the direction from the unit the number is
+    # attached to and returns None on any doubt, so the
+    # flow below is then exactly the pre-Wave-222 one.
+    try:
+        from .unitconvert import solve_unitconvert
+        out = solve_unitconvert(working)
+        if out is None and working != original:
+            out = solve_unitconvert(original)
+    except Exception:
+        out = None
+    if out is not None:
+        if was_translated:
+            out["interpreted_as"] = translated
+        return out
+
     # Wave 212: prediction-by-structure schemas (solver/
     # wave212.py) — the fix-queue families whose maths is
     # elementary but whose DRESS defeated every word-pattern
