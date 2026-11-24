@@ -4665,6 +4665,20 @@ def _solve_question_uncached(question: str):
             out["interpreted_as"] = translated
         return out
 
+    # 
+    # Wave 223: multipart splitter (J9, solver/multipart223.py) -- a question that asks TWO things about ONE shape ("Find the area and perimeter of a rectangle with length 8 cm and breadth 5 cm", "Find the circumference and area of a circle with radius 7 cm") was served as ONE of them only: the geometry solver answers the first ask word it sees. The splitter returns both answers, with a working line for each, or None on any doubt, so the flow below is then exactly the pre-Wave-223 one. The gate sits BEFORE the Wave 222 gate so a multipart ask is never handed to a single-measure solver first.
+    try:
+        from .multipart223 import solve_multipart223
+        out = solve_multipart223(working)
+        if out is None and working != original:
+            out = solve_multipart223(original)
+    except Exception:
+        out = None
+    if out is not None:
+        if was_translated:
+            out["interpreted_as"] = translated
+        return out
+
     # Wave 222: unit conversion (DeepSeek Job 3, solver/
     # unitconvert.py) — a quantity glued to its source unit
     # plus exactly one other unit of the same category is
