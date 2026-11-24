@@ -8,7 +8,7 @@ rest cover the module directly, its splitter, its
 declines, and the single-ask answers that must not change.
 """
 
-from api import solve_friendly
+from api import _solve_friendly
 from solver.multipart223 import solve_multipart223, split_multipart223
 from solver.router import solve_question
 
@@ -316,7 +316,7 @@ def test_single_square_area_unchanged():
 
 
 def test_chat_rectangle_multipart():
-    result = solve_friendly(
+    result = _solve_friendly(
         "Find the area and perimeter of a rectangle "
         "with length 8 cm and breadth 5 cm")
     text = _full(result)
@@ -325,7 +325,7 @@ def test_chat_rectangle_multipart():
 
 
 def test_chat_circle_multipart():
-    result = solve_friendly(
+    result = _solve_friendly(
         "Find the circumference and area of a circle "
         "with radius 7 cm")
     text = _full(result)
