@@ -307,29 +307,23 @@ def _time_calendar(q, t):
                 [f"{calendar.month_name[months[0]]} {year} "
                  f"has {d} days{leap}."], value=d)
 
-    # Minutes <-> hours conversion (no clock times involved).
-    if not clocks and len(nums) == 1:
-        n = nums[0]
-        if _has(t, "minute", "minut", "मिनट") and _has(
-                t, "hour", "hours", "ghante", "घंट"):
-            fr = Fraction(int(n), 60)
-            h, rem = divmod(int(n), 60)
-            if rem == 0:
-                ans = f"{h} hours"
-            else:
-                ans = f"{h} hours {rem} minutes"
-            return _res(
-                "minutes_to_hours", ans,
-                [f"1 hour = 60 minutes, so {int(n)} ÷ 60 = "
-                 f"{_fmt(fr)} hours.",
-                 f"{int(n)} minutes = {ans}."], value=float(fr))
-        if _has(t, "hour", "hours", "घंटे") and _has(
-                t, "minute", "minut", "मिनट") and _has(
-                t, "convert", "badlo", "बदल", "mein", "में"):
-            return _res(
-                "hours_to_minutes", f"{int(n) * 60} minutes",
-                [f"1 hour = 60 minutes, so {int(n)} × 60 = "
-                 f"{int(n) * 60} minutes."], value=int(n) * 60)
+    # Wave 222: unit conversion is owned by
+    # solver/unitconvert.py (DeepSeek Job 3), which reads
+    # the DIRECTION from the unit the number is attached
+    # to.  The Wave 212 block that used to sit here fired
+    # on ANY one-number question naming both a minute-word
+    # and an hour-word and unconditionally treated the
+    # number as minutes — "3 ghante me kitne minute" was
+    # served "0 hours 3 minutes" (sahi: 180).  Delegate to
+    # the shared converter; never guess a direction.
+    if not clocks:
+        try:
+            from .unitconvert import solve_unitconvert
+            _uc = solve_unitconvert(q)
+        except Exception:
+            _uc = None
+        if _uc is not None:
+            return _uc
 
     if len(clocks) == 2:
         (h1, m1, _), (h2, m2, _) = clocks
