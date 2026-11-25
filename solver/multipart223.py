@@ -361,13 +361,15 @@ def _sum_parts(q):
 # ---------------------------------------------------------------------------
 
 _PAY_ASK = re.compile(
-    r"how\s+much[^?]{0,30}\bpay\b|total\s+cost|total\s+price|"
+    r"how\s+much[^?]{0,30}\b(?:pay|spend|spent)\b|"
+    r"total\s+cost|total\s+price|"
     r"how\s+much[^?]{0,20}\bcost\b|kitna\s+paisa\s+lagega|"
     r"kitne\s+rupaye\s+lagenge|how\s+much\s+money[^?]{0,20}"
-    r"spend", re.I)
+    r"spend|kitn[ae]\s+(?:rupaye\s+)?kharch|"
+    r"kharch\s+(?:kiye|kiya|karenge|hoga)", re.I)
 _CHANGE_ASK = re.compile(
     r"\bchange\b|money\s+is\s+left|how\s+much[^?]{0,20}left|"
-    r"bacha|बचा|bachenge|wapas\s+milega", re.I)
+    r"bacha|bache|बचा|बचे|bachenge|wapas\s+milega", re.I)
 _COUNT_PRICE = [
     re.compile(r"(\d+(?:\.\d+)?)\s+(?:[a-zA-Z]{2,}\s+){0,3}?"
                r"(?:at|@)\s*(?:rs\.?|₹|rupees?)\s*"
@@ -378,6 +380,20 @@ _COUNT_PRICE = [
     re.compile(r"(\d+(?:\.\d+)?)\s+\S+\s+(?:rs\.?|₹|rupaye)?\s*"
                r"(\d+(?:\.\d+)?)\s*(?:rupaye\s+)?(?:prati|प्रति)",
                re.I),
+    # Wave 224: the price BEFORE its currency word — "at 30
+    # rupees each" (the Deploy-66 live wording).  The three
+    # patterns above all demand the currency first ("at
+    # Rs 30 each"), so this whole dress declined.
+    re.compile(r"(\d+(?:\.\d+)?)\s+(?:[a-zA-Z]{2,}\s+){0,3}?"
+               r"(?:at|@|for)\s*(\d+(?:\.\d+)?)\s*"
+               r"(?:rupees?|rs\.?|₹)?\s*(?:each|per\s+\w+)",
+               re.I),
+    re.compile(r"(\d+(?:\.\d+)?)\s+(?:[a-zA-Z]{2,}\s+){0,3}?"
+               r"for\s*(?:rs\.?|₹|rupees?)\s*"
+               r"(\d+(?:\.\d+)?)\s*(?:each|per\s+\w+)", re.I),
+    re.compile(r"(\d+(?:\.\d+)?)\s+(?:[a-zA-Z]{2,}\s+){0,3}?"
+               r"(?:costing|priced\s+at)\s*(\d+(?:\.\d+)?)\s*"
+               r"(?:rupees?|rs\.?|₹)?\s*each", re.I),
 ]
 _NOTE = [
     re.compile(r"(?:from|gave|gives|give|paid|has|have|with|"
@@ -385,8 +401,13 @@ _NOTE = [
                r"(\d+(?:\.\d+)?)", re.I),
     re.compile(r"(?:rs\.?|₹|rupees?)\s*(\d+(?:\.\d+)?)\s*"
                r"(?:ka\s+)?note", re.I),
-    re.compile(r"(\d+(?:\.\d+)?)\s*(?:rupee|rs\.?|rupaye)\s+"
+    # Wave 224: plural "rupees" — "a 200 rupees note" (the
+    # Deploy-66 live wording) missed the singular-only
+    # "rupee" alternation below.
+    re.compile(r"(\d+(?:\.\d+)?)\s*(?:rupees?|rs\.?|rupaye)\s+"
                r"(?:ka\s+)?note", re.I),
+    re.compile(r"note\s+of\s+(?:rs\.?|₹|rupees?)?\s*"
+               r"(\d+(?:\.\d+)?)", re.I),
     re.compile(r"(\d+(?:\.\d+)?)\s*rupaye\s+diye", re.I),
 ]
 
@@ -395,7 +416,12 @@ def _money_result(q):
     """The finished two-part result, or None.  Computed with
     exact Fractions; both asks must be present, the
     count x unit-price structure must be explicit ('each' /
-    'per' / 'prati'), and the note must exceed the total."""
+    'per' / 'prati'), and the note must exceed the total.
+    Wave 224 widened the surface forms after the Deploy-66
+    live failure: 'spend'/'spent' asks without the word
+    'money', Hinglish 'kharch' asks and 'bache' change asks,
+    the price BEFORE its currency word ('at 30 rupees
+    each'), and the plural note ('a 200 rupees note')."""
     ql = q.lower()
     if "%" in ql or "discount" in ql or "profit" in ql \
             or "loss" in ql or "interest" in ql:
