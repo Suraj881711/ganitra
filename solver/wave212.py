@@ -470,6 +470,44 @@ def _sig(t, *words):
     return False
 
 
+# Wave 224: a genuine currency NOTE as a whole word.  The
+# bare substring test "note" in t also fires inside
+# "notebook(s)", which made every notebook sum a "note"
+# sum.  Devanagari नोट has no word-boundary analogue and
+# cannot hide inside another word, so it stays a substring.
+_NOTE_WORD = re.compile(r"\bnotes?\b|नोट")
+
+# Wave 224: a count x unit-price structure over two of the
+# numbers ("4 notebooks at 30 rupees each", "...for Rs 30
+# each", "4 notebooks 30 rupees each"): those two numbers
+# are a COUNT and its unit price, never two independent
+# prices.
+_COUNT_PRICE_SHAPES = [
+    re.compile(r"(\d+(?:\.\d+)?)\s+(?:[a-zA-Z]{2,}\s+){0,3}?"
+               r"(?:at|@|for)\s*(?:rs\.?|₹|rupees?)?\s*"
+               r"(\d+(?:\.\d+)?)\s*(?:rupees?|rs\.?|₹)?\s*"
+               r"(?:each|per\s+\w+)", re.I),
+    re.compile(r"(\d+(?:\.\d+)?)\s+\S+\s+"
+               r"(\d+(?:\.\d+)?)\s*(?:rupees?|rs\.?|₹)\s*"
+               r"(?:each|per\s+\w+)", re.I),
+]
+
+
+def _count_price_clash(t, nums):
+    """True when two of `nums` form a count x unit-price
+    pair — the money_change schema must decline those (it
+    would read the count as a second price: the Deploy-66
+    live serve "Total spent = 30 + 4 = ₹34", change ₹166,
+    for 4 notebooks at 30 rupees each from a 200 note)."""
+    vals = {Fraction(str(x)) for x in nums}
+    for pat in _COUNT_PRICE_SHAPES:
+        m = pat.search(t)
+        if m and Fraction(m.group(1)) in vals \
+                and Fraction(m.group(2)) in vals:
+            return True
+    return False
+
+
 def _decimal_story(q, t):
     nums = _nums(t)
     money = _has(t, "rs", "rupee", "रुप", "₹", "note", "price",
@@ -481,8 +519,17 @@ def _decimal_story(q, t):
     # "note" is REQUIRED — without it, three money numbers
     # are an add/sub chain (Wave 206's family), not a
     # change sum, and this schema must not guess.
-    if len(nums) == 3 and money and ("note" in t
-                                    or "नोट" in t) and _sig(
+    # Wave 224: the note test is now a genuine whole-word
+    # test (_NOTE_WORD — "notebooks" no longer counts), and
+    # a count x unit-price pair among the three numbers
+    # (_count_price_clash) declines the schema outright:
+    # those numbers are a count and its price, and reading
+    # the count as a second price is exactly the ₹166
+    # misfire.  That shape belongs to the multipart money
+    # family; a schema that cannot serve a shape correctly
+    # must decline it, never guess.
+    if len(nums) == 3 and money and _NOTE_WORD.search(t) \
+            and not _count_price_clash(t, nums) and _sig(
             t, "change", "bacha", "बचा", "wapas", "वापस",
             "bachenge", "बचेंगे", "left", "bach", "balance",
             "balnce", "get back", "bak", "bache", "बचे",
