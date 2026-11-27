@@ -7,7 +7,10 @@ when (a) a member posts a maths question (detected by meaning,
 via the real solve pipeline — no tag, no button needed),
 (b) a peer's answer to a maths question is wrong (a polite
 correction), or (c) a member addresses Ganitra by name with a
-non-maths question (the standing maths-only line). Ordinary
+non-maths question (the standing maths-only line). A follow-up
+to Ganitra's own last answer — "samjhao", "phir se karo", or
+any reply aimed at its answer post — counts as addressed to
+Ganitra (Wave 225, Suraj's 23 Nov 2026 spec nuance). Ordinary
 member-to-member chat is never policed.
 
 IDENTITY (Suraj's security condition, 22 Nov): group membership
@@ -488,11 +491,11 @@ def _strip_markup(text):
     return re.sub(r"<[^>]+>", "", str(text or "")).strip()
 
 
-def _answer_body(result):
+def _answer_body(result, max_steps=6):
     """Ganitra's group answer as plain text: short steps, then
     the answer exactly once (the standing format lock)."""
     lines = []
-    for step in (result.get("steps") or [])[:6]:
+    for step in (result.get("steps") or [])[:max_steps]:
         step = _strip_markup(step)
         if step:
             lines.append(step[:240])
@@ -632,13 +635,29 @@ def post_message(group_id, author_id, text, reply_to=None):
             ganitra_posts.append(note)
         return post, ganitra_posts, None
 
+    # Wave 225 (Suraj's 23 Nov 2026 spec nuance): a follow-up
+    # to Ganitra's OWN last answer counts as addressed to
+    # Ganitra — "samjhao" / "galat hai, phir se karo" right
+    # after its answer, or any reply aimed at its answer post,
+    # must not earn silence. Redo/explain re-solve the original
+    # question here; any other follow-up falls through to the
+    # normal pipeline with addressed=True.
+    follow = _own_answer_followup(group_id, post, target, text)
+    if follow is not None and follow[0] in ("redo", "explain"):
+        note = _answer_followup(group_id, post, follow[1],
+                                follow[0])
+        if note:
+            ganitra_posts.append(note)
+            return post, ganitra_posts, None
+
     # A fresh message: Ganitra detects maths questions by
     # meaning through the real pipeline. Ordinary chat earns
     # silence — the pipeline's plain / not-found outcomes for
     # unaddressed chat are simply not posted.
     result = _solve(text)
     outcome = _classify(result)
-    addressed = bool(re.search(r"\bganitra\b", text, re.I))
+    addressed = bool(re.search(r"\bganitra\b", text, re.I)) \
+        or follow is not None
     conn = _connect()
     try:
         if outcome == "answer":
@@ -681,6 +700,99 @@ def post_message(group_id, author_id, text, reply_to=None):
     finally:
         conn.close()
     return post, ganitra_posts, None
+
+
+def _followup_intent(text):
+    """human_brain's redo/explain classification for a group
+    follow-up, with Ganitra's name stripped first — a name
+    mention must not stop "Ganitra, samjhao" from parsing."""
+    try:
+        from human_brain import parse_human_followup
+    except Exception:
+        return None
+    stripped = re.sub(r"\bganitra\b", " ", text or "", flags=re.I)
+    return parse_human_followup(stripped)
+
+
+def _own_answer_followup(group_id, post, target, text):
+    """(intent, question_post) when this message follows up
+    Ganitra's own last answer, else None (Wave 225).
+
+    Two shapes count: an explicit reply to Ganitra's answer
+    post (or to its correction note), and a bare redo/explain
+    ask posted right after Ganitra's answer — i.e. Ganitra's
+    answer is the latest post in the group. Anything else is
+    ordinary chat and earns the usual silence."""
+    intent = _followup_intent(text)
+    anchor = None
+    explicit = False
+    if target is not None and target["kind"] in ("ganitra",
+                                                 "ganitra_note"):
+        anchor, explicit = target, True
+    elif intent in ("redo", "explain"):
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT * FROM group_posts WHERE group_id = ? "
+                "AND id < ? ORDER BY id DESC LIMIT 1",
+                (group_id, post["id"])).fetchone()
+        finally:
+            conn.close()
+        if row is not None and row["kind"] == "ganitra":
+            anchor = dict(row)
+    if anchor is None:
+        return None
+    if not explicit and intent not in ("redo", "explain"):
+        return None
+    question = None
+    if anchor.get("reply_to"):
+        conn = _connect()
+        try:
+            row = conn.execute(
+                "SELECT * FROM group_posts WHERE id = ? AND "
+                "group_id = ?", (anchor["reply_to"], group_id)
+                ).fetchone()
+        finally:
+            conn.close()
+        if row is not None and row["kind"] == "question":
+            question = dict(row)
+    if intent in ("redo", "explain") and question is None:
+        return None
+    return (intent or "chat"), question
+
+
+def _answer_followup(group_id, member_post, question_post, intent):
+    """Re-serve Ganitra's answer to the question a follow-up
+    points at (Wave 225): 'redo' solves it fresh, 'explain'
+    solves it with fuller steps, each behind its kind opening
+    line. None when the pipeline has no answer this time."""
+    result = _solve(question_post["body"])
+    if _classify(result) != "answer":
+        return None
+    try:
+        from fallback import _looks_hindi
+        lang = "hi" if _looks_hindi(question_post["body"]) else "en"
+    except Exception:
+        lang = "en"
+    body = _answer_body(result,
+                        max_steps=12 if intent == "explain" else 6)
+    try:
+        from human_brain import intro_line
+        intro = intro_line(intent, lang)
+    except Exception:
+        intro = None
+    if intro:
+        body = f"{intro}\n{body}"
+    conn = _connect()
+    try:
+        pid = _insert_post(conn, group_id, None, "ganitra", body,
+                           reply_to=member_post["id"])
+        conn.commit()
+        return dict(conn.execute(
+            "SELECT * FROM group_posts WHERE id = ?",
+            (pid,)).fetchone())
+    finally:
+        conn.close()
 
 
 def _check_peer_answer(group_id, question_post, peer_text):
