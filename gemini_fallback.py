@@ -190,10 +190,53 @@ _DETAIL_RULES = (
     "own question.")
 
 
-def _build_prompt(question, lang=None, detail=False):
+# Wave 228 (Deploy-71 fix): the GENERAL prompt — the same
+# voice, the same one-Answer-line format, but NO maths-only
+# rule. It exists for exactly one caller shape: a group
+# member who calls Ganitra BY NAME with a question on any
+# topic (Suraj's 23 Nov 2026 group spec — a name-called
+# question is answered for real). The maths prompt above
+# orders a leg to reply NOT_MATHS to such a question, and
+# _shape_result maps that sentinel to None, so under the
+# maths prompt a healthy leg can NEVER answer a general
+# question — the Deploy-71 live failure ("Ganitra, Bharat
+# ki rajdhani kya hai?" -> the canned line, twice, with the
+# legs alive) was this rule working as written, reached
+# through a route whose tests had stubbed the legs with a
+# double that answers capital questions. The 1:1 chain
+# never uses this prompt: its legs keep the maths prompt
+# and its NOT_MATHS discipline byte-identically.
+_GENERAL_PROMPT = """You are Ganitra, a friendly tutor for Indian school students (Classes 0-12, NCERT pattern).
+
+Answer the student's question below correctly. The question can be about ANY topic — general knowledge, science, language, history, geography, maths, anything. If it is a maths question, solve it using the student's own numbers exactly as given, showing the working in short plain lines.
+
+Write the answer in Ganitra's own voice — the voice of a school teacher writing on a blackboard:
+- Simple, normal words that a Class 6 student uses every day. Short plain lines.
+- No greetings and no openers: no "Sure", no "Of course", no "Certainly", no "Great question", no "Here is the answer". Start straight with the answer.
+- No closing lines: no "Hope this helps", no "Let me know". Stop at the answer.
+- Never talk about yourself: no "As an AI". Write only the answer.
+- No headings, no markdown, no bullet points, no bold or italics, no emojis.
+- Keep it short: for a fact question, one or two lines are enough.
+- Finish with exactly one last line in this form: Answer: <the final answer>
+- Reply in the SAME language and the SAME script as the student's question. A Hindi question gets a Hindi answer, a Hinglish (Roman Hindi) question gets a Hinglish answer, an English question gets an English answer.{lang_line}
+
+Student's question:
+{question}"""
+
+
+def _build_prompt(question, lang=None, detail=False,
+                  general=False):
     name = _LANG_NAMES.get(str(lang or "").strip().lower())
     lang_line = (f"\n- The student's language is {name}; "
                  f"answer in {name}." if name else "")
+    if general:
+        # Wave 228 (Deploy-71 fix): the group name-call
+        # route asks through the GENERAL prompt — the maths
+        # prompt's NOT_MATHS rule makes every leg refuse a
+        # general question by design, which is exactly the
+        # live failure this variant exists to end.
+        return _GENERAL_PROMPT.format(
+            lang_line=lang_line, question=question)
     return _PROMPT.format(
         lang_line=lang_line,
         detail_block=_DETAIL_RULES if detail else "",
@@ -364,7 +407,8 @@ def _shape_result(text):
     }
 
 
-def try_gemini_answer(question, lang=None, detail=False):
+def try_gemini_answer(question, lang=None, detail=False,
+                      general=False):
     """Ask Gemini to solve `question` and return a shaped
     Ganitra result dict — or None on ANY problem (no key,
     timeout, HTTP/API error, empty or non-maths reply). Never
@@ -372,17 +416,21 @@ def try_gemini_answer(question, lang=None, detail=False):
     `detail` (Wave 136) selects the prompt's DETAIL variant
     for a student who explicitly asked for a long answer;
     the default False builds the prompt byte-identically to
-    before."""
+    before. `general` (Wave 228, Deploy-71 fix) selects the
+    GENERAL prompt (any topic, no NOT_MATHS rule) for the
+    group name-call route; the default False is again
+    byte-identical to before."""
     question = str(question or "").strip()
     if not question:
         return None
     api_key = (os.environ.get(ENV_KEY) or "").strip()
     if not api_key:
         return None
+    _bkw = {"general": True} if general else {}
     payload = {
         "contents": [{"parts": [
             {"text": _build_prompt(question, lang,
-                                   detail=detail)}]}],
+                                   detail=detail, **_bkw)}]}],
         "generationConfig": {"temperature": 0.2,
                              "maxOutputTokens": MAX_OUTPUT_TOKENS},
     }
