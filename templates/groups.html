@@ -1,10 +1,38 @@
 {% extends "base.html" %}
+{% block head_extra %}
+<style>
+  .gs-step { margin: 0 0 14px; }
+  .gs-step-title { font-weight: 600; margin: 0 0 8px; }
+  .gs-chips { list-style: none; margin: 8px 0; padding: 0;
+              display: flex; flex-wrap: wrap; gap: 6px; }
+  .gs-chips li { display: flex; align-items: center; gap: 6px;
+                 background: var(--hatch-widget-surface, #f4f1ea);
+                 border: 1px solid var(--hatch-widget-border, #ddd);
+                 border-radius: 999px; padding: 4px 6px 4px 12px;
+                 font-size: 0.95em; }
+  .gs-chip-x { border: none; background: transparent; cursor: pointer;
+               font-size: 1.05em; line-height: 1; padding: 2px 4px;
+               color: inherit; }
+  .gs-num-err { color: #b3261e; font-size: 0.9em; margin: 4px 0; }
+</style>
+<noscript><style>
+  /* Bina JavaScript ke dono steps ek saath dikhte hain —
+     numbers textarea me, naam neeche, seedha Group banao. */
+  #gs-step-name { display: block !important; }
+  #gs-to-name, #gs-add-num, #gs-num, #gs-count { display: none !important; }
+</style></noscript>
+{% endblock %}
 {% block content %}
-{# Wave 218 (Suraj, 23 Nov 2026): Group Study creation is
-   now WhatsApp-simple — naam, numbers, Group banao. The
-   long explanation paragraphs he objected to ("itna saara
-   likha hua hai") are gone; the backend (groups.py) and
-   every form field are unchanged. #}
+{# Wave 218 (Suraj, 23 Nov 2026): Group Study page made
+   WhatsApp-simple — the long explanation paragraphs he
+   objected to ("itna saara likha hua hai") are gone.
+   Wave 225 (Suraj, 27 Nov 2026): creation now follows the
+   WhatsApp ORDER — Step 1 pehle members select/add karo
+   (numbers, ek-ek karke ya saare ek saath), Step 2 phir
+   group ka naam, phir Create. Backend (groups.py) aur form
+   fields (name, member_phones) bilkul unchanged hain; bina
+   JavaScript ke wahi form seedha numbers + naam se bhi
+   chalta hai. #}
 <div class="acct-wrap">
   <a class="back" href="/">← {{ t.nav_solve }}</a>
   <h2 class="acct-heading">Group Study</h2>
@@ -44,16 +72,37 @@
     {% endif %}
 
     <h3>Naya group banao</h3>
-    <form method="post" action="/groups/create" class="acct-list">
-      <label>Group ka naam
-        <input type="text" name="name" maxlength="60"
-               placeholder="Jaise: Class 10 Maths" required>
-      </label>
-      <label>Doston ke numbers (har line me ek)
-        <textarea name="member_phones" rows="4" required
-          placeholder="98765 43210&#10;98765 43211"></textarea>
-      </label>
-      <button type="submit" class="acct-mini-btn">Group banao</button>
+    <form method="post" action="/groups/create" class="acct-list"
+          id="gs-create">
+      <div class="gs-step" id="gs-step-members">
+        <p class="gs-step-title">Step 1 — Members add karo</p>
+        <label>Dost ka mobile number
+          <input type="tel" id="gs-num" inputmode="numeric"
+                 autocomplete="off" placeholder="10 digit number">
+        </label>
+        <button type="button" class="acct-mini-btn"
+                id="gs-add-num">Add karo</button>
+        <p class="gs-num-err" id="gs-num-err" hidden></p>
+        <ul class="gs-chips" id="gs-chips"></ul>
+        <label id="gs-phones-label">Doston ke numbers (har line me ek)
+          <textarea name="member_phones" id="gs-phones" rows="4"
+            placeholder="98765 43210&#10;98765 43211"></textarea>
+        </label>
+        <p class="muted" id="gs-count">Abhi koi member add nahi
+           hua — kam se kam 1 dost ka number add karo.</p>
+        <button type="button" class="acct-mini-btn"
+                id="gs-to-name" disabled>Next — Group ka naam →</button>
+      </div>
+      <div class="gs-step" id="gs-step-name" hidden>
+        <p class="gs-step-title">Step 2 — Group ka naam</p>
+        <label>Group ka naam
+          <input type="text" name="name" id="gs-name" maxlength="60"
+                 placeholder="Jaise: Class 10 Maths" required>
+        </label>
+        <button type="button" class="gs-mini"
+                id="gs-to-members">← Members badlo</button>
+        <button type="submit" class="acct-mini-btn">Group banao</button>
+      </div>
     </form>
     <p class="muted">Sirf wahi dost add honge jinka number
        Ganitra par hai. Group me 2 se 30 log ho sakte hain.</p>
@@ -69,4 +118,113 @@
     </form>
   {% endif %}
 </div>
+<script>
+(function () {
+  var form = document.getElementById("gs-create");
+  if (!form) return;
+  var numInput = document.getElementById("gs-num"),
+      addBtn = document.getElementById("gs-add-num"),
+      err = document.getElementById("gs-num-err"),
+      chips = document.getElementById("gs-chips"),
+      phones = document.getElementById("gs-phones"),
+      phonesLabel = document.getElementById("gs-phones-label"),
+      count = document.getElementById("gs-count"),
+      nextBtn = document.getElementById("gs-to-name"),
+      stepMembers = document.getElementById("gs-step-members"),
+      stepName = document.getElementById("gs-step-name"),
+      backBtn = document.getElementById("gs-to-members"),
+      nameInput = document.getElementById("gs-name"),
+      numbers = [];
+
+  // JS hai to numbers chips se bante hain — textarea peeche
+  // backing store ban jata hai (bina JS ke wahi purana form).
+  phonesLabel.hidden = true;
+  phones.hidden = true;
+
+  function normalise(raw) {
+    var d = String(raw || "").replace(/\D/g, "");
+    if (d.length === 12 && d.indexOf("91") === 0) d = d.slice(2);
+    else if (d.length === 11 && d.charAt(0) === "0") d = d.slice(1);
+    return /^[6-9]\d{9}$/.test(d) ? d : null;
+  }
+
+  function sync() {
+    phones.value = numbers.join("\n");
+    chips.innerHTML = "";
+    numbers.forEach(function (n) {
+      var li = document.createElement("li");
+      var span = document.createElement("span");
+      span.textContent = n;
+      var x = document.createElement("button");
+      x.type = "button";
+      x.className = "gs-chip-x";
+      x.textContent = "×";
+      x.setAttribute("aria-label", n + " hatao");
+      x.addEventListener("click", function () {
+        numbers = numbers.filter(function (m) { return m !== n; });
+        sync();
+      });
+      li.appendChild(span);
+      li.appendChild(x);
+      chips.appendChild(li);
+    });
+    count.textContent = numbers.length === 0
+      ? "Abhi koi member add nahi hua — kam se kam 1 dost ka number add karo."
+      : numbers.length + " member add ho gaye"
+        + (numbers.length >= 30 ? " — group full (zyada se zyada 30)." : ".");
+    nextBtn.disabled = numbers.length === 0;
+  }
+
+  function addFromInput() {
+    var raw = numInput.value.trim();
+    if (!raw) return;
+    var bad = [];
+    raw.split(/[\s,;]+/).forEach(function (tok) {
+      if (!tok) return;
+      var n = normalise(tok);
+      if (!n) { bad.push(tok); return; }
+      if (numbers.indexOf(n) === -1 && numbers.length < 30) {
+        numbers.push(n);
+      }
+    });
+    if (bad.length) {
+      err.textContent = "Ye sahi 10-digit mobile number nahi hai: "
+        + bad.join(", ");
+      err.hidden = false;
+    } else {
+      err.hidden = true;
+      numInput.value = "";
+      numInput.focus();
+    }
+    sync();
+  }
+
+  addBtn.addEventListener("click", addFromInput);
+  numInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); addFromInput(); }
+  });
+  nextBtn.addEventListener("click", function () {
+    if (numbers.length === 0) return;
+    stepMembers.hidden = true;
+    stepName.hidden = false;
+    nameInput.focus();
+  });
+  backBtn.addEventListener("click", function () {
+    stepName.hidden = true;
+    stepMembers.hidden = false;
+    numInput.focus();
+  });
+  form.addEventListener("submit", function (e) {
+    if (numbers.length === 0) {
+      e.preventDefault();
+      stepName.hidden = true;
+      stepMembers.hidden = false;
+      err.textContent = "Pehle kam se kam 1 member add karo.";
+      err.hidden = false;
+      numInput.focus();
+    }
+  });
+  sync();
+})();
+</script>
 {% endblock %}
