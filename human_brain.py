@@ -167,10 +167,24 @@ def _words_to_digits(text):
                     current = (current or 1) * mult
                 last_mult = mult
                 seen = True
-            elif wj == "and" and seen and j + 2 < n and \
+            elif wj == "and" and seen and last_mult >= 100 \
+                    and j + 2 < n and \
                     (words[j + 2] in _NUM_ONES or
                      words[j + 2] in _NUM_TENS):
-                pass  # "one hundred and five" — skip the "and"
+                # "one hundred and five" — the "and" joins
+                # INSIDE one quantity, and only once a scale
+                # word (hundred / thousand / lakh...) has
+                # taken part. Wave 228: without a scale word
+                # the "and" is a CONJUNCTION between two
+                # operands — "twelve and eighteen" is 12 and
+                # 18, never 30 — so the sequence ends here
+                # and the second number converts on its own.
+                # (deep_solve.digitise states the same rule:
+                # the "and" may only join after a scale word.
+                # The old unconditional skip summed the pair:
+                # "HCF of twelve and eighteen" reached the
+                # solver as "HCF of 30".)
+                pass  # skip the "and", stay in the sequence
             else:
                 break
             j += 2  # step over the separator token
