@@ -70,6 +70,16 @@
             <button type="submit" class="gs-mini">Jawab bhejo</button>
           </form>
         {% endif %}
+        {% if p.kind == 'ganitra' and not group.closed_at %}
+          {# Wave 225: Ganitra ke apne jawab par follow-up —
+             "samjhao", "phir se karo" — usi ko addressed
+             mana jata hai (23 Nov spec nuance). #}
+          <form method="post" action="/groups/{{ group.id }}/post">
+            <input type="hidden" name="reply_to" value="{{ p.id }}">
+            <input type="text" name="text" placeholder="Ganitra se pucho — samjhao, phir se karo…">
+            <button type="submit" class="gs-mini">Pucho</button>
+          </form>
+        {% endif %}
         {% if p.author_id is not none and p.author_id != user_id %}
           <form method="post" action="/groups/{{ group.id }}/report">
             <input type="hidden" name="post_id" value="{{ p.id }}">
