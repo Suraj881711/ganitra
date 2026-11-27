@@ -5412,6 +5412,61 @@ def _with_fallback_chain(question, result, lang=None,
         if w125 is not None:
             return _with_figure(question, w125)
 
+    # Wave 227 (Deploy-70 live-failure root fix): the
+    # strict Wave 226 / Wave 223 gates sit deep in the
+    # router dispatch, BEHIND the expensive primary
+    # machinery, and the whole uncached solve runs under
+    # the router's wall-clock budget.  On the CPU-throttled
+    # production host that budget starves them: the primary
+    # dispatch on a hard string is cut before the gates run
+    # (the too-big refusal above), and a timed-out solve
+    # keeps grinding in its pool thread, racing the shared
+    # caches, so the request can also surface a stray
+    # fragment result (an "x = 0" equation solve carved out
+    # of the case-5 question) that this chain then demotes.
+    # Either way a question the gates own outright — the
+    # OCR-doubled two-part calculus ask of screenshot
+    # case 5 — fell through every layer below to the
+    # not-found line, while locally, at full CPU, the same
+    # solve finishes in ~0.5 s and the gates answer it.
+    # Consult both gates once here, in the router's own
+    # order (226 before 223), before the bank: this point
+    # is reached only when the primary outcome was NOT a
+    # real answer (failure, refusal, or a demoted
+    # fragment), each gate is a strict full-shape match
+    # that returns None on any doubt, and the multipart
+    # gate's part-solves are small single asks carrying
+    # their OWN budgets — so the question is settled
+    # without re-paying the starved primary dispatch, and
+    # every outcome the gates cannot settle runs the
+    # fall-through below exactly as before.  The 223
+    # consult is scoped to its Family 5 (op
+    # "multipart227") — the one family NO fall-through
+    # layer can settle (Wave 100's splitter has no
+    # check/differentiate asks and requires every part
+    # solved, so the incomplete-continuity shape can
+    # never survive it).  Families 1-4 are deliberately
+    # NOT served from here: on a long multi-question
+    # paste the mensuration family would claim just the
+    # first two asks and shadow the Wave 100 layer below,
+    # which answers the whole paste (screenshot case 6).
+    try:
+        from solver.wave226 import solve_wave226
+        w226 = solve_wave226(question)
+    except Exception:
+        w226 = None
+    if w226 is not None:
+        return _with_figure(question, w226)
+    try:
+        from solver.multipart223 import \
+            solve_multipart223
+        w223 = solve_multipart223(question)
+    except Exception:
+        w223 = None
+    if w223 is not None and \
+            w223.get("op") == "multipart227":
+        return _with_figure(question, w223)
+
     # Wave 39: the Verified Data Bank exact-match layer. It sits
     # AFTER the science guard (a science question is never
     # served from the bank) and after a real solver answer has
