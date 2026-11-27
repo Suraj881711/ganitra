@@ -569,13 +569,24 @@ def _named_answer(text):
     cross-leg consensus — never one leg's unchecked word).
     Returns the AI result dict, or None when the legs also
     have nothing — the caller then keeps the standing
-    one-line outcome, never a fabricated answer."""
+    one-line outcome, never a fabricated answer (Deploy-71
+    fix: when that standing outcome would be the not-found
+    clarification line, the caller posts the kind honest
+    line instead — see _named_honest_line)."""
     q = _strip_name(text)
     if not q:
         return None
     try:
         from fallback import _looks_hindi, _verified_ai_answer
-        res = _verified_ai_answer(q, _looks_hindi(q), None)
+        # Wave 228 (Deploy-71 fix): general=True is load-
+        # bearing, not decoration — the legs share ONE maths
+        # prompt that orders a NOT_MATHS reply to any
+        # non-maths question (mapped to None by the shaping),
+        # so without it a healthy leg can never answer a
+        # name-called general question; that, not quota, is
+        # what the Deploy-71 live check hit (see the packet).
+        res = _verified_ai_answer(q, _looks_hindi(q), None,
+                                  general=True)
     except Exception:
         return None
     if isinstance(res, dict) and _classify(res) == "answer":
@@ -595,6 +606,37 @@ def _named_body(result):
     if not any(s and s != ans for s in steps):
         return ans[:MAX_ANSWER_CHARS]
     return _answer_body(result)
+
+
+def _named_honest_line(text):
+    """Wave 228 (Deploy-71 fix): what a name-called question
+    earns when the AI legs genuinely have nothing right now
+    (quota gone, providers down) — a kind honest line in
+    Ganitra's voice: the answer could not be fetched just
+    now, ask again in a little while. It replaces ONLY the
+    not-found clarification line for a name-called question:
+    that line tells the student their question was unclear
+    ("maths ka sawal thoda saaf likh kar bhejo"), which is
+    false and unfair when the question was clear and was
+    addressed to Ganitra by name. The maths-only guard line
+    (the nonmaths outcome) is a different standing reply and
+    is untouched."""
+    try:
+        from fallback import _looks_hindi
+        hindi = _looks_hindi(text)
+    except Exception:
+        hindi = False
+    if hindi:
+        return ("Is sawal ka jawab main abhi la nahi paya — "
+                "thodi der me phir se puchna, main pakka "
+                "dobara koshish karunga. Tab tak koi maths ka "
+                "sawal ho to bhejo, main turant hal kar "
+                "dunga. 🙂")
+    return ("I could not fetch the answer to this one just "
+            "now — please ask again in a little while and I "
+            "will try my best again. Till then, if you have "
+            "a maths question, send it and I will solve it "
+            "right away. 🙂")
 
 
 _NUMBER_RE = re.compile(r"-?\d+\s*/\s*\d+|-?\d+\.\d+|-?\d+")
@@ -729,7 +771,9 @@ def post_message(group_id, author_id, text, reply_to=None):
     # science guidance keep their designed one-liners; a
     # maths question keeps its native answer exactly as
     # now. When the legs also have nothing, the standing
-    # plain outcome below stands — never a fake answer.
+    # plain outcome below stands — never a fake answer
+    # (Deploy-71 fix: a standing NOT-FOUND outcome becomes
+    # the kind honest line — see _named_honest_line).
     named = None
     if _NAME_RE.search(text) and outcome in ("plain", "none") \
             and not (isinstance(result, dict) and
@@ -741,6 +785,28 @@ def post_message(group_id, author_id, text, reply_to=None):
         if named is not None:
             pid = _insert_post(conn, group_id, None, "ganitra",
                                _named_body(named),
+                               reply_to=post["id"])
+            ganitra_posts.append(dict(conn.execute(
+                "SELECT * FROM group_posts WHERE id = ?",
+                (pid,)).fetchone()))
+        elif named is None and _NAME_RE.search(text) and (
+                outcome == "none" or
+                (outcome == "plain" and isinstance(result, dict)
+                 and result.get("fallback_kind")
+                 == "not_found")):
+            # Wave 228 (Deploy-71 fix): the question was
+            # addressed to Ganitra by name, the legs were
+            # tried and genuinely have nothing right now, and
+            # the standing outcome would be the not-found
+            # clarification line (or, for a "none" outcome,
+            # silence) — neither is an honest reply to a
+            # clear name-called question. Post the kind
+            # honest line instead. The maths-only guard line
+            # (a plain outcome of kind "nonmaths") still
+            # stands exactly as pinned.
+            pid = _insert_post(conn, group_id, None,
+                               "ganitra_note",
+                               _named_honest_line(text),
                                reply_to=post["id"])
             ganitra_posts.append(dict(conn.execute(
                 "SELECT * FROM group_posts WHERE id = ?",
