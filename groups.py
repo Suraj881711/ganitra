@@ -6,11 +6,17 @@ freely, and Ganitra sits quietly in the group — it speaks only
 when (a) a member posts a maths question (detected by meaning,
 via the real solve pipeline — no tag, no button needed),
 (b) a peer's answer to a maths question is wrong (a polite
-correction), or (c) a member addresses Ganitra by name with a
-non-maths question (the standing maths-only line). A follow-up
-to Ganitra's own last answer — "samjhao", "phir se karo", or
+correction), or (c) a member addresses Ganitra by name — on
+ANY topic: the name-called question is answered for real,
+via the verified AI legs when the native pipeline has no
+answer (Wave 228, completing Suraj's 23 Nov 2026 spec; the
+Wave 213 maths-only line survives only as the outcome when
+the legs also have nothing). A follow-up
+to Ganitra's own last answer — "samjhao", "phir se karo",
+"details mai chahiye", or
 any reply aimed at its answer post — counts as addressed to
-Ganitra (Wave 225, Suraj's 23 Nov 2026 spec nuance). Ordinary
+Ganitra (Wave 225, Suraj's 23 Nov 2026 spec nuance; the
+plain-message path completed in Wave 228). Ordinary
 member-to-member chat is never policed.
 
 IDENTITY (Suraj's security condition, 22 Nov): group membership
@@ -535,6 +541,62 @@ def _solve(text):
     return _solve_friendly(text)
 
 
+_NAME_RE = re.compile(r"\bganitra\b", re.I)
+
+
+def _strip_name(text):
+    """The question with Ganitra's name taken out — what the
+    student is actually asking, once the call is removed."""
+    q = _NAME_RE.sub(" ", str(text or ""))
+    return re.sub(r"\s+", " ", q).strip(" ,:;—-").strip()
+
+
+def _named_answer(text):
+    """Wave 228: the name-call route to the AI legs.
+
+    Suraj's 23 Nov 2026 behaviour spec: a member who calls
+    Ganitra by name gets an answer on ANY topic. The native
+    pipeline cannot promise that — its maths-only guard
+    refuses a general question before the legs are ever
+    consulted ("Ganitra, what is the capital of India?"),
+    and a total miss ends at the not-found line even when a
+    leg could have answered (the Deploy-68 live partial:
+    the canned line for "Ganitra, Bharat ki rajdhani kya
+    hai?"). So a name-called message with no native answer
+    is put to fallback's verified AI chain directly (the
+    Wave 226 gate: a prose question is served by the first
+    sane leg; a valued one needs a deterministic pass or a
+    cross-leg consensus — never one leg's unchecked word).
+    Returns the AI result dict, or None when the legs also
+    have nothing — the caller then keeps the standing
+    one-line outcome, never a fabricated answer."""
+    q = _strip_name(text)
+    if not q:
+        return None
+    try:
+        from fallback import _looks_hindi, _verified_ai_answer
+        res = _verified_ai_answer(q, _looks_hindi(q), None)
+    except Exception:
+        return None
+    if isinstance(res, dict) and _classify(res) == "answer":
+        return res
+    return None
+
+
+def _named_body(result):
+    """The named answer's post body: the full steps+answer
+    format when the legs gave real working, the bare answer
+    when they gave prose (whose single step merely restates
+    the answer — the steps+answer format would print it
+    twice)."""
+    ans = _strip_markup(result.get("answer"))
+    steps = [_strip_markup(s) for s in (result.get("steps")
+                                        or [])]
+    if not any(s and s != ans for s in steps):
+        return ans[:MAX_ANSWER_CHARS]
+    return _answer_body(result)
+
+
 _NUMBER_RE = re.compile(r"-?\d+\s*/\s*\d+|-?\d+\.\d+|-?\d+")
 
 
@@ -643,9 +705,10 @@ def post_message(group_id, author_id, text, reply_to=None):
     # question here; any other follow-up falls through to the
     # normal pipeline with addressed=True.
     follow = _own_answer_followup(group_id, post, target, text)
-    if follow is not None and follow[0] in ("redo", "explain"):
+    if follow is not None and follow[0] in (
+            "redo", "explain", "detail", "steps"):
         note = _answer_followup(group_id, post, follow[1],
-                                follow[0])
+                                follow[0], anchor_post=follow[2])
         if note:
             ganitra_posts.append(note)
             return post, ganitra_posts, None
@@ -658,9 +721,31 @@ def post_message(group_id, author_id, text, reply_to=None):
     outcome = _classify(result)
     addressed = bool(re.search(r"\bganitra\b", text, re.I)) \
         or follow is not None
+    # Wave 228: a member who calls Ganitra by name gets an
+    # answer on any topic (23 Nov spec) — when the native
+    # pipeline has none (the maths-only guard, or a total
+    # miss), the question goes to the verified AI legs
+    # before any guard line is posted. Greetings and the
+    # science guidance keep their designed one-liners; a
+    # maths question keeps its native answer exactly as
+    # now. When the legs also have nothing, the standing
+    # plain outcome below stands — never a fake answer.
+    named = None
+    if _NAME_RE.search(text) and outcome in ("plain", "none") \
+            and not (isinstance(result, dict) and
+                     result.get("fallback_kind") in
+                     ("greeting", "science")):
+        named = _named_answer(text)
     conn = _connect()
     try:
-        if outcome == "answer":
+        if named is not None:
+            pid = _insert_post(conn, group_id, None, "ganitra",
+                               _named_body(named),
+                               reply_to=post["id"])
+            ganitra_posts.append(dict(conn.execute(
+                "SELECT * FROM group_posts WHERE id = ?",
+                (pid,)).fetchone()))
+        elif outcome == "answer":
             conn.execute(
                 "UPDATE group_posts SET kind = 'question' "
                 "WHERE id = ?", (post["id"],))
@@ -703,25 +788,98 @@ def post_message(group_id, author_id, text, reply_to=None):
 
 
 def _followup_intent(text):
-    """human_brain's redo/explain classification for a group
-    follow-up, with Ganitra's name stripped first — a name
-    mention must not stop "Ganitra, samjhao" from parsing."""
+    """The follow-up classification for a group message, with
+    Ganitra's name stripped first — a name mention must not
+    stop "Ganitra, samjhao" from parsing. Wave 228: besides
+    human_brain's redo/explain, the bare VIEW requests the
+    1:1 chat has owned since Wave 148/226 — "details mai
+    chahiye", "step by step batao" (followups'
+    parse_bare_view_request) — count too; before this wave
+    they parsed as nothing here and a plain group message
+    asking for detail earned silence."""
+    stripped = re.sub(r"\bganitra\b", " ", text or "", flags=re.I)
     try:
         from human_brain import parse_human_followup
+        intent = parse_human_followup(stripped)
+    except Exception:
+        intent = None
+    if intent is not None:
+        return intent
+    try:
+        from followups import parse_bare_view_request
+        return parse_bare_view_request(stripped)
     except Exception:
         return None
-    stripped = re.sub(r"\bganitra\b", " ", text or "", flags=re.I)
-    return parse_human_followup(stripped)
+
+
+def _thread_question(group_id, anchor):
+    """The original question post a Ganitra post belongs to,
+    walking the reply chain (Wave 228 — the group thread
+    anchor). One hop used to be all there was: a follow-up
+    answer post points at the MEMBER's follow-up message,
+    not at the question, so a second follow-up in a row
+    ("samjhao" answered, then "phir se karo") lost the
+    question and collapsed. The walk follows reply_to
+    through Ganitra's own posts, and through a member post
+    only when that post is itself a bare follow-up (the
+    chain continues via the Ganitra answer that preceded
+    it) — a fresh member message ends the walk, so an old
+    unrelated answer is never claimed. Bounded and
+    cycle-safe; None when the thread holds no question."""
+    conn = _connect()
+    try:
+        cur = anchor
+        seen = set()
+        for _ in range(10):
+            if cur is None or cur.get("id") in seen:
+                return None
+            seen.add(cur.get("id"))
+            target_id = cur.get("reply_to")
+            if not target_id:
+                return None
+            row = conn.execute(
+                "SELECT * FROM group_posts WHERE id = ? AND "
+                "group_id = ?", (target_id, group_id)).fetchone()
+            if row is None:
+                return None
+            target = dict(row)
+            if target["kind"] == "question":
+                return target
+            if target["kind"] in ("ganitra", "ganitra_note"):
+                cur = target
+                continue
+            # A member post: the chain continues only when
+            # it was itself a follow-up Ganitra answered —
+            # via the latest Ganitra post before it.
+            if _followup_intent(target["body"]) is None:
+                return None
+            row = conn.execute(
+                "SELECT * FROM group_posts WHERE group_id = ? "
+                "AND id < ? AND kind = 'ganitra' ORDER BY id "
+                "DESC LIMIT 1", (group_id, target["id"])
+                ).fetchone()
+            if row is None:
+                return None
+            cur = dict(row)
+        return None
+    finally:
+        conn.close()
 
 
 def _own_answer_followup(group_id, post, target, text):
-    """(intent, question_post) when this message follows up
-    Ganitra's own last answer, else None (Wave 225).
+    """(intent, question_post, anchor_post) when this message
+    follows up Ganitra's own last answer, else None
+    (Wave 225, completed by Wave 228).
 
     Two shapes count: an explicit reply to Ganitra's answer
-    post (or to its correction note), and a bare redo/explain
-    ask posted right after Ganitra's answer — i.e. Ganitra's
-    answer is the latest post in the group. Anything else is
+    post (or to its correction note), and a bare follow-up
+    ask (redo / explain / detail / steps) posted right after
+    Ganitra's answer — i.e. Ganitra's answer is the latest
+    post in the group. The question is resolved through the
+    thread anchor (_thread_question); when the thread holds
+    no question post (Ganitra's answer was to a name-called
+    general question), the anchor itself is returned so the
+    caller can still re-serve from it. Anything else is
     ordinary chat and earns the usual silence."""
     intent = _followup_intent(text)
     anchor = None
@@ -729,7 +887,7 @@ def _own_answer_followup(group_id, post, target, text):
     if target is not None and target["kind"] in ("ganitra",
                                                  "ganitra_note"):
         anchor, explicit = target, True
-    elif intent in ("redo", "explain"):
+    elif intent in ("redo", "explain", "detail", "steps"):
         conn = _connect()
         try:
             row = conn.execute(
@@ -742,47 +900,88 @@ def _own_answer_followup(group_id, post, target, text):
             anchor = dict(row)
     if anchor is None:
         return None
-    if not explicit and intent not in ("redo", "explain"):
+    if not explicit and intent not in (
+            "redo", "explain", "detail", "steps"):
         return None
-    question = None
-    if anchor.get("reply_to"):
+    question = _thread_question(group_id, anchor)
+    if intent in ("redo", "explain", "detail", "steps") \
+            and question is None and anchor["kind"] != "ganitra":
+        # A redo/explain aimed at a mere note (whose thread
+        # holds no question and which carries no answer of
+        # its own to re-serve) is not a follow-up we can
+        # honour — ordinary addressed chat, as before.
+        return None
+    return (intent or "chat"), question, anchor
+
+
+def _answer_followup(group_id, member_post, question_post,
+                     intent, anchor_post=None):
+    """Re-serve Ganitra's answer to the question a follow-up
+    points at (Wave 225, completed by Wave 228): 'redo'
+    solves it fresh, 'explain' / 'detail' / 'steps' solve
+    it with fuller steps, each redo/explain behind its kind
+    opening line.
+
+    Wave 228: when the fresh solve cannot reproduce an
+    answer this time (a leg's quota is gone, a cached miss
+    intervenes — the Deploy-68 live shape, where the
+    follow-up collapsed to silence or the generic line),
+    Ganitra re-serves the answer it ALREADY gave in this
+    thread — the anchor post's stored body — instead of
+    going quiet: the answer of record is in the thread."""
+    qtext = None
+    if question_post is not None:
+        qtext = question_post["body"]
+    elif anchor_post is not None and anchor_post.get("reply_to"):
         conn = _connect()
         try:
             row = conn.execute(
-                "SELECT * FROM group_posts WHERE id = ? AND "
-                "group_id = ?", (anchor["reply_to"], group_id)
-                ).fetchone()
+                "SELECT body FROM group_posts WHERE id = ? "
+                "AND group_id = ?",
+                (anchor_post["reply_to"], group_id)).fetchone()
         finally:
             conn.close()
-        if row is not None and row["kind"] == "question":
-            question = dict(row)
-    if intent in ("redo", "explain") and question is None:
+        if row is not None:
+            qtext = row["body"]
+    body = None
+    if qtext:
+        result = _solve(qtext)
+        if _classify(result) == "answer":
+            try:
+                from fallback import _looks_hindi
+                lang = "hi" if _looks_hindi(qtext) else "en"
+            except Exception:
+                lang = "en"
+            body = _answer_body(
+                result, max_steps=12 if intent in (
+                    "explain", "detail", "steps") else 6)
+            try:
+                from human_brain import intro_line
+                intro = intro_line(intent, lang)
+            except Exception:
+                intro = None
+            if intro:
+                body = f"{intro}\n{body}"
+    if body is None and anchor_post is not None:
+        stored = _strip_markup(anchor_post.get("body"))
+        if stored:
+            body = stored
+            if intent in ("redo", "explain"):
+                try:
+                    from fallback import _looks_hindi
+                    lang = "hi" if _looks_hindi(
+                        qtext or "") else "en"
+                except Exception:
+                    lang = "en"
+                try:
+                    from human_brain import intro_line
+                    intro = intro_line(intent, lang)
+                except Exception:
+                    intro = None
+                if intro:
+                    body = f"{intro}\n{body}"
+    if body is None:
         return None
-    return (intent or "chat"), question
-
-
-def _answer_followup(group_id, member_post, question_post, intent):
-    """Re-serve Ganitra's answer to the question a follow-up
-    points at (Wave 225): 'redo' solves it fresh, 'explain'
-    solves it with fuller steps, each behind its kind opening
-    line. None when the pipeline has no answer this time."""
-    result = _solve(question_post["body"])
-    if _classify(result) != "answer":
-        return None
-    try:
-        from fallback import _looks_hindi
-        lang = "hi" if _looks_hindi(question_post["body"]) else "en"
-    except Exception:
-        lang = "en"
-    body = _answer_body(result,
-                        max_steps=12 if intent == "explain" else 6)
-    try:
-        from human_brain import intro_line
-        intro = intro_line(intent, lang)
-    except Exception:
-        intro = None
-    if intro:
-        body = f"{intro}\n{body}"
     conn = _connect()
     try:
         pid = _insert_post(conn, group_id, None, "ganitra", body,
