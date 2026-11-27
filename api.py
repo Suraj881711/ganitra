@@ -1,8 +1,9 @@
+import os
 import re
 import time
 
-from flask import Blueprint, Response, request, jsonify, \
-    session, stream_with_context
+from flask import Blueprint, Response, current_app, request, \
+    jsonify, session, stream_with_context
 from i18n import (LANG_NAMES, SPEECH_LANGS, advice_for,
                   explanation_for, get_strings, normalise_lang,
                   result_is_plain, result_unsolvable,
@@ -26,6 +27,53 @@ api_bp = Blueprint("api", __name__)
 
 _HISTORY_LIMIT = 30
 _QUESTION_LIMIT = 500
+
+# Wave 227 (Suraj's screenshot case 6 + the external audit's
+# DoS row): the 500-char line used to REJECT a pasted paper
+# outright — "That question is a bit long, keep it under
+# about 500 characters", again and again, for a student who
+# had pasted a whole paper.  The solve pipeline itself
+# splits a long paste part-wise (the multipart layer), so a
+# long question is no longer refused: it flows into the
+# solve and is answered part by part.  Only an absurd
+# payload past this hard ceiling keeps the old too-long
+# reply, purely as a payload-size guard.
+_QUESTION_HARD_LIMIT = 8000
+
+# Wave 227: a basic per-client rate limit for /api/solve —
+# the audit found none at all.  At most this many solves per
+# rolling minute per logged-in user (per IP when anonymous):
+# a student never comes close, a hammering script is capped.
+# The budget clock lives on the app instance, so every fresh
+# app (each test run) starts clean.  Set the env var to 0 to
+# disable.
+_SOLVE_RATE_PER_MINUTE = int(
+    os.environ.get("GANITRA_SOLVE_RATE_LIMIT", "300"))
+_SOLVE_RATE_WINDOW = 60.0
+
+
+def _solve_rate_limited():
+    """True when this client has spent its per-minute solve
+    budget.  Fail-open on any bookkeeping error: a limiter
+    bug must never block a student's question."""
+    if _SOLVE_RATE_PER_MINUTE <= 0:
+        return False
+    try:
+        store = current_app.extensions.setdefault(
+            "ganitra_solve_rate", {})
+        key = session.get("user_id") or \
+            request.remote_addr or "anonymous"
+        now = time.monotonic()
+        hits = [t for t in store.get(key, [])
+                if now - t < _SOLVE_RATE_WINDOW]
+        if len(hits) >= _SOLVE_RATE_PER_MINUTE:
+            store[key] = hits
+            return True
+        hits.append(now)
+        store[key] = hits
+        return False
+    except Exception:
+        return False
 
 
 def trimmed_history_entry(question, result):
@@ -509,10 +557,21 @@ def api_solve():
         return jsonify({"ok": False,
                         "message": strings["flash_no_question"],
                         **_lang_fields(lang, strings, False)})
-    if len(question) > _QUESTION_LIMIT:
+    if len(question) > _QUESTION_HARD_LIMIT:
         return jsonify({"ok": False,
                         "message": strings["flash_too_long"],
                         **_lang_fields(lang, strings, False)})
+    # Wave 227: a paste between the old 500-char line and the
+    # hard ceiling is NOT refused any more — it flows into
+    # the solve below, whose multipart layer splits it and
+    # solves it part-wise (screenshot case 6).
+    if _solve_rate_limited():
+        return jsonify({"ok": False,
+                        "message": "Too many questions at "
+                                   "once — please wait a "
+                                   "minute and try again.",
+                        **_lang_fields(lang, strings,
+                                        False)}), 429
 
     # Wave 216: per-chat follow-up anchoring. If the session's
     # last_result belongs to a DIFFERENT chat than this request,
@@ -1839,10 +1898,17 @@ def api_solve_stream():
         return jsonify({"ok": False,
                         "message": strings["flash_no_question"],
                         **_lang_fields(lang, strings, False)})
-    if len(question) > _QUESTION_LIMIT:
+    if len(question) > _QUESTION_HARD_LIMIT:
         return jsonify({"ok": False,
                         "message": strings["flash_too_long"],
                         **_lang_fields(lang, strings, False)})
+    if _solve_rate_limited():
+        return jsonify({"ok": False,
+                        "message": "Too many questions at "
+                                   "once — please wait a "
+                                   "minute and try again.",
+                        **_lang_fields(lang, strings,
+                                        False)}), 429
 
     # Language handling identical to api_solve (Wave 9
     # auto-detect + the Wave 107 explicit-request override) —
@@ -2142,7 +2208,7 @@ def api_solve_stream_commit():
     question = _json_str(data, "question")
     result = data.get("result")
     if question is None or not question.strip() \
-            or len(question) > _QUESTION_LIMIT \
+            or len(question) > _QUESTION_HARD_LIMIT \
             or not isinstance(result, dict) \
             or "answer" not in result:
         return jsonify({"ok": False,
@@ -2175,7 +2241,7 @@ def api_solve_method():
     method_id = method_id.strip()
     lang = normalise_lang(session.get("lang", "en"))
     if not question or not method_id \
-            or len(question) > _QUESTION_LIMIT:
+            or len(question) > _QUESTION_HARD_LIMIT:
         return jsonify({"ok": False, "error": "method-unavailable"})
     primary = _solve_friendly(question)
     if solve_failed(question, primary):
