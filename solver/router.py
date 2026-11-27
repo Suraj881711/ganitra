@@ -4665,6 +4665,33 @@ def _solve_question_uncached(question: str):
             out["interpreted_as"] = translated
         return out
 
+    # Wave 226: the AI-first conversion gates (solver/
+    # wave226.py) — three strict full-shape families the main
+    # dispatch provably mis-serves: bare factorial asks in a
+    # sentence ("7! kitna hota hai" was served the operand 7;
+    # "(-3)!" was served -3), the interest formula dress
+    # ("simple interest P=1000 R=5 T=2" was served "P = 1000"
+    # by the equation solver) and bare log/ln values
+    # ("ln(e)", "log 1000" served unevaluated). Each gate is
+    # a strict shape match and returns None on any doubt, so
+    # everything else flows exactly as before. The gate sits
+    # before Wave 223/222 for the same reason they sit where
+    # they do: a shape owned here must never be claimed by a
+    # later single-ask layer first.
+    try:
+        from .wave226 import solve_wave226
+        out = solve_wave226(original)
+        if out is None and folded != original:
+            out = solve_wave226(folded)
+        if out is None and working != original:
+            out = solve_wave226(working)
+    except Exception:
+        out = None
+    if out is not None:
+        if was_translated:
+            out["interpreted_as"] = translated
+        return out
+
     # Wave 223: multi-part questions (DeepSeek Job 9, solver/
     # multipart223.py) — a question carrying TWO genuine asks
     # ("area and perimeter of a rectangle ...", "3 ghante..."

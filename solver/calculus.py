@@ -859,11 +859,15 @@ def _w80_integral(q):
             return None
     except Exception:
         return None
+    # Wave 226: same ln|x| rule as the word-form branch —
+    # ∫ 1/x dx is ln|x| + C, never "log(x) + C".
+    _ans226 = f"ln|{var}| + C" if F == sp.log(vsym) \
+        else f"{fmt(F)} + C"
     steps = [f"Integrate {integrand} with respect to {var} "
              f"(standard forms / substitution).",
-             f"∫ {integrand} d{var} = {fmt(F)} + C"]
+             f"∫ {integrand} d{var} = {_ans226}"]
     return {"type": "calculus", "op": "integral",
-            "answer": f"{fmt(F)} + C", "steps": steps}
+            "answer": _ans226, "steps": steps}
 
 
 def _w80_abs_linear_definite(expr, vsym, lo_v, hi_v):
@@ -2012,6 +2016,20 @@ def solve_calculus(question: str):
             expr_text = expr_text[:_mwrt.start()]
         expr_text = re.sub(r"\s*d[a-zA-Z]\s*$", "", expr_text)
         expr_text = expr_text.strip().strip(".").strip()
+        # Wave 226: OCR / board dress doubles the instruction
+        # ("Integration Evaluate: integral x e^x dx" — the
+        # regex above consumed the FIRST "integr..." token and
+        # left "Evaluate: integral ..." as the integrand, which
+        # is prose and died). Strip any FURTHER leading
+        # instruction tokens so the integrand itself remains.
+        for _ in range(3):
+            _stripped = re.sub(
+                r"^\s*(?:integr\w*|evaluate|find|solve|"
+                r"calculate)\b\s*(?:of\s*)?[:\-]?\s*", "",
+                expr_text, flags=re.I)
+            if _stripped == expr_text:
+                break
+            expr_text = _stripped.strip()
         wants_graph = bool(re.search(
             r"\b(graph|plot|sketch|shade|diagram)\b", q, re.I))
         bound_b = m.group(3)
@@ -2023,6 +2041,12 @@ def solve_calculus(question: str):
                 bound_b = mb.group(1)
         if bound_b:
             bound_b = bound_b.strip().rstrip(".")
+        # Wave 226: unglue a variable letter stuck to e^
+        # ("xe^x" for "x e^x", the OCR dress) BEFORE the
+        # prose guard — the guard reads the glued "xe" as a
+        # two-letter word and declines a genuine integrand.
+        expr_text = re.sub(r"(?<![A-Za-z])([a-zA-Z])e\s*\^",
+                           r"\1 e^", expr_text)
         # Wave 125: prose guard, same as the derivative
         # branch — "integration kaise karte hain…" leaves a
         # sentence here, not an integrand.
@@ -2037,7 +2061,14 @@ def solve_calculus(question: str):
         # mangled worse). A bare e in e^... is Euler's
         # number: swap it for E before the variable is
         # guessed, so the integrand's only symbol is x.
-        if re.search(r"\be\s*\^", expr_text):
+        # Wave 226: the trigger no longer demands a word
+        # boundary before "e^" — the glued form "xe^x" (the
+        # OCR dress of "x e^x") has the e glued to the x, so
+        # \b never fired and the integrand kept a free symbol
+        # e and died. In an integrand, e^... is Euler's
+        # number; the swap below only touches the symbol
+        # literally named "e".
+        if re.search(r"e\s*\^", expr_text):
             _es52 = [s for s in expr.free_symbols
                      if str(s) == "e"]
             if _es52:
@@ -2066,6 +2097,26 @@ def solve_calculus(question: str):
                     pass
             return out
         val = integrate(expr, var)
+        # Wave 226 (external audit): ∫ 1/x dx was served as
+        # "log(x) + C" — the school answer is ln|x| + C
+        # (natural log, modulus: 1/x is defined for negative
+        # x too). SymPy's antiderivative is exactly log(var)
+        # only for the 1/var integrand, so the special case
+        # is precise.
+        if val == sp.log(var):
+            return {
+                "type": "calculus",
+                "op": "integral",
+                "answer": f"ln|{var}| + C",
+                "value": f"ln|{var}|",
+                "steps": [
+                    f"∫ 1/{var} d{var} is a standard form: "
+                    f"the antiderivative of 1/{var} is "
+                    f"ln|{var}|.",
+                    f"∫ 1/{var} d{var} = ln|{var}| + C",
+                ],
+                "latex": sp.latex(val),
+            }
         return {
             "type": "calculus",
             "op": "integral",

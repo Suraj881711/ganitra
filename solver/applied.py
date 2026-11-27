@@ -1348,7 +1348,17 @@ def _discount(q):
     if "discount" not in q:
         return None
     md = re.search(r"discount\s+of\s+(" + _NUM + r")\s*%", q) \
-        or re.search(r"(" + _NUM + r")\s*%\s+discount", q)
+        or re.search(r"(" + _NUM + r")\s*%\s+discount", q) \
+        or re.search(
+            # Wave 226: the bare audit form "discount 20%
+            # on 500" — the percent must be glued to its
+            # "on <amount>" (the adjacency is the shape).
+            # A bare "discount N%" anywhere in a longer
+            # text (a multi-item GST bill carries one per
+            # item) must NOT arm this solver: Wave 146's
+            # Q6(iii) bill was captured by exactly that.
+            r"discount\s+(?:of\s+)?(" + _NUM + r")\s*%\s+on\s+"
+            r"(?:" + _RS + r"\s*)?" + _NUM, q)
     if not md:
         return None
     d = _num(md.group(1))
@@ -1415,6 +1425,13 @@ def _discount(q):
             r"discount\s+of\s+" + _NUM + r"\s*%\s+on\s+"
             r"[\w\s]{0,24}?(?:" + _RS + r"\s*)?(" + _NUM + r")",
             q) or re.search(
+                # Wave 226: the bare audit form "discount
+                # 20% on 500" — the amount the discount is
+                # ON is the marked price; no other pattern
+                # above reads it.
+                r"discount\s+(?:of\s+)?" + _NUM + r"\s*%\s+on\s+"
+                r"(?:" + _RS + r"\s*)?(" + _NUM + r")",
+                q) or re.search(
                 # Wave 56: "the marked price of an article is
                 # Rs 1500" — words sit between "marked price"
                 # and the amount.
