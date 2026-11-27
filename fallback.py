@@ -5023,6 +5023,30 @@ def _with_fallback_chain(question, result, lang=None,
             "reasoning_negation", "reasoning_quantifier") \
             and _is_real(question, result):
         return result
+    # Wave 228: SAATHI MODE (saathi.py) — a personal /
+    # emotional share in the 1:1 chat ("mujhe bahut tension
+    # ho rahi hai", "ghar par kisi ko bata nahi sakta") is
+    # NOT a study question: it must not earn the maths-only
+    # line below, the not-found line, or a study-motivation
+    # card. It sits here, ahead of the non-maths guard and
+    # every solving layer, but behind the greeting and the
+    # real-result guards: the detector's own triple gate
+    # (self-reference + personal theme + NO maths payload)
+    # plus the not-_is_real condition below keep every real
+    # problem and every other-subject study ask out — those
+    # flow on exactly as before. The serve is a plain
+    # result, so the Live Bank never stores it (see
+    # saathi.py's docstring).
+    if not _is_real(question, result):
+        try:
+            from saathi import saathi_result
+            w228_saathi = saathi_result(
+                question, hindi, lang=lang,
+                lang_request=lang_request)
+        except Exception:
+            w228_saathi = None
+        if w228_saathi is not None:
+            return w228_saathi
     if _is_nonmaths(question):
         return _nonmaths_result(question, hindi, req_flavour)
 
