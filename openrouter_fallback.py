@@ -115,14 +115,18 @@ def _shape_openrouter_result(text):
     return shaped
 
 
-def try_openrouter_answer(question, lang=None, detail=False):
+def try_openrouter_answer(question, lang=None, detail=False,
+                          general=False):
     """Ask OpenRouter to solve `question` and return a shaped
     Ganitra result dict — or None on ANY problem (no key,
     timeout/stall, HTTP/API error, non-JSON, empty or
     non-maths reply). Never raises: the caller falls back to
     the Wave-18 answer. `detail` (Wave 136) selects the
     shared prompt's DETAIL variant; the default False is
-    byte-identical to before."""
+    byte-identical to before. `general` (Wave 228,
+    Deploy-71 fix) selects the shared GENERAL prompt (any
+    topic, no NOT_MATHS rule) for the group name-call
+    route."""
     question = str(question or "").strip()
     if not question:
         return None
@@ -133,7 +137,9 @@ def try_openrouter_answer(question, lang=None, detail=False):
         "model": MODEL,
         "messages": [{"role": "user",
                       "content": _build_prompt(
-                          question, lang, detail=detail)}],
+                          question, lang, detail=detail,
+                          **({"general": True}
+                             if general else {}))}],
         "temperature": 0.2,
         "max_tokens": MAX_TOKENS,
     }
