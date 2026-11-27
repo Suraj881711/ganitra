@@ -10,14 +10,32 @@ os.environ.setdefault("MPLCONFIGDIR", "/tmp/mplconfig")
 from app import create_app  # noqa: E402
 from solver.router import solve_question  # noqa: E402
 
+# Wave 227 (BUG-007, ChatGPT code audit): an expectation may
+# be a LIST of substrings — the answer must contain EVERY
+# one.  The old single-substring check passed an INCOMPLETE
+# solution set: "x^2 - 5x + 6 = 0" expected only "x = 2", so
+# an answer missing the second root x = 3 still printed
+# PASS.  Set-valued samples (both roots, both unknowns,
+# both eigenvalues, both trig solutions) now name their
+# complete set.
+def check_sample(answer, expect):
+    """True when the answer carries the COMPLETE expected
+    value set: every required substring present.  A plain
+    string expectation is a one-element set."""
+    required = [expect] if isinstance(expect, str) \
+        else list(expect)
+    text = str(answer or "")
+    return all(part in text for part in required)
+
+
 SAMPLES = [
-    # (category, question, substring expected in the answer)
+    # (category, question, substring(s) the answer must ALL contain)
     ("arithmetic", "2+2*5", "12"),
     ("arithmetic-fraction", "3/4 + 1/2", "5/4"),
     ("arithmetic-percent", "15% of 240", "36"),
     ("algebra-linear", "2*x + 3 = 7", "x = 2"),
-    ("algebra-quadratic", "x^2 - 5x + 6 = 0", "x = 2"),
-    ("algebra-system", "x + y = 10 and x - y = 4", "x = 7"),
+    ("algebra-quadratic", "x^2 - 5x + 6 = 0", ["x = 2", "x = 3"]),
+    ("algebra-system", "x + y = 10 and x - y = 4", ["x = 7", "y = 3"]),
     ("algebra-inequality", "2x + 3 > 7", "2"),
     ("algebra-factor", "factor x^2 - 5x + 6", "x - 2"),
     ("algebra-expand", "expand (x+2)(x+3)", "x^2 + 5"),
@@ -27,7 +45,7 @@ SAMPLES = [
     ("trig-value-deg", "sin 30", "1/2"),
     ("trig-value-rad", "cos(pi/3)", "1/2"),
     ("trig-identity", "prove sin^2(x) + cos^2(x) = 1", "verified"),
-    ("trig-equation", "solve sin(x) = 1/2", "150"),
+    ("trig-equation", "solve sin(x) = 1/2", ["30", "150"]),
     ("trig-inverse", "arcsin(0.5)", "30"),
     ("calculus-limit", "limit x->0 of sin(x)/x", "1"),
     ("calculus-derivative", "derivative of x^3 + 2x", "3"),
@@ -38,10 +56,10 @@ SAMPLES = [
     ("calculus-ode", "solve dy/dx = 2x", "C1"),
     ("linalg-det", "determinant of [[1,2],[3,4]]", "-2"),
     ("linalg-inverse", "inverse of [[1,2],[3,4]]", "-2"),
-    ("linalg-eigen", "eigenvalues of [[2,0],[0,3]]", "3"),
+    ("linalg-eigen", "eigenvalues of [[2,0],[0,3]]", ["2", "3"]),
     ("linalg-rank", "rank of [[1,2],[2,4]]", "1"),
     ("linalg-multiply", "multiply [[1,2],[3,4]] and [[5,6],[7,8]]", "19"),
-    ("linalg-solve", "A=[[2,1],[1,3]], b=[[5],[10]]", "1"),
+    ("linalg-solve", "A=[[2,1],[1,3]], b=[[5],[10]]", ["1", "3"]),
     ("geometry-area", "area of circle with radius 5", "78.5"),
     ("geometry-volume", "volume of sphere with radius 3", "113"),
     ("geometry-distance", "distance between (1,2) and (4,6)", "5"),
@@ -95,48 +113,63 @@ SAMPLES = [
     ("hinglish-trig", "sin 30 ka maan", "1/2"),
 ]
 
-fails = []
-for cat, q, expect in SAMPLES:
-    r = solve_question(q)
-    answer = str(r.get("answer", ""))
-    ok = expect in answer and r.get("op") != "error"
-    steps = len(r.get("steps") or [])
-    print(f"[{'PASS' if ok else 'FAIL'}] {cat:26} {q[:52]:54} -> "
-          f"{answer[:44]} (steps={steps})")
-    if not ok:
-        fails.append((cat, q, r))
+def main():
+    """The battery itself.  Wave 227: it lives behind the
+    __main__ guard (it used to run at import time) so tests
+    can import SAMPLES / check_sample without paying for a
+    full run."""
+    fails = []
+    for cat, q, expect in SAMPLES:
+        r = solve_question(q)
+        answer = str(r.get("answer", ""))
+        ok = check_sample(answer, expect) \
+            and r.get("op") != "error"
+        steps = len(r.get("steps") or [])
+        print(f"[{'PASS' if ok else 'FAIL'}] {cat:26} "
+              f"{q[:52]:54} -> {answer[:44]} (steps={steps})")
+        if not ok:
+            fails.append((cat, q, r))
 
-print()
-app = create_app()
-client = app.test_client()
+    print()
+    app = create_app()
+    client = app.test_client()
 
-r = client.get("/")
-print("GET / ->", r.status_code)
-r = client.get("/practice")
-body = r.get_data(as_text=True)
-print("GET /practice ->", r.status_code,
-      "| questions rendered:", body.count("practice-q"),
-      "| has Show answer:", "Show answer" in body)
-r = client.post("/solve", data={"question": "derivative of x^3 + 2x"})
-body = r.get_data(as_text=True)
-print("POST /solve (derivative) ->", r.status_code,
-      "| steps shown:", 'id="steps-list"' in body,
-      "| answer present:", "3" in body)
-r = client.post("/api/solve", json={"question": "integrate x^2 from 0 to 1"})
-data = r.get_json()
-print("POST /api/solve ->", r.status_code, "| ok:", data["ok"],
-      "| answer:", data["result"]["answer"],
-      "| steps:", len(data["result"].get("steps", [])))
+    r = client.get("/")
+    print("GET / ->", r.status_code)
+    r = client.get("/practice")
+    body = r.get_data(as_text=True)
+    print("GET /practice ->", r.status_code,
+          "| questions rendered:", body.count("practice-q"),
+          "| has Show answer:", "Show answer" in body)
+    r = client.post("/solve",
+                    data={"question": "derivative of x^3 + 2x"})
+    body = r.get_data(as_text=True)
+    print("POST /solve (derivative) ->", r.status_code,
+          "| steps shown:", 'id="steps-list"' in body,
+          "| answer present:", "3" in body)
+    r = client.post("/api/solve",
+                    json={"question": "integrate x^2 from 0 to 1"})
+    data = r.get_json()
+    print("POST /api/solve ->", r.status_code, "| ok:",
+          data["ok"], "| answer:", data["result"]["answer"],
+          "| steps:", len(data["result"].get("steps", [])))
 
-r = solve_question("plot x^2 - 3x + 2")
-print("plot result:", r.get("type"), r.get("image"))
-img = Path(__file__).parent / "static" / (r.get("image") or "")
-print("graph PNG exists:", img.exists(),
-      "| size:", img.stat().st_size if img.exists() else 0, "bytes")
-if not img.exists() or img.stat().st_size < 2000:
-    fails.append(("plot", "plot x^2 - 3x + 2", r))
+    r = solve_question("plot x^2 - 3x + 2")
+    print("plot result:", r.get("type"), r.get("image"))
+    img = Path(__file__).parent / "static" / (r.get("image") or "")
+    print("graph PNG exists:", img.exists(),
+          "| size:", img.stat().st_size if img.exists() else 0,
+          "bytes")
+    if not img.exists() or img.stat().st_size < 2000:
+        fails.append(("plot", "plot x^2 - 3x + 2", r))
 
-print()
-print("FAILURES:", len(fails))
-for cat, q, r in fails:
-    print(" -", cat, "|", q, "|", json.dumps(r, default=str)[:220])
+    print()
+    print("FAILURES:", len(fails))
+    for cat, q, r in fails:
+        print(" -", cat, "|", q, "|",
+              json.dumps(r, default=str)[:220])
+    return fails
+
+
+if __name__ == "__main__":
+    main()
