@@ -98,6 +98,26 @@ def _unit(q, q_raw):
     return ""
 
 
+def _dim_unit(q, dims):
+    """The unit written next to one of the figure's OWN
+    dimensions, or None. Deploy-70b: the whole-text vote
+    above harvests units from the entire question — on a
+    multi-part paste ("radius 7 cm … 120 km") the counts
+    tie and the vote's set-order tie-break served the
+    train's "km" on the circle's figure. A dimension's own
+    neighbouring unit is the figure's unit; the whole-text
+    vote remains the fallback for dimensions stated
+    without one."""
+    for v in dims.values():
+        f = float(v)
+        num = str(int(f)) if f == int(f) else str(f)
+        m = re.search(r"(?<![\d.])" + re.escape(num) +
+                      r"(?:\.0+)?\s*(cm|mm|km|m)\b", q)
+        if m:
+            return m.group(1)
+    return None
+
+
 def _answer_value(result):
     """The solved quantity as a float, or None when the answer
     text does not carry exactly one unambiguous number."""
@@ -363,7 +383,7 @@ def _figure_for(question, result):
     if expected is None or not _matches(expected,
                                          _answer_value(result)):
         return None
-    unit = _unit(q, q_raw)
+    unit = _dim_unit(q, dims) or _unit(q, q_raw)
     if shape == "rectangle":
         return _rect_svg(dims["l"], dims["b"], unit, "Rectangle")
     if shape == "square":
