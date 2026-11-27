@@ -4357,18 +4357,24 @@ def _ai_lang(hindi, lang_request):
 
 
 def _gemini_answer(question, hindi, lang_request=None,
-                   detail=False):
+                   detail=False, general=False):
     """Ask Gemini for the student's own question. Lazy import
     so the module (and its env key) stays fully optional; ANY
     failure returns None and the honest Wave-18 fallback is
     served exactly as before. `detail` (Wave 136) selects the
     prompt's DETAIL variant for an explicit long-answer
-    request."""
+    request. `general` (Wave 228, Deploy-71 fix) selects the
+    GENERAL prompt (any topic) for the group name-call
+    route; it rides to the leg ONLY as a keyword when on —
+    with it off, the call is byte-for-byte the pre-fix one
+    (older test doubles for this seam take no general
+    argument)."""
     try:
         from gemini_fallback import try_gemini_answer
+        _kw = {"general": True} if general else {}
         return try_gemini_answer(question,
                                  _ai_lang(hindi, lang_request),
-                                 detail=detail)
+                                 detail=detail, **_kw)
     except Exception:
         return None
 
@@ -4391,34 +4397,41 @@ def _bank_answer(question):
 
 
 def _groq_answer(question, hindi, lang_request=None,
-                 detail=False):
+                 detail=False, general=False):
     """Wave 41: ask Groq for the student's own question —
     only ever called when Gemini returned None. Same contract
     as _gemini_answer: lazy import, ANY failure returns None
     and the honest Wave-18 fallback is served unchanged.
     `detail` (Wave 136) selects the prompt's DETAIL
-    variant."""
+    variant. `general` (Wave 228, Deploy-71 fix) selects the
+    GENERAL prompt for the group name-call route and rides
+    only when on, exactly like _gemini_answer's."""
     try:
         from groq_fallback import try_groq_answer
+        _kw = {"general": True} if general else {}
         return try_groq_answer(question,
                                _ai_lang(hindi, lang_request),
-                               detail=detail)
+                               detail=detail, **_kw)
     except Exception:
         return None
 
 
-def _openrouter_answer(question, hindi, detail=False):
+def _openrouter_answer(question, hindi, detail=False,
+                       general=False):
     """Wave 108: ask OpenRouter for the student's own
     question — only ever called when Gemini AND Groq both
     returned None. Same contract as _gemini_answer: lazy
     import, ANY failure returns None and the honest Wave-18
     fallback is served unchanged. `detail` (Wave 136)
-    selects the prompt's DETAIL variant."""
+    selects the prompt's DETAIL variant. `general` (Wave
+    228, Deploy-71 fix) selects the GENERAL prompt for the
+    group name-call route and rides only when on."""
     try:
         from openrouter_fallback import try_openrouter_answer
+        _kw = {"general": True} if general else {}
         return try_openrouter_answer(question,
                                      "hi" if hindi else None,
-                                     detail=detail)
+                                     detail=detail, **_kw)
     except Exception:
         return None
 
@@ -4578,7 +4591,8 @@ def _w212_wrong_question_result(question, hindi, lang=None,
 
 
 def _verified_ai_answer(question, hindi, lang_request,
-                        rejected_sink=None, detail=False):
+                        rejected_sink=None, detail=False,
+                        general=False):
     """Wave 133: the AI chain behind aiverify's verification
     gate ("jawab ki jaanch"). The three legs keep their
     Wave 37/41/108 order and contracts; what changed is that
@@ -4600,12 +4614,27 @@ def _verified_ai_answer(question, hindi, lang_request,
     if the module itself cannot be imported, this returns
     None — verification that cannot run means NOT verified
     (fail-closed), never the pre-Wave-133 first-leg-wins
-    serve of an unchecked answer."""
+    serve of an unchecked answer.
+
+    `general` (Wave 228, Deploy-71 fix): the group name-call
+    route asks for ANY topic, so the legs must be built with
+    the GENERAL prompt — under the shared maths prompt a
+    leg is ordered to reply NOT_MATHS to a general question
+    and the shaped result is None, so a healthy leg could
+    never answer one (the Deploy-71 live failure). It rides
+    to the legs ONLY as a keyword when on — with it off, the
+    three calls are byte-for-byte the pre-fix ones. The
+    verification gate is unchanged: a prose answer is served
+    by the first sane leg; a valued one still needs its
+    deterministic pass or a cross-leg consensus."""
     # Wave 136 (Deploy-27 merge): `detail` rides to the legs
     # ONLY as a keyword when it is on — with it off, the three
     # calls are byte-for-byte the pre-Wave-136 ones (older test
-    # doubles for these seams take no detail argument).
+    # doubles for these seams take no detail argument). Wave
+    # 228 (Deploy-71 fix): `general` rides the same way.
     extra = {"detail": True} if detail else {}
+    if general:
+        extra["general"] = True
     legs = [
         ("gemini", lambda: _gemini_answer(question, hindi,
                                           lang_request, **extra)),
