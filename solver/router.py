@@ -3398,6 +3398,15 @@ _EXPANSION_TERM_LIMIT = 5000
 #: digits than this is a memory/print bomb, not a school sum.
 _INT_POWER_DIGIT_LIMIT = 20000
 
+#: Wave 227: a two-term expansion can pass the term count
+#: and still be a bomb — (x + 1)^3000 has only 3001 terms,
+#: but its middle binomial coefficient has ~900 digits and
+#: the external audit measured ~46 s on it.  Past this many
+#: digits in the largest coefficient, an expansion is
+#: neither fast nor readable for a student.  (x + y)^100,
+#: the teaching case, has a 30-digit middle coefficient.
+_EXPANSION_COEFF_DIGIT_LIMIT = 200
+
 _SUM_POWER_RE = re.compile(r"\(([^()]*)\)\s*(?:\^|\*\*)\s*(\d+)")
 _INT_POWER_RE = re.compile(r"(?<![\d.])(\d+)\s*(?:\^|\*\*)\s*(\d+)")
 _INT_TOWER_RE = re.compile(
@@ -3427,6 +3436,15 @@ def _dangerous_shape(question):
                 exp + len(terms) - 1,
                 len(terms) - 1) > _EXPANSION_TERM_LIMIT:
             return "expansion too large"
+        # Wave 227: the coefficient-size guard for the
+        # two-term case the term count cannot see (see
+        # _EXPANSION_COEFF_DIGIT_LIMIT).  The term check
+        # above has already refused exp >= 5000 for a
+        # two-term base (terms == exp + 1), so this comb()
+        # is always small to compute.
+        if len(terms) == 2 and len(str(math.comb(
+                exp, exp // 2))) > _EXPANSION_COEFF_DIGIT_LIMIT:
+            return "expansion too large"
     # Plain-integer powers with absurd digit counts.
     for m in _INT_POWER_RE.finditer(q):
         base, exp = int(m.group(1)), int(m.group(2))
@@ -3447,35 +3465,73 @@ def _too_big_result():
             "steps": []}
 
 
+# Wave 227 (BUG-008, ChatGPT code audit + the external
+# audit's DoS row): the Wave 46 budget spawned one NEW daemon
+# thread per solve and walked away from it on timeout.
+# Python threads cannot be killed, so every timed-out bomb
+# kept burning CPU in the background and the threads piled
+# up without bound.  Solves now run on ONE bounded pool: at
+# most _SOLVE_POOL_WORKERS execute at once and at most
+# _SOLVE_POOL_SLOTS are in flight (running + queued).  A
+# submission past the cap is refused immediately with the
+# standard too-big result instead of spawning more work, and
+# a timed-out solve — still unkillable — now holds one of a
+# FIXED number of pool threads, so the total burn is bounded
+# no matter how many bombs arrive.
+_SOLVE_POOL_WORKERS = 4
+_SOLVE_POOL_SLOTS = 12
+_solve_pool = None
+_solve_pool_lock = threading.Lock()
+_solve_slots = threading.BoundedSemaphore(_SOLVE_POOL_SLOTS)
+
+
+def _get_solve_pool():
+    global _solve_pool
+    if _solve_pool is None:
+        with _solve_pool_lock:
+            if _solve_pool is None:
+                from concurrent.futures import \
+                    ThreadPoolExecutor
+                _solve_pool = ThreadPoolExecutor(
+                    max_workers=_SOLVE_POOL_WORKERS,
+                    thread_name_prefix="ganitra-solve")
+    return _solve_pool
+
+
 def _solve_with_budget(question, budget=SOLVE_BUDGET_SECONDS):
-    """_solve_question_uncached with a wall-clock budget — the
-    thread pattern from speedups.methods_nonblocking. A normal
-    solve finishes far inside the budget and its result (or its
-    exception) reaches the caller exactly as before; only an
-    overrun changes behaviour. An overrun worker keeps running
-    as a daemon (Python threads cannot be killed), which is why
-    the pre-guards above stop the known bombs from starting at
-    all; the budget caps the response time for the unforeseen."""
-    box = {}
-
-    def _run():
-        try:
-            box["result"] = _solve_question_uncached(question)
-        except BaseException as exc:  # re-raised on this thread
-            box["error"] = exc
-
-    worker = threading.Thread(target=_run, daemon=True,
-                              name="ganitra-solve")
-    worker.start()
-    worker.join(budget)
-    if worker.is_alive():
+    """_solve_question_uncached with a wall-clock budget, on
+    the bounded pool above. A normal solve finishes far
+    inside the budget and its result (or its exception)
+    reaches the caller exactly as before; only an overrun —
+    or a saturated pool — changes behaviour, answering with
+    the standard too-big result the app layer turns into its
+    friendly guide."""
+    from concurrent.futures import TimeoutError as _ftimeout
+    if not _solve_slots.acquire(blocking=False):
         log.warning(
-            "solve exceeded %.0fs budget for %r; answering with "
-            "the fallback guide", budget, str(question)[:80])
+            "solve pool saturated; refusing %r without "
+            "spawning work", str(question)[:80])
         return _too_big_result()
-    if "error" in box:
-        raise box["error"]
-    return box.get("result")
+    try:
+        future = _get_solve_pool().submit(
+            _solve_question_uncached, question)
+    except BaseException:
+        _solve_slots.release()
+        raise
+    future.add_done_callback(
+        lambda _done: _solve_slots.release())
+    try:
+        return future.result(timeout=budget)
+    except _ftimeout:
+        # A queued future is cancelled outright; a running
+        # one finishes inside its pool thread and releases
+        # its slot there — bounded either way (BUG-008).
+        future.cancel()
+        log.warning(
+            "solve exceeded %.0fs budget for %r; answering "
+            "with the fallback guide", budget,
+            str(question)[:80])
+        return _too_big_result()
 
 
 def solve_question(question: str):
