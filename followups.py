@@ -579,17 +579,19 @@ _VIEW_STEP_REMOVALS = tuple(re.compile(p) for p in (
 _VIEW_DETAIL_REMOVALS = tuple(re.compile(p) for p in (
     r"\bin detail\b",
     r"\bdetailed (?:answer|solution|explanation|working)\b",
-    r"\bdetail (?:me|mein|mai|se) "
+    # Wave 226: plural "details?" — mirrors langdetect_local's
+    # _DETAIL_PATTERNS fix ("details mai chahiye answer").
+    r"\bdetails? (?:me|mein|mai|se) "
     r"(?:batao|samjhao|samjhaao|dikhao|chahiye|do|samjha)\b",
-    r"\bdetailme (?:batao|samjhao|samjhaao|dikhao|chahiye|do)\b",
-    r"\bdetail (?:batao|samjhao|samjhaao|dikhao|chahiye)\b",
+    r"\bdetails?me (?:batao|samjhao|samjhaao|dikhao|chahiye|do)\b",
+    r"\bdetails? (?:batao|samjhao|samjhaao|dikhao|chahiye)\b",
     r"\bvistar se\b",
     r"\bvistaar se\b",
     r"\blamba (?:answer|jawab|solution)\b",
     r"\blong (?:answer|explanation|solution)\b",
     r"\bfull (?:solution|answer|explanation)\b",
     r"\bpoora (?:samjhao|samjha|batao|answer|jawab|solution)\b",
-    r"\bpoori detail\b",
+    r"\bpoori details?\b",
     r"\bexplain fully\b",
 ))
 _VIEW_DEV_PHRASES = (
@@ -610,7 +612,7 @@ _VIEW_FILLER = {
     "mere", "liye",
     # The request families' own nouns/heads: a leftover one
     # ("step", "detail", "full") is still just the request.
-    "step", "steps", "detail", "vistar", "vistaar",
+    "step", "steps", "detail", "details", "vistar", "vistaar",
     "lamba", "full", "poora", "poori", "long", "answer",
     "jawab", "solution", "explanation", "working", "in",
     "with", "show", "all", "each", "har", "sab", "saare",

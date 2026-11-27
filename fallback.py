@@ -3439,7 +3439,24 @@ def _w151c_veto_inner(question, result):
                 return True
         # W50b: a decimal comma (1019,2) was split into
         # two data values (1019 and 2). (Sweep 170.)
+        # Wave 226: the pair must be an ISOLATED decimal
+        # comma. In an ordinary comma-separated data list
+        # ("median of 3,1,2,5,4", "average of 2,4,6,8")
+        # every adjacent pair matches this pattern and the
+        # guard vetoed the solver's CORRECT mean/median —
+        # the audit's median/average failures. A pair that
+        # is part of a tight comma chain (a digit-comma
+        # immediately before it, or a comma-digit
+        # immediately after it) is a list separator, not a
+        # decimal comma; the sweep-170 shape ("1019,2,
+        # 1046.5, ..." — comma-SPACE after the pair) is not
+        # a tight chain and still vetoes.
         for _dc in re.finditer(r"(\d+),(\d)(?!\d)", q):
+            _before = q[max(0, _dc.start() - 2):_dc.start()]
+            _after = q[_dc.end():_dc.end() + 2]
+            if re.search(r"\d,$", _before) \
+                    or re.match(r",\d", _after):
+                continue
             if _dc.group(1) in _toks and _dc.group(2) in _toks:
                 return True
         # W50c: mis-OCR'd decimal points (243ण्50 for
@@ -4238,12 +4255,19 @@ def _is_gibberish(question):
     # whole phrases, so letter-soup still cannot trip
     # them, and the non-maths guards upstream are
     # untouched.
+    # Wave 226: the definition net joins too — "Define a
+    # hyperbola." is all-unknown words to this detector,
+    # yet it is a genuine definition ask (Suraj's P0:
+    # definitions must always be answered); the shape
+    # phrase is the anchor, as in the follow-up net.
     try:
-        from maths_meta import is_followup_shaped, \
-            is_knowledge_shaped, is_meta_shaped
+        from maths_meta import is_definition_shaped, \
+            is_followup_shaped, is_knowledge_shaped, \
+            is_meta_shaped
         if is_meta_shaped(question) \
                 or is_knowledge_shaped(question) \
-                or is_followup_shaped(question):
+                or is_followup_shaped(question) \
+                or is_definition_shaped(question):
             return False
     except Exception:
         pass
@@ -4572,10 +4596,11 @@ def _verified_ai_answer(question, hindi, lang_request,
     receives one {"question", "rejected"} bundle on total
     verification failure — the Wave 134 deep-solve seam (see
     the AI block in _with_fallback_chain). aiverify never
-    raises by contract; if the module itself cannot be
-    imported, the pre-Wave-133 chain runs unchanged (first
-    leg answer wins) rather than losing the AI fallback to
-    an import problem."""
+    raises by contract. Wave 226 (BUG-003, ChatGPT audit):
+    if the module itself cannot be imported, this returns
+    None — verification that cannot run means NOT verified
+    (fail-closed), never the pre-Wave-133 first-leg-wins
+    serve of an unchecked answer."""
     # Wave 136 (Deploy-27 merge): `detail` rides to the legs
     # ONLY as a keyword when it is on — with it off, the three
     # calls are byte-for-byte the pre-Wave-136 ones (older test
@@ -4600,13 +4625,10 @@ def _verified_ai_answer(question, hindi, lang_request,
         from aiverify import verify_chain
         return verify_chain(question, legs, on_rejected=_seam)
     except Exception:
-        for _name, call in legs:
-            try:
-                result = call()
-            except Exception:
-                result = None
-            if result is not None:
-                return result
+        # Wave 226 (BUG-003): fail-closed. An unverifiable
+        # answer is not served; the chain continues to its
+        # method-transfer / honest outcomes exactly as when
+        # every leg was rejected.
         return None
 
 
@@ -4628,7 +4650,8 @@ def _mark_last_resort(result, basis):
     pending AI answer (ai_generated / fallback_kind do
     that), so a repeat ask is never served this copy from
     the store — it re-runs the chain. `basis` records how
-    the candidate won: "majority" or "single"."""
+    the candidate won: since Wave 226 only "majority" can
+    win (the "single" serve was BUG-001 and is removed)."""
     out = dict(result)
     out["ai_verification"] = "last_resort"
     out["ai_last_resort"] = basis
@@ -4662,8 +4685,15 @@ def _last_resort_ai_answer(question, rejected):
           reaches this function — Wave 133 serves it first;
           agreement is the strongest evidence a rejected
           candidate can still carry.)
-      (b) SINGLE — otherwise the first leg's answer in
-          chain order (Gemini -> Groq -> OpenRouter).
+      (b) Wave 226 (BUG-001, ChatGPT audit): the SINGLE
+          serve is REMOVED. One leg's unverified answer is
+          never served confidently — with no majority this
+          returns None and the chain gives the kind honest
+          "unverified" reply instead (see
+          _w226_unverified_result). Majority remains: two
+          legs agreeing IS the brief's verification gate
+          (b), the same evidence class as a Wave 133
+          consensus.
     Before this picker runs, the chain has already given
     Ganitra's own arithmetic its chances: deep_solve's
     reformulations (before the AI block) and Wave 134's
@@ -4714,9 +4744,131 @@ def _last_resort_ai_answer(question, rejected):
         for j in range(i + 1, len(cands)):
             if claims[j] is not None and claims_agree(
                     question, claims[i], claims[j]):
-                return _mark_last_resort(cands[i][1],
-                                         "majority")
-    return _mark_last_resort(cands[0][1], "single")
+                return _w226_clean_ai_steps(
+                    _mark_last_resort(cands[i][1], "majority"))
+    # Wave 226: no majority — nothing here is verified, so
+    # nothing is served (BUG-001). The caller answers with
+    # the honest unverified reply.
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Wave 226: the honest unverified reply + AI steps sanity
+# ---------------------------------------------------------------------------
+
+_W226_UNVERIFIED_EN = (
+    "I worked on this one, but I couldn't get the answer "
+    "pakka-verified, and I don't want to give you a wrong "
+    "answer. Send the question once more, written a little "
+    "differently, and I'll solve it properly.")
+_W226_UNVERIFIED_ROMAN = (
+    "Maine is sawal par kaam kiya, lekin jawab pakka "
+    "verify nahi ho paya — aur galat jawab main nahi "
+    "dunga. Sawal ko thoda alag tarike se likh kar dobara "
+    "bhejo, main sahi se solve kar dunga.")
+_W226_UNVERIFIED_DEV = (
+    "मैंने इस सवाल पर काम किया, लेकिन जवाब पक्का verify "
+    "नहीं हो पाया — और गलत जवाब मैं नहीं दूँगा। सवाल को "
+    "थोड़ा अलग तरीके से लिखकर दोबारा भेजिए, मैं सही से "
+    "हल कर दूँगा।")
+
+
+def _w226_unverified_result(question, hindi, lang=None,
+                            lang_request=None):
+    """Wave 226 (BUG-001's other half): the AI legs DID
+    answer a genuine question, but nothing could be
+    verified — no deterministic confirmation, no second
+    leg agreeing, method transfer could not re-derive it.
+    The student gets this kind honest reply: it says
+    plainly that the answer could not be pakka-verified
+    and asks for the question written a little differently.
+    It is NOT the banned canned line (different words, a
+    different outcome kind — "unverified", not "not_found")
+    and never a confident unverified answer."""
+    q = str(question or "")
+    if lang_request == "en":
+        line = _W226_UNVERIFIED_EN
+    elif lang_request == "hi":
+        line = _W226_UNVERIFIED_DEV
+    elif any("ऀ" <= ch <= "ॿ" for ch in q):
+        line = _W226_UNVERIFIED_DEV
+    elif hindi or lang_request == "hinglish" \
+            or lang == "hi":
+        line = _W226_UNVERIFIED_ROMAN
+    else:
+        line = _W226_UNVERIFIED_EN
+    return _plain_result("unverified", line, hindi)
+
+
+def _w226_step_balances(text):
+    """Wave 226 (BUG-002, light): judge ONE AI step that is
+    written as an equation claim. Returns False only when
+    the step is PROVABLY unbalanced — consecutive sides
+    whose difference simplifies to a nonzero constant
+    ("2 + 3 = 6", "450 × 24/100 = 118", "2x + 2 = 2x + 3").
+    Returns True when every side provably agrees, and None
+    (not judgeable — keep the step) for prose, assignments
+    ("x = 5", "SI = ..."), equations still carrying the
+    unknown ("x + 2 = 5" is the problem restated, not a
+    false claim), and anything unparseable."""
+    t = str(text or "").strip().rstrip(".")
+    if "=" not in t or "==" in t or "<=" in t \
+            or ">=" in t or "!=" in t:
+        return None
+    parts = [p.strip() for p in t.split("=")]
+    if len(parts) < 2 or any(not p for p in parts):
+        return None
+    if re.fullmatch(r"[A-Za-z ]+", parts[0]):
+        return None  # a label assignment, not a claim
+    try:
+        import sympy as sp
+        from solver.expression_parser import parse_expression
+        exprs = [parse_expression(p) for p in parts]
+    except Exception:
+        return None
+    for a, b in zip(exprs, exprs[1:]):
+        try:
+            d = sp.simplify(a - b)
+        except Exception:
+            return None
+        if d == 0:
+            continue
+        if not getattr(d, "free_symbols", None):
+            # A nonzero constant difference: the two sides
+            # provably disagree, for every value of every
+            # variable.
+            return False
+        return None  # still carries the unknown — an
+        # equation, not a provably false claim
+    return True
+
+
+def _w226_clean_ai_steps(result):
+    """Wave 226 (BUG-002, light): drop PROVABLY unbalanced
+    equation steps from an AI answer before it is served.
+    Applied ONLY to AI-leg results (the verified-AI serve
+    and the last-resort majority serve) — never to solver /
+    bank / own-recomputed results, whose steps are already
+    deterministic. Unjudgeable steps are kept byte-identical;
+    if every step drops, the answer serves with no steps
+    rather than with a wrong method."""
+    if not isinstance(result, dict):
+        return result
+    steps = result.get("steps")
+    if not steps:
+        return result
+    kept = []
+    dropped = False
+    for step in steps:
+        if _w226_step_balances(step) is False:
+            dropped = True
+            continue
+        kept.append(step)
+    if not dropped:
+        return result
+    out = dict(result)
+    out["steps"] = kept
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -4789,6 +4941,12 @@ def _honest_after_ai_miss(question, result_out, hindi, lang,
                 student_class, result_out.get("fallback_kind"))
         return _not_found_result(question, hindi, lang,
                                  lang_request)
+    # Wave 226: the Wave 134 seam key is internal — it must
+    # never ride into a served result. (Pre-Wave-226 the
+    # single-leg serve usually masked this; with the serve
+    # gone, a concept standing that outlives the AI block
+    # carried the parked bundle into the student's answer.)
+    result_out.pop("_ai_rejected", None)
     return result_out
 
 
@@ -5734,7 +5892,11 @@ def _with_fallback_chain(question, result, lang=None,
                     own = None
                 if own is not None:
                     return _with_figure(question, own)
-            return ai_result
+            # Wave 226 (BUG-002, light): a verified AI
+            # answer's equation steps are sanity-checked
+            # before the serve — a provably unbalanced step
+            # is dropped rather than teaching a wrong method.
+            return _w226_clean_ai_steps(ai_result)
         if rejected_sink:
             result_out["_ai_rejected"] = rejected_sink[0]
             # Wave 134 (Deploy-27 merge, per its notes'
@@ -5780,16 +5942,28 @@ def _with_fallback_chain(question, result, lang=None,
         # a real answer and keeps its as-is serve below).
         # When any leg DID answer, serve the best of those
         # answers instead of not-found (see
-        # _last_resort_ai_answer for the strict preference:
-        # majority first, then the first leg). An empty
-        # bundle — every leg silent — changes nothing: the
-        # honest collapse below stands.
+        # _last_resort_ai_answer for the strict preference).
+        # Wave 226 narrowed the resort to MAJORITY only
+        # (BUG-001): with no majority the honest unverified
+        # reply stands instead of a single leg's unchecked
+        # answer. An empty bundle — every leg silent —
+        # changes nothing: the honest collapse below stands.
         if rejected_sink and result_out.get(
                 "fallback_kind") in ("similar", "guide"):
             last = _last_resort_ai_answer(
                 question, rejected_sink[0].get("rejected"))
             if last is not None:
                 return last
+            # Wave 226 (BUG-001): the legs DID answer this
+            # genuine question, but nothing verified — no
+            # deterministic pass, no majority, no method
+            # transfer. The outcome is the kind honest
+            # unverified reply, never a confident single-leg
+            # serve and never the canned line. (An EMPTY
+            # bundle — every leg silent — keeps the old
+            # collapse below: the provider-outage floor.)
+            return _w226_unverified_result(
+                question, hindi, lang, lang_request)
 
     # Wave 67: whatever honest layer is still standing here —
     # a similar example, gibberish, the general guide — means

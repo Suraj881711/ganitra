@@ -3699,9 +3699,49 @@ def is_followup_shaped(question):
     return any(m in q for m in _FOLLOWUP_MARKERS)
 
 
+# Wave 226: the DEFINITION net — "Define a hyperbola.",
+# "X ki paribhasha batao", "X ka matlab kya hai". The
+# knowledge net above demands a who/when/why/what-is shape
+# PLUS a curated topic word, so a plain definition ask for
+# a concept outside the topic list ("hyperbola", "ellipse",
+# "parabola", "relation", "sequence"...) measured as
+# GIBBERISH by the letter test — every word unknown — and
+# the gibberish bucket never reaches the AI legs: the
+# question died on the canned line even in production
+# (Suraj's P0, 27 Nov 2026: definition questions must
+# ALWAYS be answered). The definition shape is its own
+# anchor — the request phrase IS the intent, exactly like
+# the follow-up net's markers — so no topic gate is
+# demanded; letter-soup cannot trip a whole-phrase marker,
+# and a fresh problem vetoes, as in the nets above.
+# fallback.py consults this net at the same gibberish-vs-
+# guide decision point.
+_DEFINITION_LEAD = re.compile(
+    r"^\s*(?:define|definition\s+of)\b")
+
+
+def is_definition_shaped(question):
+    """True when the message is plainly a definition ask:
+    it opens with "define" / "definition of", or carries a
+    paribhasha / ka-matlab marker (Roman or Devanagari)."""
+    raw = str(question or "")
+    q = raw.lower()
+    if not q.strip() or _has_fresh_problem(q):
+        return False
+    if _DEFINITION_LEAD.search(q):
+        return True
+    if "paribhasha" in q or "परिभाषा" in raw:
+        return True
+    if re.search(r"\b(?:ka|ki)\s+matlab\b", q) \
+            or "का मतलब" in raw or "की परिभाषा" in raw:
+        return True
+    return False
+
+
 __all__ = ["HISTORY", "FACTS", "ADVICE", "meta_result",
            "is_meta_shaped", "is_knowledge_shaped",
-           "is_followup_shaped", "meta_variation"]
+           "is_followup_shaped", "is_definition_shaped",
+           "meta_variation"]
 
 
 # ---------------------------------------------------------------------------

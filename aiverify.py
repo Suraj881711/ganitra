@@ -40,15 +40,18 @@ shaped answer" and "the answer is served":
      the third leg; a 2-of-3 majority wins. Legs that were
      never configured / are down (they return None) cast no
      vote: if exactly one leg answered and no other leg could
-     be consulted, that answer is served marked "single"
-     (the pre-Wave-133 behaviour, kept for the degraded case —
-     in production all three keys are set, so a second opinion
-     is almost always available). If two or more legs answered
-     and no two agree, NOTHING is served.
+     be consulted, that answer was served marked "single"
+     until Wave 226 removed the serve (BUG-001): a lone
+     unjudged claim now joins the rejection bundle with
+     check "single_unverified" and NOTHING is served from
+     this layer — the caller's method transfer and honest
+     outcomes decide what the student sees. If two or more
+     legs answered and no two agree, NOTHING is served.
 
 OUTCOMES: a candidate that passes (deterministic or
 consensus) is served with an `ai_verification` marker
-("deterministic" / "consensus" / "single"). A candidate that
+("deterministic" / "consensus"; the "single" marker is
+retired since Wave 226). A candidate that
 fails is NEVER served: the chain tries the next leg, and if
 no leg produces a servable answer the caller falls through
 to the existing honest outcome (the Wave 67 one-line
@@ -77,17 +80,18 @@ LIVE BANK PROMOTION: fallback.py's record hook promotes a
 served AI answer's Live Bank row from "pending" to
 "verified" via livebank.set_status() — ONLY when this layer
 marked it "deterministic". A consensus pass is weaker
-evidence (two AIs can share a mistake), so consensus and
-single answers stay pending, exactly as Wave 117 designed.
+evidence (two AIs can share a mistake), so consensus answers stay pending, exactly as Wave 117 designed.
 
 SAFETY: verify_chain() NEVER raises and never blocks a
 deterministic layer — it only ever sees AI-leg results
 (solver / bank / concept answers never pass through here).
-Any internal failure degrades to serving the first leg
-answer already in hand (the pre-Wave-133 behaviour) rather
-than breaking the chain. Set GANITRA_AIVERIFY=0 to switch
-the whole layer off (the chain then behaves byte-identically
-to pre-Wave-133: first leg answer wins).
+Wave 226 (BUG-003): any internal failure is FAIL-CLOSED —
+it degrades to serving NOTHING (returning None), never to
+serving an unverified answer. Set GANITRA_AIVERIFY=0 to
+switch the whole layer off (the chain then behaves
+byte-identically to pre-Wave-133: first leg answer wins) —
+that kill switch is a deliberate operator configuration,
+not an error path, and is unchanged.
 """
 import os
 import re
@@ -1175,11 +1179,15 @@ def verify_chain(question, legs, lang=None, student_class=None,
         return _verify_chain(question, legs, on_rejected,
                              holder)
     except Exception:
-        # Catastrophe insurance: an answer already in hand is
-        # served exactly as pre-Wave-133 rather than breaking
-        # the chain; with nothing in hand, the honest outcome
-        # stands.
-        return holder["first"]
+        # Wave 226 (BUG-003, ChatGPT audit): FAIL-CLOSED.
+        # The pre-Wave-226 "catastrophe insurance" returned
+        # the first leg's UNVERIFIED answer when the
+        # verification machinery itself blew up — a
+        # verification error was treated as a pass. An
+        # error means NOT verified: return None and let the
+        # caller run its method-transfer / honest outcomes,
+        # exactly as when every candidate was rejected.
+        return None
 
 
 def _verify_chain(question, legs, on_rejected, holder):
@@ -1236,13 +1244,28 @@ def _verify_chain(question, legs, on_rejected, holder):
             _flush_rejections(question, rejected)
             return _mark(winner, "consensus", "cross_leg")
     if len(valued) == 1:
-        # Exactly one leg produced an unjudged claim (the
-        # others are unconfigured, down, or were disproven
-        # by a check): the degraded single-opinion path —
-        # served as pre-Wave-133, marked honestly, and never
-        # promoted in the Live Bank.
+        # Wave 226 (BUG-001, ChatGPT audit): exactly one leg
+        # produced an unjudged claim (the others are
+        # unconfigured, down, or were disproven by a check).
+        # The pre-Wave-226 code SERVED it marked "single" —
+        # one AI's unchecked word, served confidently. That
+        # is precisely what the verification gate exists to
+        # prevent: the candidate now joins the rejection
+        # bundle (check "single_unverified"), so the
+        # caller's method transfer can still re-derive from
+        # its steps and the Wave 158 picker can still use it
+        # toward a majority — but it is never served alone.
+        _name, _result, _claim = valued[0]
+        rejected.append({"leg": _name, "result": _result,
+                         "claim": _claim,
+                         "check": "single_unverified"})
         _flush_rejections(question, rejected)
-        return _mark(valued[0][1], "single", "single_leg")
+        if rejected and on_rejected is not None:
+            try:
+                on_rejected(question, rejected)
+            except Exception:
+                pass
+        return None
     if len(valued) >= 2:
         # Legs answered but no two agreed — no majority, so
         # nothing is verified. The disagreeing candidates

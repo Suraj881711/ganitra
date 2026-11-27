@@ -605,17 +605,22 @@ def detect_steps_request(text):
 _DETAIL_PATTERNS = tuple(re.compile(p) for p in (
     r"\bin detail\b",
     r"\bdetailed (?:answer|solution|explanation|working)\b",
-    r"\bdetail (?:me|mein|mai|se) "
+    # Wave 226: the plural "details" is how students actually
+    # write it ("details mai chahiye answer", Suraj's
+    # screenshot, 27 Nov 2026) — the singular-only patterns
+    # never fired on it and the follow-up died on the canned
+    # line. Every "detail" below is now "details?".
+    r"\bdetails? (?:me|mein|mai|se) "
     r"(?:batao|samjhao|samjhaao|dikhao|chahiye|do|samjha)\b",
-    r"\bdetailme (?:batao|samjhao|samjhaao|dikhao|chahiye|do)\b",
-    r"\bdetail (?:batao|samjhao|samjhaao|dikhao|chahiye)\b",
+    r"\bdetails?me (?:batao|samjhao|samjhaao|dikhao|chahiye|do)\b",
+    r"\bdetails? (?:batao|samjhao|samjhaao|dikhao|chahiye)\b",
     r"\bvistar se\b",
     r"\bvistaar se\b",
     r"\blamba (?:answer|jawab|solution)\b",
     r"\blong (?:answer|explanation|solution)\b",
     r"\bfull (?:solution|answer|explanation)\b",
     r"\bpoora (?:samjhao|samjha|batao|answer|jawab|solution)\b",
-    r"\bpoori detail\b",
+    r"\bpoori details?\b",
     r"\bexplain fully\b",
 ))
 _DETAIL_PHRASES_DEV = (

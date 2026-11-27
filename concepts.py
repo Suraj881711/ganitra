@@ -625,6 +625,171 @@ CONCEPTS = [
         },
     },
     {
+        # Wave 226 (Suraj's P0, 27 Nov 2026): definition
+        # questions must ALWAYS be answered — "Define
+        # one-one and onto functions with examples" died on
+        # the canned line because no card owned these words.
+        # The combined card sits FIRST: find_concept is
+        # first-match, and a both-words ask must not be
+        # captured by the one-one-only card.
+        "id": "one_one_onto_concept",
+        "keywords": ("one-one and onto", "one one and onto",
+                     "one-one & onto", "one one & onto"),
+        "title": "One-One and Onto Functions",
+        "formula": "One-one (injective): different inputs "
+                   "always give different outputs — if "
+                   "f(a) = f(b) then a = b. Onto "
+                   "(surjective): every element of the "
+                   "codomain is actually hit — the range "
+                   "equals the codomain.",
+        "explain": "Example: f(x) = 2x + 3 on R is one-one "
+                   "(2a + 3 = 2b + 3 gives a = b) and onto "
+                   "(for any y, x = (y − 3)/2 maps to it). "
+                   "A function that is both one-one and onto "
+                   "is called bijective.",
+        "hinglish": "One-one matlab alag input par hamesha "
+                    "alag output; onto matlab codomain ka "
+                    "har element kisi na kisi input se "
+                    "banta hai.",
+        "example": {
+            "q": "Is f(x) = x² on R one-one?",
+            "steps": ["f(−2) = 4 and f(2) = 4 — two inputs, "
+                      "one output"],
+            "answer": "No — x² on R is not one-one (and "
+                      "not onto either)",
+        },
+    },
+    {
+        "id": "one_one_concept",
+        "keywords": ("one-one function", "one one function",
+                     "one-one kya", "one one kya",
+                     "injective function", "injective kya"),
+        "title": "One-One Function (Injective)",
+        "formula": "A function f is one-one when different "
+                   "inputs always give different outputs: "
+                   "if f(a) = f(b), then a = b.",
+        "explain": "Example: f(x) = 2x + 3 is one-one, "
+                   "because 2a + 3 = 2b + 3 forces a = b. "
+                   "But f(x) = x² on R is NOT one-one: "
+                   "f(2) = f(−2) = 4.",
+        "hinglish": "One-one function me alag-alag input "
+                    "par hamesha alag-alag output milta "
+                    "hai — do input ek hi output nahi de "
+                    "sakte.",
+        "example": {
+            "q": "Is f(x) = 3x − 5 one-one?",
+            "steps": ["3a − 5 = 3b − 5 gives 3a = 3b, so "
+                      "a = b"],
+            "answer": "Yes, f is one-one",
+        },
+    },
+    {
+        "id": "onto_concept",
+        "keywords": ("onto function", "onto kya",
+                     "surjective function", "surjective kya"),
+        "title": "Onto Function (Surjective)",
+        "formula": "A function f is onto when every "
+                   "element of the codomain is the image "
+                   "of some input — the range equals the "
+                   "codomain.",
+        "explain": "Example: f(x) = 2x + 3 from R to R "
+                   "is onto, because for any y we can pick "
+                   "x = (y − 3)/2. But f(x) = x² from R "
+                   "to R is NOT onto: −4 is never an "
+                   "output.",
+        "hinglish": "Onto function me codomain ka har "
+                    "element kisi na kisi input ka output "
+                    "hota hai — koi element khaali nahi "
+                    "rehta.",
+        "example": {
+            "q": "Is f(x) = x³ from R to R onto?",
+            "steps": ["For any y, x = ∛y gives f(x) = y"],
+            "answer": "Yes, f is onto (and one-one too — "
+                      "bijective)",
+        },
+    },
+    {
+        "id": "bijective_concept",
+        "keywords": ("bijective function", "bijective kya",
+                     "bijection kya", "what is bijective",
+                     "bijective function kya"),
+        "title": "Bijective Function",
+        "formula": "A function is bijective when it is "
+                   "BOTH one-one and onto: every output "
+                   "comes from exactly one input.",
+        "explain": "Example: f(x) = 2x + 3 on R is "
+                   "bijective, so it has an inverse: "
+                   "f⁻¹(y) = (y − 3)/2. Only bijective "
+                   "functions have a proper inverse.",
+        "hinglish": "Bijective matlab one-one bhi aur "
+                    "onto bhi — har output ka exactly ek "
+                    "hi input hota hai.",
+        "example": {
+            "q": "Is f(x) = x + 7 on R bijective?",
+            "steps": ["One-one: a + 7 = b + 7 gives a = b. "
+                      "Onto: for any y, x = y − 7 works"],
+            "answer": "Yes, f is bijective",
+        },
+    },
+    {
+        # Wave 226: two more Class 9-12 staples that died on
+        # the canned line with no card and no live leg.
+        "id": "polynomial_concept",
+        "keywords": ("define a polynomial", "define polynomial",
+                     "what is a polynomial", "polynomial kya",
+                     "polynomial ka matlab",
+                     "polynomial ki paribhasha"),
+        "title": "Polynomial",
+        "formula": "A polynomial is an expression of "
+                   "variables and coefficients using only "
+                   "+, −, × and whole-number powers — like "
+                   "3x² − 5x + 2.",
+        "explain": "The power of every variable must be a "
+                   "whole number (0, 1, 2, ...): 1/x and √x "
+                   "are NOT polynomials. One term = monomial, "
+                   "two = binomial, three = trinomial; the "
+                   "highest power is the degree (1 linear, "
+                   "2 quadratic, 3 cubic).",
+        "hinglish": "Polynomial matlab aisi expression "
+                    "jisme variable ki power hamesha poori "
+                    "sankhya (0, 1, 2, ...) hoti hai — 1/x "
+                    "ya √x polynomial nahi hote.",
+        "example": {
+            "q": "Is 5x³ − 2x + 7 a polynomial?",
+            "steps": ["Every power of x (3, 1 and 0) is a "
+                      "whole number"],
+            "answer": "Yes — a cubic polynomial (degree 3)",
+        },
+    },
+    {
+        "id": "vector_concept",
+        "keywords": ("define a vector", "define vector",
+                     "what is a vector", "vector kya",
+                     "vector ka matlab"),
+        "title": "Vector",
+        "formula": "A vector is a quantity that has BOTH "
+                   "magnitude (size) and direction — like "
+                   "velocity or displacement, drawn as an "
+                   "arrow.",
+        "explain": "A quantity with size only (mass, "
+                   "temperature) is a scalar, not a vector. "
+                   "A vector is written with an arrow over "
+                   "it or in component form aî + bĵ + ck̂; "
+                   "its magnitude is the length of the "
+                   "arrow.",
+        "hinglish": "Vector woh quantity hai jisme size "
+                    "ke saath direction bhi hoti hai — jaise "
+                    "veg (velocity); sirf size wali quantity "
+                    "scalar hoti hai.",
+        "example": {
+            "q": "Is weight a vector?",
+            "steps": ["Weight has size AND a direction "
+                      "(downwards)"],
+            "answer": "Yes — weight is a vector; mass is "
+                      "a scalar",
+        },
+    },
+    {
         "id": "function_basics",
         "keywords": ("function kya", "function hota",
                      "function ka matlab", "falan kya"),
