@@ -21,6 +21,69 @@ def _all_ints(text: str):
     return [int(v) for v in re.findall(r"\d+", text)]
 
 
+# Deploy-70c: the operands of an HCF/LCM ask live in the
+# ask's own phrase — the numbers listed right after
+# "HCF of", or in the clause that carries the keyword
+# ("12 aur 18 ka HCF"). The branches below used to read
+# the first integers of the WHOLE text, so any dressing
+# ahead of the ask silently became the operands: a pasted
+# set's preamble bound into a part-solve ("Please solve
+# all of these questions for me 1 by 1: What is the HCF
+# of 12 and 18?" — the "1 by 1" is the route normaliser's
+# rewrite of the idiom "one by one") gave GCD(1, 1) = 1
+# with empty factorisations on the Deploy-70b live paste,
+# and a literal "Set 2:" / "Chapter 5:" dressing gives
+# GCD(2, 12) / LCM(5, 12, 18) the same way.
+_HCF_KW = (r"(?:hcf|gcd|greatest\s+common\s+"
+           r"(?:divisor|factor|measure)|महत्तम\s*समापवर्तक)")
+_LCM_KW = (r"(?:lcm|least\s+common\s+multiple|"
+           r"लघुत्तम\s*समापवर्त्य)")
+_OPERAND_RUN_RE = re.compile(
+    r"\s*(?:the\s+)?(\d+(?:\s*(?:,|&|\band\b|\baur\b|और)"
+    r"\s*\d+)+)")
+
+
+def _pair_operands(question, q, kind):
+    """The integers an HCF/LCM ask is about, anchored to
+    the ask itself — never merely the first integers of
+    the text:
+
+    1. the operand run listed right after "<keyword> of"
+       ("HCF of 12 and 18", "Find the HCF and LCM of 24
+       and 36");
+    2. else the integers of the one clause carrying the
+       keyword, when exactly one such clause has any
+       ("12 aur 18 ka HCF batao"; a preamble clause split
+       off by ':' or '?' cannot donate its numbers);
+    3. else the historical whole-text read, so every
+       shape the anchors do not recognise behaves exactly
+       as before ("The numbers are 12 and 18. Find their
+       HCF." — the operands sit in a keyword-less clause).
+    """
+    if kind == "gcd":
+        kw = _HCF_KW
+    elif kind == "lcm":
+        kw = _LCM_KW
+    else:
+        kw = "(?:" + _HCF_KW + "|" + _LCM_KW + ")"
+    m = re.search(kw + r"(?:\s*(?:and|&|,)\s*" + kw + r")?"
+                  r"\s+of\s+", q)
+    if m:
+        run = _OPERAND_RUN_RE.match(q, m.end())
+        if run:
+            return [int(v) for v in
+                    re.findall(r"\d+", run.group(1))]
+    found = []
+    for clause in re.split(r"[.?;:।\n]+", q):
+        if re.search(kw, clause):
+            ints = [int(v) for v in re.findall(r"\d+", clause)]
+            if len(ints) >= 2:
+                found.append(ints)
+    if len(found) == 1:
+        return found[0]
+    return _all_ints(question)
+
+
 def _icbrt140(a: int) -> int:
     """Exact integer cube root (floor) of a non-negative int."""
     if a <= 0:
@@ -230,7 +293,9 @@ def solve_number_theory(question: str):
     # (Digits reach here in ASCII: the router's spelling
     # normalisation converts Devanagari digits first.)
     if "महत्तम समापवर्तक" in q or "लघुत्तम समापवर्त्य" in q:
-        nums = _all_ints(question)
+        nums = _pair_operands(
+            question, q, "gcd" if "महत्तम समापवर्तक" in q
+            else "lcm")
         if len(nums) >= 2:
             import math
             a, b = nums[0], nums[1]
@@ -268,7 +333,7 @@ def solve_number_theory(question: str):
     if ("hcf" in q or "gcd" in q) and "lcm" in q and re.search(
             r"(?:hcf|gcd)\s*(?:guna|×|x|\*|times)|"
             r"product\s+of\s+(?:the\s+)?(?:hcf|gcd)", q):
-        nums = _all_ints(question)
+        nums = _pair_operands(question, q, "both")
         if len(nums) >= 2:
             a, b = nums[0], nums[1]
             import math
@@ -292,7 +357,7 @@ def solve_number_theory(question: str):
     _wants_gcd = "gcd" in q or "hcf" in q or "greatest common" in q
     _wants_lcm = "lcm" in q or "least common multiple" in q
     if _wants_gcd and _wants_lcm:
-        nums = _all_ints(question)
+        nums = _pair_operands(question, q, "both")
         if len(nums) >= 2:
             import math
             g, l = nums[0], nums[0]
@@ -313,7 +378,7 @@ def solve_number_theory(question: str):
 
     # GCD / HCF
     if "gcd" in q or "hcf" in q or "greatest common" in q:
-        nums = _all_ints(question)
+        nums = _pair_operands(question, q, "gcd")
         if len(nums) >= 2:
             a, b = nums[0], nums[1]
             import math
@@ -329,7 +394,7 @@ def solve_number_theory(question: str):
 
     # LCM
     if "lcm" in q or "least common multiple" in q:
-        nums = _all_ints(question)
+        nums = _pair_operands(question, q, "lcm")
         if len(nums) >= 2:
             import math
             l = nums[0]
