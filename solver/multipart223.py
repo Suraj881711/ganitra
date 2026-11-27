@@ -536,6 +536,176 @@ def _generic_parts(q):
 
 
 # ---------------------------------------------------------------------------
+# Family 5 (Wave 227) — OCR-doubled multi-part calculus
+# questions (Suraj's screenshot case 5, 27 Nov 2026):
+#
+#     "Check the continuity of a function at x = 0 x=0.
+#      Differentiate y = x 2 sin x y=x2 sinx."
+#         -> the canned "I didn't understand"
+#
+# Three stacked mechanisms, each fixed at its own root:
+#
+#  1. OCR DOUBLING.  The photo/OCR layer often emits a
+#     fragment twice — once spaced ("x = 0", "y = x 2 sin
+#     x"), once glued ("x=0", "y=x2 sinx").  No solver can
+#     read the doubled text.  _dedup_ocr_restatements drops
+#     a tail fragment whose glued form restates the glued
+#     tail of what precedes it.
+#  2. OCR POWER SPELLING.  The surviving spaced rendering
+#     writes x^2 as "x 2" (and the glued one as "x2"); the
+#     expression parser reads "x 2 sin x" as 2x·sin x and
+#     answers a DIFFERENT question.  In a differentiate /
+#     integrate part, a variable followed by a bare digit
+#     directly before a trig/log function is the power
+#     spelling, and is repaired to x^2 before solving.
+#  3. A GENUINELY INCOMPLETE PART.  "Check the continuity
+#     of a function at x = 0" names no function — there is
+#     nothing to check, and the honest answer for THAT part
+#     is a plain note saying exactly what is missing (the
+#     standing rule for wrong/incomplete questions), while
+#     the complete part is still solved.  The old flow
+#     demanded every part solve, so one incomplete part
+#     sank the whole question into the canned line.
+#
+# The gate stays strict: at least two parts, EVERY part a
+# calculus ask (continuity / differentiate / integrate /
+# limit / dy/dx), every part either solved for real or the
+# incomplete-continuity shape, and at least one part really
+# solved.  Any doubt -> None, and the older families and
+# flows decide exactly as before.
+# ---------------------------------------------------------------------------
+
+_CALC_ASK = re.compile(
+    r"continuit|differentiat|derivative|integrat|"
+    r"dy\s*/\s*dx|\blimit\b", re.I)
+
+_OCR_POWER_SPACED = re.compile(
+    r"\b([a-zA-Z])\s+(\d+)\s+"
+    r"(?=(?:sin|cos|tan|sec|csc|cot|log|ln)\b)")
+_OCR_POWER_GLUED = re.compile(
+    r"\b([a-zA-Z])(\d+)\s+"
+    r"(?=(?:sin|cos|tan|sec|csc|cot|log|ln)\b)")
+
+_FUNCTION_GIVEN = re.compile(
+    r"f\s*\(\s*x\s*\)\s*=|function\s+is\b|=\s*\{|"
+    r"continuit\w*\s+of\s+(?:the\s+)?"
+    r"(?:sin|cos|tan|sec|csc|cot|log|ln|e\^|x\^|\d|"
+    r"f\s*\()", re.I)
+
+
+def _glued(text):
+    return re.sub(r"\s+", "", str(text)).lower()
+
+
+def _dedup_ocr_restatements(text):
+    """Drop OCR's doubled rendering of a fragment: a tail
+    whose space-stripped form restates the space-stripped
+    tail of what precedes it ("... at x = 0 x=0" -> "... at
+    x = 0"; "... y = x 2 sin x y=x2 sinx" -> "... y = x 2
+    sin x").  Only a fragment carrying '=' or a digit can
+    be dropped, and only inside one sentence segment."""
+    segments = re.split(r"(?<=[.?!।])\s+", str(text))
+    out = []
+    for seg in segments:
+        tokens = seg.split(" ")
+        for i in range(len(tokens) - 1, 0, -1):
+            right = " ".join(tokens[i:])
+            # The sentence's final punctuation rides on the
+            # dropped fragment; it is punctuation, not part
+            # of the restatement, and the kept text needs it
+            # back (the parts are re-split on it downstream).
+            punct = re.search(r"[.?!।]+$", right)
+            glued_right = _glued(
+                right[:punct.start()] if punct else right)
+            if len(glued_right) < 3:
+                continue
+            if "=" not in right and not any(
+                    ch.isdigit() for ch in right):
+                continue
+            left = " ".join(tokens[:i])
+            if _glued(left).endswith(glued_right):
+                seg = left + (punct.group(0) if punct
+                              else "")
+                break
+        out.append(seg)
+    return " ".join(out)
+
+
+def _repair_ocr_powers(part):
+    """The OCR power spelling in a calculus part: 'x 2 sin
+    x' / 'x2 sin x' -> 'x^2 sin x' (see the family note)."""
+    part = _OCR_POWER_SPACED.sub(r"\1^\2 ", part)
+    part = _OCR_POWER_GLUED.sub(r"\1^\2 ", part)
+    return part
+
+
+def _continuity_missing_function(part):
+    """A continuity ask that names no function is genuinely
+    incomplete — there is nothing whose continuity could be
+    checked.  Returns the point string (or "" when no point
+    is named either), or None when this is not that shape
+    (no continuity ask, or a function IS given)."""
+    if not re.search(r"continuit", part, re.I):
+        return None
+    if _FUNCTION_GIVEN.search(part):
+        return None
+    m = re.search(r"at\s+x\s*=\s*(-?\d+(?:\.\d+)?)", part)
+    return m.group(1) if m else ""
+
+
+def _incomplete_continuity_result(point):
+    """The plain, specific note for the incomplete part:
+    what is missing, why it is needed, and what to send —
+    never the canned line."""
+    where = f" at x = {point}" if point else ""
+    note = (
+        "The function itself is not given in this part — "
+        f"only the point{where}. Continuity can only be "
+        "checked when the function is known (for example "
+        "f(x) = x^2 + 1), so this part cannot be checked "
+        "yet. Send the function and I will check it right "
+        "away.")
+    return {"answer": "Function not given — continuity "
+                      "cannot be checked",
+            "steps": [note]}
+
+
+def _ocr_calculus_result(q):
+    """The finished Wave 227 result, or None (see the
+    family note above for the strict gate)."""
+    if len(q) > 600:
+        return None
+    deduped = _dedup_ocr_restatements(q)
+    segments = [s.strip() for s in
+                re.split(r"(?<=[.?!।])\s+", deduped)
+                if s.strip()]
+    if len(segments) < 2:
+        return None
+    if not all(_CALC_ASK.search(s) for s in segments):
+        return None
+    from .router import solve_question
+    results = []
+    solved_any = False
+    for seg in segments:
+        point = _continuity_missing_function(seg)
+        if point is not None:
+            results.append(
+                _incomplete_continuity_result(point))
+            continue
+        try:
+            result = solve_question(_repair_ocr_powers(seg))
+        except Exception:
+            return None
+        if not _is_solved(result):
+            return None
+        solved_any = True
+        results.append(result)
+    if not solved_any:
+        return None
+    return _assemble("multipart227", results, segments)
+
+
+# ---------------------------------------------------------------------------
 # Public surface
 # ---------------------------------------------------------------------------
 
@@ -624,6 +794,14 @@ def solve_multipart223(question):
             if solved is not None:
                 return _assemble("multipart223", solved, parts)
             return None
+        # Wave 227: the OCR-doubled calculus family — it
+        # must run before the generic family, whose ask
+        # signals never knew "check"/"differentiate" and
+        # which demands every part solve (an incomplete
+        # part sank the whole question, screenshot case 5).
+        ocr_calc = _ocr_calculus_result(q)
+        if ocr_calc is not None:
+            return ocr_calc
         parts = _generic_parts(q)
         if parts and not _dependent_parts(parts):
             solved = _solve_parts(parts)
