@@ -81,14 +81,28 @@ MAX_VARIANTS = 6
 # Small helpers: values, formatting, number extraction
 # ---------------------------------------------------------------------------
 
-_NUM_RE = re.compile(r"\d+(?:\.\d+)?(?:\s*/\s*\d+)?")
+# Wave 227 (BUG-005, ChatGPT code audit): the old pattern
+# had no sign at all, so -5 was read as 5 — a claimed answer
+# "x = -5" then "verified" as 5.  A leading minus now
+# belongs to the number when it is NOT a binary minus: it
+# must not sit directly after a digit, a decimal point or a
+# letter ("5-3" and "x-3" are subtractions), nor after a
+# digit across one space ("5 -3" is subtraction too), while
+# "x = -5", "(-5)" and "temp -5" carry the value -5.  The
+# Unicode minus (U+2212, which AI answers and OCR use)
+# counts as a minus, and scientific notation (1.5e3) is
+# part of a token.
+_NUM_RE = re.compile(
+    r"(?:(?<![\d.a-zA-Z])(?<!\d\s)[-−])?"
+    r"\d+(?:\.\d+)?(?:\s*/\s*\d+)?(?:[eE][+-]?\d+)?")
 
 
 def _frac(text):
     """One number token ('12', '12.5', '3/4') as a Fraction,
     or None."""
     try:
-        t = str(text).replace(" ", "").replace(",", "")
+        t = str(text).replace(" ", "").replace(",", "") \
+            .replace("−", "-")
         if "/" in t:
             a, b = t.split("/", 1)
             return Fraction(int(a), int(b))
@@ -108,17 +122,32 @@ def _numbers_in(text):
     return out
 
 
+# Wave 227 (BUG-004, ChatGPT code audit): the old _fmt
+# truncated every fraction with denominator > 100 to a
+# 4-decimal value with NO approximation mark — 1/101 printed
+# as "0.0099", a wrong value wearing an exact costume.
+# Fractions now stay exact far past the old line; only a
+# denominator too large to print sanely falls back to a
+# decimal, and that decimal always carries its ≈.
+_FMT_EXACT_DENOM_LIMIT = 10 ** 6
+
+
 def _fmt(value):
     """A Fraction as Ganitra writes it: whole numbers bare,
-    small fractions as a/b, anything else a trimmed
-    decimal."""
+    fractions as exact a/b, and only a monster denominator
+    as a decimal — always marked ≈, never silently
+    truncated."""
     v = Fraction(value)
     if v.denominator == 1:
         return str(v.numerator)
-    if v.denominator <= 100:
+    if v.denominator <= _FMT_EXACT_DENOM_LIMIT:
         return f"{v.numerator}/{v.denominator}"
     s = f"{float(v):.4f}".rstrip("0").rstrip(".")
-    return s or "0"
+    if s in ("", "0") and v:
+        # A nonzero value too small for 4 decimals must not
+        # print as "≈ 0" — say its size honestly.
+        s = f"{float(v):.2e}"
+    return "≈ " + (s or "0")
 
 
 def _parse_value(text):
