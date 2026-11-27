@@ -721,8 +721,15 @@ def _split_gen_numbered(q):
                 and q[start - 2].isdigit():
             continue  # a decimal's tail, not a marker
         prefix = q[:start].rstrip()
-        if prefix and prefix[-1] not in "\n.;:।":
+        if prefix and prefix[-1] not in "\n.;:।?":
             continue  # mid-sentence number, not a boundary
+        # Deploy-70b: "?" is a sentence boundary too — in a
+        # pasted set the parts themselves are questions
+        # ("What is 15% of 200? 2) Solve 2x + 3 = 11."), so
+        # a marker after a question mark starts the next
+        # part exactly as one after "." does.  Without it
+        # the run broke at every "?"-terminated part and no
+        # splitter owned the set at all.
         hits.append((m.group(1), int(m.group(1)),
                      start, m.end()))
     got = _gen_from_run(q, hits, 1, strong=True)
