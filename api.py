@@ -568,9 +568,10 @@ def api_solve():
     # solves it part-wise (screenshot case 6).
     if _solve_rate_limited():
         return jsonify({"ok": False,
-                        "message": "Too many questions at "
-                                   "once — please wait a "
-                                   "minute and try again.",
+                        # Wave 233: localised (was a hard-coded
+                        # English line — it renders as a chat
+                        # bubble, so it follows the language).
+                        "message": strings["api_rate_limited"],
                         **_lang_fields(lang, strings,
                                         False)}), 429
 
@@ -1905,9 +1906,8 @@ def api_solve_stream():
                         **_lang_fields(lang, strings, False)})
     if _solve_rate_limited():
         return jsonify({"ok": False,
-                        "message": "Too many questions at "
-                                   "once — please wait a "
-                                   "minute and try again.",
+                        # Wave 233: localised — see api_solve.
+                        "message": strings["api_rate_limited"],
                         **_lang_fields(lang, strings,
                                         False)}), 429
 
