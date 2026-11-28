@@ -88,8 +88,11 @@
         {% endif %}
       </div>
     {% else %}
-      <p>Abhi koi message nahi. Pehla message likho — maths ka
-         sawal puchega to Ganitra khud jawab de dega.</p>
+      {# Wave 233: the empty-chat hint states the actual
+         group rule (silence / maths answered / name-call
+         answered on any topic), via i18n like the rest of
+         the app — it was a hard-coded line before. #}
+      <p>{{ t.group_empty_hint }}</p>
     {% endfor %}
   </div>
 
