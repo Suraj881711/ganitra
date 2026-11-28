@@ -336,6 +336,17 @@
     </div>
 
     <div class="composer-wrap">
+      {# Wave 230: the voice-call status bar — hidden until a
+         voice call starts; it carries the live state line
+         (listening / thinking / speaking) and the End button.
+         Composer furniture only, like the context strip. #}
+      <div id="voice-call-bar" class="voice-call-bar" hidden>
+        <span class="voice-call-dot" aria-hidden="true"></span>
+        <span id="voice-call-status" class="voice-call-status"
+              role="status"></span>
+        <button type="button" id="voice-call-end"
+                class="voice-call-end">{{ t.voice_call_end }}</button>
+      </div>
       <form method="post" action="/solve" class="chat-form" id="chat-form">
         <label class="sr-only" for="q">{{ t.enter_question }}</label>
         {# Wave 212 (items 9 + 10): the composer context strip
@@ -372,6 +383,9 @@
             <button type="button" id="mic-btn" class="composer-btn icon-btn"
                     aria-label="{{ t.voice_btn }}"
                     title="{{ t.voice_btn }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button>
+            <button type="button" id="call-btn" class="composer-btn icon-btn"
+                    aria-label="{{ t.voice_call_btn }}"
+                    title="{{ t.voice_call_btn }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></button>
             <button type="button" id="attach-btn" class="composer-btn icon-btn"
                    aria-label="{{ t.photo_btn }}"
                    title="{{ t.photo_btn }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></button>
@@ -1034,6 +1048,311 @@
             lang: speechLang, step: -2 });
         }
         return parts;
+      }
+
+      /* ---------- Wave 230: voice call (personal chat) ----------
+         Suraj's spec (23 Nov 2026): the student talks to
+         Ganitra the way he talks to Muse — speaks the
+         question, Ganitra answers BY VOICE in its soft voice,
+         and the mascot moves while it speaks. Built ONLY on
+         the free Web Speech API (SpeechRecognition +
+         speechSynthesis): no service, no key, no cloning.
+         Voice changes I/O only — a spoken question rides the
+         composer's own submit path to /api/solve, and the
+         spoken answer is the very answer the verification
+         chain served, never a second solve.
+
+         THE MODEL (one, clear): the Listen buttons keep
+         doing the full teacher narration (unchanged). The
+         CALL is the hands-free loop: tap the phone button →
+         the mic opens; the final transcript is submitted
+         exactly like a typed send; when the answer lands,
+         voiceCallAfterTurn speaks the SHORT form (a one-line
+         summary + the final answer in the teacher's closing
+         line) and reopens the mic. Tap End (or the phone, or
+         the mic) to hang up. While the call lives,
+         body.voice-listening / body.voice-speaking drive
+         the mascot states in style.css. */
+
+      /* The ear-cleaner for the SHORT spoken form. The house
+         speakable() above verbalises symbols, but it reads
+         text as written: LaTeX, markdown, ₹/%/° stuck to
+         numbers, "Answer:" prefixes, ticks and emoji would
+         all reach the ear raw, and it turns EVERY slash
+         into "divided by" — a fraction must be "3 by 4".
+         speakClean pre-digests those, then hands over to
+         speakable() for the symbol words themselves, so the
+         call speaks in the same voice as Listen. It lives in
+         JS (not a Python twin) because speechSynthesis is
+         client-only: the text the browser speaks is built
+         where it is spoken, from the payload the page
+         already holds — no new endpoint, no payload change.
+         WAVE230-SPEECH-CLEAN-BEGIN */
+      var CALL_WORDS = {
+        en: { by: "by", percent: "percent", rupees: "rupees",
+              degree: "degrees", le: "less than or equal to",
+              ge: "greater than or equal to",
+              ne: "not equal to", pm: "plus or minus" },
+        hi: { by: "बटा", percent: "प्रतिशत", rupees: "रुपये",
+              degree: "डिग्री", le: "से छोटा या बराबर",
+              ge: "से बड़ा या बराबर", ne: "बराबर नहीं",
+              pm: "जमा या घटा" }
+      };
+      function speakClean(text, code) {
+        var w = CALL_WORDS[code] || CALL_WORDS.en;
+        var s = String(text || "");
+        /* LaTeX fractions first: their spoken form is final
+           words, so they are settled before anything else can
+           split them. The pass runs again after the sqrt
+           pass — one pass can expose an outer fraction
+           around an inner one. */
+        var frac = /\\d?frac\{([^{}]+)\}\{([^{}]+)\}/g;
+        s = s.replace(frac, "$1 " + w.by + " $2");
+        s = s.replace(/\\sqrt\{([^{}]+)\}/g, "√($1)");
+        s = s.replace(/\\sqrt\s+([A-Za-z0-9]+)/g, "√($1)");
+        s = s.replace(frac, "$1 " + w.by + " $2");
+        s = s.replace(/\\times/g, "×").replace(/\\div/g, "÷")
+          .replace(/\\pi/g, "π").replace(/\\le/g, "≤")
+          .replace(/\\ge/g, "≥").replace(/\\ne/g, "≠")
+          .replace(/\\pm/g, "±").replace(/\\cdot/g, "·");
+        s = s.replace(/\\(?:left|right|[,;!]|quad|qquad)/g, " ");
+        s = s.replace(/\\[a-zA-Z]+/g, " ");
+        s = s.replace(/\\\(|\\\)|\\\[|\\\]/g, " ")
+          .replace(/\$\$?/g, " ").replace(/[{}]/g, " ");
+        /* Markup: tags, markdown emphasis/code/links, and
+           heading/bullet furniture at line starts. */
+        s = s.replace(/<[^>]+>/g, " ");
+        s = s.replace(/\*\*([^*]+)\*\*/g, "$1")
+          .replace(/\*([^*]+)\*/g, "$1")
+          .replace(/`([^`]+)`/g, "$1")
+          .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
+        s = s.replace(/^\s*[-•#>+]+\s*/gm, " ");
+        /* Plain fractions before speakable: "3/4" is "3 by
+           4"; a slash that survives is a real division. */
+        s = s.replace(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/g,
+                      "$1 " + w.by + " $2");
+        /* Symbols speakable() does not know. × and ÷ fold
+           to the glyphs it does know. */
+        s = s.replace(/×/g, "*").replace(/÷/g, "/");
+        s = s.replace(/≤/g, " " + w.le + " ")
+          .replace(/≥/g, " " + w.ge + " ")
+          .replace(/≠/g, " " + w.ne + " ")
+          .replace(/±/g, " " + w.pm + " ");
+        /* Units stuck to numbers. */
+        s = s.replace(/₹\s*(\d[\d,]*(?:\.\d+)?)/g,
+                      "$1 " + w.rupees);
+        s = s.replace(/(\d+(?:\.\d+)?)\s*%/g, "$1 " + w.percent);
+        s = s.replace(/(\d+(?:\.\d+)?)\s*°/g, "$1 " + w.degree);
+        s = s.replace(/°/g, " ");
+        /* The house symbol verbaliser does the rest. */
+        s = speakable(s, code);
+        /* Ear hygiene: no spoken prefix labels, no ticks or
+           crosses, no emoji, no bracket furniture. */
+        s = s.replace(
+          /^\s*(answer|ans|solution|उत्तर|हल)\s*[:：]\s*/i, "");
+        s = s.replace(/[✓✔✗✘]/g, " ");
+        s = s.replace(
+          /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu,
+          " ");
+        s = s.replace(/[()\[\]]/g, " ");
+        return s.replace(/\s+/g, " ").trim();
+      }
+
+      /* The SHORT spoken form of one served answer — what
+         the call speaks. Plain replies speak their one line.
+         A solved answer speaks at most two parts: one brief
+         summary line (the server's intro when it sent one,
+         else the first step — cleaned and capped), then the
+         teacher's closing line carrying the final answer,
+         exactly the close Listen uses. The full steps stay
+         on screen; they are never dumped into the ear. */
+      function buildCallSpeech(data) {
+        var parts = [];
+        if (!data || !data.ok) return parts;
+        var result = data.result || {};
+        var answer = result.answer ? String(result.answer) : "";
+        if (result.plain_reply || result.plain === true
+            || result.fallback_kind === "not_found") {
+          var line = speakClean(answer, UI_CODE);
+          if (line) parts.push({ text: line, lang: SPEECH_LANG });
+          return parts;
+        }
+        if (!answer) return parts;
+        var ansClean = speakClean(answer, UI_CODE);
+        if (ansClean.length > 140) {
+          ansClean = ansClean.slice(0, 140);
+          var cut = ansClean.lastIndexOf(" ");
+          if (cut > 60) ansClean = ansClean.slice(0, cut);
+          ansClean = ansClean.trim();
+        }
+        var summary = "";
+        if (data.intro) summary = String(data.intro);
+        else if (result.steps && result.steps.length) {
+          summary = String(result.steps[0]);
+        }
+        summary = summary ? speakClean(summary, "en") : "";
+        if (summary.length > 120) {
+          summary = summary.slice(0, 120);
+          var scut = summary.lastIndexOf(" ");
+          if (scut > 60) summary = summary.slice(0, scut);
+          summary = summary.trim();
+        }
+        if (summary && summary !== ansClean
+            && ansClean.indexOf(summary) !== 0) {
+          parts.push({ text: summary, lang: "en-IN" });
+        }
+        var T = TEACHER[UI_CODE] || TEACHER.en;
+        var seed = (result.steps || []).length;
+        parts.push({
+          text: pickLine(T.close, seed).replace("{ans}", ansClean),
+          lang: SPEECH_LANG });
+        return parts;
+      }
+      /* WAVE230-SPEECH-CLEAN-END */
+
+      /* The call bridge. State + the spoken-answer player
+         live here (IIFE level) so the solve handlers can
+         hand every finished turn over; the recogniser
+         controls live in the Wave-84 voice-input block
+         below, which registers its call-mode starter and
+         stopper here. */
+      var VoiceCall = {
+        active: false,
+        phase: "off",   /* off | listening | waiting | speaking */
+        startListening: null,
+        stopListening: null,
+        listenTimer: null
+      };
+      function voiceCallSetPhase(phase) {
+        VoiceCall.phase = phase;
+        var bar = document.getElementById("voice-call-bar");
+        var status = document.getElementById("voice-call-status");
+        document.body.classList.toggle(
+          "voice-listening", phase === "listening");
+        document.body.classList.toggle(
+          "voice-speaking", phase === "speaking");
+        if (bar) bar.hidden = !VoiceCall.active;
+        if (status) {
+          status.textContent =
+            phase === "listening"
+              ? (L.js_voice_call_listening
+                 || "Voice call — listening…")
+              : phase === "speaking"
+                ? (L.js_voice_call_speaking
+                   || "Ganitra is speaking…")
+                : phase === "waiting"
+                  ? (L.js_voice_call_thinking
+                     || "Voice call — thinking…")
+                  : "";
+        }
+        var mic = document.getElementById("mic-btn");
+        if (mic) {
+          mic.classList.toggle("mic-live", phase === "listening");
+        }
+        var callBtn = document.getElementById("call-btn");
+        if (callBtn) {
+          callBtn.classList.toggle("call-live", !!VoiceCall.active);
+        }
+      }
+      function voiceCallListen() {
+        if (!VoiceCall.active || !VoiceCall.startListening) return;
+        voiceCallSetPhase("listening");
+        VoiceCall.startListening();
+      }
+      function voiceCallListenSoon() {
+        if (!VoiceCall.active) return;
+        if (VoiceCall.listenTimer) {
+          window.clearTimeout(VoiceCall.listenTimer);
+        }
+        VoiceCall.listenTimer = window.setTimeout(function () {
+          VoiceCall.listenTimer = null;
+          if (VoiceCall.active
+              && VoiceCall.phase === "listening") {
+            voiceCallListen();
+          }
+        }, 400);
+      }
+      /* Speak the parts in order; the mascot's speaking
+         state rides body.voice-speaking. A per-part watchdog
+         advances the queue even on browsers whose utterance
+         onend never fires (the Wave-24 teach-playback
+         lesson), so the call can never stall mid-answer. */
+      function voiceCallSpeakParts(parts, done) {
+        if (!("speechSynthesis" in window) || !parts.length) {
+          done();
+          return;
+        }
+        var idx = 0;
+        var finished = false;
+        function finish() {
+          if (finished) return;
+          finished = true;
+          document.body.classList.remove("voice-speaking");
+          done();
+        }
+        function next() {
+          if (!VoiceCall.active || idx >= parts.length) {
+            finish();
+            return;
+          }
+          var p = parts[idx];
+          idx += 1;
+          var u = new SpeechSynthesisUtterance(p.text);
+          u.lang = p.lang;
+          tuneUtterance(u, p.lang);
+          /* A touch softer than Listen's flat 1.0 — the call
+             is a conversation, not a reading. */
+          u.pitch = 1.05;
+          var advanced = false;
+          var watchdog = window.setTimeout(function () {
+            if (!advanced) { advanced = true; next(); }
+          }, Math.max(3000, p.text.length * 95 + 1800));
+          u.onend = u.onerror = function () {
+            if (!advanced) {
+              advanced = true;
+              window.clearTimeout(watchdog);
+              next();
+            }
+          };
+          window.speechSynthesis.speak(u);
+        }
+        next();
+      }
+      /* Every finished solve turn (classic, streamed and
+         the offline evaluator all land here via the submit
+         handler) is handed over: speak the short form, then
+         reopen the mic. Nothing speakable — or a failed
+         turn — just reopens the mic, so the call never
+         dead-ends. */
+      function voiceCallAfterTurn(data) {
+        if (!VoiceCall.active) return;
+        var parts = [];
+        try { parts = buildCallSpeech(data); }
+        catch (e) { parts = []; }
+        if (parts.length) {
+          voiceCallSetPhase("speaking");
+          voiceCallSpeakParts(parts, function () {
+            if (VoiceCall.active) voiceCallListen();
+          });
+        } else {
+          voiceCallSetPhase("listening");
+          voiceCallListenSoon();
+        }
+      }
+      function endVoiceCall() {
+        if (!VoiceCall.active) return;
+        VoiceCall.active = false;
+        if (VoiceCall.listenTimer) {
+          window.clearTimeout(VoiceCall.listenTimer);
+          VoiceCall.listenTimer = null;
+        }
+        if ("speechSynthesis" in window) {
+          try { window.speechSynthesis.cancel(); } catch (e) {}
+        }
+        if (VoiceCall.stopListening) {
+          try { VoiceCall.stopListening(); } catch (e) {}
+        }
+        voiceCallSetPhase("off");
       }
 
       /* ---------- Natural voice + teacher pace ----------
@@ -2884,6 +3203,19 @@
             else mic.classList.remove("mic-live");
           }
         }
+        /* Wave 230: the call controls re-label with the
+           rest of the composer on a language switch. */
+        if (ui.voice_call_btn) {
+          var callBtn2 = document.getElementById("call-btn");
+          if (callBtn2) {
+            callBtn2.setAttribute("aria-label", ui.voice_call_btn);
+            callBtn2.title = ui.voice_call_btn;
+          }
+        }
+        if (ui.voice_call_end) {
+          var callEnd2 = document.getElementById("voice-call-end");
+          if (callEnd2) callEnd2.textContent = ui.voice_call_end;
+        }
         if (ui.file_btn) {
           var fileBtn = document.getElementById("file-btn");
           if (fileBtn) {
@@ -3060,6 +3392,10 @@
             data = null;
           }
           if (data) recordTurn({ role: "bot", data: data });
+          /* Wave 230: a live voice call takes the turn from
+             here — speak the short form, reopen the mic. A
+             no-op whenever no call is running. */
+          voiceCallAfterTurn(data);
           box.focus();
         }
         function solveClassic() {
@@ -3101,6 +3437,8 @@
             };
             addAnswerBubble(question, odata);
             recordTurn({ role: "bot", data: odata });
+            /* Wave 230: the offline answer is spoken too. */
+            voiceCallAfterTurn(odata);
           } else if (window.GanitraOffline) {
             /* Wave 145 (Suraj): the offline line is ONLY for a
                genuine connectivity loss — the browser itself
@@ -3127,6 +3465,9 @@
             form.submit();
             return;
           }
+          /* Wave 230: even a failed turn reopens the call's
+             mic (nothing is spoken for it). */
+          voiceCallAfterTurn(null);
           box.focus();
           });
         }
@@ -3406,11 +3747,19 @@
 
       /* ---------- Voice input (Web Speech API, browser-side) ---------- */
       var micBtn = document.getElementById("mic-btn");
+      var callBtn = document.getElementById("call-btn");
       var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (!SR) {
         micBtn.style.display = "none";
+        /* Wave 230: no recognition, no voice call either. */
+        if (callBtn) callBtn.style.display = "none";
         say(L.js_voice_no_api);
       } else {
+        /* Wave 230: the call also needs a voice to answer
+           with — without speechSynthesis there is no call. */
+        if (!("speechSynthesis" in window) && callBtn) {
+          callBtn.style.display = "none";
+        }
         var recog = null;
         var listening = false;
         /* Wave 84: try the student's UI language first, then
@@ -3482,9 +3831,128 @@
           } catch (e) { /* already running */ }
         }
         micBtn.addEventListener("click", function () {
+          /* Wave 230: while a voice call is live the mic is
+             the call's mic — a tap hangs the call up. */
+          if (VoiceCall.active) { endVoiceCall(); return; }
           if (listening && recog) { recog.stop(); return; }
           startRecognition(0);
         });
+
+        /* ---------- Wave 230: the voice-call recogniser ----
+           A sibling of the one-shot recogniser above (which
+           keeps its Wave-84 dictate-check-send behaviour,
+           untouched): the call's recogniser shows the LIVE
+           interim transcript in the box and, on the final
+           result, submits through the composer's own submit
+           path — the very handler a typed send uses, so the
+           question rides the same /api/solve flow with the
+           same chat_id. Silence simply reopens the mic while
+           the call lives; a permission denial ends the call
+           with the same kind line the one-shot mic uses. */
+        var callRecog = null;
+        function startCallRecognition(langIdx) {
+          if (!VoiceCall.active) return;
+          /* A solve is in flight — the finished turn's hook
+             reopens the mic when the answer lands. */
+          if (solving) return;
+          var langs = speechLangs();
+          var mine = new SR();
+          callRecog = mine;
+          mine.lang = langs[Math.min(langIdx, langs.length - 1)];
+          mine.interimResults = true;
+          mine.maxAlternatives = 1;
+          mine.onresult = function (ev) {
+            var interim = "";
+            var finalText = "";
+            for (var i = ev.resultIndex; i < ev.results.length;
+                 i++) {
+              var alt = ev.results[i][0].transcript || "";
+              if (ev.results[i].isFinal) finalText += alt;
+              else interim += alt;
+            }
+            if (interim) {
+              box.value = interim;
+              box.dispatchEvent(new Event("input"));
+            }
+            if (finalText) {
+              var text = normalizeSpokenMaths(finalText);
+              voiceCallSetPhase("waiting");
+              if (text) {
+                box.value = text;
+                box.dispatchEvent(new Event("input"));
+                if (form.requestSubmit) form.requestSubmit();
+                else if (form.dispatchEvent) {
+                  form.dispatchEvent(new Event("submit", {
+                    bubbles: true, cancelable: true }));
+                }
+              } else {
+                /* Nothing usable heard — listen again. */
+                voiceCallSetPhase("listening");
+                voiceCallListenSoon();
+              }
+            }
+          };
+          mine.onerror = function (ev) {
+            if (ev.error === "language-not-supported" &&
+                langIdx < langs.length - 1) {
+              startCallRecognition(langIdx + 1);
+              return;
+            }
+            if (callRecog === mine) callRecog = null;
+            if (ev.error === "not-allowed"
+                || ev.error === "service-not-allowed") {
+              endVoiceCall();
+              say(L.js_voice_denied);
+              return;
+            }
+            /* no-speech / aborted / network: quietly listen
+               again while the call lives. */
+            if (VoiceCall.active
+                && VoiceCall.phase === "listening") {
+              voiceCallListenSoon();
+            }
+          };
+          mine.onend = function () {
+            if (callRecog === mine) callRecog = null;
+            if (VoiceCall.active
+                && VoiceCall.phase === "listening") {
+              voiceCallListenSoon();
+            }
+          };
+          try {
+            mine.start();
+          } catch (e) { /* already running */ }
+        }
+        VoiceCall.startListening = function () {
+          startCallRecognition(0);
+        };
+        VoiceCall.stopListening = function () {
+          if (callRecog) {
+            try { callRecog.stop(); } catch (e) {}
+            callRecog = null;
+          }
+        };
+        function beginVoiceCall() {
+          if (VoiceCall.active) return;
+          /* Never two recognisers: a one-shot dictation in
+             progress is stopped before the call takes the
+             mic. */
+          if (listening && recog) {
+            try { recog.stop(); } catch (e) {}
+          }
+          VoiceCall.active = true;
+          voiceCallListen();
+        }
+        if (callBtn) {
+          callBtn.addEventListener("click", function () {
+            if (VoiceCall.active) endVoiceCall();
+            else beginVoiceCall();
+          });
+        }
+        var callEndBtn = document.getElementById("voice-call-end");
+        if (callEndBtn) {
+          callEndBtn.addEventListener("click", endVoiceCall);
+        }
       }
 
       /* ---------- Photo + file input (Tesseract.js OCR) ----------
