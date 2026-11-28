@@ -3,6 +3,103 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
+    <meta name="csrf-token" content="{{ csrf_token }}" />
+    <script>
+      /* Wave 232 (security): carry this session's CSRF token on
+         every state-changing request the page makes. Classic
+         form posts get a hidden csrf_token field (added here,
+         and to any form inserted later); fetch() is wrapped so
+         same-origin POST/PUT/DELETE calls send the X-CSRFToken
+         header. GETs are untouched, and a failure in this
+         script must never break a request — on any error the
+         original fetch / the unmodified form is used. */
+      (function () {
+        var meta = document.querySelector(
+          'meta[name="csrf-token"]');
+        var token = meta ? meta.getAttribute("content") : "";
+        if (!token) return;
+        window.GANITRA_CSRF_TOKEN = token;
+        if (window.fetch) {
+          var origFetch = window.fetch;
+          window.fetch = function (input, init) {
+            try {
+              var method = "GET", url = "";
+              if (typeof input === "string") { url = input; }
+              else if (input) {
+                url = input.url || "";
+                method = input.method || "GET";
+              }
+              if (init && init.method) method = init.method;
+              method = String(method).toUpperCase();
+              if (method !== "GET" && method !== "HEAD"
+                  && method !== "OPTIONS") {
+                var same = false;
+                try {
+                  same = new URL(url, window.location.href)
+                    .origin === window.location.origin;
+                } catch (e) { same = false; }
+                if (same) {
+                  init = init || {};
+                  var headers = new Headers(
+                    init.headers ||
+                    (typeof input !== "string" && input
+                      ? input.headers : undefined));
+                  if (!headers.has("X-CSRFToken")) {
+                    headers.set("X-CSRFToken", token);
+                  }
+                  init.headers = headers;
+                  return origFetch.call(this, input, init);
+                }
+              }
+            } catch (e) { /* fall through to the plain call */ }
+            return origFetch.call(this, input, init);
+          };
+        }
+        function armForm(form) {
+          try {
+            if (!form || form.tagName !== "FORM") return;
+            var m = (form.getAttribute("method") || "get")
+              .toLowerCase();
+            if (m !== "post") return;
+            if (form.querySelector(
+                  'input[name="csrf_token"]')) return;
+            var inp = document.createElement("input");
+            inp.type = "hidden";
+            inp.name = "csrf_token";
+            inp.value = token;
+            form.appendChild(inp);
+          } catch (e) { /* a form without the field simply
+                            posts as it always did */ }
+        }
+        function armAll(root) {
+          if (!root || !root.querySelectorAll) return;
+          var forms = root.querySelectorAll("form");
+          for (var i = 0; i < forms.length; i++) {
+            armForm(forms[i]);
+          }
+        }
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded",
+            function () { armAll(document); });
+        } else {
+          armAll(document);
+        }
+        if (window.MutationObserver) {
+          new MutationObserver(function (muts) {
+            for (var i = 0; i < muts.length; i++) {
+              var nodes = muts[i].addedNodes || [];
+              for (var j = 0; j < nodes.length; j++) {
+                var n = nodes[j];
+                if (n.nodeType !== 1) continue;
+                if (n.tagName === "FORM") armForm(n);
+                armAll(n);
+              }
+            }
+          }).observe(document.documentElement,
+                     { childList: true, subtree: true });
+        }
+      })();
+    </script>
     <title>Ganitra — {{ t.tagline }}</title>
     <link rel="icon" type="image/png"
           href="{{ url_for('static', filename='favicon.png') }}" />
