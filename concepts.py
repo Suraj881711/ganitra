@@ -19,6 +19,21 @@ rather than broad and shaky:
     hinglish  the same idea in one Roman-Hindi line
     example   ONE tiny fully-worked example: q, steps, answer
 
+Wave 229: two OPTIONAL depth fields, present on the cards
+whose concept is a definition students must learn to TEST,
+not just recite:
+
+    not_example  a worked COUNTERexample in the example's
+                 own shape (q, steps, answer): a case that
+                 fails the definition, with the reason shown
+    method       the standard test / check for the concept
+                 (horizontal line test, vertical line test,
+                 "put the value in", ...) in one-two lines
+
+fallback.py renders them after the worked example, as a
+"Not an example:" block and a closing "Quick check:" line.
+Cards without them render exactly as before.
+
 fallback.py renders: answer = title + formula, steps = explanation
 + worked example. Nothing here pretends to be the answer to a
 different numeric question — these entries trigger only on
@@ -469,6 +484,19 @@ CONCEPTS = [
                       "a₁₀ = 2 + (10 - 1) × 3 = 2 + 27 = 29"],
             "answer": "10th term = 29",
         },
+        # Wave 229: the AP/GP confusion case, settled by
+        # doing both neighbour checks.
+        "not_example": {
+            "q": "Is 2, 6, 18, 54 an AP?",
+            "steps": ["Differences: 6 − 2 = 4, 18 − 6 = 12 "
+                      "— not equal",
+                      "Ratios: 6/2 = 3, 18/6 = 3 — equal"],
+            "answer": "No — it is a GP (ratio 3), not an AP",
+        },
+        "method": "Subtract neighbours: the same "
+                  "difference every time → AP. Divide "
+                  "neighbours: the same ratio every time "
+                  "→ GP.",
     },
     {
         "id": "speed_distance_time",
@@ -651,13 +679,36 @@ CONCEPTS = [
                     "alag output; onto matlab codomain ka "
                     "har element kisi na kisi input se "
                     "banta hai.",
+        # Wave 229: the worked example now CHECKS both
+        # halves step by step (the old card compressed them
+        # into one sentence and spent its example block on
+        # the x² failure); x² moves to not_example, where
+        # BOTH of its failures are shown, and the two
+        # standard tests are named.
         "example": {
-            "q": "Is f(x) = x² on R one-one?",
-            "steps": ["f(−2) = 4 and f(2) = 4 — two inputs, "
-                      "one output"],
-            "answer": "No — x² on R is not one-one (and "
-                      "not onto either)",
+            "q": "Check: is f(x) = 2x + 3 on R one-one "
+                 "and onto?",
+            "steps": ["One-one: if 2a + 3 = 2b + 3, then "
+                      "2a = 2b, so a = b ✓",
+                      "Onto: for any y, choose x = (y − 3)/2; "
+                      "then f(x) = y ✓"],
+            "answer": "Yes — f is one-one and onto "
+                      "(bijective)",
         },
+        "not_example": {
+            "q": "Is f(x) = x² on R one-one? Onto?",
+            "steps": ["One-one? f(2) = 4 and f(−2) = 4 — "
+                      "two inputs, one output ✗",
+                      "Onto? No input gives −4, but −4 is in "
+                      "the codomain R ✗"],
+            "answer": "x² on R is neither one-one nor onto",
+        },
+        "method": "One-one — the horizontal line test: if "
+                  "any horizontal line cuts the graph more "
+                  "than once, the function is not one-one. "
+                  "Onto — the range must cover the whole "
+                  "codomain; one codomain value that never "
+                  "appears as an output settles it.",
     },
     {
         "id": "one_one_concept",
@@ -682,6 +733,20 @@ CONCEPTS = [
                       "a = b"],
             "answer": "Yes, f is one-one",
         },
+        # Wave 229: a second failure shape (|x| folds the
+        # two halves of R onto one output) beyond the x²
+        # case the explain names, plus the standard test.
+        "not_example": {
+            "q": "Is f(x) = |x| one-one?",
+            "steps": ["f(3) = 3 and f(−3) = 3 — two "
+                      "different inputs, the same output"],
+            "answer": "No — |x| is not one-one on R",
+        },
+        "method": "The horizontal line test: if any "
+                  "horizontal line cuts the graph more than "
+                  "once, the function is not one-one. In "
+                  "algebra: assume f(a) = f(b) and check "
+                  "that a = b is forced.",
     },
     {
         "id": "onto_concept",
@@ -707,6 +772,19 @@ CONCEPTS = [
             "answer": "Yes, f is onto (and one-one too — "
                       "bijective)",
         },
+        # Wave 229: a failure beyond the x² case the
+        # explain names — e^x never reaches a negative y.
+        "not_example": {
+            "q": "Is f(x) = e^x from R to R onto?",
+            "steps": ["e^x is always positive, so y = −1 "
+                      "has no input that maps to it"],
+            "answer": "No — e^x is not onto R (its range "
+                      "is only the positive numbers)",
+        },
+        "method": "Pick any y in the codomain and try to "
+                  "solve y = f(x) for x: if such an x always "
+                  "exists, the function is onto; one y with "
+                  "no solution settles that it is not.",
     },
     {
         "id": "bijective_concept",
@@ -730,6 +808,21 @@ CONCEPTS = [
                       "Onto: for any y, x = y − 7 works"],
             "answer": "Yes, f is bijective",
         },
+        # Wave 229: the failure case, with both halves
+        # failing for their own shown reasons.
+        "not_example": {
+            "q": "Is f(x) = x² on R bijective?",
+            "steps": ["Not one-one: f(2) = f(−2) = 4",
+                      "Not onto: −4 is never an output"],
+            "answer": "No — x² fails both halves, so it is "
+                      "not bijective (and has no inverse "
+                      "on R)",
+        },
+        "method": "Check the two halves separately: "
+                  "one-one (f(a) = f(b) must force a = b) "
+                  "and onto (every y must have an x with "
+                  "f(x) = y). Both pass → bijective → an "
+                  "inverse exists.",
     },
     {
         # Wave 226: two more Class 9-12 staples that died on
@@ -760,6 +853,18 @@ CONCEPTS = [
                       "whole number"],
             "answer": "Yes — a cubic polynomial (degree 3)",
         },
+        # Wave 229: the worked failure — the explain names
+        # √x, this block shows the check being done.
+        "not_example": {
+            "q": "Is √x + 2 a polynomial?",
+            "steps": ["√x = x^(1/2) — the power 1/2 is not "
+                      "a whole number"],
+            "answer": "No — √x + 2 is not a polynomial",
+        },
+        "method": "Look at every power of the variable: "
+                  "each must be a whole number (0, 1, 2, "
+                  "...), and no variable may sit under a "
+                  "root or in a denominator.",
     },
     {
         "id": "vector_concept",
@@ -788,6 +893,19 @@ CONCEPTS = [
             "answer": "Yes — weight is a vector; mass is "
                       "a scalar",
         },
+        # Wave 229: the classic near-miss pair — speed
+        # vs velocity — as a worked failure.
+        "not_example": {
+            "q": "Is speed a vector?",
+            "steps": ["Speed says how fast, but not which "
+                      "way — it has no direction"],
+            "answer": "No — speed is a scalar; velocity "
+                      "(speed with direction) is the vector",
+        },
+        "method": "Ask one question: does the quantity "
+                  "need a direction to be fully described? "
+                  "If yes, it is a vector; if only a size is "
+                  "enough, it is a scalar.",
     },
     {
         "id": "function_basics",
@@ -806,6 +924,18 @@ CONCEPTS = [
             "steps": ["Put x = 5: f(5) = 5 + 3 = 8"],
             "answer": "f(5) = 8",
         },
+        # Wave 229: the relation that fails the one
+        # rule a function lives by.
+        "not_example": {
+            "q": "Is x² + y² = 25 (a circle) a function?",
+            "steps": ["At x = 0, both y = 5 and y = −5 "
+                      "fit — one input, two outputs"],
+            "answer": "No — a circle is not a function",
+        },
+        "method": "The vertical line test: if any "
+                  "vertical line cuts the graph more than "
+                  "once, it is not a function — one input "
+                  "would be giving two outputs.",
     },
     {
         "id": "domain_range",
@@ -827,6 +957,18 @@ CONCEPTS = [
                       "Range = all y ≥ 0"],
             "answer": "Domain = all real numbers, Range = [0, ∞)",
         },
+        # Wave 229: the excluded input, shown — the case
+        # that makes "domain" mean something.
+        "not_example": {
+            "q": "Is x = −4 allowed in f(x) = √x?",
+            "steps": ["√(−4) is not a real number, so the "
+                      "function gives no output for x = −4"],
+            "answer": "No — the domain of √x is x ≥ 0",
+        },
+        "method": "Hunt for the forbidden inputs: a "
+                  "denominator can never be 0, and the "
+                  "inside of a square root can never be "
+                  "negative — the domain is everything else.",
     },
     {
         "id": "surd",
@@ -917,6 +1059,20 @@ CONCEPTS = [
             "steps": ["2² = 4: { }, {1}, {2}, {1, 2}"],
             "answer": "4 subsets",
         },
+        # Wave 229: one outside element breaks it — the
+        # worked failure.
+        "not_example": {
+            "q": "Is {1, 5} a subset of {1, 2, 3}?",
+            "steps": ["5 belongs to {1, 5} but is not in "
+                      "{1, 2, 3} — one outside element is "
+                      "enough"],
+            "answer": "No — {1, 5} is not a subset of "
+                      "{1, 2, 3}",
+        },
+        "method": "Check element by element: every member "
+                  "of the smaller set must sit inside the "
+                  "bigger one; even one member outside "
+                  "breaks it.",
     },
     {
         "id": "events_types",
@@ -1101,6 +1257,17 @@ CONCEPTS = [
             "steps": ["C = π × d = (22/7) × 7 = 22"],
             "answer": "22 units",
         },
+        # Wave 229: the most common π misconception in
+        # school maths, settled with the digits.
+        "not_example": {
+            "q": "Is 22/7 exactly equal to π?",
+            "steps": ["π = 3.14159265... but 22/7 = "
+                      "3.14285714... — they differ from "
+                      "the third decimal place"],
+            "answer": "No — 22/7 is only an approximation "
+                      "of π (a very handy one for school "
+                      "sums)",
+        },
     },
     {
         "id": "profit_loss",
@@ -1173,6 +1340,17 @@ CONCEPTS = [
             "steps": ["(x - 2)(x - 3) = 0, so x = 2 or 3"],
             "answer": "Zeroes are 2 and 3",
         },
+        # Wave 229: a value that fails the put-it-in
+        # test, plus the test itself.
+        "not_example": {
+            "q": "Is x = 5 a zero of p(x) = x² − 5x + 6?",
+            "steps": ["p(5) = 25 − 25 + 6 = 6, which is "
+                      "not 0"],
+            "answer": "No — 5 is not a zero of p(x)",
+        },
+        "method": "Put the value in: if p(value) comes "
+                  "out 0, the value is a zero; anything "
+                  "else, and it is not — no guessing.",
     },
     {
         "id": "poly_degree",
@@ -1246,6 +1424,17 @@ CONCEPTS = [
             "steps": ["√(13² - 5²) = √144 = 12"],
             "answer": "12 cm",
         },
+        # Wave 229: the two-point line students confuse
+        # with a tangent.
+        "not_example": {
+            "q": "A straight line cuts a circle at two "
+                 "points. Is it a tangent?",
+            "steps": ["A tangent touches at exactly ONE "
+                      "point; a line meeting the circle at "
+                      "two points is a secant"],
+            "answer": "No — that line is a secant, not a "
+                      "tangent",
+        },
     },
     {
         "id": "sector_concept",
@@ -1281,6 +1470,19 @@ CONCEPTS = [
             "steps": ["10² = 100, so the power is 2"],
             "answer": "log₁₀100 = 2",
         },
+        # Wave 229: the log that does not exist — the
+        # boundary of the definition.
+        "not_example": {
+            "q": "Find log₁₀(−100).",
+            "steps": ["10 raised to any power is always "
+                      "positive — it can never give −100"],
+            "answer": "Not defined — in real numbers, the "
+                      "log of a negative number (or of 0) "
+                      "does not exist",
+        },
+        "method": "Turn it into a power question: "
+                  "log_b(x) = y means b^y = x. If no power "
+                  "of b can give x, the log is not defined.",
     },
     {
         "id": "linear_eq_concept",
@@ -1635,6 +1837,14 @@ CONCEPTS = [
             "steps": ["18 = 1 × 18, 2 × 9, 3 × 6"],
             "answer": "1, 2, 3, 6, 9, 18",
         },
+        # Wave 229: the near-miss divisor, shown failing
+        # the exact-division test.
+        "not_example": {
+            "q": "Is 4 a factor of 18?",
+            "steps": ["18 ÷ 4 = 4.5 — it does not divide "
+                      "exactly (remainder 2)"],
+            "answer": "No — 4 is not a factor of 18",
+        },
     },
     {
         "id": "line_segment_concept",
@@ -1703,6 +1913,17 @@ CONCEPTS = [
             "steps": ["(x - 2)(x - 3) = 0"],
             "answer": "x = 2 or x = 3",
         },
+        # Wave 229: the power-1 lookalike, shown failing
+        # the highest-power test.
+        "not_example": {
+            "q": "Is 3x + 5 = 0 a quadratic equation?",
+            "steps": ["The highest power of x here is 1, "
+                      "not 2"],
+            "answer": "No — it is a linear equation",
+        },
+        "method": "Look at the highest power of the "
+                  "variable after simplifying: power 2 "
+                  "(with a ≠ 0) → quadratic.",
     },
 ]
 

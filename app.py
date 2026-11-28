@@ -2549,6 +2549,60 @@ def create_app():
         return bool(_FIGURE_REF.search(text)
                     or _FIGURE_REF_HI.search(text))
 
+    def _option_run_lines(piece):
+        """Wave 229: split one piece's MCQ option run into one
+        display line per option, or None when the piece holds
+        no such run. A run is at least THREE sequential labels
+        — (a) (b) (c) [(d)], or the (A)-(D) capitals — in
+        order. The Wave 63/64 branches below only ever split
+        SPACED capitals (and spaced lowercase on Hindi-medium
+        sheets), so a lowercase run on an English paper — 732
+        stored questions — rendered as one continuous line,
+        and a run stored without spaces around its labels
+        ("(a)2(b)6(c)20(d)1", Suraj's screenshot) rendered
+        fully glued. Display only, like everything in
+        _paper_q_lines: every word of the stored text
+        survives, in order; the only normalisation is one
+        space after a label that was stored glued to its
+        option text. A label counts only when the character
+        before "(" is not a letter, so "f(a)", "P(A)" and
+        "Assertion (A):" never start a run."""
+        for labels in ("abcd", "ABCD"):
+            starts = []
+            pos = 0
+            for ch in labels:
+                label = "(" + ch + ")"
+                found = -1
+                while True:
+                    i = piece.find(label, pos)
+                    if i < 0:
+                        break
+                    if i == 0 or not piece[i - 1].isalpha():
+                        found = i
+                        break
+                    pos = i + 1
+                if found < 0:
+                    break
+                starts.append(found)
+                pos = found + len(label)
+            if len(starts) < 3:
+                continue
+            out = []
+            stem = piece[:starts[0]].strip()
+            if stem:
+                out.append(stem)
+            for k, s in enumerate(starts):
+                e = (starts[k + 1] if k + 1 < len(starts)
+                     else len(piece))
+                opt = piece[s:e].strip()
+                label = "(" + labels[k] + ")"
+                rest = opt[len(label):]
+                if rest and not rest[0].isspace():
+                    opt = label + " " + rest
+                out.append(opt)
+            return out
+        return None
+
     def _paper_q_lines(text, or_word="OR", lower_options=False):
         """Display lines for one stored question text: a list of
         (kind, text) with kind "or" for the centred OR divider
@@ -2578,7 +2632,15 @@ def create_app():
                         r"(?<=[.;:।])\s+"
                         r"(?=\((?:i|ii|iii|iv|a|b|क|ख)\))",
                         chunk):
-                    if "(A)" in piece and " (B) " in piece:
+                    # Wave 229: a 3+ label option run (either
+                    # case, spaced or stored glued) splits
+                    # first; the Wave 63/64 branches below keep
+                    # their exact behaviour for the 2-label
+                    # pieces they have always owned.
+                    run = _option_run_lines(piece)
+                    if run is not None:
+                        lines.extend(("line", opt) for opt in run)
+                    elif "(A)" in piece and " (B) " in piece:
                         lines.extend(
                             ("line", opt) for opt in re.split(
                                 r"\s+(?=\([A-D]\)\s)", piece))

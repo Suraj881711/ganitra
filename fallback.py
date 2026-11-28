@@ -4061,6 +4061,19 @@ def _concept_result(question, hindi):
              f"Example: {ex['q']}"]
     steps.extend(ex["steps"])
     steps.append(f"Example answer: {ex['answer']}")
+    # Wave 229: the depth fields — a card that carries a
+    # worked counterexample and/or the standard test for
+    # its concept serves them after the worked example, in
+    # the same plain rendering. Cards without the fields
+    # render byte-identically to before.
+    ne = entry.get("not_example")
+    if ne:
+        steps.append(f"Not an example: {ne['q']}")
+        steps.extend(ne["steps"])
+        steps.append(f"Answer: {ne['answer']}")
+    method = entry.get("method")
+    if method:
+        steps.append(f"Quick check: {method}")
     return {
         "type": "Concept",
         "op": entry["id"],
