@@ -5523,6 +5523,19 @@ def _with_fallback_chain(question, result, lang=None,
         w226 = None
     if w226 is not None:
         return _with_figure(question, w226)
+    # Wave 234: the maths-quality gates get the same
+    # starved-budget consult as Wave 226 — shapes like
+    # "1/0 kyun undefined hota hai" otherwise fall to a
+    # concept card that answers a different question
+    # (the zero-history card) once the primary dispatch
+    # has errored.
+    try:
+        from solver.wave234 import solve_wave234
+        w234 = solve_wave234(question)
+    except Exception:
+        w234 = None
+    if w234 is not None:
+        return _with_figure(question, w234)
     try:
         from solver.multipart223 import \
             solve_multipart223
