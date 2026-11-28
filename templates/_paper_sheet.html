@@ -7,7 +7,13 @@
    question exactly as stored (display line-breaks only). A
    question whose printed figure is not in the data gets the
    [Figure] marker. Time allowed is not in the data and is
-   therefore not printed. #}
+   therefore not printed.
+   Wave 229: the sheet's CSS (style.css + the print view's
+   inline copy) gives it the original-paper feel — an off-white
+   sheet with a real shadow on the page backdrop, the classic
+   double rule under the header, ruled section headings — and
+   consecutive option lines are wrapped in .q-opts so they lay
+   out as a spaced grid instead of one glued line. #}
 <div class="exam-sheet">
   <p class="sheet-code">{{ sheet.set_label }}</p>
   <h1 class="sheet-subject">{{ sheet.subject }}</h1>
@@ -28,13 +34,24 @@
       <div class="paper-q">
         <span class="q-num">{{ q.number }}.</span>
         <div class="q-body">
+          {# Wave 229: consecutive option lines (a line whose
+             text opens with an (a)-(d) / (A)-(D) label) are
+             wrapped in one .q-opts block so the sheet CSS can
+             lay them out as a spaced grid — never one glued
+             running line. The lines themselves render exactly
+             as before (<p class="q-line">), inside the wrapper. #}
+          {% set opts = namespace(open=false) %}
           {% for kind, text in q.lines %}
+            {% set is_opt = kind == "line" and (text.startswith("(a) ") or text.startswith("(b) ") or text.startswith("(c) ") or text.startswith("(d) ") or text.startswith("(A) ") or text.startswith("(B) ") or text.startswith("(C) ") or text.startswith("(D) ")) %}
+            {% if is_opt and not opts.open %}<div class="q-opts">{% set opts.open = true %}{% endif %}
+            {% if not is_opt and opts.open %}</div>{% set opts.open = false %}{% endif %}
             {% if kind == "or" %}
               <p class="q-or">{{ text }}</p>
             {% else %}
               <p class="q-line">{{ text }}</p>
             {% endif %}
           {% endfor %}
+          {% if opts.open %}</div>{% endif %}
           {% if q.has_figure %}<p class="q-figure">[Figure]</p>{% endif %}
         </div>
         <span class="q-marks">{{ q.marks }}</span>

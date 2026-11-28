@@ -35,33 +35,46 @@
                     vertical-align: middle; margin-right: 10px; }
       /* Wave 63: the typed exam-paper sheet (stored papers) —
          same rules as static/style.css .exam-sheet, duplicated
-         here because this view is standalone. */
-      .exam-sheet { color: #111; line-height: 1.6; }
+         here because this view is standalone.
+         Wave 229: the same original-paper furniture as the
+         in-app sheet — double rule under the header, a rule
+         over every section heading, generous line spacing and
+         the .q-opts options grid (no shadow/backdrop here:
+         on this page the sheet IS the printed page). */
+      .exam-sheet { color: #111; line-height: 1.65; }
       .sheet-code { text-align: center; font-size: 13.5px;
-                    letter-spacing: .03em; margin: 0 0 10px; }
-      .sheet-subject { text-align: center; font-size: 24px;
-                       margin: 0 0 4px; text-transform: uppercase; }
+                    letter-spacing: .08em; margin: 0 0 10px; }
+      .sheet-subject { text-align: center; font-size: 26px;
+                       margin: 0 0 4px; text-transform: uppercase;
+                       letter-spacing: .02em; }
       .sheet-classline { text-align: center; font-size: 15px;
-                         margin: 0 0 10px; }
+                         margin: 0 0 12px; }
       .sheet-marksrow { display: flex; justify-content: flex-end;
                         border-top: 2.5px solid #111;
-                        border-bottom: 1px solid #111;
+                        border-bottom: 3px double #111;
                         padding: 5px 2px; font-weight: bold;
-                        margin: 0 0 18px; }
+                        margin: 0 0 20px; }
       .sheet-instr-title { font-size: 16.5px; margin: 0 0 6px;
                            text-decoration: underline; }
       .sheet-instr { margin: 0 0 8px; padding-left: 22px; }
       .sheet-instr li { margin: 3px 0; }
       .sheet-section { text-align: center; font-size: 19px;
-                       margin: 30px 0 2px; letter-spacing: .06em; }
+                       margin: 34px 0 2px; letter-spacing: .06em;
+                       border-top: 1.5px solid #111;
+                       padding-top: 12px; }
       .sheet-secsub { text-align: center; font-style: italic;
-                      font-size: 14.5px; margin: 0 0 10px; }
+                      font-size: 14.5px; margin: 0 0 12px; }
       .exam-sheet .paper-q { display: flex; gap: 10px;
-                             padding: 7px 0; page-break-inside: avoid; }
+                             padding: 9px 0; page-break-inside: avoid; }
       .exam-sheet .q-num { font-weight: bold; min-width: 30px;
                            text-align: right; }
       .exam-sheet .q-body { flex: 1; }
-      .exam-sheet .q-line { margin: 0 0 4px; text-align: justify; }
+      .exam-sheet .q-line { margin: 0 0 4px; line-height: 1.7;
+                            text-align: left; }
+      .exam-sheet .q-opts { display: flex; flex-wrap: wrap;
+                            gap: 5px 30px; margin: 3px 0 7px; }
+      .exam-sheet .q-opts .q-line { flex: 1 1 240px; margin: 0;
+                                    text-align: left; }
       .exam-sheet .q-or { text-align: center; font-weight: bold;
                           margin: 5px 0; }
       .exam-sheet .q-figure { text-align: center;
