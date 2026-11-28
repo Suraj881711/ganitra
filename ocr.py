@@ -45,7 +45,12 @@ Confidence: tesseract reports a per-word confidence (0-100).
 The mean over recognised words below ``LOW_CONFIDENCE`` marks
 the read ``low_confidence`` — the client then shows the text
 to the student for editing BEFORE solving instead of solving
-a possibly-misread question blind.
+a possibly-misread question blind. Wave 231 (BUG-010): the
+mean alone can hide a single misread symbol (a minus read as
+a plus at low confidence, averaged away by confident prose),
+so a symbol-bearing token (digit / operator) under the same
+bar also marks the read ``low_confidence`` — see
+``OcrOutcome.symbol_confidence``.
 """
 
 import io
@@ -70,15 +75,31 @@ class OcrFailed(Exception):
 
 
 class OcrOutcome:
-    def __init__(self, text, confidence, backend):
+    def __init__(self, text, confidence, backend,
+                 symbol_confidence=None):
         self.text = text
         self.confidence = confidence
         self.backend = backend
+        # Wave 231 (BUG-010): the lowest confidence among
+        # symbol-bearing tokens (digits / operators), or None
+        # when the read carried none.
+        self.symbol_confidence = symbol_confidence
 
     @property
     def low_confidence(self):
-        return (self.confidence is not None
-                and self.confidence < LOW_CONFIDENCE)
+        if (self.confidence is not None
+                and self.confidence < LOW_CONFIDENCE):
+            return True
+        # Wave 231 (BUG-010): the mean over ALL words can hide
+        # one misread symbol — ninety-five confident prose
+        # words average away a "-" read at 40 that was really
+        # a "+", and the solver then solves a different
+        # question with full confidence. A symbol-bearing
+        # token under the SAME bar drags the whole read into
+        # the confirm-before-solving behaviour, however high
+        # the mean sits.
+        return (self.symbol_confidence is not None
+                and self.symbol_confidence < LOW_CONFIDENCE)
 
 
 def _tesseract_cmd():
@@ -129,14 +150,31 @@ def preprocess_image(data):
     return out.getvalue()
 
 
-def _parse_tsv(tsv):
-    """Tesseract TSV -> (text, mean word confidence or None).
-    Words are regrouped into their printed lines so the solver
-    sees the question's line structure (collapsed later by
-    normalize_ocr_text, exactly like the browser flow's text)."""
+_SYMBOL_CHARS = set("+-−–—×*/÷=<>≤≥^√π%()")
+
+
+def _is_symbol_bearing(word):
+    """Wave 231 (BUG-010): a token whose misread can change
+    the QUESTION — anything carrying a digit ("12", "3x",
+    "2.5") or built from operator characters ("+", "−", "=",
+    "×", a lone "x"). Plain prose words are not symbol-
+    bearing: their misreads garble wording, not values."""
+    w = str(word or "")
+    if any(ch.isdigit() for ch in w):
+        return True
+    return bool(w) and all(
+        ch in _SYMBOL_CHARS or ch == "x" for ch in w)
+
+
+def _parse_tsv_rows(tsv):
+    """Tesseract TSV -> (text, [(word, conf), ...]). Words are
+    regrouped into their printed lines so the solver sees the
+    question's line structure (collapsed later by
+    normalize_ocr_text, exactly like the browser flow's
+    text)."""
     lines = {}
     order = []
-    confs = []
+    pairs = []
     rows = tsv.splitlines()
     for row in rows[1:]:  # first row is the header
         parts = row.split("\t")
@@ -154,10 +192,25 @@ def _parse_tsv(tsv):
             lines[key] = []
             order.append(key)
         lines[key].append(word)
-        confs.append(conf)
+        pairs.append((word, conf))
     text = "\n".join(" ".join(lines[key]) for key in order)
+    return text.strip(), pairs
+
+
+def _parse_tsv(tsv):
+    """Tesseract TSV -> (text, mean word confidence or None)."""
+    text, pairs = _parse_tsv_rows(tsv)
+    confs = [conf for _word, conf in pairs]
     confidence = (sum(confs) / len(confs)) if confs else None
-    return text.strip(), confidence
+    return text, confidence
+
+
+def _symbol_min_confidence(pairs):
+    """The lowest confidence among symbol-bearing tokens, or
+    None when the read carried none."""
+    vals = [conf for word, conf in pairs
+            if _is_symbol_bearing(word)]
+    return min(vals) if vals else None
 
 
 class TesseractBackend:
@@ -188,9 +241,13 @@ class TesseractBackend:
         if proc.returncode != 0:
             raise OcrFailed(
                 f"tesseract exited {proc.returncode}")
-        text, confidence = _parse_tsv(
+        text, pairs = _parse_tsv_rows(
             proc.stdout.decode("utf-8", "replace"))
-        return OcrOutcome(text, confidence, self.name)
+        confs = [conf for _word, conf in pairs]
+        confidence = (sum(confs) / len(confs)) if confs else None
+        return OcrOutcome(text, confidence, self.name,
+                          symbol_confidence=_symbol_min_confidence(
+                              pairs))
 
 
 def available_backend():
