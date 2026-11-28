@@ -50,6 +50,8 @@ _EN = {
     "question_placeholder": "e.g., Solve 2x+3=7, integrate x^2 from 0 "
                             "to 1, sin 30 ka maan, plot x^2 - 3x + 2",
     "voice_btn": "🎤 Speak your question",
+    "voice_call_btn": "📞 Voice call",
+    "voice_call_end": "End call",
     "photo_btn": "📷 Photo question",
     "attach_gallery": "🖼️ Photo from gallery",
     "attach_file": "📎 Choose a file",
@@ -171,6 +173,9 @@ _EN = {
     "js_voice_failed": "Could not understand the voice, please try "
                        "again.",
     "js_voice_speak": "Speak now, I am listening…",
+    "js_voice_call_listening": "Voice call — listening… speak your question",
+    "js_voice_call_speaking": "Ganitra is speaking…",
+    "js_voice_call_thinking": "Voice call — thinking…",
     "js_photo_unavailable": "The photo feature has not loaded yet — "
                             "please refresh the page and try again.",
     "js_photo_reading": "Reading the photo… ⏳ (printed questions read "
@@ -218,6 +223,8 @@ _HI = {
     "question_placeholder": "जैसे, 2x+3=7 हल कीजिए, 0 से 1 तक x^2 का "
                             "समाकलन, sin 30 का मान, x^2 - 3x + 2 का ग्राफ़",
     "voice_btn": "🎤 बोलकर प्रश्न पूछिए",
+    "voice_call_btn": "📞 वॉइस कॉल",
+    "voice_call_end": "कॉल खत्म करें",
     "photo_btn": "📷 फ़ोटो से प्रश्न",
     "attach_gallery": "🖼️ गैलरी से फ़ोटो",
     "attach_file": "📎 फ़ाइल चुनो",
@@ -331,6 +338,9 @@ _HI = {
                        "माइक की अनुमति दीजिए।",
     "js_voice_failed": "आवाज़ समझ नहीं आई, फिर से प्रयास कीजिए।",
     "js_voice_speak": "बोलिए, मैं सुन रहा हूँ…",
+    "js_voice_call_listening": "वॉइस कॉल — सुन रहा हूँ… अपना सवाल बोलिए",
+    "js_voice_call_speaking": "Ganitra बोल रहा है…",
+    "js_voice_call_thinking": "वॉइस कॉल — सोच रहा हूँ…",
     "js_photo_unavailable": "फ़ोटो वाला फ़ीचर अभी लोड नहीं हुआ — पृष्ठ "
                             "फिर से लोड करके प्रयास कीजिए।",
     "js_photo_reading": "फ़ोटो पढ़ा जा रहा है… ⏳ (छपा हुआ प्रश्न सबसे "
@@ -372,6 +382,8 @@ _BN = {
                             "পর্যন্ত x^2-এর সমাকলন, sin 30-এর মান, "
                             "x^2 - 3x + 2-এর লেখচিত্র",
     "voice_btn": "🎤 বলে প্রশ্ন করুন",
+    "voice_call_btn": "📞 ভয়েস কল",
+    "voice_call_end": "কল শেষ করুন",
     "photo_btn": "📷 ছবি থেকে প্রশ্ন",
     "attach_gallery": "🖼️ গ্যালারি থেকে ছবি",
     "attach_file": "📎 ফাইল বেছে নাও",
@@ -486,6 +498,9 @@ _BN = {
                        "সেটিংসে মাইক অনুমোদন করুন।",
     "js_voice_failed": "কণ্ঠ বোঝা যায়নি, আবার চেষ্টা করুন।",
     "js_voice_speak": "বলুন, শুনছি…",
+    "js_voice_call_listening": "ভয়েস কল — শুনছি… আপনার প্রশ্ন বলুন",
+    "js_voice_call_speaking": "Ganitra বলছে…",
+    "js_voice_call_thinking": "ভয়েস কল — ভাবছি…",
     "js_photo_unavailable": "ছবির ফিচারটি এখনো লোড হয়নি — পৃষ্ঠাটি "
                             "আবার লোড করে চেষ্টা করুন।",
     "js_photo_reading": "ছবি পড়া হচ্ছে… ⏳ (ছাপানো প্রশ্ন সবচেয়ে "
@@ -527,6 +542,8 @@ _MR = {
                             "समाकलन, sin 30 चे मूल्य, x^2 - 3x + 2 चा "
                             "आलेख",
     "voice_btn": "🎤 बोलून प्रश्न विचारा",
+    "voice_call_btn": "📞 व्हॉइस कॉल",
+    "voice_call_end": "कॉल संपवा",
     "photo_btn": "📷 फोटोवरून प्रश्न",
     "attach_gallery": "🖼️ गॅलरीतून फोटो",
     "attach_file": "📎 फाइल निवडा",
@@ -639,6 +656,9 @@ _MR = {
                        "माइकला परवानगी द्या.",
     "js_voice_failed": "आवाज समजला नाही, पुन्हा प्रयत्न करा.",
     "js_voice_speak": "बोला, मी ऐकतोय…",
+    "js_voice_call_listening": "व्हॉइस कॉल — ऐकतोय… तुमचा प्रश्न बोला",
+    "js_voice_call_speaking": "Ganitra बोलतोय…",
+    "js_voice_call_thinking": "व्हॉइस कॉल — विचार करतोय…",
     "js_photo_unavailable": "फोटोचे वैशिष्ट्य अजून लोड झाले नाही — "
                             "पृष्ठ पुन्हा लोड करून प्रयत्न करा.",
     "js_photo_reading": "फोटो वाचत आहे… ⏳ (छापील प्रश्न सर्वात स्पष्ट "
@@ -680,6 +700,8 @@ _TA = {
                             "வரை x^2 இன் தொகையீடு, sin 30 இன் மதிப்பு, "
                             "x^2 - 3x + 2 இன் வரைபடம்",
     "voice_btn": "🎤 பேசிக் கேளுங்கள்",
+    "voice_call_btn": "📞 குரல் அழைப்பு",
+    "voice_call_end": "அழைப்பை முடி",
     "photo_btn": "📷 புகைப்படத்திலிருந்து கேள்வி",
     "attach_gallery": "🖼️ கேலரியிலிருந்து புகைப்படம்",
     "attach_file": "📎 கோப்பைத் தேர்ந்தெடு",
@@ -809,6 +831,9 @@ _TA = {
     "js_voice_failed": "குரலைப் புரிந்துகொள்ள முடியவில்லை, மீண்டும் "
                        "முயற்சிக்கவும்.",
     "js_voice_speak": "பேசுங்கள், கேட்கிறேன்…",
+    "js_voice_call_listening": "குரல் அழைப்பு — கேட்கிறேன்… உங்கள் கேள்வியைச் சொல்லுங்கள்",
+    "js_voice_call_speaking": "Ganitra பேசுகிறது…",
+    "js_voice_call_thinking": "குரல் அழைப்பு — யோசிக்கிறேன்…",
     "js_photo_unavailable": "புகைப்பட அம்சம் இன்னும் ஏற்றப்படவில்லை — "
                             "பக்கத்தைப் புதுப்பித்து மீண்டும் "
                             "முயற்சிக்கவும்.",
@@ -855,6 +880,8 @@ _TE = {
                             "వరకు x^2 యొక్క సమాకలనం, sin 30 విలువ, "
                             "x^2 - 3x + 2 గ్రాఫ్",
     "voice_btn": "🎤 మాట్లాడి అడగండి",
+    "voice_call_btn": "📞 వాయిస్ కాల్",
+    "voice_call_end": "కాల్ ముగించు",
     "photo_btn": "📷 ఫోటో నుండి ప్రశ్న",
     "attach_gallery": "🖼️ గ్యాలరీ నుండి ఫోటో",
     "attach_file": "📎 ఫైల్‌ను ఎంచుకోండి",
@@ -974,6 +1001,9 @@ _TE = {
                        "మైక్‌ను అనుమతించండి.",
     "js_voice_failed": "వాయిస్ అర్థం కాలేదు, మళ్లీ ప్రయత్నించండి.",
     "js_voice_speak": "మాట్లాడండి, వింటున్నాను…",
+    "js_voice_call_listening": "వాయిస్ కాల్ — వింటున్నాను… మీ ప్రశ్న చెప్పండి",
+    "js_voice_call_speaking": "Ganitra మాట్లాడుతోంది…",
+    "js_voice_call_thinking": "వాయిస్ కాల్ — ఆలోచిస్తున్నాను…",
     "js_photo_unavailable": "ఫోటో ఫీచర్ ఇంకా లోడ్ కాలేదు — పేజీని "
                             "రిఫ్రెష్ చేసి మళ్లీ ప్రయత్నించండి.",
     "js_photo_reading": "ఫోటో చదువుతున్నాను… ⏳ (అచ్చువేసిన ప్రశ్నలు "
