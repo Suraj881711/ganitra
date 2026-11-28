@@ -298,6 +298,53 @@ def _fmt_interval(iv, v):
     return f"{fmt(a)} {ls} {v} {rs} {fmt(b)}"
 
 
+_SQRT_GLYPH_RE = re.compile(r"sqrt\(([^()]+)\)")
+
+
+def fmt_exact(value) -> str:
+    """Wave 234: an exact SymPy value in school form.
+
+    fmt() spells roots and pi the machine way ("5·sqrt(2)",
+    "36·pi"); a student's copybook writes "5√2" and "36π".
+    This rendering is used where the EXACT value leads the
+    answer (bare-root asks, mensuration with true pi, Heron):
+    integers and rationals render as in fmt_num, a simple
+    surd as coeff·√radicand ("5√2", "√2", "2√6"), a multiple
+    of pi as "36π" / "4/3π", and anything more complex falls
+    back to fmt() unchanged — never an invented form."""
+    try:
+        v = sp.nsimplify(value)
+    except Exception:
+        return fmt(value)
+    if v.is_Integer:
+        return str(v)
+    if v.is_Rational:
+        return str(v.p) if v.q == 1 else f"{v.p}/{v.q}"
+    s = fmt(v)
+
+    def _glyph(m):
+        arg = m.group(1)
+        if re.fullmatch(r"-?\d+(?:\.\d+)?(?:/\d+)?", arg):
+            return "√" + arg
+        return "√(" + arg + ")"
+
+    s = _SQRT_GLYPH_RE.sub(_glyph, s)
+    s = s.replace("·√", "√")
+    s = s.replace("·pi", "π")
+    s = re.sub(r"(?<![A-Za-z])pi(?![A-Za-z])", "π", s)
+    return s
+
+
+def approx_str(value) -> str:
+    """Wave 234: the decimal companion of an exact-first
+    answer — 4 decimal places, trailing zeros stripped
+    ("7.0711", "113.0973", "2.9047", "6")."""
+    f = float(value)
+    if f == int(f):
+        return str(int(f))
+    return f"{f:.4f}".rstrip("0").rstrip(".")
+
+
 def fmt_num(value) -> str:
     """Format a number: integers clean, fractions as a/b, else decimal."""
     if isinstance(value, float):
