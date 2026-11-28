@@ -1372,23 +1372,28 @@ def _cx_parse(m):
 
 
 def _cx_str(z):
-    # Native's complex display: the unit is a capital I
-    # joined by the middle dot ("3 + 2·I", "-I", "9·I").
+    # Complex display: the unit is a lowercase i joined by
+    # the middle dot ("3 + 2·i", "-i", "9·i"). Wave 231
+    # SUPERSESSION: this family used a capital I (matching
+    # the old fmt pass-through of SymPy's spelling); the
+    # external audit ruled I must reach a student as i, and
+    # fmt now renders i everywhere else, so the family
+    # dialect is unified on i.
     z = sp.expand(z)
     re_part, im_part = z.as_real_imag()
     if im_part == 0:
         return str(re_part)
     if re_part == 0:
         if im_part == 1:
-            return "I"
+            return "i"
         if im_part == -1:
-            return "-I"
-        return f"{im_part}·I".replace("sqrt", "√")
+            return "-i"
+        return f"{im_part}·i".replace("sqrt", "√")
     sign = "+" if im_part > 0 else "-"
     mag = abs(im_part)
     mag_s = "" if mag == 1 else str(mag).replace(
         "sqrt", "√").replace("*", "") + "·"
-    return f"{re_part} {sign} {mag_s}I"
+    return f"{re_part} {sign} {mag_s}i"
 
 
 _I_POWER_REST = {
