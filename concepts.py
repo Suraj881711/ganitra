@@ -1930,14 +1930,58 @@ CONCEPTS = [
 _BY_ID = {c["id"]: c for c in CONCEPTS}
 
 
+_CONJ_SEPS = (" and ", " & ", " aur ")
+
+
+def _conjunction_forms(kw):
+    """The matchable forms of a conjunction keyword: itself,
+    plus the swapped-halves form ("onto and one-one" for
+    "one-one and onto") — a student may name the two concepts
+    in either order, and a combined card owns its pair in
+    both. Non-conjunction keywords yield just themselves."""
+    for sep in _CONJ_SEPS:
+        if sep in kw:
+            left, _, right = kw.partition(sep)
+            left, right = left.strip(), right.strip()
+            if left and right:
+                return (kw, right + sep + left)
+            return (kw,)
+    return (kw,)
+
+
 def find_concept(question):
     """Return the concept entry whose keyword appears in the
     question (case-insensitive substring match), else None.
     Longer/more specific keywords are checked by list order —
     specific entries (trig identity, root-2) sit before the
     general ones they could be confused with only where their
-    keywords genuinely overlap."""
+    keywords genuinely overlap.
+
+    Wave 231: COMBINED cards first. A card whose keyword
+    joins two concepts with a conjunction ("hcf aur lcm",
+    "one-one and onto", "area and perimeter"…) exists
+    precisely for a two-concept ask, but first-match list
+    order could demote it to a single-concept card whose
+    plain keyword happened to sit earlier in the list (and
+    the chat path's number-word normaliser made it worse —
+    see human_brain). So: when any conjunction keyword
+    matches (in either naming order), the combined card
+    with the longest matched keyword wins, list order
+    breaking ties. When no conjunction keyword matches,
+    the historical first-match scan runs byte-identically."""
     q = str(question or "").lower()
+    best = None
+    best_len = -1
+    for entry in CONCEPTS:
+        for kw in entry["keywords"]:
+            if not any(sep in kw for sep in _CONJ_SEPS):
+                continue
+            for form in _conjunction_forms(kw):
+                if form in q and len(form) > best_len:
+                    best = entry
+                    best_len = len(form)
+    if best is not None:
+        return best
     for entry in CONCEPTS:
         for kw in entry["keywords"]:
             if kw in q:
