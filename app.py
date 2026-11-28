@@ -52,6 +52,7 @@ import full_paper
 import progress as progress_mod
 import chats
 import thoughts
+import security
 
 _HISTORY_LIMIT = 30
 _MISTAKE_LIMIT = 50
@@ -60,6 +61,13 @@ _SAATHI_NAME_LIMIT = 30
 # Wave 10: after this many failed login attempts for one name in a
 # session, further attempts get the friendly "try later" message.
 _LOGIN_ATTEMPT_LIMIT = 8
+# Wave 232 (security): the minimum length for a NEW password —
+# set at sign-up, at favourite-login reset, or on the Account
+# page. It was 4 (the audit's row); it is 6 now. The check lives
+# only where a password is SET: verify-only paths never look at
+# the length, so every existing password keeps working exactly
+# as before, however short it is.
+_PASSWORD_MIN_LENGTH = 6
 # Wave 70 (Suraj, 16 Nov 2026): the Logo Jungle scene is OFF —
 # "scene se eagle bhi hata do, bilkul khali kar do". The empty
 # state shows only the still logo + greeting. All scene code,
@@ -431,6 +439,16 @@ def create_app():
     # so /download, /solution/print and every follow-up
     # layer keep reading the exact full body, byte for
     # byte, exactly as before this wave.
+    # Wave 232 (security): CSRF — every state-changing request
+    # that a browser could have been tricked into sending must
+    # carry this session's token (security.check_csrf decides
+    # when a token is required; GET routes are never checked).
+    # Registered on the app, so it covers the /api blueprint
+    # exactly like the routes below.
+    @app.before_request
+    def _wave232_csrf_check():
+        return security.check_csrf()
+
     @app.before_request
     def _wave182_expand_paper_last_result():
         try:
@@ -544,6 +562,10 @@ def create_app():
         if app.config.get("SESSION_COOKIE_SECURE"):
             resp.headers["Strict-Transport-Security"] = (
                 "max-age=31536000; includeSubDomains")
+        # Wave 232 (security): the CSP joins the Wave-17 headers
+        # here — see security.py for exactly what the policy
+        # allows and what it does not claim to stop.
+        security.apply_csp(resp)
         if request.path.startswith("/static/"):
             resp.headers["Cache-Control"] = "public, max-age=86400"
         return resp
@@ -622,6 +644,10 @@ def create_app():
         The Wave-17/17b cookie flags (HttpOnly, SameSite=Lax,
         Secure opt-in) and the server-side lockout are unchanged."""
         session.permanent = True
+        # Wave 232 (security): a fresh CSRF token rides the new
+        # privilege level — the pre-login token stops validating
+        # the moment an account session exists.
+        security.rotate_csrf_token()
         session["user_id"] = user["id"]
         session["user_name"] = user["name"]
         session["saathi_name"] = user["name"]
@@ -652,6 +678,15 @@ def create_app():
         attempts.pop(name_key, None)
         session["login_attempts"] = attempts
         accounts.clear_login_failures(name_key)
+
+    @app.context_processor
+    def inject_csrf_token():
+        # Wave 232 (security): base.html carries the token in a
+        # meta tag; its script arms every POST form with the
+        # hidden field and wraps fetch with the header. Issuing
+        # here means any rendered page hands the browser its
+        # token — including the sign-in page itself.
+        return {"csrf_token": security.issue_csrf_token()}
 
     @app.context_processor
     def inject_i18n():
@@ -818,6 +853,12 @@ def create_app():
                 for key in ("name", "class", "board", "goal",
                             "hobby", "favourite", "password")}
         strings = _t()
+        # Wave 232 (security): the per-IP failed-auth throttle —
+        # this IP has burned its failure budget across the auth
+        # endpoints, so it waits, whatever name it tries next.
+        if security.auth_ip_throttled():
+            return _signin("signup", strings["auth_err_lockout"],
+                           form)
         # The account display name uses the same cleaning as Mera
         # Saathi (tags stripped, whitespace collapsed, 30-char cap).
         name = _clean_saathi_name(form["name"])
@@ -829,7 +870,7 @@ def create_app():
         class_num = accounts.parse_class(form["class"])
         if class_num is None:
             return _signin("signup", strings["auth_err_class"], form)
-        if len(form["password"]) < 4:
+        if len(form["password"]) < _PASSWORD_MIN_LENGTH:
             return _signin("signup",
                            strings["auth_err_password_short"], form)
         # Wave 17b (pen-test F1): a favourite thing is a recovery
@@ -847,6 +888,7 @@ def create_app():
             form["password"], form["goal"], form["hobby"],
             form["favourite"])
         if problem == "exists":
+            security.record_auth_ip_failure()
             return _signin("signup", strings["auth_err_name_taken"],
                            form)
         user = accounts.get_user(name)
@@ -859,6 +901,11 @@ def create_app():
         name = request.form.get("name", "")
         password = request.form.get("password", "")
         key = accounts.normalise_name_key(name)
+        # Wave 232 (security): per-IP throttle first — a sprayer
+        # rotating through names meets the same wall everywhere.
+        if security.auth_ip_throttled():
+            return _signin("login", strings["auth_err_lockout"],
+                           {"name": name})
         if _failed_logins(key) >= _LOGIN_ATTEMPT_LIMIT:
             return _signin("login", strings["auth_err_lockout"],
                            {"name": name})
@@ -867,6 +914,7 @@ def create_app():
             # One friendly error for both cases — never a hint
             # about which part (name vs password) was wrong.
             _record_failed_login(key)
+            security.record_auth_ip_failure()
             if _failed_logins(key) >= _LOGIN_ATTEMPT_LIMIT:
                 return _signin("login", strings["auth_err_lockout"],
                                {"name": name})
@@ -886,19 +934,25 @@ def create_app():
         typed = request.form.get("favourite", "")
         new_password = request.form.get("new_password", "")
         key = accounts.normalise_name_key(name)
+        # Wave 232 (security): the per-IP throttle guards the
+        # favourite door exactly like the password door.
+        if security.auth_ip_throttled():
+            return _signin("login", strings["auth_err_lockout"],
+                           {"name": name}, fav_error=True)
         if _failed_logins(key) >= _LOGIN_ATTEMPT_LIMIT:
             return _signin("login", strings["auth_err_lockout"],
                            {"name": name}, fav_error=True)
         user = accounts.get_user(name)
         if user is None or not accounts.verify_favourite(user, typed):
             _record_failed_login(key)
+            security.record_auth_ip_failure()
             if _failed_logins(key) >= _LOGIN_ATTEMPT_LIMIT:
                 return _signin("login",
                                strings["auth_err_lockout"],
                                {"name": name}, fav_error=True)
             return _signin("login", strings["auth_err_fav"],
                            {"name": name}, fav_error=True)
-        if len(new_password) < 4:
+        if len(new_password) < _PASSWORD_MIN_LENGTH:
             return _signin("login",
                            strings["auth_err_password_short"],
                            {"name": name}, fav_error=True)
@@ -1032,7 +1086,7 @@ def create_app():
         if not accounts.verify_password(user, old):
             return _account_page(
                 user, strings["acct_err_password_wrong"])
-        if len(new) < 4:
+        if len(new) < _PASSWORD_MIN_LENGTH:
             return _account_page(
                 user, strings["auth_err_password_short"])
         accounts.update_password(user["id"], new)

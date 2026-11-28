@@ -3407,6 +3407,9 @@ _EN_W10 = {
     "auth_hobby_label": "Hobby",
     "auth_fav_label": "Favourite",
     "auth_password_label": "Password",
+    # Wave 232: the password rule, stated on the form itself.
+    "auth_password_hint": "At least 6 characters — pick one "
+                          "you will remember.",
     "auth_new_password_label": "New password",
     "auth_signup_btn": "Create my account",
     "auth_forgot_line": "Forgot password? Any one favourite thing "
@@ -3424,7 +3427,7 @@ _EN_W10 = {
                          "password.",
     "auth_err_class": "Class must be between 6 and 12 — please "
                       "write it like 8 or Class 8.",
-    "auth_err_password_short": "Password needs at least 4 "
+    "auth_err_password_short": "Password needs at least 6 "
                                "characters — pick one you will "
                                "remember.",
     "auth_err_name_taken": "This name is already registered. Add "
@@ -3455,6 +3458,8 @@ _HI_W10 = {
     "auth_hobby_label": "मेरा शौक",
     "auth_fav_label": "मेरी पसंदीदा चीज़",
     "auth_password_label": "पासवर्ड",
+    "auth_password_hint": "कम से कम 6 अक्षर — ऐसा चुनो जो "
+                          "याद रहे।",
     "auth_new_password_label": "नया पासवर्ड",
     "auth_signup_btn": "मेरा खाता बनाओ",
     "auth_forgot_line": "पासवर्ड भूल गए? कोई एक पसंदीदा चीज़ "
@@ -3472,7 +3477,7 @@ _HI_W10 = {
                          "तीनों पसंदीदा चीज़ें और पासवर्ड।",
     "auth_err_class": "कक्षा 6 से 12 के बीच होनी चाहिए — ऐसे "
                       "लिखो जैसे 8 या Class 8।",
-    "auth_err_password_short": "पासवर्ड कम से कम 4 अक्षरों का हो "
+    "auth_err_password_short": "पासवर्ड कम से कम 6 अक्षरों का हो "
                                "— ऐसा चुनो जो याद रहे।",
     "auth_err_name_taken": "यह नाम पहले से दर्ज है। अपने नाम में "
                            "कुछ जोड़कर उसे अपना बनाओ — जैसे "
@@ -3502,6 +3507,8 @@ _BN_W10 = {
     "auth_hobby_label": "আমার শখ",
     "auth_fav_label": "আমার প্রিয় জিনিস",
     "auth_password_label": "পাসওয়ার্ড",
+    "auth_password_hint": "অন্তত 6 অক্ষর — এমন একটি বেছে "
+                          "নাও যা মনে থাকবে।",
     "auth_new_password_label": "নতুন পাসওয়ার্ড",
     "auth_signup_btn": "আমার অ্যাকাউন্ট তৈরি করো",
     "auth_forgot_line": "পাসওয়ার্ড ভুলে গেছো? যেকোনো একটি প্রিয় "
@@ -3519,7 +3526,7 @@ _BN_W10 = {
                          "পাসওয়ার্ড।",
     "auth_err_class": "শ্রেণি 6 থেকে 12-এর মধ্যে হতে হবে — "
                       "এভাবে লেখো যেমন 8 বা Class 8।",
-    "auth_err_password_short": "পাসওয়ার্ড অন্তত 4 অক্ষরের হতে "
+    "auth_err_password_short": "পাসওয়ার্ড অন্তত 6 অক্ষরের হতে "
                                "হবে — এমন একটি বেছে নাও যা মনে "
                                "থাকবে।",
     "auth_err_name_taken": "এই নামটি আগেই নথিভুক্ত আছে। তোমার "
@@ -3551,6 +3558,8 @@ _MR_W10 = {
     "auth_hobby_label": "माझा छंद",
     "auth_fav_label": "माझी आवडती गोष्ट",
     "auth_password_label": "पासवर्ड",
+    "auth_password_hint": "किमान 6 अक्षरे — लक्षात राहील "
+                          "असा निवडा.",
     "auth_new_password_label": "नवीन पासवर्ड",
     "auth_signup_btn": "माझे खाते तयार करा",
     "auth_forgot_line": "पासवर्ड विसरलात? कोणतीही एक आवडती गोष्ट "
@@ -3569,7 +3578,7 @@ _MR_W10 = {
                          "आणि पासवर्ड.",
     "auth_err_class": "इयत्ता 6 ते 12 च्या दरम्यान हवी — अशी "
                       "लिहा जसे 8 किंवा Class 8.",
-    "auth_err_password_short": "पासवर्ड किमान 4 अक्षरांचा हवा "
+    "auth_err_password_short": "पासवर्ड किमान 6 अक्षरांचा हवा "
                                "— लक्षात राहील असा निवडा.",
     "auth_err_name_taken": "हे नाव आधीच नोंदवलेले आहे. तुमच्या "
                            "नावात काही जोडून ते तुमचे स्वतःचे "
@@ -3600,6 +3609,9 @@ _TA_W10 = {
     "auth_hobby_label": "என் பொழுதுபோக்கு",
     "auth_fav_label": "எனக்கு மிகவும் பிடித்தது",
     "auth_password_label": "கடவுச்சொல்",
+    "auth_password_hint": "குறைந்தது 6 எழுத்துகள் — "
+                          "நினைவில் இருக்கும் ஒன்றைத் "
+                          "தேர்ந்தெடுங்கள்.",
     "auth_new_password_label": "புதிய கடவுச்சொல்",
     "auth_signup_btn": "என் கணக்கை உருவாக்கு",
     "auth_forgot_line": "கடவுச்சொல் மறந்துவிட்டதா? ஏதேனும் "
@@ -3620,7 +3632,7 @@ _TA_W10 = {
                          "3 விஷயங்களும் மற்றும் கடவுச்சொல்.",
     "auth_err_class": "வகுப்பு 6 முதல் 12 வரை இருக்க வேண்டும் "
                       "— 8 அல்லது Class 8 என எழுதுங்கள்.",
-    "auth_err_password_short": "கடவுச்சொல் குறைந்தது 4 "
+    "auth_err_password_short": "கடவுச்சொல் குறைந்தது 6 "
                                "எழுத்துகள் இருக்க வேண்டும் — "
                                "நினைவில் இருக்கும் ஒன்றைத் "
                                "தேர்ந்தெடுங்கள்.",
@@ -3655,6 +3667,8 @@ _TE_W10 = {
     "auth_hobby_label": "నా అభిరుచి",
     "auth_fav_label": "నాకు అత్యంత ఇష్టమైనది",
     "auth_password_label": "పాస్‌వర్డ్",
+    "auth_password_hint": "కనీసం 6 అక్షరాలు — గుర్తుండే "
+                          "దాన్ని ఎంచుకోండి.",
     "auth_new_password_label": "కొత్త పాస్‌వర్డ్",
     "auth_signup_btn": "నా ఖాతాను సృష్టించు",
     "auth_forgot_line": "పాస్‌వర్డ్ మర్చిపోయారా? ఏదైనా ఒక "
@@ -3672,7 +3686,7 @@ _TE_W10 = {
                          "పాస్‌వర్డ్.",
     "auth_err_class": "తరగతి 6 నుండి 12 మధ్య ఉండాలి — 8 లేదా "
                       "Class 8 అని రాయండి.",
-    "auth_err_password_short": "పాస్‌వర్డ్ కనీసం 4 అక్షరాలు "
+    "auth_err_password_short": "పాస్‌వర్డ్ కనీసం 6 అక్షరాలు "
                                "ఉండాలి — గుర్తుండే దాన్ని "
                                "ఎంచుకోండి.",
     "auth_err_name_taken": "ఈ పేరు ఇప్పటికే నమోదైంది. Aarav S. "
