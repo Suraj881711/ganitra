@@ -179,11 +179,123 @@ def is_equation(text: str) -> bool:
     )
 
 
+def _fmt_exp(s):
+    """Wave 231: SymPy's function spelling "exp(x)" is raw
+    library output, not student text — the house style writes
+    e^x. A single-token argument rides bare ("exp(-x)" ->
+    "e^-x", "exp(x)" -> "e^x"); anything wider takes
+    parentheses ("exp(x + 1)" -> "e^(x + 1)"). Balanced-paren
+    scan, so nested calls convert inside-out and a malformed
+    string is returned untouched rather than mangled."""
+    out = []
+    i = 0
+    while True:
+        k = s.find("exp(", i)
+        if k < 0:
+            out.append(s[i:])
+            break
+        if k > 0 and (s[k - 1].isalpha() or s[k - 1] == "_"):
+            out.append(s[i:k + 4])
+            i = k + 4
+            continue
+        depth = 0
+        j = k + 3
+        while j < len(s):
+            if s[j] == "(":
+                depth += 1
+            elif s[j] == ")":
+                depth -= 1
+                if depth == 0:
+                    break
+            j += 1
+        if j >= len(s):
+            out.append(s[i:])
+            break
+        arg = _fmt_exp(s[k + 4:j])
+        out.append(s[i:k])
+        if re.fullmatch(r"-?[A-Za-z0-9]+", arg):
+            out.append("e^" + arg)
+        else:
+            out.append("e^(" + arg + ")")
+        i = j + 1
+    return "".join(out)
+
+
+_OO_RE = re.compile(r"(?<![A-Za-z])oo(?![A-Za-z])")
+_IMAG_RE = re.compile(r"(?<![A-Za-z])I(?![A-Za-z])")
+
+
 def fmt(value) -> str:
-    """Human-friendly formatting for SymPy objects: x^2, 3·x, sqrt(2)."""
+    """Human-friendly formatting for SymPy objects: x^2, 3·x, sqrt(2).
+
+    Wave 231 (external-audit row): raw SymPy spellings must
+    never reach a student. On top of the ** / * folds, three
+    token-exact normalisations — none of them can change a
+    value's meaning, they only change its spelling:
+    "exp(x)" -> "e^x" (see _fmt_exp), a standalone "oo" ->
+    "∞" (the letter-guarded pattern cannot touch "good",
+    "floor", "zoo"…), and a standalone "I" -> "i" (the
+    imaginary unit; guarded the same way, so "Interval" and
+    prose words are safe)."""
     s = str(value)
     s = s.replace("**", "^").replace("*", "·")
+    s = _fmt_exp(s)
+    s = _OO_RE.sub("∞", s)
+    s = _IMAG_RE.sub("i", s)
     return s
+
+
+def fmt_set(sol, var) -> str:
+    """Wave 231: a SymPy SET (a solveset result) as student
+    text — "x < 1 or x > 2", never the raw
+    "Union(Interval.open(-oo, 1), Interval.open(2, oo))".
+    The conversion reads the set OBJECT, so it is exact by
+    construction: interval ends and their open/closed flags
+    become the matching inequality signs, infinite ends drop
+    their side, a Union joins with "or", a FiniteSet lists
+    its points as "x = a or x = b". Anything that is not a
+    plain interval union / finite set (ConditionSet and
+    friends) falls back to fmt() unchanged — an honest
+    spelling, never an invented inequality."""
+    v = str(var)
+    try:
+        if sol is sp.S.EmptySet:
+            return "no solution"
+        if sol == sp.S.Reals:
+            return "all real numbers"
+        if isinstance(sol, sp.FiniteSet):
+            pts = sorted(sol.args, key=lambda e: float(sp.N(e)))
+            return " or ".join(f"{v} = {fmt(p)}" for p in pts)
+        if isinstance(sol, sp.Interval):
+            return _fmt_interval(sol, v)
+        if isinstance(sol, sp.Union):
+            parts = []
+            for arg in sol.args:
+                if isinstance(arg, sp.Interval):
+                    parts.append(_fmt_interval(arg, v))
+                elif isinstance(arg, sp.FiniteSet):
+                    parts.append(fmt_set(arg, var))
+                else:
+                    return fmt(sol)
+            return " or ".join(parts)
+    except Exception:
+        pass
+    return fmt(sol)
+
+
+def _fmt_interval(iv, v):
+    a, b = iv.start, iv.end
+    if a == -sp.oo and b == sp.oo:
+        return "all real numbers"
+    if a == -sp.oo:
+        sign = "<" if iv.right_open else "≤"
+        return f"{v} {sign} {fmt(b)}"
+    if b == sp.oo:
+        sign = ">" if iv.left_open else "≥"
+        return f"{v} {sign} {fmt(a)}"
+    ls = "<" if iv.left_open else "≤"
+    rs = "<" if iv.right_open else "≤"
+    return f"{fmt(a)} {ls} {v} {rs} {fmt(b)}"
 
 
 def fmt_num(value) -> str:
