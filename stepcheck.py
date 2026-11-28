@@ -35,7 +35,14 @@ against the reference method's text:
 * Arithmetic / percentages / applied numeric problems: every
   "expr = value" claim inside a line is checked numerically;
   a wrong claim is the mistake. The final value is compared
-  with the reference answer.
+  with the reference answer. Wave 231 (BUG-006) widened this
+  claims mode to number theory (HCF/LCM), statistics
+  (mean/median), geometry mensuration, sequences and junior
+  fraction-of — ONLY when the reference answer is exactly
+  one numeric value (_single_ref_value): two-value answers
+  ("HCF = 6, LCM = 36") and verdicts stay out of scope, and
+  unit conversion stays out on purpose (its correct lines
+  equate unequal numbers).
 
 Only flag a step when the maths SAYS it is wrong: lines that
 cannot be parsed (labels, Hindi text, annotations) are skipped,
@@ -714,11 +721,24 @@ def _seg_value(seg):
     s = str(seg or "").strip()
     if not s or not any(ch.isdigit() for ch in s):
         return None
+    # Wave 231: a subscript-style LABEL ("a10", "x1", "t2") is
+    # a variable name, never a value — the letter-strip
+    # candidates below turned "a10" into the bogus value 10
+    # and accused a correct AP line ("a10 = 2 + 9 × 3 = 29").
+    if re.fullmatch(r"[a-zA-Z]+\d+", s):
+        return None
     cands = [s]
     # A trailing UNIT word may be dropped ("120 cm" -> 120) —
     # but only a known unit: trimming any trailing letters
     # turned "2x" into the bogus value 2.
     m = re.match(r"^(.*?)\s*([a-zA-Z]+)$", s)
+    if m and m.group(2).lower() in _UNITS and m.group(1).strip():
+        cands.append(m.group(1).strip())
+    # Wave 231: an area/volume unit carries a superscript
+    # ("154 cm²", "64 cm³") — the letter run is the same known
+    # unit, so the same drop applies; without it a mensuration
+    # working's final line never registered a value at all.
+    m = re.match(r"^(.*?)\s*([a-zA-Z]+)[²³]$", s)
     if m and m.group(2).lower() in _UNITS and m.group(1).strip():
         cands.append(m.group(1).strip())
     trimmed2 = re.sub(r"^[a-zA-Z\s]+?(?=[\d(])", "", s).strip()
@@ -765,8 +785,38 @@ def _ref_number(answer):
         return e
 
 
-def _check_claims(question, ref, lines, S):
-    ref_val = _ref_number(ref.get("answer", ""))
+_SINGLE_VALUE_RE = re.compile(
+    r"^\s*(?:[A-Za-z][A-Za-z ]{0,14}?=\s*)?"
+    r"(-?\d+(?:\.\d+)?(?:\s*/\s*\d+)?)"
+    r"\s*(?:cm²|cm³|m²|m³|mm²|km²|cm|mm|km|m|kg|g|mg|ml|l|"
+    r"litres?|square units)?\s*$")
+
+
+def _single_ref_value(answer):
+    """Wave 231: the numeric value of a reference answer that
+    is EXACTLY one value — a bare number ("6"), a labelled
+    one ("HCF = 6" style prefix) or a unit-carrying one
+    ("154 cm²") — else None. This is the strict gate for the
+    families Wave 231 widened claims mode to: an answer like
+    "HCF = 6, LCM = 36" (two values), "7 is prime" (a verdict)
+    or "2^2 × 3^2" (a form) does NOT pass, so those questions
+    keep the honest out-of-scope reply instead of a check
+    against a wrongly-grabbed first number."""
+    m = _SINGLE_VALUE_RE.match(str(answer or ""))
+    if not m:
+        return None
+    e = _try_parse(m.group(1))
+    if e is None or not e.is_number:
+        return None
+    try:
+        return sp.nsimplify(e, rational=True)
+    except Exception:
+        return e
+
+
+def _check_claims(question, ref, lines, S, ref_val=None):
+    if ref_val is None:
+        ref_val = _ref_number(ref.get("answer", ""))
     if ref_val is None:
         return _out_of_scope(ref, S)
     checkable = 0
@@ -830,6 +880,22 @@ _SIMPLIFY_OPS = {"simplify", "expand", "factor", "factorise",
                  "factorize", "collect"}
 
 
+# Wave 231 (BUG-006): families whose workings are numeric
+# claims through and through — HCF/LCM factorisations,
+# mean/median sums, mensuration formula evaluations, AP/GP
+# term computations, junior fraction-of — but which v1 left
+# out of scope because their result TYPES were not in the
+# claims list. They join claims mode ONLY behind
+# _single_ref_value: a two-value or verdict answer keeps the
+# family out, exactly as before. (Unit conversion stays out
+# on purpose: a correct conversion line equates UNEQUAL
+# numbers — "2.5 kg = 2500 g" — and claims mode would accuse
+# it; trig/geometry-proof/calculus workings likewise stay
+# out: their lines are not numeric claims.)
+_GATED_CLAIMS_TYPES = {"number_theory", "statistics",
+                       "geometry", "sequences", "junior"}
+
+
 def _scope_of(ref):
     rtype = ref.get("type", "")
     rop = ref.get("op", "")
@@ -845,6 +911,9 @@ def _scope_of(ref):
         return "expr"
     if rtype in ("arithmetic", "applied", "word_problem"):
         return "claims"
+    if rtype in _GATED_CLAIMS_TYPES and \
+            _single_ref_value(ref.get("answer", "")) is not None:
+        return "claims_gated"
     return None
 
 
@@ -881,4 +950,8 @@ def step_check_result(question, lang=None, flavour_hint=None):
         return _check_equations(q_text, ref, lines, S)
     if scope == "expr":
         return _check_expressions(q_text, ref, lines, S)
+    if scope == "claims_gated":
+        return _check_claims(
+            q_text, ref, lines, S,
+            ref_val=_single_ref_value(ref.get("answer", "")))
     return _check_claims(q_text, ref, lines, S)
