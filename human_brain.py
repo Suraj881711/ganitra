@@ -146,18 +146,46 @@ def _words_to_digits(text):
         seen = False
         j = i
         last_mult = 1
+        prev_kind = None
+        poisoned = False
         while j < n:
             wj = words[j]
             if wj in _NUM_ONES:
+                if prev_kind == "ones":
+                    # Wave 231: two bare ones-words in a row
+                    # never compose ONE quantity in English or
+                    # Hinglish. The old scan SUMMED the pair, so
+                    # "one-one" reached the solver as "2" — the
+                    # function term was silently destroyed and
+                    # the chat path served the onto-only
+                    # concept card for "Define one-one and
+                    # onto…" (Deploy-73). Two shapes:
+                    # - hyphen-joined ("one-one"): ONE term,
+                    #   not a sum — the whole run stays in
+                    #   words, exactly as written (poisoned).
+                    # - any other separator ("eleven, twelve"):
+                    #   a LIST of two numbers — the sequence
+                    #   simply ends here and the second word
+                    #   converts on its own (plain break).
+                    # (Composition stays legal after a tens or
+                    # a multiplier: "twenty-one" = 21,
+                    # "one hundred one" = 101.)
+                    if str(tokens[j - 1]).strip() in (
+                            "-", "–", "—"):
+                        poisoned = True
+                    break
                 current += _NUM_ONES[wj]
                 seen = True
+                prev_kind = "ones"
             elif wj in _NUM_TENS:
                 current += _NUM_TENS[wj]
                 seen = True
+                prev_kind = "tens"
             elif wj in _GUARDED_ONES and seen is False and \
                     j + 2 < n and words[j + 2] in _NUM_MULT:
                 current += _GUARDED_ONES[wj]
                 seen = True
+                prev_kind = "ones"
             elif wj in _NUM_MULT:
                 mult = _NUM_MULT[wj]
                 if mult >= 1000:
@@ -167,6 +195,7 @@ def _words_to_digits(text):
                     current = (current or 1) * mult
                 last_mult = mult
                 seen = True
+                prev_kind = "mult"
             elif wj == "and" and seen and last_mult >= 100 \
                     and j + 2 < n and \
                     (words[j + 2] in _NUM_ONES or
@@ -188,6 +217,14 @@ def _words_to_digits(text):
             else:
                 break
             j += 2  # step over the separator token
+        if poisoned:
+            # Emit the whole run — the consumed words AND the
+            # offending second ones-word at j — exactly as
+            # written, and continue after it. Neither word
+            # converts, so the term survives intact.
+            out.extend(tokens[i:j + 1])
+            i = j + 1
+            continue
         if not seen:
             out.append(tokens[i])
             i += 1
