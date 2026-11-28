@@ -38,35 +38,22 @@ from datetime import datetime, timedelta
 import accounts
 
 # Bot results whose fallback_kind means "the student's own
-# question WAS answered": the verified bank's exact match,
-# an AI brain's answer to the question itself (Wave 37/41),
-# and a salvage solve of the maths part (Wave 18+). A plain
-# solver result carries fallback_kind None and is answered
-# by definition; Wave 75 concept answers are answered too,
-# but they keep fallback_kind "concept", so they are told
-# apart by source == "topics" (the generic concepts.py card
-# without that source is a guide, not an answer). Everything
-# else — "not_found", "similar", "guide", greetings, vague
-# and science/guard plain replies — is NOT an answer.
-_ANSWERED_KINDS = ("bank", "gemini", "groq", "salvage")
+# question WAS answered": the taxonomy itself lives in
+# accounts.is_answered_result since Wave 233 (ONE canonical
+# definition, shared with the menu stats counter — see the
+# note there). is_answered below delegates to it; the Wave-89
+# wording of the taxonomy is preserved in accounts.py.
 _WEEKS_SHOWN = 8
 
 
 def is_answered(data):
     """True when one stored bot result answered the student's
-    own question (see the taxonomy note above)."""
-    if not isinstance(data, dict):
-        return False
-    if data.get("plain_reply") or data.get("plain"):
-        return False
-    kind = data.get("fallback_kind")
-    if kind is None:
-        return True
-    if kind in _ANSWERED_KINDS:
-        return True
-    if data.get("source") in ("topics", "mcq"):
-        return True
-    return False
+    own question. Delegates to accounts.is_answered_result
+    (Wave 233): the same predicate the menu's "questions
+    solved" counter sums, applied to the record's data in
+    either stored shape (the /api/solve payload the live
+    client saves, or a bare result dict)."""
+    return accounts.is_answered_result(data)
 
 
 def _thread_rows(user_id):
@@ -151,8 +138,10 @@ def format_date(ts):
 def collect_progress(user_id, now=None):
     """The full account-side progress record for ONE student:
     totals, answered share and the weekly series. Asked is
-    accounts.questions_count itself, so this page can never
-    disagree with the menu's own stats line."""
+    accounts.questions_count itself; answered is the same
+    canonical predicate (accounts.is_answered_result) the
+    menu's "questions solved" counter sums, so this page's
+    answered number and the menu line can never disagree."""
     threads = _thread_rows(user_id)
     asked = accounts.questions_count(user_id)
     answered = 0
