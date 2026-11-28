@@ -121,6 +121,23 @@ def csrf_enforced():
     return bool(request.headers.get("Origin"))
 
 
+def _csrf_text(key, fallback):
+    """One CSRF failure text in the session's language
+    (Wave 233 — these were hard-coded English, so a Hindi
+    student whose form token went stale met a foreign page).
+    Any failure at all falls back to the English canonical
+    text: the 403 path must never break over a translation
+    lookup."""
+    try:
+        from flask import session
+
+        from i18n import get_strings, normalise_lang
+        lang = normalise_lang(session.get("lang", "en"))
+        return get_strings(lang).get(key) or fallback
+    except Exception:
+        return fallback
+
+
 def _csrf_failure():
     """The clean 403: JSON for API paths, a short friendly page
     for form posts. Never a 500, never a stack trace."""
@@ -128,16 +145,21 @@ def _csrf_failure():
         return jsonify({
             "ok": False,
             "error": "csrf_failed",
-            "message": "This request could not be verified. "
-                       "Please reload the page and try again.",
+            "message": _csrf_text(
+                "csrf_not_verified",
+                "This request could not be verified. "
+                "Please reload the page and try again."),
         }), 403
     body = (
         "<!doctype html><html><head><meta charset=\"utf-8\" />"
         "<title>Ganitra</title></head><body>"
-        "<p>This request could not be verified, so it was not "
-        "carried out. Please go back, reload the page and try "
-        "again.</p>"
-        "<p><a href=\"/\">Back to Ganitra</a></p>"
+        "<p>" + _csrf_text(
+            "csrf_page_text",
+            "This request could not be verified, so it was not "
+            "carried out. Please go back, reload the page and "
+            "try again.") + "</p>"
+        "<p><a href=\"/\">" + _csrf_text(
+            "csrf_back_home", "Back to Ganitra") + "</a></p>"
         "</body></html>")
     return Response(body, status=403, mimetype="text/html")
 
