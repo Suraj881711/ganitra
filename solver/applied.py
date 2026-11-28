@@ -2230,11 +2230,26 @@ def _find_k_equal_roots(q):
         return None
     m = re.search(r"(?:equation\s+)?(.+?)\s+has\s+(?:two\s+)?"
                   r"equal\s+roots", q)
-    if not m:
-        return None
-    text = re.sub(r"^(?:for\s+which|which)\s+", "", m.group(1))
-    text = re.sub(r"^.*?equation\s+", "", text)
-    got = _quad_coeffs(text)
+    got = None
+    if m:
+        text = re.sub(r"^(?:for\s+which|which)\s+", "", m.group(1))
+        text = re.sub(r"^.*?equation\s+", "", text)
+        got = _quad_coeffs(text)
+    if got is None:
+        # Wave 234: the dresses the capture above cannot see —
+        # "Find k so that x^2 + kx + 9 = 0 has equal roots"
+        # (the ask prefix rides inside the capture and
+        # _quad_coeffs chokes on it) and "for what value of k
+        # does x^2 + kx + 9 = 0 HAVE equal roots" (have, not
+        # has). Family-root fix: pull the equation span itself
+        # out of the question — a run of equation characters
+        # containing the squared term and ending in "= 0" —
+        # and hand THAT to _quad_coeffs.
+        m2 = re.search(
+            r"((?:\d+(?:\.\d+)?\s*)?[a-z]\s*(?:\^|\*\*)\s*2"
+            r"[^.;?]*?=\s*0)", q)
+        if m2:
+            got = _quad_coeffs(m2.group(1))
     if not got:
         return None
     a, b, c, var = got
@@ -4597,6 +4612,15 @@ def _hinglish_schemas(q):
     # Wave 140: operands take _OP140H (fractions included).
     m = re.search(r"(" + _OP140H + r")\s+ka\s+(?:square\s*root|"
                   r"vargmool|sqrt)", q)
+    # Wave 234: the operand grammar has no sign, so for
+    # "-4 ka square root" the match silently started at the
+    # 4 and served sqrt(4) = 2 — a wrong answer with the
+    # minus dropped. When a minus sign rides directly on the
+    # operand, this schema must not serve the positive root
+    # (the Wave 234 gate answers the negative-radicand
+    # family with 2i); the schemas below still get their turn.
+    if m and re.search(r"-\s*$", q[:m.start()]):
+        m = None
     if m:
         from .expression_parser import fmt as _fmt56h
         _disp = _op140h_disp(m.group(1))
