@@ -307,6 +307,31 @@ _ANSWER_HAI_LINE = re.compile(
     r"^\s*(?:jawab|answer|उत्तर)\s+(.+?)\s+"
     r"(?:hai|है)\s*[.!।]?\s*$",
     re.IGNORECASE)
+# Wave 233: a BARE answer label — the label word alone on a
+# line, with nothing after it but an optional colon / dash /
+# full stop ("Answer:", "उत्तर:", "Jawab:", "अंतिम उत्तर:").
+# Legs open (or close) replies with one as pure dressing;
+# ganitra_voice drops the English ones ("answer" is in its
+# LABEL_LINES) but the Hindi / Roman ones survived shaping
+# and were served as a step line — or, worst case, as the
+# answer itself when a reply had no real answer line and
+# the tail-pop below picked the label up. A bare label
+# carries no content, so _shape_result drops it wherever it
+# stands. A line that merely CONTAINS the word ("Answer the
+# question by comparing both sides", "उत्तर प्रदेश की
+# राजधानी …") never matches: the pattern is a fullmatch.
+_BARE_ANSWER_LABEL = re.compile(
+    r"(?:the\s+)?(?:final\s+)?(?:answer|ans|jawab)"
+    r"|(?:अंतिम\s+)?उत्तर",
+    re.IGNORECASE)
+
+
+def _is_bare_answer_label(line):
+    """True when `line` is only an answer label plus optional
+    trailing punctuation — dressing, never content."""
+    text = str(line or "").strip().rstrip(":.-–—").strip()
+    return bool(text) and \
+        _BARE_ANSWER_LABEL.fullmatch(text) is not None
 
 
 def _answer_value(line):
@@ -369,6 +394,13 @@ def _shape_result(text):
         return None
     lines = [ln for ln in
              (_clean_line(raw) for raw in text.splitlines()) if ln]
+    if not lines:
+        return None
+    # Wave 233: bare answer labels ("उत्तर:", "Jawab:",
+    # "Answer:") are dressing, not steps — drop them wherever
+    # they stand, so one can never be served as a step or be
+    # picked up as the answer by the tail-pop below.
+    lines = [ln for ln in lines if not _is_bare_answer_label(ln)]
     if not lines:
         return None
     answer = None
