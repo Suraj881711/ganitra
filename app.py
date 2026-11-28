@@ -1152,9 +1152,47 @@ def create_app():
                             "error": "login-required"}), 401
         return jsonify({
             "ok": True,
-            "questions": accounts.questions_count(user["id"]),
+            # Wave 233: the menu line reads "{count} questions
+            # solved" — it is fed by solved_count (served
+            # answers in the student's own chats), not by the
+            # asked-turns count it used before.
+            "questions": accounts.solved_count(user["id"]),
             "chats": accounts.chats_count(user["id"]),
         })
+
+    # ------------------------------------------------- wave 233 errors
+    # Localised error pages: Flask's built-in 404/500 pages are
+    # English-only, so a Hindi (or Bengali / Marathi / Tamil /
+    # Telugu) student who followed a stale link met a foreign
+    # page. API paths keep a JSON body; page paths get a short
+    # page in the student's own language. Explicit 404 returns
+    # (e.g. a missing account photo) are unaffected — handlers
+    # only fire for unmatched routes and real server errors.
+    def _error_page(key, status):
+        strings = _t()
+        if request.path.startswith("/api/"):
+            return jsonify({
+                "ok": False,
+                "error": "not_found" if status == 404
+                         else "server_error",
+                "message": strings[key],
+            }), status
+        body = (
+            "<!doctype html><html><head><meta charset=\"utf-8\" />"
+            "<title>Ganitra</title></head><body>"
+            f"<p>{strings[key]}</p>"
+            f"<p><a href=\"/\">{strings['error_page_home']}</a></p>"
+            "</body></html>")
+        return Response(body, status=status,
+                        mimetype="text/html")
+
+    @app.errorhandler(404)
+    def _wave233_not_found(_err):
+        return _error_page("error_page_not_found", 404)
+
+    @app.errorhandler(500)
+    def _wave233_server_error(_err):
+        return _error_page("error_page_server", 500)
 
     # ------------------------------------------------------ wave 11 chats
     # Multi-chat (Brave-style tabs): chats belong to the signed-in
@@ -1324,8 +1362,7 @@ def create_app():
         if group is None or not study_groups.is_member(
                 group_id, user["id"]):
             return _groups_page(
-                user, error="Group nahi mila, ya tum iske member "
-                            "nahi ho.")
+                user, error=_t()["group_err_not_member"])
         return _group_page(user, group)
 
     @app.post("/groups/<int:group_id>/post")
@@ -1355,7 +1392,8 @@ def create_app():
             return redirect(url_for("groups_view"))
         return _group_page(
             user, group, error=error,
-            notice="Member add ho gaya." if ok else None)
+            notice=_t()["group_notice_member_added"]
+            if ok else None)
 
     @app.post("/groups/<int:group_id>/remove")
     def group_remove(group_id):
@@ -1371,7 +1409,8 @@ def create_app():
             return redirect(url_for("groups_view"))
         return _group_page(
             user, group, error=error,
-            notice="Member hata diya gaya." if ok else None)
+            notice=_t()["group_notice_member_removed"]
+            if ok else None)
 
     @app.post("/groups/<int:group_id>/leave")
     def group_leave(group_id):
@@ -1397,7 +1436,7 @@ def create_app():
             return redirect(url_for("groups_view"))
         return _group_page(
             user, group, error=error,
-            notice="Group band kar diya gaya." if ok else None)
+            notice=_t()["group_notice_closed"] if ok else None)
 
     @app.post("/groups/<int:group_id>/report")
     def group_report(group_id):
@@ -1414,7 +1453,7 @@ def create_app():
             return redirect(url_for("groups_view"))
         return _group_page(
             user, group, error=error,
-            notice="Report bhej di gayi. Dhanyavaad!" if ok else None)
+            notice=_t()["group_notice_reported"] if ok else None)
 
     # -- Wave 213: owner dashboard (Suraj's account, id 1 only).
 
@@ -1440,7 +1479,7 @@ def create_app():
             group_id, user["id"], owner=True)
         return _owner_page(
             error=error,
-            notice="Group band kar diya gaya." if ok else None)
+            notice=_t()["group_notice_closed"] if ok else None)
 
     @app.post("/owner/groups/<int:group_id>/remove")
     def owner_group_remove(group_id):
@@ -1453,7 +1492,8 @@ def create_app():
             int(target) if target.isdigit() else -1, owner=True)
         return _owner_page(
             error=error,
-            notice="Member hata diya gaya." if ok else None)
+            notice=_t()["group_notice_member_removed"]
+            if ok else None)
 
     @app.get("/topics")
     def topics():
