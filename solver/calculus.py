@@ -1081,9 +1081,9 @@ def solve_calculus(question: str):
                                         _xv, _a, "+")
                         _steps = [
                             f"Left-hand derivative at "
-                            f"x = {_a}: {fmt(_lhd)}",
+                            f"x = {fmt(_a)}: {fmt(_lhd)}",
                             f"Right-hand derivative at "
-                            f"x = {_a}: {fmt(_rhd)}",
+                            f"x = {fmt(_a)}: {fmt(_rhd)}",
                         ]
                         if _cont and _lhd == _rhd and \
                                 _lhd.is_number:
@@ -1093,7 +1093,7 @@ def solve_calculus(question: str):
                                 "differentiable at the "
                                 "point.")
                             _ans = (f"Differentiable at "
-                                    f"x = {_a}")
+                                    f"x = {fmt(_a)}")
                         else:
                             _steps.append(
                                 "The two one-sided "
@@ -1103,7 +1103,7 @@ def solve_calculus(question: str):
                                 "differentiable at the "
                                 "point.")
                             _ans = (f"Not differentiable "
-                                    f"at x = {_a}")
+                                    f"at x = {fmt(_a)}")
                         return {"type": "calculus",
                                 "op": "differentiability_check",
                                 "answer": _ans,
@@ -1117,32 +1117,32 @@ def solve_calculus(question: str):
                     except Exception:
                         _defined = False
                     _steps = [
-                        f"Limit of f as x -> {_a}: "
+                        f"Limit of f as x -> {fmt(_a)}: "
                         f"{fmt(_lim)}",
                     ]
                     if _defined and _val == _lim:
                         _steps.append(
-                            f"f({_a}) = {fmt(_val)} equals "
+                            f"f({fmt(_a)}) = {fmt(_val)} equals "
                             f"the limit, so f is CONTINUOUS "
-                            f"at x = {_a}.")
-                        _ans = f"Continuous at x = {_a}"
+                            f"at x = {fmt(_a)}.")
+                        _ans = f"Continuous at x = {fmt(_a)}"
                     elif not _defined:
                         _steps.append(
-                            f"f({_a}) is NOT defined "
+                            f"f({fmt(_a)}) is NOT defined "
                             f"(denominator zero), so f is "
-                            f"not continuous at x = {_a} — "
+                            f"not continuous at x = {fmt(_a)} — "
                             f"a removable discontinuity, "
                             f"since the limit exists.")
                         _ans = (f"Not continuous at "
-                                f"x = {_a} (removable "
+                                f"x = {fmt(_a)} (removable "
                                 f"discontinuity; limit = "
                                 f"{fmt(_lim)})")
                     else:
                         _steps.append(
-                            f"f({_a}) = {fmt(_val)} does "
+                            f"f({fmt(_a)}) = {fmt(_val)} does "
                             f"not equal the limit, so f is "
-                            f"NOT continuous at x = {_a}.")
-                        _ans = f"Not continuous at x = {_a}"
+                            f"NOT continuous at x = {fmt(_a)}.")
+                        _ans = f"Not continuous at x = {fmt(_a)}"
                     return {"type": "calculus",
                             "op": "continuity_limit",
                             "answer": _ans, "steps": _steps}
