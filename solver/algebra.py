@@ -8,7 +8,7 @@ import re
 
 import sympy as sp
 
-from .expression_parser import fmt, fmt_num, is_equation, parse_expression
+from .expression_parser import fmt, fmt_num, fmt_set, is_equation, parse_expression
 
 x, y = sp.symbols("x y")
 
@@ -539,13 +539,18 @@ def _solve_inequality(q: str):
             )
     rel = {"<": sp.Lt, "<=": sp.Le, ">": sp.Gt, ">=": sp.Ge}[op]
     sol = sp.solveset(rel(expr_l, expr_r, evaluate=False), var, domain=sp.S.Reals)
-    answer = fmt(sol).replace("Interval", "")
-    steps.append(f"Solution set: {fmt(sol)}")
+    # Wave 231: the solution set is rendered from the set
+    # OBJECT (fmt_set) — "x < 1 or x > 2". The old code served
+    # str(sol) itself as the answer ("Union(Interval.open(
+    # -oo, 1), Interval.open(2, oo))") and fmt(sol) in the
+    # step — raw SymPy spelling straight to the student.
+    answer = fmt_set(sol, var)
+    steps.append(f"Solution set: {answer}")
     return {
         "type": "algebra",
         "op": "inequality",
-        "answer": str(sol),
-        "solutions": [str(sol)],
+        "answer": answer,
+        "solutions": [answer],
         "steps": steps,
     }
 
