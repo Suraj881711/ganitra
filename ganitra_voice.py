@@ -205,6 +205,13 @@ LABEL_LINES = (
     "result", "given", "to find", "find",
     "हल", "समाधान", "दिया है", "दिया गया है",
     "ज्ञात करना है",
+    # Wave 233: the Hindi / Roman answer labels join the
+    # English "answer" / "final answer" above — a bare
+    # "उत्तर:" / "जवाब:" line is the same dressing and is
+    # dropped the same way (gemini_fallback._shape_result
+    # drops them again at shaping, for the replies whose
+    # normalisation this module declines).
+    "उत्तर", "अंतिम उत्तर", "जवाब",
 )
 
 # Words that may remain after an opener is stripped without
