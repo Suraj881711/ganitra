@@ -655,7 +655,14 @@ def _build(question, answer, result):
     rhs_text = rhs_text.replace("·", "*") \
         .replace("−", "-")
     try:
-        ysol = parse_expression(rhs_text)
+        # Wave 231: fmt now renders exp(x) as e^x (house
+        # style), so the parsed-back solution can carry the
+        # house 'e' symbol — fold it onto Euler's number,
+        # exactly as _extract does for the question side,
+        # or the constant count below sees a phantom extra
+        # symbol and this solver bows out to the generic
+        # dsolve path.
+        ysol = _fold_e(parse_expression(rhs_text))
     except Exception:
         return None
     if ysol.has(sp.Piecewise) or _y in \
