@@ -784,6 +784,40 @@ body.mascot-cheer .mascot-buddy {
   40% { transform: translateX(-50%) translateY(-4px); }
   70% { transform: translateX(-50%) translateY(1px); }
 }
+/* Wave 230: the voice-call states. While Ganitra SPEAKS
+   (body.voice-speaking, set by the call player in
+   templates/index.html) the mascot gets a gentle talking
+   bob — the portraits are stills with no mouth layer, so
+   the motion is a soft pulse, never a redraw. While the
+   call LISTENS (body.voice-listening) a soft teal ring
+   breathes out of the mascot's circle. The buddy's img
+   and the home pose carry the bob (neither has a base
+   transform to preserve); the rings ride the two circle
+   frames. Reduced motion rests everything. */
+body.voice-speaking .mascot-buddy img,
+body.voice-speaking .mascot-pose-wave {
+  animation: voice-talk .75s ease-in-out infinite;
+}
+@keyframes voice-talk {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-2px) scale(1.05); }
+}
+body.voice-listening .mascot-buddy,
+body.voice-listening .mascot-circle {
+  animation: voice-ring 1.8s ease-out infinite;
+}
+@keyframes voice-ring {
+  0% { box-shadow: 0 0 0 0 rgba(10, 122, 100, .35),
+       0 4px 10px rgba(7, 67, 53, .22); }
+  100% { box-shadow: 0 0 0 14px rgba(10, 122, 100, 0),
+       0 4px 10px rgba(7, 67, 53, .22); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.voice-speaking .mascot-buddy img,
+  body.voice-speaking .mascot-pose-wave,
+  body.voice-listening .mascot-buddy,
+  body.voice-listening .mascot-circle { animation: none; }
+}
 .mascot-pop {
   position: fixed; inset: 0; z-index: 60;
   display: flex;
@@ -1002,6 +1036,40 @@ body.chat-page .icon-btn svg { display: block; }
    the same accent colour as every other composer icon. */
 body.chat-page .send-btn.icon-btn { color: var(--accent); }
 .composer-btn.mic-live { background: #fbe9bb; color: #7a5a10; }
+/* Wave 230: the phone button wears the same warm live tint
+   as the mic while a voice call is running, and the call
+   bar — a quiet pill above the composer — carries the
+   state line, a soft red presence dot and the End button. */
+.composer-btn.call-live { background: #fbe9bb; color: #7a5a10; }
+.voice-call-bar {
+  display: flex; align-items: center; gap: 8px;
+  box-sizing: border-box; width: 100%;
+  margin: 0 0 6px; padding: 6px 8px 6px 12px;
+  background: #fdf6e0; color: #7a5a10;
+  border: 1px solid rgba(122, 90, 16, .25);
+  border-radius: 999px; font-size: 13.5px;
+}
+.voice-call-bar[hidden] { display: none; }
+.voice-call-dot {
+  flex: none; width: 9px; height: 9px; border-radius: 50%;
+  background: #d33a2c;
+  animation: voice-dot 1.2s ease-in-out infinite;
+}
+@keyframes voice-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .35; }
+}
+.voice-call-status { flex: 1 1 auto; }
+.voice-call-end {
+  flex: none; font: inherit; font-size: 13px;
+  padding: 3px 12px; border-radius: 999px;
+  background: #ffffff; color: #b3261e;
+  border: 1px solid rgba(179, 38, 30, .45);
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .voice-call-dot { animation: none; }
+}
 
 /* Composer placement (Wave 11, Suraj's approved layout): in the
    EMPTY state the composer sits directly under the greeting —
