@@ -4748,6 +4748,37 @@ def _solve_question_uncached(question: str):
             out["interpreted_as"] = translated
         return out
 
+    # Wave 234: maths-quality gates (solver/wave234.py) —
+    # strict full-shape families the audit proved were
+    # mis-served or unserved: worded square-of-a-number
+    # ("ek sankhya ka varg 144 hai" was not-found; the
+    # answer is ±12), worded factorial ("5 factorial"),
+    # absolute-value equations ("|x - 2| = 3"),
+    # decimal->fraction dresses the router never lets
+    # junior reach, negative square roots ("sqrt(-4)"; one
+    # dress served 2 with the minus dropped), undefined-WHY
+    # explanations (1/0, 0/0, log 0), worded-operator
+    # algebra ("x squared minus 4" served a letter product
+    # of the words), Devanagari number-word arithmetic
+    # ("दो जमा तीन" — same letter-product garbage),
+    # check/verdict asks ("2 + 2 = 5 sahi hai?") and bare
+    # root atoms ("sqrt(50)" served 7.07107 instead of
+    # 5√2). Each gate returns None on any doubt, so the
+    # flow below is then exactly the pre-Wave-234 one.
+    try:
+        from .wave234 import solve_wave234
+        out = solve_wave234(original)
+        if out is None and folded != original:
+            out = solve_wave234(folded)
+        if out is None and working != original:
+            out = solve_wave234(working)
+    except Exception:
+        out = None
+    if out is not None:
+        if was_translated:
+            out["interpreted_as"] = translated
+        return out
+
     # Wave 223: multi-part questions (DeepSeek Job 9, solver/
     # multipart223.py) — a question carrying TWO genuine asks
     # ("area and perimeter of a rectangle ...", "3 ghante..."
@@ -5125,6 +5156,26 @@ def _solve_question_uncached(question: str):
                 "ladder_foot", "ladder_height",
                 "coord_unknown_point",
                 "polygon_sides_from_sum"):
+            if was_translated:
+                out["interpreted_as"] = translated
+            return out
+
+    # Wave 234: the Hinglish hypotenuse ask ("right
+    # triangle me karn nikalo, sides 5 aur 12") names no
+    # English intent keyword, so it routes to arithmetic,
+    # whose parser errors on the sentence and geometry is
+    # never tried (the English "hypotenuse" dress routes
+    # correctly). "karn" is the Roman-Hindi word for the
+    # hypotenuse and appears in no other maths family, so
+    # try geometry FIRST for it and accept only its
+    # pythagoras ops, falling through unchanged otherwise.
+    if "karn" in _wl:
+        try:
+            out = solve_geometry(working)
+        except Exception:
+            out = None
+        if out is not None and str(
+                out.get("op", "")).startswith("pythagoras"):
             if was_translated:
                 out["interpreted_as"] = translated
             return out
