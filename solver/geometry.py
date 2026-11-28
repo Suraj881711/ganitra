@@ -7,7 +7,8 @@ from fractions import Fraction
 import sympy as sp
 
 from .expression_parser import (extract_points, find_param, fmt,
-                                fmt_num, wants_circumference)
+                                fmt_exact, fmt_num,
+                                wants_circumference)
 from .pi_policy import PI_227, pi_choice, pi_note, pi_note_hi
 
 PI = math.pi
@@ -26,6 +27,58 @@ def _fmt_frac(fr):
     if q == 1:
         return fmt_num(float(fr))
     return fmt_num(fr)
+
+
+def _pi_lead(coeff, approx_text):
+    """Wave 234: exact-first answer text for a TRUE-pi
+    mensuration value whose exact form is a simple multiple
+    of pi — "36·pi ≈ 113.0973" in the house style the circle
+    branches already use — given the exact coefficient of pi
+    (a Fraction, or None) and the branch's existing decimal
+    text. Returns None when there is no simple exact form,
+    so the branch keeps its plain decimal answer. Only ever
+    called on the true-pi path: the 22/7 branches keep their
+    clean textbook value untouched."""
+    if coeff is None:
+        return None
+    c = Fraction(coeff)
+    if c == 0 or c.denominator > 24 or abs(c) > 1000000:
+        return None
+    if c == 1:
+        lead = "pi"
+    elif c.denominator == 1:
+        lead = f"{c.numerator}·pi"
+    else:
+        lead = f"{c.numerator}/{c.denominator}·pi"
+    return f"{lead} ≈ {approx_text}"
+
+
+def _frac_of(x):
+    """Wave 234: x as an exact Fraction when x is exactly a
+    modest decimal/rational (3.5 -> 7/2), else None. The
+    exactness check (the Fraction must convert back to the
+    very same float) keeps an irrational dimension — a slant
+    height that came out of a square root — from ever being
+    dressed up as an exact pi coefficient."""
+    try:
+        c = Fraction(x).limit_denominator(1000)
+    except (TypeError, ValueError, ZeroDivisionError):
+        return None
+    if float(c) != float(x):
+        return None
+    return c
+
+
+def _coeff234(*parts):
+    """Wave 234: product of exact-Fraction parts; None when
+    any part is None (an inexact dimension anywhere makes
+    the whole coefficient inexact)."""
+    out = Fraction(1)
+    for p in parts:
+        if p is None:
+            return None
+        out *= p
+    return out
 
 
 def _param_flex(q, names):
@@ -156,6 +209,14 @@ def _mensuration_extra(q):
                 f"({fmt_num(R)} + {fmt_num(r)}) × {slant:.4f} "
                 f"= {fmt_num(val)}",
             ]
+            if not _u227:
+                _fR, _fr2, _fs = _frac_of(R), _frac_of(r), \
+                    _frac_of(slant)
+                _lead = _pi_lead(_coeff234(
+                    None if _fR is None or _fr2 is None
+                    else _fR + _fr2, _fs), fmt_num(val))
+                if _lead is not None:
+                    return "frustum csa", _lead, steps
             return "frustum csa", fmt_num(val), steps
         if "total surface" in q or " tsa" in q:
             val = _pi * (R + r) * slant + _pi * (R * R + r * r)
@@ -166,6 +227,21 @@ def _mensuration_extra(q):
                 f"TSA = pi(R + r)l + pi(R^2 + r^2) = "
                 f"{fmt_num(val)}",
             ]
+            if not _u227:
+                _fR, _fr2, _fs = _frac_of(R), _frac_of(r), \
+                    _frac_of(slant)
+                _c1 = _coeff234(
+                    None if _fR is None or _fr2 is None
+                    else _fR + _fr2, _fs)
+                _c2 = _coeff234(_fR, _fR) if _fR is not None \
+                    else None
+                _c3 = _coeff234(_fr2, _fr2) if _fr2 is not None \
+                    else None
+                _lead = _pi_lead(
+                    None if None in (_c1, _c2, _c3)
+                    else _c1 + _c2 + _c3, fmt_num(val))
+                if _lead is not None:
+                    return "frustum tsa", _lead, steps
             return "frustum tsa", fmt_num(val), steps
         val = _pi * h / 3 * (R * R + R * r + r * r)
         steps = _note + [
@@ -176,6 +252,15 @@ def _mensuration_extra(q):
             f"{fmt_num(R * r)} + {fmt_num(r * r)}) "
             f"= {fmt_num(val)}",
         ]
+        if not _u227:
+            _fR, _fr2, _fh = _frac_of(R), _frac_of(r), \
+                _frac_of(h)
+            _sq = None if None in (_fR, _fr2) else \
+                _fR * _fR + _fR * _fr2 + _fr2 * _fr2
+            _lead = _pi_lead(_coeff234(
+                Fraction(1, 3), _fh, _sq), fmt_num(val))
+            if _lead is not None:
+                return "frustum volume", _lead, steps
         return "frustum volume", fmt_num(val), steps
 
     # ---- Combined solid: cylinder + cone (same radius) ---------
@@ -281,6 +366,12 @@ def _mensuration_extra(q):
             steps = _note + [f"Curved surface area of a hemisphere = "
                      f"2·pi·r^2 = 2 × pi × {fmt_num(r)}^2 "
                      f"= {fmt_num(val)}"]
+            if not _u227:
+                _lead = _pi_lead(_coeff234(
+                    Fraction(2), _frac_of(r), _frac_of(r)),
+                    fmt_num(val))
+                if _lead is not None:
+                    return "hemisphere csa", _lead, steps
             return "hemisphere csa", fmt_num(val), steps
         if "total surface" in q or " tsa" in q or \
                 "surface" in q:
@@ -291,11 +382,23 @@ def _mensuration_extra(q):
                 f"= 3·pi·r^2",
                 f"= 3 × pi × {fmt_num(r)}^2 = {fmt_num(val)}",
             ]
+            if not _u227:
+                _lead = _pi_lead(_coeff234(
+                    Fraction(3), _frac_of(r), _frac_of(r)),
+                    fmt_num(val))
+                if _lead is not None:
+                    return "hemisphere tsa", _lead, steps
             return "hemisphere tsa", fmt_num(val), steps
         val = 2 * _pi * r ** 3 / 3
         steps = _note + [f"Volume of a hemisphere = (2/3)·pi·r^3 = "
                  f"(2/3) × pi × {fmt_num(r)}^3 "
                  f"= {fmt_num(val)}"]
+        if not _u227:
+            _lead = _pi_lead(_coeff234(
+                Fraction(2, 3), _frac_of(r), _frac_of(r),
+                _frac_of(r)), fmt_num(val))
+            if _lead is not None:
+                return "hemisphere volume", _lead, steps
         return "hemisphere volume", fmt_num(val), steps
 
     # ---- Cone CSA / TSA ----------------------------------------
@@ -320,6 +423,12 @@ def _mensuration_extra(q):
                 f"pi × {fmt_num(r)} × {fmt_num(slant)} "
                 f"= {fmt_num(val)}",
             ]
+            if not _u227:
+                _lead = _pi_lead(_coeff234(
+                    _frac_of(r), _frac_of(slant)),
+                    fmt_num(val))
+                if _lead is not None:
+                    return "cone csa", _lead, steps
             return "cone csa", fmt_num(val), steps
         val = _pi * r * (slant + r)
         steps = _note + [
@@ -328,6 +437,14 @@ def _mensuration_extra(q):
             f"pi × {fmt_num(r)} × ({fmt_num(slant)} + "
             f"{fmt_num(r)}) = {fmt_num(val)}",
         ]
+        if not _u227:
+            _fs, _fr = _frac_of(slant), _frac_of(r)
+            _lead = _pi_lead(
+                _coeff234(_fr, None if _fs is None or
+                          _fr is None else _fs + _fr),
+                fmt_num(val))
+            if _lead is not None:
+                return "cone tsa", _lead, steps
         return "cone tsa", fmt_num(val), steps
 
     # ---- Cylinder CSA ------------------------------------------
@@ -343,6 +460,12 @@ def _mensuration_extra(q):
         steps = _note + [f"Curved surface area of a cylinder = "
                  f"2·pi·r·h = 2 × pi × {fmt_num(r)} × "
                  f"{fmt_num(h)} = {fmt_num(val)}"]
+        if not _u227:
+            _lead = _pi_lead(_coeff234(
+                Fraction(2), _frac_of(r), _frac_of(h)),
+                fmt_num(val))
+            if _lead is not None:
+                return "cylinder csa", _lead, steps
         return "cylinder csa", fmt_num(val), steps
 
     # ---- Sector / segment / arc --------------------------------
@@ -379,6 +502,12 @@ def _mensuration_extra(q):
         steps = _note + [f"Area of a sector = (theta/360)·pi·r^2 = "
                  f"({fmt_num(th)}/360) × pi × {fmt_num(r)}^2 "
                  f"= {fmt_num(val)}"]
+        if not _u227:
+            _lead = _pi_lead(_coeff234(
+                _frac_of(th), _frac_of(r), _frac_of(r),
+                Fraction(1, 360)), fmt_num(val))
+            if _lead is not None:
+                return "sector area", _lead, steps
         return "sector area", fmt_num(val), steps
     if "arc" in q and "length" in q:
         r = _param_flex(q, ["radius", "r"])
@@ -391,6 +520,12 @@ def _mensuration_extra(q):
         steps = _note + [f"Length of an arc = (theta/360)·2·pi·r = "
                  f"({fmt_num(th)}/360) × 2 × pi × "
                  f"{fmt_num(r)} = {fmt_num(val)}"]
+        if not _u227:
+            _lead = _pi_lead(_coeff234(
+                _frac_of(th), _frac_of(r), Fraction(1, 180)),
+                fmt_num(val))
+            if _lead is not None:
+                return "arc length", _lead, steps
         return "arc length", fmt_num(val), steps
 
     # ---- Cuboid --------------------------------------------------
@@ -754,6 +889,40 @@ def _area_perimeter_volume(q: str):
             a, b, c = sides
             s = (a + b + c) / 2
             area = math.sqrt(max(s * (s - a) * (s - b) * (s - c), 0))
+            # Wave 234: the answer used to be the raw float
+            # ("6.0000" for the 3-4-5 triangle). When the
+            # sides are exact decimals the radicand is an
+            # exact fraction: a perfect square serves the
+            # integer, a simple surd leads with the decimal
+            # after it — integers never carry ".0000".
+            _fa, _fb, _fc = _frac_of(a), _frac_of(b), _frac_of(c)
+            _exact_area = None
+            if None not in (_fa, _fb, _fc):
+                _fs = (_fa + _fb + _fc) / 2
+                _prod = _fs * (_fs - _fa) * (_fs - _fb) * \
+                    (_fs - _fc)
+                if _prod >= 0:
+                    _exact_area = sp.sqrt(sp.Rational(_prod))
+            if _exact_area is not None and \
+                    _exact_area.is_Integer:
+                steps = [
+                    f"Semi-perimeter s = (a + b + c)/2 = {fmt_num(s)}",
+                    "Heron: Area = sqrt(s(s-a)(s-b)(s-c))",
+                    f"= sqrt({fmt_num(s)} × {fmt_num(s - a)} × "
+                    f"{fmt_num(s - b)} × {fmt_num(s - c)}) "
+                    f"= {int(_exact_area)}",
+                ]
+                return "area (Heron)", str(int(_exact_area)), steps
+            if _exact_area is not None:
+                _lead = f"{fmt_exact(_exact_area)} ≈ {area:.4f}"
+                steps = [
+                    f"Semi-perimeter s = (a + b + c)/2 = {fmt_num(s)}",
+                    "Heron: Area = sqrt(s(s-a)(s-b)(s-c))",
+                    f"= sqrt({fmt_num(s)} × {fmt_num(s - a)} × "
+                    f"{fmt_num(s - b)} × {fmt_num(s - c)}) "
+                    f"= {_lead}",
+                ]
+                return "area (Heron)", _lead, steps
             steps = [
                 f"Semi-perimeter s = (a + b + c)/2 = {fmt_num(s)}",
                 "Heron: Area = sqrt(s(s-a)(s-b)(s-c))",
@@ -787,6 +956,11 @@ def _area_perimeter_volume(q: str):
                 return "surface area", fmt_num(val), steps
             steps = [f"Surface area = 4·pi·r^2 = 4 × pi × {fmt_num(r)}^2",
                      f"≈ {val:.4f}"]
+            _lead = _pi_lead(_coeff234(
+                Fraction(4), _frac_of(r), _frac_of(r)),
+                f"{val:.4f}")
+            if _lead is not None:
+                return "surface area", _lead, steps
             return "surface area", f"≈ {val:.4f}", steps
         val = (4 / 3) * _pi * r ** 3
         if _u227:
@@ -798,6 +972,11 @@ def _area_perimeter_volume(q: str):
             return "volume", fmt_num(val), steps
         steps = [f"Volume = (4/3)·pi·r^3 = (4/3) × pi × {fmt_num(r)}^3",
                  f"= {fmt_num(4 * r ** 3)}·pi/3 ≈ {val:.4f}"]
+        _lead = _pi_lead(_coeff234(
+            Fraction(4, 3), _frac_of(r), _frac_of(r),
+            _frac_of(r)), f"{val:.4f}")
+        if _lead is not None:
+            return "volume", _lead, steps
         return "volume", f"≈ {val:.4f}", steps
 
     # ---- Cube --------------------------------------------------------
@@ -832,6 +1011,13 @@ def _area_perimeter_volume(q: str):
             steps = [f"Total surface area = 2·pi·r(r + h) = 2 × pi × "
                      f"{fmt_num(r)} × ({fmt_num(r)} + {fmt_num(h)})",
                      f"≈ {val:.4f}"]
+            _fr, _fh = _frac_of(r), _frac_of(h)
+            _lead = _pi_lead(_coeff234(
+                Fraction(2), _fr,
+                None if _fr is None or _fh is None
+                else _fr + _fh), f"{val:.4f}")
+            if _lead is not None:
+                return "surface area", _lead, steps
             return "surface area", f"≈ {val:.4f}", steps
         val = _pi * r * r * h
         if _u227:
@@ -842,6 +1028,11 @@ def _area_perimeter_volume(q: str):
             return "volume", fmt_num(val), steps
         steps = [f"Volume = pi·r^2·h = pi × {fmt_num(r)}^2 × "
                  f"{fmt_num(h)}", f"≈ {val:.4f}"]
+        _lead = _pi_lead(_coeff234(
+            _frac_of(r), _frac_of(r), _frac_of(h)),
+            f"{val:.4f}")
+        if _lead is not None:
+            return "volume", _lead, steps
         return "volume", f"≈ {val:.4f}", steps
 
     # ---- Cone --------------------------------------------------------
@@ -861,6 +1052,11 @@ def _area_perimeter_volume(q: str):
             return "volume", fmt_num(val), steps
         steps = [f"Volume = (1/3)·pi·r^2·h = (1/3) × pi × "
                  f"{fmt_num(r)}^2 × {fmt_num(h)}", f"≈ {val:.4f}"]
+        _lead = _pi_lead(_coeff234(
+            Fraction(1, 3), _frac_of(r), _frac_of(r),
+            _frac_of(h)), f"{val:.4f}")
+        if _lead is not None:
+            return "volume", _lead, steps
         return "volume", f"≈ {val:.4f}", steps
 
     return None
@@ -1618,6 +1814,65 @@ def _pythagoras(q):
                 f"{fmt_num(a * a)} + {fmt_num(b * b)} = "
                 f"{fmt_num(a * a + b * b)}",
                 f"Hypotenuse = {ans}",
+            ]
+            return ("pythagoras_hypotenuse", ans, steps)
+        # Wave 234: the commonest school dress of all — the
+        # two legs given as plain "sides" ("the two sides are
+        # 5 cm and 12 cm, find the hypotenuse"). The branches
+        # above only recognised the legs when they were NAMED
+        # (leg / base / perpendicular), so this dress fell
+        # through entirely. With the hypotenuse itself the
+        # ask (no value given for it) and exactly two numbers
+        # in the question, the two numbers can only be the
+        # legs. Also: hypotenuse value given + the other leg
+        # named as a plain "side".
+        if mh is None and len(nums) == 2 and "side" in q:
+            a, b = nums[0], nums[1]
+            ans, _v = _sqrt_answer(a * a + b * b)
+            steps = [
+                "Pythagoras theorem: hypotenuse^2 = "
+                "side1^2 + side2^2",
+                f"= {fmt_num(a)}^2 + {fmt_num(b)}^2 = "
+                f"{fmt_num(a * a)} + {fmt_num(b * b)} = "
+                f"{fmt_num(a * a + b * b)}",
+                f"Hypotenuse = {ans}",
+            ]
+            return ("pythagoras_hypotenuse", ans, steps)
+        if mh is not None and ml is None:
+            ms = re.search(r"(?:side|leg)\s*(?:is\s*)?"
+                           r"(\d+(?:\.\d+)?)", q)
+            if ms:
+                H = float(mh.group(1))
+                L = float(ms.group(1))
+                if H > L:
+                    ans, _v = _sqrt_answer(H * H - L * L)
+                    steps = [
+                        "Pythagoras theorem: hypotenuse^2 = "
+                        "leg1^2 + leg2^2",
+                        f"Other leg = sqrt({fmt_num(H)}^2 - "
+                        f"{fmt_num(L)}^2) = sqrt("
+                        f"{fmt_num(H * H)} - {fmt_num(L * L)})",
+                        f"= {ans}",
+                    ]
+                    return ("pythagoras_leg", ans, steps)
+
+    # Wave 234: the Hinglish dress — "right triangle me karn
+    # nikalo, sides 5 aur 12". "karn" is the hypotenuse; with
+    # a triangle named and exactly two side lengths, the two
+    # numbers are the legs.
+    if "karn" in q and ("triangle" in q or "tribhuj" in q
+                        or "samkon" in q or "right" in q):
+        nums = [float(v) for v in re.findall(r"\d+(?:\.\d+)?", q)]
+        if len(nums) == 2:
+            a, b = nums[0], nums[1]
+            ans, _v = _sqrt_answer(a * a + b * b)
+            steps = [
+                "Pythagoras theorem: karn^2 = "
+                "side1^2 + side2^2",
+                f"= {fmt_num(a)}^2 + {fmt_num(b)}^2 = "
+                f"{fmt_num(a * a)} + {fmt_num(b * b)} = "
+                f"{fmt_num(a * a + b * b)}",
+                f"Karn (hypotenuse) = {ans}",
             ]
             return ("pythagoras_hypotenuse", ans, steps)
 
