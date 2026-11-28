@@ -479,7 +479,9 @@ def list_posts(group_id, limit=MAX_POSTS_KEPT):
 
 
 def _insert_post(conn, group_id, author_id, kind, body, reply_to=None):
-    body = (body or "")[:MAX_ANSWER_CHARS]
+    # Wave 233: the storage cap cuts on a word boundary (see
+    # _truncate_words) — the old hard slice cut words in half.
+    body = _truncate_words(body or "", MAX_ANSWER_CHARS)
     cur = conn.execute(
         "INSERT INTO group_posts (group_id, author_id, kind, "
         "body, reply_to, created_at) VALUES (?, ?, ?, ?, ?, ?)",
@@ -497,18 +499,59 @@ def _strip_markup(text):
     return re.sub(r"<[^>]+>", "", str(text or "")).strip()
 
 
+# Wave 233: one step line's display budget in a group answer.
+_STEP_CHARS = 240
+
+
+def _truncate_words(text, limit):
+    """`text` cut to at most `limit` characters on a WORD
+    boundary, with an ellipsis marking the cut — never
+    mid-word. (The pre-233 group code hard-sliced steps at
+    240 chars and whole bodies at MAX_ANSWER_CHARS, which is
+    exactly how group replies arrived cut in half of a word.)
+    A single token longer than the limit (a long formula) is
+    hard-cut — there is no boundary to honour — and still
+    carries the ellipsis."""
+    text = str(text or "")
+    if len(text) <= limit:
+        return text
+    if limit < 2:
+        return text[:limit]
+    cut = text[:limit - 1].rsplit(" ", 1)[0].rstrip(" ,;:")
+    if not cut:
+        cut = text[:limit - 1]
+    return cut + "…"
+
+
 def _answer_body(result, max_steps=6):
     """Ganitra's group answer as plain text: short steps, then
-    the answer exactly once (the standing format lock)."""
+    the answer exactly once (the standing format lock).
+
+    Wave 233: the assembly is budget-aware and word-safe. The
+    "Answer: …" line is reserved FIRST and is never cut;
+    steps are added while they fit the remaining budget, each
+    word-truncated to _STEP_CHARS (and to the budget itself
+    when nearly out of room) instead of being hard-sliced."""
+    answer = _strip_markup(result.get("answer"))
+    tail = f"Answer: {answer}" if answer else ""
+    budget = MAX_ANSWER_CHARS - (len(tail) + 1 if tail else 0)
     lines = []
     for step in (result.get("steps") or [])[:max_steps]:
         step = _strip_markup(step)
-        if step:
-            lines.append(step[:240])
-    answer = _strip_markup(result.get("answer"))
-    if answer:
-        lines.append(f"Answer: {answer}")
-    return "\n".join(lines)[:MAX_ANSWER_CHARS]
+        if not step:
+            continue
+        step = _truncate_words(step, _STEP_CHARS)
+        if len(step) > budget:
+            if budget < 40:
+                break
+            step = _truncate_words(step, budget)
+        lines.append(step)
+        budget -= len(step) + 1
+        if budget <= 0:
+            break
+    if tail:
+        lines.append(tail)
+    return "\n".join(lines)
 
 
 _AI_KINDS = frozenset({"gemini", "groq", "openrouter"})
@@ -604,7 +647,7 @@ def _named_body(result):
     steps = [_strip_markup(s) for s in (result.get("steps")
                                         or [])]
     if not any(s and s != ans for s in steps):
-        return ans[:MAX_ANSWER_CHARS]
+        return _truncate_words(ans, MAX_ANSWER_CHARS)
     return _answer_body(result)
 
 
