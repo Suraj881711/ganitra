@@ -529,13 +529,13 @@ def _chats_fast_count(user_id, aggregate):
             " AND name = 'chats'").fetchone()
         if not exists:
             return 0
-        if aggregate == "user_turns":
+        if aggregate in ("user_turns", "solved_turns"):
             cols = {row[1] for row in
                     conn.execute("PRAGMA table_info(chats)")}
-            if "user_turns" not in cols:
+            if aggregate not in cols:
                 return None
-            sql = ("SELECT COALESCE(SUM(user_turns), 0) FROM chats"
-                   " WHERE user_id = ?")
+            sql = ("SELECT COALESCE(SUM(" + aggregate + "), 0)"
+                   " FROM chats WHERE user_id = ?")
         else:
             sql = "SELECT COUNT(*) FROM chats WHERE user_id = ?"
         row = conn.execute(sql, (user_id,)).fetchone()
@@ -544,6 +544,71 @@ def _chats_fast_count(user_id, aggregate):
         return None
     finally:
         conn.close()
+
+
+# Wave 233: the ONE canonical "served answer" taxonomy for a
+# stored bot record, shared by the menu stats counter
+# (solved_count below) and the My Progress page
+# (progress.is_answered delegates here) so the two surfaces
+# can never disagree again. A bot result answered the
+# student's OWN question when it is: a plain solver result
+# (fallback_kind None), the verified bank's exact match, an
+# AI brain's answer to the question itself (gemini / groq /
+# openrouter), a salvage solve of the maths part, or a
+# topics / mcq concept answer. Everything else — "not_found",
+# "similar", "guide", greetings, plain one-liners, and the
+# generic concepts.py card (fallback_kind "concept" without a
+# topics/mcq source — a guide, not an answer) — is NOT an
+# answer. Wave 233 adds "openrouter" to the Wave-89 list: an
+# OpenRouter leg's verified answer is a served answer exactly
+# like the other two legs', and the old list silently
+# excluded it.
+_ANSWERED_KINDS = ("bank", "gemini", "groq", "openrouter",
+                   "salvage")
+
+
+def _result_is_answered(result):
+    """The taxonomy above, applied to ONE solve result dict."""
+    if not isinstance(result, dict):
+        return False
+    if not str(result.get("answer") or "").strip():
+        return False
+    if result.get("plain_reply") or result.get("plain"):
+        return False
+    kind = result.get("fallback_kind")
+    if kind is None:
+        return True
+    if kind in _ANSWERED_KINDS:
+        return True
+    if result.get("source") in ("topics", "mcq"):
+        return True
+    return False
+
+
+def is_answered_result(data):
+    """True when one stored bot record served an answer to
+    the student's own question (see the taxonomy above).
+
+    The record's ``data`` is the /api/solve PAYLOAD in the
+    live client flow ({"ok": ..., "result": {...}} — the
+    client stores the whole response in the thread); older
+    and test records may carry the bare result dict instead.
+    Both shapes are judged by the same taxonomy — the pre-233
+    code read result-level keys (fallback_kind, plain) off
+    the payload's top level, where they never live, so every
+    payload (greetings, not-found lines, even the unsolvable
+    error card) counted as "answered". An unsolvable / error
+    payload never counts."""
+    if not isinstance(data, dict):
+        return False
+    result = data.get("result")
+    if isinstance(result, dict):
+        if data.get("unsolvable"):
+            return False
+        return _result_is_answered(result)
+    if data.get("unsolvable") or data.get("ok") is False:
+        return False
+    return _result_is_answered(data)
 
 
 def questions_count(user_id):
@@ -560,6 +625,30 @@ def questions_count(user_id):
         return fast
     return sum(1 for thread in _chat_rows(user_id) for msg in thread
                if isinstance(msg, dict) and msg.get("role") == "user")
+
+
+def solved_count(user_id):
+    """How many questions Ganitra has actually SOLVED for the
+    student — the number behind the menu's "{count} questions
+    solved" line.
+
+    Wave 233 root fix: the line used to be fed by
+    questions_count (user turns ASKED — greetings, follow-ups
+    and unsolved questions included), so the "solved" number
+    never matched the answers the student had actually been
+    served. The definition now: one solved question is one
+    stored bot record in the student's OWN chats that served
+    an answer (is_answered_result). Same Wave-48 fast path as
+    questions_count — one indexed SUM over the per-chat
+    solved_turns counters chats.py maintains at save time —
+    with the thread parse as the fallback for a database whose
+    chats table predates the counter column."""
+    fast = _chats_fast_count(user_id, "solved_turns")
+    if fast is not None:
+        return fast
+    return sum(1 for thread in _chat_rows(user_id) for msg in thread
+               if isinstance(msg, dict) and msg.get("role") == "bot"
+               and is_answered_result(msg.get("data")))
 
 
 def chats_count(user_id):
