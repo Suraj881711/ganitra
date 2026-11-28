@@ -3,7 +3,8 @@ import re
 
 import sympy as sp
 
-from .expression_parser import fmt, fmt_num, parse_expression
+from .expression_parser import approx_str, fmt, fmt_exact, \
+    fmt_num, parse_expression
 
 x = sp.symbols("x")
 
@@ -125,6 +126,17 @@ def solve_exponents_logs(question: str):
         _res = sp.nsimplify(sp.real_root(
             sp.Rational(_vroot).limit_denominator(), _nroot))
         _exact = _res.is_Integer or _res.is_Rational
+        # Wave 234: an irrational root used to serve the raw
+        # float ("7.0710678118654755" for the square root of
+        # 50). School maths leads with the exact surd and
+        # follows with the decimal: "5√2 ≈ 7.0711". The exact
+        # value is already in hand (_res is the simplified
+        # SymPy root), so only the rendering changes.
+        if _exact:
+            _ans234 = fmt(_res)
+        else:
+            _ans234 = (f"{fmt_exact(_res)} ≈ "
+                       f"{approx_str(_res)}")
         # Wave 140: the working line read "The 2th root of
         # 729.0 is the number whose 2th power is 729.0" —
         # square/cube roots have proper names, other roots
@@ -145,12 +157,11 @@ def solve_exponents_logs(question: str):
         return {
             "type": "exponents_logs",
             "op": "nth_root",
-            "answer": fmt(_res) if _exact else
-                      fmt(float(_res)),
+            "answer": _ans234,
             "value": float(_res),
             "steps": [
                 _w140,
-                f"Answer = {fmt(_res) if _exact else fmt(float(_res))}",
+                f"Answer = {_ans234}",
             ],
         }
 
