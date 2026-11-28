@@ -5870,3 +5870,206 @@ for _code in list(STRINGS):
         if _key in STRINGS[_code] and _key in STRINGS["en"]:
             STRINGS[_code][_key] = STRINGS["en"][_key]
 del _code, _key
+
+
+# ---------------------------------------------------------------------------
+# Wave 233 (polish sweep): the group empty-chat hint, the group
+# route notices/errors that app.py used to hard-code, the chat
+# rate-limit line api.py used to hard-code, the CSRF 403 texts
+# security.py used to hard-code, and the localised 404/500
+# error-page lines. Every key exists in all 6 languages (the
+# house completeness rule). NONE of these keys joins
+# SYSTEM_MESSAGE_KEYS — that Wave-139 pin exists to keep
+# system notices in English/Hinglish, and these strings are
+# precisely the ones that must follow the student's language.
+# The group keys' "en" values keep the group's established
+# Hinglish-Roman house voice (the group pages are Hinglish by
+# design); the other languages carry real translations.
+# ---------------------------------------------------------------------------
+
+STRINGS["en"].update({
+    "group_empty_hint": "Abhi koi message nahi. Pehla message "
+                        "likho — Ganitra yahan chup rehta hai, "
+                        "lekin maths ka sawal puchega to khud "
+                        "jawab de dega. Naam lekar bulao — "
+                        "“Ganitra, …” — to kisi bhi topic par "
+                        "jawab milega.",
+    "group_err_not_member": "Group nahi mila, ya tum iske "
+                            "member nahi ho.",
+    "group_notice_member_added": "Member add ho gaya.",
+    "group_notice_member_removed": "Member hata diya gaya.",
+    "group_notice_closed": "Group band kar diya gaya.",
+    "group_notice_reported": "Report bhej di gayi. Dhanyavaad!",
+    "api_rate_limited": "Too many questions at once — please "
+                        "wait a minute and try again.",
+    "csrf_not_verified": "This request could not be verified. "
+                         "Please reload the page and try again.",
+    "csrf_page_text": "This request could not be verified, so "
+                      "it was not carried out. Please go back, "
+                      "reload the page and try again.",
+    "csrf_back_home": "Back to Ganitra",
+    "error_page_not_found": "This page could not be found. "
+                            "The link may be old or mistyped.",
+    "error_page_server": "Something went wrong on our side. "
+                         "Please wait a moment and try again.",
+    "error_page_home": "Back to Ganitra",
+})
+STRINGS["hi"].update({
+    "group_empty_hint": "अभी कोई संदेश नहीं है। पहला संदेश "
+                        "लिखो — Ganitra यहाँ चुप रहता है, "
+                        "लेकिन गणित का सवाल पूछते ही खुद जवाब "
+                        "दे देता है। नाम लेकर बुलाओ — "
+                        "“Ganitra, …” — तो किसी भी विषय पर "
+                        "जवाब मिलेगा।",
+    "group_err_not_member": "ग्रुप नहीं मिला, या तुम इसके "
+                            "सदस्य नहीं हो।",
+    "group_notice_member_added": "सदस्य जोड़ दिया गया।",
+    "group_notice_member_removed": "सदस्य हटा दिया गया।",
+    "group_notice_closed": "ग्रुप बंद कर दिया गया।",
+    "group_notice_reported": "रिपोर्ट भेज दी गई। धन्यवाद!",
+    "api_rate_limited": "एक साथ बहुत सारे सवाल — कृपया एक "
+                        "मिनट रुककर फिर प्रयास कीजिए।",
+    "csrf_not_verified": "यह अनुरोध सत्यापित नहीं हो सका। "
+                         "कृपया पेज फिर से लोड करके दोबारा "
+                         "प्रयास कीजिए।",
+    "csrf_page_text": "यह अनुरोध सत्यापित नहीं हो सका, इसलिए "
+                      "यह पूरा नहीं किया गया। कृपया वापस "
+                      "जाकर पेज फिर से लोड करके दोबारा "
+                      "प्रयास कीजिए।",
+    "csrf_back_home": "Ganitra पर वापस",
+    "error_page_not_found": "यह पेज नहीं मिला। लिंक पुराना हो "
+                            "सकता है या ग़लत लिखा गया होगा।",
+    "error_page_server": "हमारी तरफ़ से कुछ गड़बड़ हो गई। "
+                         "कृपया थोड़ी देर रुककर फिर प्रयास "
+                         "कीजिए।",
+    "error_page_home": "Ganitra पर वापस",
+})
+STRINGS["bn"].update({
+    "group_empty_hint": "এখনো কোনো বার্তা নেই। প্রথম বার্তাটি "
+                        "লেখো — Ganitra এখানে চুপ থাকে, "
+                        "কিন্তু গণিতের প্রশ্ন করলেই নিজে "
+                        "উত্তর দিয়ে দেয়। নাম ধরে ডাকো — "
+                        "“Ganitra, …” — তাহলে যেকোনো বিষয়ে "
+                        "উত্তর মিলবে।",
+    "group_err_not_member": "গ্রুপ পাওয়া যায়নি, অথবা তুমি "
+                            "এর সদস্য নও।",
+    "group_notice_member_added": "সদস্য যোগ করা হয়েছে।",
+    "group_notice_member_removed": "সদস্যকে সরিয়ে দেওয়া "
+                                   "হয়েছে।",
+    "group_notice_closed": "গ্রুপ বন্ধ করে দেওয়া হয়েছে।",
+    "group_notice_reported": "রিপোর্ট পাঠানো হয়েছে। ধন্যবাদ!",
+    "api_rate_limited": "একসাথে অনেক প্রশ্ন — অনুগ্রহ করে এক "
+                        "মিনিট অপেক্ষা করে আবার চেষ্টা করুন।",
+    "csrf_not_verified": "এই অনুরোধটি যাচাই করা যায়নি। "
+                         "অনুগ্রহ করে পেজটি আবার লোড করে "
+                         "চেষ্টা করুন।",
+    "csrf_page_text": "এই অনুরোধটি যাচাই করা যায়নি, তাই এটি "
+                      "সম্পন্ন করা হয়নি। অনুগ্রহ করে ফিরে "
+                      "গিয়ে পেজটি আবার লোড করে চেষ্টা করুন।",
+    "csrf_back_home": "Ganitra-তে ফিরে যান",
+    "error_page_not_found": "এই পেজটি পাওয়া যায়নি। লিংকটি "
+                            "পুরনো হতে পারে বা ভুল লেখা "
+                            "হয়েছে।",
+    "error_page_server": "আমাদের দিকে কিছু সমস্যা হয়েছে। "
+                         "অনুগ্রহ করে কিছুক্ষণ অপেক্ষা করে "
+                         "আবার চেষ্টা করুন।",
+    "error_page_home": "Ganitra-তে ফিরে যান",
+})
+STRINGS["mr"].update({
+    "group_empty_hint": "अजून एकही संदेश नाही. पहिला संदेश "
+                        "लिहा — Ganitra इथे शांत राहतो, पण "
+                        "गणिताचा प्रश्न विचारताच स्वतः उत्तर "
+                        "देतो. नाव घेऊन बोलवा — “Ganitra, …” "
+                        "— तर कोणत्याही विषयावर उत्तर मिळेल.",
+    "group_err_not_member": "गट सापडला नाही, किंवा तुम्ही "
+                            "याचे सदस्य नाही.",
+    "group_notice_member_added": "सदस्य जोडला गेला.",
+    "group_notice_member_removed": "सदस्य काढून टाकला गेला.",
+    "group_notice_closed": "गट बंद केला गेला.",
+    "group_notice_reported": "अहवाल पाठवला गेला. धन्यवाद!",
+    "api_rate_limited": "एकाच वेळी खूप प्रश्न — कृपया एक "
+                        "मिनिट थांबून पुन्हा प्रयत्न करा.",
+    "csrf_not_verified": "ही विनंती पडताळता आली नाही. कृपया "
+                         "पेज पुन्हा लोड करून प्रयत्न करा.",
+    "csrf_page_text": "ही विनंती पडताळता आली नाही, त्यामुळे "
+                      "ती पूर्ण केली गेली नाही. कृपया मागे "
+                      "जाऊन पेज पुन्हा लोड करून प्रयत्न करा.",
+    "csrf_back_home": "Ganitra वर परत",
+    "error_page_not_found": "हे पेज सापडले नाही. लिंक जुनी "
+                            "असू शकते किंवा चुकीची लिहिली "
+                            "गेली असेल.",
+    "error_page_server": "आमच्या बाजूने काहीतरी चुकले. कृपया "
+                         "थोडा वेळ थांबून पुन्हा प्रयत्न करा.",
+    "error_page_home": "Ganitra वर परत",
+})
+STRINGS["ta"].update({
+    "group_empty_hint": "இன்னும் செய்திகள் இல்லை. முதல் "
+                        "செய்தியை எழுதுங்கள் — Ganitra "
+                        "இங்கே அமைதியாக இருக்கும், ஆனால் "
+                        "கணிதக் கேள்வி கேட்டால் தானே பதில் "
+                        "தரும். பெயர் சொல்லி அழைத்தால் — "
+                        "“Ganitra, …” — எந்தத் தலைப்பிலும் "
+                        "பதில் கிடைக்கும்.",
+    "group_err_not_member": "குழு கிடைக்கவில்லை, அல்லது "
+                            "நீங்கள் இதன் உறுப்பினர் இல்லை.",
+    "group_notice_member_added": "உறுப்பினர் "
+                                 "சேர்க்கப்பட்டார்.",
+    "group_notice_member_removed": "உறுப்பினர் "
+                                   "நீக்கப்பட்டார்.",
+    "group_notice_closed": "குழு மூடப்பட்டது.",
+    "group_notice_reported": "புகார் அனுப்பப்பட்டது. நன்றி!",
+    "api_rate_limited": "ஒரே நேரத்தில் பல கேள்விகள் — ஒரு "
+                        "நிமிடம் காத்திருந்து மீண்டும் "
+                        "முயற்சிக்கவும்.",
+    "csrf_not_verified": "இந்தக் கோரிக்கையைச் சரிபார்க்க "
+                         "முடியவில்லை. பக்கத்தை மீண்டும் "
+                         "ஏற்றி முயற்சிக்கவும்.",
+    "csrf_page_text": "இந்தக் கோரிக்கையைச் சரிபார்க்க "
+                      "முடியவில்லை, எனவே அது "
+                      "நிறைவேற்றப்படவில்லை. திரும்பிச் "
+                      "சென்று பக்கத்தை மீண்டும் ஏற்றி "
+                      "முயற்சிக்கவும்.",
+    "csrf_back_home": "Ganitra-க்குத் திரும்பு",
+    "error_page_not_found": "இந்தப் பக்கம் கிடைக்கவில்லை. "
+                            "இணைப்பு பழையதாகவோ தவறாகத் "
+                            "தட்டச்சு செய்யப்பட்டதாகவோ "
+                            "இருக்கலாம்.",
+    "error_page_server": "எங்கள் பக்கம் ஏதோ தவறு "
+                         "நடந்துவிட்டது. சிறிது நேரம் "
+                         "காத்திருந்து மீண்டும் "
+                         "முயற்சிக்கவும்.",
+    "error_page_home": "Ganitra-க்குத் திரும்பு",
+})
+STRINGS["te"].update({
+    "group_empty_hint": "ఇంకా సందేశాలు లేవు. మొదటి సందేశం "
+                        "రాయండి — Ganitra ఇక్కడ మౌనంగా "
+                        "ఉంటుంది, కానీ గణిత ప్రశ్న అడిగితే "
+                        "తానే సమాధానం ఇస్తుంది. పేరు పెట్టి "
+                        "పిలిస్తే — “Ganitra, …” — ఏ "
+                        "అంశంపైనైనా సమాధానం లభిస్తుంది.",
+    "group_err_not_member": "గ్రూప్ దొరకలేదు, లేదా మీరు "
+                            "దీని సభ్యులు కాదు.",
+    "group_notice_member_added": "సభ్యుడు చేర్చబడ్డాడు.",
+    "group_notice_member_removed": "సభ్యుడు "
+                                   "తీసివేయబడ్డాడు.",
+    "group_notice_closed": "గ్రూప్ మూసివేయబడింది.",
+    "group_notice_reported": "నివేదిక పంపబడింది. "
+                             "ధన్యవాదాలు!",
+    "api_rate_limited": "ఒకేసారి చాలా ప్రశ్నలు — దయచేసి ఒక "
+                        "నిమిషం వేచి మళ్లీ ప్రయత్నించండి.",
+    "csrf_not_verified": "ఈ అభ్యర్థనను ధృవీకరించలేకపోయాము. "
+                         "దయచేసి పేజీని మళ్లీ లోడ్ చేసి "
+                         "ప్రయత్నించండి.",
+    "csrf_page_text": "ఈ అభ్యర్థనను ధృవీకరించలేకపోయాము, "
+                      "కాబట్టి అది అమలు కాలేదు. దయచేసి "
+                      "వెనక్కి వెళ్లి పేజీని మళ్లీ లోడ్ "
+                      "చేసి ప్రయత్నించండి.",
+    "csrf_back_home": "Ganitra కు తిరిగి వెళ్లండి",
+    "error_page_not_found": "ఈ పేజీ కనబడలేదు. లింక్ పాతది "
+                            "కావచ్చు లేదా తప్పుగా టైప్ చేసి "
+                            "ఉండవచ్చు.",
+    "error_page_server": "మా వైపు ఏదో తప్పు జరిగింది. "
+                         "దయచేసి కొంచెం సేపు వేచి మళ్లీ "
+                         "ప్రయత్నించండి.",
+    "error_page_home": "Ganitra కు తిరిగి వెళ్లండి",
+})
