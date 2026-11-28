@@ -80,6 +80,7 @@ def _connect():
     for statement in _INDEXES:
         conn.execute(statement)
     _ensure_user_turns_column(conn)
+    _ensure_solved_turns_column(conn)
     return conn
 
 
@@ -88,6 +89,15 @@ def _user_turns(messages):
     (role == "user") — the number accounts.questions_count sums."""
     return sum(1 for m in messages or []
                if isinstance(m, dict) and m.get("role") == "user")
+
+
+def _solved_turns(messages):
+    """How many stored bot turns in a thread served an answer
+    (accounts.is_answered_result) — the number
+    accounts.solved_count sums (Wave 233)."""
+    return sum(1 for m in messages or []
+               if isinstance(m, dict) and m.get("role") == "bot"
+               and accounts.is_answered_result(m.get("data")))
 
 
 def _ensure_user_turns_column(conn):
@@ -111,6 +121,28 @@ def _ensure_user_turns_column(conn):
         conn.execute(
             "UPDATE chats SET user_turns = ? WHERE id = ?",
             (_user_turns(_parse_messages(row["messages_json"])),
+             row["id"]))
+    conn.commit()
+
+
+def _ensure_solved_turns_column(conn):
+    """Wave 233: per-chat counter of bot turns that served an
+    answer, kept so accounts.solved_count is one indexed SUM
+    (the Wave-48 pattern, mirrored from user_turns). Added and
+    backfilled from the stored threads exactly once, the first
+    time a pre-233 database is opened; after that save_chat
+    maintains it on every write."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(chats)")}
+    if "solved_turns" in cols:
+        return
+    conn.execute(
+        "ALTER TABLE chats ADD COLUMN solved_turns"
+        " INTEGER NOT NULL DEFAULT 0")
+    rows = conn.execute("SELECT id, messages_json FROM chats").fetchall()
+    for row in rows:
+        conn.execute(
+            "UPDATE chats SET solved_turns = ? WHERE id = ?",
+            (_solved_turns(_parse_messages(row["messages_json"])),
              row["id"]))
     conn.commit()
 
@@ -237,9 +269,10 @@ def save_chat(user_id, chat_id, messages):
     try:
         cur = conn.execute(
             "UPDATE chats SET messages_json = ?, title = ?,"
-            " user_turns = ?, updated_at = ?"
+            " user_turns = ?, solved_turns = ?, updated_at = ?"
             " WHERE id = ? AND user_id = ?",
-            (payload, title, _user_turns(messages), _now(),
+            (payload, title, _user_turns(messages),
+             _solved_turns(messages), _now(),
              chat_id, user_id))
         conn.commit()
         if cur.rowcount == 0:
